@@ -1,0 +1,9 @@
+.cursorignore
+
+.vscode
+.idea
+
+cmake-build*
+build
+
+__pycache__

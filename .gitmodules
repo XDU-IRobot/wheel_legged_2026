@@ -1,0 +1,6 @@
+[submodule "libs/librm"]
+	path = libs/librm
+	url = https://github.com/XDU-IRobot/librm.git
+[submodule "docs/dm-mc02"]
+	path = docs/dm-mc02
+	url = https://gitee.com/kit-miao/dm-mc02.git
