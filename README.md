@@ -1,6 +1,8 @@
 # 2026 赛季嵌入式组软件仓库2（达妙H7部分）
 
-## Branch status
+## Branch/CI status
+
+[![Branch Status](https://branch-status-card.vercel.app/api/branch-status?repo=XDU-IRobot%2Fembedded-2026-h7&base=main&stale_days=30&theme=light&exclude=dependabot%2F*%2Crenovate%2F*)](https://github.com/XDU-IRobot/embedded-2026-h7/branches)
 
 | 模块          | 编译测试状态                                                                                                                                                                                                           |
 |-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
