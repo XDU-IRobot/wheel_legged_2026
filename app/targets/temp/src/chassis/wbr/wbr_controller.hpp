@@ -9,20 +9,20 @@ namespace wbr {
 
 // 当前机体状态：包含系统所有状态与腿长变量
 struct CurrentState {
-  f32 s;            // 直线位移
-  f32 s_dot;        // 直线速度
-  f32 phi;          // 偏航角
-  f32 phi_dot;      // 偏航角速度
-  f32 theta_ll;     // 左腿摆杆与竖直方向夹角
-  f32 theta_ll_dot; // 左腿摆角速度
-  f32 theta_lr;     // 右腿摆杆与竖直方向夹角
-  f32 theta_lr_dot; // 右腿摆角速度
-  f32 theta_b;      // 机体俯仰角
-  f32 theta_b_dot;  // 机体俯仰角速度
+  f32 s;             // 直线位移
+  f32 s_dot;         // 直线速度
+  f32 phi;           // 偏航角
+  f32 phi_dot;       // 偏航角速度
+  f32 theta_ll;      // 左腿摆杆与竖直方向夹角
+  f32 theta_ll_dot;  // 左腿摆角速度
+  f32 theta_lr;      // 右腿摆杆与竖直方向夹角
+  f32 theta_lr_dot;  // 右腿摆角速度
+  f32 theta_b;       // 机体俯仰角
+  f32 theta_b_dot;   // 机体俯仰角速度
 
   // 当前腿长数据（由五连杆机构正运动学计算得出）
-  f32 l_l; // 左腿腿长
-  f32 l_r; // 右腿腿长
+  f32 l_l;  // 左腿腿长
+  f32 l_r;  // 右腿腿长
 };
 
 // 状态向量期望
@@ -41,15 +41,15 @@ struct ExpectedState {
 
 // 输出控制扭矩
 struct MotorTorque {
-  f32 t_wl; // 左驱动轮输出力矩
-  f32 t_wr; // 右驱动轮输出力矩
-  f32 t_bl; // 左侧髋关节输出力矩（需要随后映射到五连杆关节电机）
-  f32 t_br; // 右侧髋关节输出力矩（需要随后映射到五连杆关节电机）
+  f32 t_wl;  // 左驱动轮输出力矩
+  f32 t_wr;  // 右驱动轮输出力矩
+  f32 t_bl;  // 左侧髋关节输出力矩（需要随后映射到五连杆关节电机）
+  f32 t_br;  // 右侧髋关节输出力矩（需要随后映射到五连杆关节电机）
 };
 
 // 轮腿机器人控制器核心类
 class WbrController {
-public:
+ public:
   WbrController();
   ~WbrController() = default;
 
@@ -58,12 +58,10 @@ public:
   void SetLqrCoefficients(const std::vector<std::array<f32, 6>> &coeff_matrix);
 
   // 核心控制计算：在此带入当前机器人的机体状态和期望状态，解算出控制输出
-  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current,
-                                           const ExpectedState &expected) const;
+  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected) const;
 
-private:
-  std::vector<std::array<f32, 6>>
-      k_coeffs_; // 40个系数序列，对应 4x10 的 K 矩阵
+ private:
+  std::vector<std::array<f32, 6>> k_coeffs_;  // 40个系数序列，对应 4x10 的 K 矩阵
 
   // 求多项式的运行函数：p(x,y) = p00 + p10*x + p01*y + p20*x^2 + p11*x*y +
   // p02*y^2
@@ -73,6 +71,6 @@ private:
   void ComputeKMatrix(f32 l_l, f32 l_r, f32 k_matrix[4][10]) const;
 };
 
-} // namespace wbr
+}  // namespace wbr
 
-#endif // WBR_CONTROLLER_HPP_
+#endif  // WBR_CONTROLLER_HPP_

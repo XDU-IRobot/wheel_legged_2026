@@ -4,8 +4,6 @@
 #include "../../chassis/state/chassis_state.hpp"
 #include "wbr/wbr_controller.hpp"
 
-
-
 /**
  * @file  task/messages/control_messages.hpp
  * @brief 任务间控制消息定义
@@ -87,7 +85,7 @@ struct TorqueCmd6 {
   MsgHeader h{};
   // 执行控制位：由计算任务统一下发给电机任务。
   bool enable_dm{false};
-  uint8_t jump_phase{0U}; // 跳跃阶段：1=下蹲, 2=起跳伸直, 3=空中缓冲/落地
+  uint8_t jump_phase{0U};  // 跳跃阶段：1=下蹲, 2=起跳伸直, 3=空中缓冲/落地
 
   float lf_tau{0.0f};
   float lb_tau{0.0f};
@@ -98,5 +96,4 @@ struct TorqueCmd6 {
   bool valid{false};
 };
 
-} // namespace tasking
-
+}  // namespace tasking

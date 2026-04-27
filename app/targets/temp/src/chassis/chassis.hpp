@@ -19,7 +19,7 @@ using namespace rm::modules;
 using namespace rm::device;
 
 class Chassis {
-public:
+ public:
   struct UpdateInput {
     ChassisStateEstimatorInput estimator_input{};
     wbr::ExpectedState expected{};
@@ -72,11 +72,9 @@ public:
   void Cal_Fn();
 
   /** @brief 获取当前融合状态 */
-  [[nodiscard]] const wbr::CurrentState &GetCurrentState() const {
-    return current_state_;
-  }
+  [[nodiscard]] const wbr::CurrentState &GetCurrentState() const { return current_state_; }
 
-private:
+ private:
   struct TunableParams {
     f32 leg_target_length_m{0.18f};
     f32 support_force_bias{100.0f};
@@ -134,4 +132,4 @@ private:
   ChassisStateEstimator state_estimator_{};
 };
 
-#endif // BALANCE_CHASSIS_CHASSIS_HPP
+#endif  // BALANCE_CHASSIS_CHASSIS_HPP

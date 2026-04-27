@@ -139,7 +139,7 @@ typedef struct {
   float right_leg_back_tau;
   float wheel_left_rad_s;
   float wheel_right_rad_s;
-}MotorFeedbackDebugSnapshot;
+} MotorFeedbackDebugSnapshot;
 
 typedef struct {
   CommTaskDebugSnapshot comm;
@@ -165,27 +165,17 @@ void TaskDebugReset(void);
 namespace tasking {
 
 void DebugUpdateComm(const CommInputMsg &msg);
-void DebugUpdateFsm(const Fsm::Input &input, const Fsm::Output &out,
-                    const FsmOutputMsg &msg);
-void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm,
-                       bool has_motor_feedback, bool run_compute,
-                       float target_leg_length_m,
-                       const wbr::CurrentState *current_state,
-                       const wbr::ExpectedState *expected_state,
-                       float theta_b_outer_comp,
-                       bool imu_valid, float imu_roll_rad, float imu_pitch_rad,
-                       float imu_gyro_y_rad_s, float imu_gyro_z_rad_s,
-                       float imu_acc_x_mps2, float imu_acc_y_mps2,
-                       float imu_acc_z_mps2, float imu_yaw_motor_rad,
-                       float left_Fn, float right_Fn,
-                       float raw_wheel_speed_mps,
-                       float raw_accel_speed_mps,
+void DebugUpdateFsm(const Fsm::Input &input, const Fsm::Output &out, const FsmOutputMsg &msg);
+void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm, bool has_motor_feedback, bool run_compute,
+                       float target_leg_length_m, const wbr::CurrentState *current_state,
+                       const wbr::ExpectedState *expected_state, float theta_b_outer_comp, bool imu_valid,
+                       float imu_roll_rad, float imu_pitch_rad, float imu_gyro_y_rad_s, float imu_gyro_z_rad_s,
+                       float imu_acc_x_mps2, float imu_acc_y_mps2, float imu_acc_z_mps2, float imu_yaw_motor_rad,
+                       float left_Fn, float right_Fn, float raw_wheel_speed_mps, float raw_accel_speed_mps,
                        float current_speed_mps);
-void DebugUpdateMotor(bool has_cmd, bool timeout, const TorqueCmd6 &msg,
-                      bool dm_enabled_latched);
+void DebugUpdateMotor(bool has_cmd, bool timeout, const TorqueCmd6 &msg, bool dm_enabled_latched);
 void DebugUpdateMotor(const MotorFeedbackMsg &msg);
 
-} // namespace tasking
+}  // namespace tasking
 
 #endif
-

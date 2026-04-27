@@ -15,8 +15,7 @@ void LegKinematics::Update(const f32 dt) {
   A0_ = 2.0f * l2_ * (xd_ - xb_);
   B0_ = 2.0f * l2_ * (yd_ - yb_);
   C0_ = l_bd_ * l_bd_;
-  phi2_ = 2.0f * std::atan2(B0_ + std::sqrt(A0_ * A0_ + B0_ * B0_ - C0_ * C0_),
-                            A0_ + C0_);
+  phi2_ = 2.0f * std::atan2(B0_ + std::sqrt(A0_ * A0_ + B0_ * B0_ - C0_ * C0_), A0_ + C0_);
 
   xc_ = xb_ + l2_ * arm_cos_f32(phi2_);
   yc_ = yb_ + l2_ * arm_sin_f32(phi2_);
@@ -43,11 +42,9 @@ void LegKinematics::Update(const f32 dt) {
   const f32 sin_p3 = arm_sin_f32(phi3_);
   const f32 cos_p3 = arm_cos_f32(phi3_);
 
-  xc_dot_ = l1_ * sin_p12 * sin_p3 / sin_p23 * w_phi1_ +
-            l1_ * sin_p34 * sin_p2 / sin_p23 * w_phi4_;
+  xc_dot_ = l1_ * sin_p12 * sin_p3 / sin_p23 * w_phi1_ + l1_ * sin_p34 * sin_p2 / sin_p23 * w_phi4_;
 
-  yc_dot_ = l1_ * sin_p12 * cos_p3 / sin_p23 * w_phi1_ -
-            l1_ * sin_p34 * cos_p2 / sin_p23 * w_phi4_;
+  yc_dot_ = l1_ * sin_p12 * cos_p3 / sin_p23 * w_phi1_ - l1_ * sin_p34 * cos_p2 / sin_p23 * w_phi4_;
 
   jacobi_00_ = l1_ * sin_p03 * sin_p12 / sin_p32;
   jacobi_01_ = l1_ * cos_p03 * sin_p12 / (l0_ * sin_p32);
@@ -58,12 +55,11 @@ void LegKinematics::Update(const f32 dt) {
 }
 
 // 角度归一化：强制限制在 [-PI, PI]，解决 -PI <-> PI 跳变
-static f32 NormalizeAngle(f32 angle)
-{
+static f32 NormalizeAngle(f32 angle) {
   // 核心：把角度折叠到 [-π, π]，消除跳变
-  while (angle > PI)  angle -= 2.0f * PI;
+  while (angle > PI) angle -= 2.0f * PI;
   while (angle < -PI) angle += 2.0f * PI;
   return angle;
 }
 
-} // namespace wbr
+}  // namespace wbr

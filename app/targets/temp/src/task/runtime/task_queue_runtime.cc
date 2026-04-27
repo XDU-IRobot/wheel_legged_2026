@@ -16,24 +16,19 @@ void InitQueues(TaskContext &ctx) {
     ctx.queues.comm_to_fsm = osMessageQueueNew(1U, sizeof(CommInputMsg), nullptr);
   }
   if (ctx.queues.comm_to_compute == nullptr) {
-    ctx.queues.comm_to_compute =
-        osMessageQueueNew(1U, sizeof(CommInputMsg), nullptr);
+    ctx.queues.comm_to_compute = osMessageQueueNew(1U, sizeof(CommInputMsg), nullptr);
   }
   if (ctx.queues.fsm_to_compute == nullptr) {
-    ctx.queues.fsm_to_compute =
-        osMessageQueueNew(1U, sizeof(FsmOutputMsg), nullptr);
+    ctx.queues.fsm_to_compute = osMessageQueueNew(1U, sizeof(FsmOutputMsg), nullptr);
   }
   if (ctx.queues.compute_to_fsm == nullptr) {
-    ctx.queues.compute_to_fsm =
-        osMessageQueueNew(1U, sizeof(StateEstimateMsg), nullptr);
+    ctx.queues.compute_to_fsm = osMessageQueueNew(1U, sizeof(StateEstimateMsg), nullptr);
   }
   if (ctx.queues.motor_to_compute == nullptr) {
-    ctx.queues.motor_to_compute =
-        osMessageQueueNew(1U, sizeof(MotorFeedbackMsg), nullptr);
+    ctx.queues.motor_to_compute = osMessageQueueNew(1U, sizeof(MotorFeedbackMsg), nullptr);
   }
   if (ctx.queues.compute_to_motor == nullptr) {
-    ctx.queues.compute_to_motor =
-        osMessageQueueNew(1U, sizeof(TorqueCmd6), nullptr);
+    ctx.queues.compute_to_motor = osMessageQueueNew(1U, sizeof(TorqueCmd6), nullptr);
   }
 }
 
@@ -47,13 +42,7 @@ void EnsureQueuesInitialized() {
   g_queues_initialized = true;
 }
 
-} // namespace
-} // namespace tasking
+}  // namespace
+}  // namespace tasking
 
-extern "C" void TaskQueuesInit() {
-  tasking::EnsureQueuesInitialized();
-}
-
-
-
-
+extern "C" void TaskQueuesInit() { tasking::EnsureQueuesInitialized(); }

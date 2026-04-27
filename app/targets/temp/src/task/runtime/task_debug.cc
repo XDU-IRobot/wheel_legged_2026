@@ -8,17 +8,15 @@ namespace {
 
 inline uint8_t B2U8(bool value) { return value ? 1U : 0U; }
 
-} // namespace
+}  // namespace
 
 extern "C" {
 
 TaskDebugSnapshot g_task_debug_snapshot = {};
 
-void TaskDebugReset(void) {
-  std::memset(&g_task_debug_snapshot, 0, sizeof(g_task_debug_snapshot));
-}
+void TaskDebugReset(void) { std::memset(&g_task_debug_snapshot, 0, sizeof(g_task_debug_snapshot)); }
 
-} // extern "C"
+}  // extern "C"
 
 namespace tasking {
 
@@ -36,8 +34,7 @@ void DebugUpdateComm(const CommInputMsg &msg) {
   dbg.yaw_cmd = msg.yaw_cmd;
 }
 
-void DebugUpdateFsm(const Fsm::Input &input, const Fsm::Output &out,
-                    const FsmOutputMsg &msg) {
+void DebugUpdateFsm(const Fsm::Input &input, const Fsm::Output &out, const FsmOutputMsg &msg) {
   volatile FsmTaskDebugSnapshot &dbg = g_task_debug_snapshot.fsm;
   dbg.tick_ms = msg.h.tick_ms;
   dbg.seq = msg.h.seq;
@@ -53,24 +50,16 @@ void DebugUpdateFsm(const Fsm::Input &input, const Fsm::Output &out,
   dbg.target_leg_length_m = out.control.target_leg_length_m;
 }
 
-void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm,
-                       bool has_motor_feedback, bool run_compute,
-                       float target_leg_length_m,
-                       const wbr::CurrentState *current_state,
-                       const wbr::ExpectedState *expected_state,
-                       float theta_b_outer_comp, bool imu_valid,
-                       float imu_roll_rad, float imu_pitch_rad,
-                       float imu_gyro_y_rad_s, float imu_gyro_z_rad_s,
-                       float imu_acc_x_mps2, float imu_acc_y_mps2,
-                       float imu_acc_z_mps2, float imu_yaw_motor_rad,
-                       float left_Fn, float right_Fn,
-                       float raw_wheel_speed_mps,
-                       float raw_accel_speed_mps,
+void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm, bool has_motor_feedback, bool run_compute,
+                       float target_leg_length_m, const wbr::CurrentState *current_state,
+                       const wbr::ExpectedState *expected_state, float theta_b_outer_comp, bool imu_valid,
+                       float imu_roll_rad, float imu_pitch_rad, float imu_gyro_y_rad_s, float imu_gyro_z_rad_s,
+                       float imu_acc_x_mps2, float imu_acc_y_mps2, float imu_acc_z_mps2, float imu_yaw_motor_rad,
+                       float left_Fn, float right_Fn, float raw_wheel_speed_mps, float raw_accel_speed_mps,
                        float current_speed_mps) {
   g_task_debug_snapshot.torque.tick_ms = msg.h.tick_ms;
   g_task_debug_snapshot.torque.seq = msg.h.seq;
-  g_task_debug_snapshot.torque.update_count =
-      static_cast<uint16_t>(g_task_debug_snapshot.torque.update_count + 1U);
+  g_task_debug_snapshot.torque.update_count = static_cast<uint16_t>(g_task_debug_snapshot.torque.update_count + 1U);
   g_task_debug_snapshot.torque.has_comm = B2U8(has_comm);
   g_task_debug_snapshot.torque.has_fsm = B2U8(has_fsm);
   g_task_debug_snapshot.torque.has_motor_feedback = B2U8(has_motor_feedback);
@@ -127,14 +116,11 @@ void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm,
     g_task_debug_snapshot.torque.target_phi = expected_state->phi;
     g_task_debug_snapshot.torque.target_phi_dot = expected_state->phi_dot;
     g_task_debug_snapshot.torque.target_theta_ll = expected_state->theta_ll;
-    g_task_debug_snapshot.torque.target_theta_ll_dot =
-        expected_state->theta_ll_dot;
+    g_task_debug_snapshot.torque.target_theta_ll_dot = expected_state->theta_ll_dot;
     g_task_debug_snapshot.torque.target_theta_lr = expected_state->theta_lr;
-    g_task_debug_snapshot.torque.target_theta_lr_dot =
-        expected_state->theta_lr_dot;
+    g_task_debug_snapshot.torque.target_theta_lr_dot = expected_state->theta_lr_dot;
     g_task_debug_snapshot.torque.target_theta_b = expected_state->theta_b;
-    g_task_debug_snapshot.torque.target_theta_b_dot =
-        expected_state->theta_b_dot;
+    g_task_debug_snapshot.torque.target_theta_b_dot = expected_state->theta_b_dot;
   } else {
     g_task_debug_snapshot.torque.target_s = 0.0f;
     g_task_debug_snapshot.torque.target_s_dot = 0.0f;
@@ -167,11 +153,9 @@ void DebugUpdateTorque(const TorqueCmd6 &msg, bool has_comm, bool has_fsm,
     g_task_debug_snapshot.torque.imu_acc_z_mps2 = 0.0f;
     g_task_debug_snapshot.torque.imu_yaw_motor_rad = 0.0f;
   }
-
 }
 
-void DebugUpdateMotor(bool has_cmd, bool timeout, const TorqueCmd6 &msg,
-                      bool dm_enabled_latched) {
+void DebugUpdateMotor(bool has_cmd, bool timeout, const TorqueCmd6 &msg, bool dm_enabled_latched) {
   volatile MotorTaskDebugSnapshot &dbg = g_task_debug_snapshot.motor;
   dbg.tick_ms = osKernelGetTickCount();
   dbg.seq = msg.h.seq;
@@ -208,5 +192,4 @@ void DebugUpdateMotor(const MotorFeedbackMsg &msg) {
   dbg.wheel_right_rad_s = msg.wheel.right_rad_s;
 }
 
-} // namespace tasking
-
+}  // namespace tasking

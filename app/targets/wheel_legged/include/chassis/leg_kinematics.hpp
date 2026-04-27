@@ -92,10 +92,8 @@ class LegKinematics {
       return;
     }
 
-    xc_dot_ = l1_ * sin_p12 * sin_p3 / sin_p23 * w_phi1_ +
-              l1_ * sin_p34 * sin_p2 / sin_p23 * w_phi4_;
-    yc_dot_ = l1_ * sin_p12 * cos_p3 / sin_p23 * w_phi1_ -
-              l1_ * sin_p34 * cos_p2 / sin_p23 * w_phi4_;
+    xc_dot_ = l1_ * sin_p12 * sin_p3 / sin_p23 * w_phi1_ + l1_ * sin_p34 * sin_p2 / sin_p23 * w_phi4_;
+    yc_dot_ = l1_ * sin_p12 * cos_p3 / sin_p23 * w_phi1_ - l1_ * sin_p34 * cos_p2 / sin_p23 * w_phi4_;
 
     jacobi_00_ = l1_ * sin_p03 * sin_p12 / sin_p32;
     jacobi_01_ = l1_ * cos_p03 * sin_p12 / (l0_ * sin_p32);

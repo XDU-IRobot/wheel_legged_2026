@@ -9,7 +9,7 @@ using namespace rm;
 namespace wbr {
 
 class LegKinematics {
-public:
+ public:
   LegKinematics(f32 l1, f32 l2);
 
   void Update(f32 dt = 0.002f);
@@ -32,11 +32,11 @@ public:
   [[nodiscard]] f32 jacobi_01() const { return this->jacobi_01_; }
   [[nodiscard]] f32 jacobi_10() const { return this->jacobi_10_; }
   [[nodiscard]] f32 jacobi_11() const { return this->jacobi_11_; }
-  [[nodiscard]] f32 sin_p32() const { return arm_sin_f32(phi3_ - phi2_);}
-  [[nodiscard]] f32 phi3() const { return this->phi3_;}
-  [[nodiscard]] f32 phi2() const { return this->phi2_;}
+  [[nodiscard]] f32 sin_p32() const { return arm_sin_f32(phi3_ - phi2_); }
+  [[nodiscard]] f32 phi3() const { return this->phi3_; }
+  [[nodiscard]] f32 phi2() const { return this->phi2_; }
 
-private:
+ private:
   f32 phi1_{0.0f}, phi4_{0.0f};
   f32 beta_{0.0f}, beta_last{0.0f};
   f32 beta_dot_{0.0f};
@@ -63,6 +63,6 @@ private:
   f32 jacobi_00_{0.0f}, jacobi_01_{0.0f}, jacobi_10_{0.0f}, jacobi_11_{0.0f};
 };
 
-} // namespace wbr
+}  // namespace wbr
 
-#endif // WBR_LEG_KINEMATICS_HPP_
+#endif  // WBR_LEG_KINEMATICS_HPP_

@@ -18,8 +18,7 @@ namespace {
 
 std::unique_ptr<rm::hal::stm32::FdCan> g_comm_can{};
 std::unique_ptr<communication::Communication> g_comm_rx{};
-std::shared_ptr<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>
-    g_comm_dm_motor{};
+std::shared_ptr<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>> g_comm_dm_motor{};
 bool g_comm_can_started{false};
 
 struct CommCanSnapshot {
@@ -40,8 +39,7 @@ CommCanSnapshot SampleCommCanSnapshot() {
   return snapshot;
 }
 
-void MapChassisCommandToCommInput(const CommCanSnapshot &snapshot,
-                                  CommInputMsg &msg) {
+void MapChassisCommandToCommInput(const CommCanSnapshot &snapshot, CommInputMsg &msg) {
   msg.link_ok = snapshot.link_ok;
   msg.remote_mid_force = false;
   msg.force_enable = false;
@@ -49,43 +47,43 @@ void MapChassisCommandToCommInput(const CommCanSnapshot &snapshot,
   msg.jump_trigger = false;
 
   switch (snapshot.cmd.chassis.state) {
-  case communication::ChassisState::kUnable:
-    break;
-  case communication::ChassisState::kFollow:
-    msg.force_enable = true;
-    break;
-  case communication::ChassisState::kRotate:
-    msg.force_enable = true;
-    msg.small_gyro_enable = true;
-    break;
-  case communication::ChassisState::kJump:
-    msg.force_enable = true;
-    msg.jump_trigger = true;
-    break;
-  default:
-    break;
+    case communication::ChassisState::kUnable:
+      break;
+    case communication::ChassisState::kFollow:
+      msg.force_enable = true;
+      break;
+    case communication::ChassisState::kRotate:
+      msg.force_enable = true;
+      msg.small_gyro_enable = true;
+      break;
+    case communication::ChassisState::kJump:
+      msg.force_enable = true;
+      msg.jump_trigger = true;
+      break;
+    default:
+      break;
   }
 
   switch (snapshot.cmd.chassis.leg_length) {
-  case communication::LegLength::kLow:
-    msg.leg_length_mode = Fsm::LegLengthMode::kLow;
-    break;
-  case communication::LegLength::kNormal:
-    msg.leg_length_mode = Fsm::LegLengthMode::kMid;
-    break;
-  case communication::LegLength::kHigh:
-    msg.leg_length_mode = Fsm::LegLengthMode::kHigh;
-    break;
-  default:
-    msg.leg_length_mode = Fsm::LegLengthMode::kLow;
-    break;
+    case communication::LegLength::kLow:
+      msg.leg_length_mode = Fsm::LegLengthMode::kLow;
+      break;
+    case communication::LegLength::kNormal:
+      msg.leg_length_mode = Fsm::LegLengthMode::kMid;
+      break;
+    case communication::LegLength::kHigh:
+      msg.leg_length_mode = Fsm::LegLengthMode::kHigh;
+      break;
+    default:
+      msg.leg_length_mode = Fsm::LegLengthMode::kLow;
+      break;
   }
 
   // 仅保留前向输入通道，横向平移输入不再下发到控制链路。
   msg.vx_cmd = static_cast<float>(snapshot.cmd.chassis.move_y) / 127.f;
 }
 
-} // namespace
+}  // namespace
 
 /**
  * @brief 通信任务初始化
@@ -104,11 +102,9 @@ void CommTaskInit(TaskContext &ctx) {
   }
 
   if (!g_comm_dm_motor && g_comm_can) {
-    g_comm_dm_motor = std::make_shared<
-        rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
-        *g_comm_can,
-        rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-            0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}});
+    g_comm_dm_motor = std::make_shared<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
+        *g_comm_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                         0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}});
   }
 
   if (g_comm_can && !g_comm_can_started) {
@@ -148,12 +144,8 @@ void CommTaskUpdate(TaskContext &ctx) {
   DebugUpdateComm(msg);
 }
 
-} // namespace tasking
+}  // namespace tasking
 
-extern "C" void CommTaskInitC() {
-  tasking::CommTaskInit(tasking::GetTaskContext());
-}
+extern "C" void CommTaskInitC() { tasking::CommTaskInit(tasking::GetTaskContext()); }
 
-extern "C" void CommTaskUpdateC() {
-  tasking::CommTaskUpdate(tasking::GetTaskContext());
-}
+extern "C" void CommTaskUpdateC() { tasking::CommTaskUpdate(tasking::GetTaskContext()); }

@@ -65,21 +65,17 @@ void InitMotorsIfNeeded() {
 
   if (!g_dm_joints.Valid()) {
     g_dm_joints.lf = std::make_shared<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
-        *g_joint_can,
-        rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-            0x17, 0x07, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
+        *g_joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                          0x17, 0x07, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
     g_dm_joints.lb = std::make_shared<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
-        *g_joint_can,
-        rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-            0x14, 0x04, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
+        *g_joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                          0x14, 0x04, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
     g_dm_joints.rf = std::make_shared<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
-        *g_joint_can,
-        rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-            0x16, 0x06, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
+        *g_joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                          0x16, 0x06, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
     g_dm_joints.rb = std::make_shared<rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>>(
-        *g_joint_can,
-        rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-            0x15, 0x05, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
+        *g_joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                          0x15, 0x05, 3.141593f, 45.f, 54.f, {0, 500}, {0, 10}});
   }
 
   if (!g_left_wheel) {
@@ -100,7 +96,6 @@ void InitMotorsIfNeeded() {
     g_wheel_can_started = true;
   }
 }
-
 
 void SendDmEnable(bool &dm_enabled) {
   if (dm_enabled) {
@@ -147,7 +142,6 @@ void SendDmMitCommand(float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
   g_dm_joints.rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
   g_dm_joints.rf->SetMitCommand(0.0f, 0.0f, rf_tau, 0.0f, 0.0f);
 }
-
 
 void SendWheelCommand(float lw_tau, float rw_tau) {
   if (!g_left_wheel || !g_right_wheel || !g_wheel_can) {
@@ -213,7 +207,7 @@ void PublishMotorFeedback(TaskContext &ctx) {
   DebugUpdateMotor(msg);
 }
 
-} // namespace
+}  // namespace
 
 /**
  * @brief 电机输出任务初始化
@@ -253,8 +247,7 @@ void MotorOutputTaskUpdate(TaskContext &ctx) {
 
   if (torque_rx.valid) {
     // 有力状态：下发计算任务输出的目标力矩。
-    SendDmMitCommand(torque_rx.lf_tau, torque_rx.lb_tau, torque_rx.rf_tau,
-                     torque_rx.rb_tau);
+    SendDmMitCommand(torque_rx.lf_tau, torque_rx.lb_tau, torque_rx.rf_tau, torque_rx.rb_tau);
     SendWheelCommand(torque_rx.lw_tau * 2436.5f, torque_rx.rw_tau * 2436.5f);
   } else {
     // 其他状态：保持零力矩输出。
@@ -266,15 +259,8 @@ void MotorOutputTaskUpdate(TaskContext &ctx) {
   DebugUpdateMotor(true, false, torque_rx, ctx.motor_runtime.dm_enabled);
 }
 
-} // namespace tasking
+}  // namespace tasking
 
-extern "C" void MotorTaskInitC() {
-  tasking::MotorOutputTaskInit(tasking::GetTaskContext());
-}
+extern "C" void MotorTaskInitC() { tasking::MotorOutputTaskInit(tasking::GetTaskContext()); }
 
-extern "C" void MotorTaskUpdateC() {
-  tasking::MotorOutputTaskUpdate(tasking::GetTaskContext());
-}
-
-
-
+extern "C" void MotorTaskUpdateC() { tasking::MotorOutputTaskUpdate(tasking::GetTaskContext()); }

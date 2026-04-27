@@ -52,25 +52,17 @@ void FsmTaskUpdate(TaskContext &ctx) {
   }
 
   const uint32_t now_ms = osKernelGetTickCount();
-  const bool comm_fresh = has_comm_latched &&
-                          ((now_ms - comm_latched.h.tick_ms) <=
-                           kCommInputTimeoutMs);
+  const bool comm_fresh = has_comm_latched && ((now_ms - comm_latched.h.tick_ms) <= kCommInputTimeoutMs);
 
   Fsm::Input input{};
   input.input_valid = comm_fresh && comm_latched.link_ok;
-  input.force_enable = comm_fresh && comm_latched.link_ok &&
-                       comm_latched.force_enable;
-  input.leg_length_mode = (comm_fresh && comm_latched.link_ok)
-                              ? comm_latched.leg_length_mode
-                              : Fsm::LegLengthMode::kLow;
-  input.small_gyro_enable = comm_fresh && comm_latched.link_ok &&
-                            comm_latched.small_gyro_enable;
-  input.jump_trigger = comm_fresh && comm_latched.link_ok &&
-                       comm_latched.jump_trigger;
+  input.force_enable = comm_fresh && comm_latched.link_ok && comm_latched.force_enable;
+  input.leg_length_mode =
+      (comm_fresh && comm_latched.link_ok) ? comm_latched.leg_length_mode : Fsm::LegLengthMode::kLow;
+  input.small_gyro_enable = comm_fresh && comm_latched.link_ok && comm_latched.small_gyro_enable;
+  input.jump_trigger = comm_fresh && comm_latched.link_ok && comm_latched.jump_trigger;
   input.current_leg_length_m =
-      has_state_latched
-          ? 0.5f * (state_latched.current.l_l + state_latched.current.l_r)
-          : 0.0f;
+      has_state_latched ? 0.5f * (state_latched.current.l_l + state_latched.current.l_r) : 0.0f;
   input.tick_ms = now_ms;
 
   const Fsm::Output out = ctx.fsm->Update(input);
@@ -88,14 +80,8 @@ void FsmTaskUpdate(TaskContext &ctx) {
   DebugUpdateFsm(input, out, msg);
 }
 
-} // namespace tasking
+}  // namespace tasking
 
-extern "C" void FsmTaskInitC() {
-  tasking::FsmTaskInit(tasking::GetTaskContext());
-}
+extern "C" void FsmTaskInitC() { tasking::FsmTaskInit(tasking::GetTaskContext()); }
 
-extern "C" void FsmTaskUpdateC() {
-  tasking::FsmTaskUpdate(tasking::GetTaskContext());
-}
-
-
+extern "C" void FsmTaskUpdateC() { tasking::FsmTaskUpdate(tasking::GetTaskContext()); }

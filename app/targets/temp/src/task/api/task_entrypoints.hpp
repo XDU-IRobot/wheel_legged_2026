@@ -49,8 +49,4 @@ void MotorOutputTaskInit(TaskContext &ctx);
  */
 void MotorOutputTaskUpdate(TaskContext &ctx);
 
-} // namespace tasking
-
-
-
-
+}  // namespace tasking

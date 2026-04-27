@@ -72,6 +72,4 @@ struct TaskContext {
  */
 TaskContext &GetTaskContext();
 
-} // namespace tasking
-
-
+}  // namespace tasking

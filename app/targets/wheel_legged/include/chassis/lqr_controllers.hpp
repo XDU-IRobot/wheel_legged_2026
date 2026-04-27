@@ -52,8 +52,7 @@ class WbrController {
     }
   }
 
-  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current,
-                                           const ExpectedState &expected) const {
+  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected) const {
     static constexpr rm::f32 kPi = 3.14159265358979323846f;
 
     rm::f32 k_matrix[4][10]{};
@@ -87,11 +86,9 @@ class WbrController {
   }
 
  private:
-  [[nodiscard]] static rm::f32 EvaluatePolynomial(const std::array<rm::f32, 6> &p,
-                                                  const rm::f32 l_l,
+  [[nodiscard]] static rm::f32 EvaluatePolynomial(const std::array<rm::f32, 6> &p, const rm::f32 l_l,
                                                   const rm::f32 l_r) {
-    return p[0] + p[1] * l_l + p[2] * l_r + p[3] * l_l * l_l + p[4] * l_l * l_r +
-           p[5] * l_r * l_r;
+    return p[0] + p[1] * l_l + p[2] * l_r + p[3] * l_l * l_l + p[4] * l_l * l_r + p[5] * l_r * l_r;
   }
 
   void ComputeKMatrix(const rm::f32 l_l, const rm::f32 l_r, rm::f32 k_matrix[4][10]) const {

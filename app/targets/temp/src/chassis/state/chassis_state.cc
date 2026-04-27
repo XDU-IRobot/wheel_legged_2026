@@ -10,10 +10,8 @@ void ChassisStateEstimator::Init(const ChassisStateEstimatorConfig &config) {
   config_ = config;
   left_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
   right_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
-  theta_ll_dot_filter_.set_cutoff_frequency(500.0f,
-                                            config_.theta_dot_filter_cutoff_hz);
-  theta_lr_dot_filter_.set_cutoff_frequency(500.0f,
-                                            config_.theta_dot_filter_cutoff_hz);
+  theta_ll_dot_filter_.set_cutoff_frequency(500.0f, config_.theta_dot_filter_cutoff_hz);
+  theta_lr_dot_filter_.set_cutoff_frequency(500.0f, config_.theta_dot_filter_cutoff_hz);
   Reset();
   speed_estimator_.Init();
 }
@@ -46,16 +44,12 @@ void ChassisStateEstimator::Update(const ChassisStateEstimatorInput &input) {
 /**
  * @brief 获取状态估计输出
  */
-const ChassisStateEstimatorOutput &ChassisStateEstimator::GetOutput() const {
-  return output_;
-}
+const ChassisStateEstimatorOutput &ChassisStateEstimator::GetOutput() const { return output_; }
 
 /**
  * @brief 获取可供控制器使用的 current 状态
  */
-const wbr::CurrentState &ChassisStateEstimator::GetCurrentState() const {
-  return output_.current;
-}
+const wbr::CurrentState &ChassisStateEstimator::GetCurrentState() const { return output_.current; }
 
 /**
  * @brief 统一执行关节零位/符号标定
@@ -84,8 +78,7 @@ CalibratedLegKinematicsInput ChassisStateEstimator::BuildCalibratedLegInput(
  * @param input 输入反馈
  * @param dt_s  控制周期，单位 s
  */
-void ChassisStateEstimator::UpdateLegState(
-    const ChassisStateEstimatorInput &input, rm::f32 dt_s) {
+void ChassisStateEstimator::UpdateLegState(const ChassisStateEstimatorInput &input, rm::f32 dt_s) {
   if (dt_s <= 0.0f) {
     dt_s = 0.002f;
   }
@@ -114,10 +107,8 @@ void ChassisStateEstimator::UpdateLegState(
   output_.current.l_r = output_.right_leg_length_m;
 
   // 摆角定义沿用原控制链路约定。
-  const rm::f32 theta_ll =
-      -1.5708f - (-output_.current.theta_b - left_leg_.phi0());
-  const rm::f32 theta_lr =
-      -1.5708f - (-output_.current.theta_b - right_leg_.phi0());
+  const rm::f32 theta_ll = -1.5708f - (-output_.current.theta_b - left_leg_.phi0());
+  const rm::f32 theta_lr = -1.5708f - (-output_.current.theta_b - right_leg_.phi0());
 
   output_.left_leg_angle_rad = theta_ll;
   output_.right_leg_angle_rad = theta_lr;
@@ -135,8 +126,7 @@ void ChassisStateEstimator::UpdateLegState(
  * @brief 更新机体姿态相关状态
  * @param input 输入反馈
  */
-void ChassisStateEstimator::UpdateBodyState(
-    const ChassisStateEstimatorInput &input) {
+void ChassisStateEstimator::UpdateBodyState(const ChassisStateEstimatorInput &input) {
   output_.current.theta_b = input.imu.pitch_rad;
   output_.current.theta_b_dot = input.imu.gyro_y_rad_s;
 
@@ -150,30 +140,21 @@ void ChassisStateEstimator::UpdateBodyState(
  * @param input 输入反馈
  * @param dt_s  控制周期，单位 s
  */
-void ChassisStateEstimator::UpdateSpeedState(
-    const ChassisStateEstimatorInput &input, rm::f32 dt_s) {
+void ChassisStateEstimator::UpdateSpeedState(const ChassisStateEstimatorInput &input, rm::f32 dt_s) {
   (void)dt_s;
 
   // 计算轮速
-  const f32 left_wheel_vel = input.wheel.left_rad_s *
-                             config_.wheel_reduction_ratio *
-                             config_.wheel_radius_m;
-  const f32 right_wheel_vel = input.wheel.right_rad_s *
-                              config_.wheel_reduction_ratio *
-                              config_.wheel_radius_m;
+  const f32 left_wheel_vel = input.wheel.left_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
+  const f32 right_wheel_vel = input.wheel.right_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
 
   // 转换到机身速度
-  const f32 left_speed =
-      left_wheel_vel +
-      output_.current.l_l * output_.current.theta_ll_dot *
-          arm_cos_f32(output_.current.theta_ll) +
-      left_leg_.l0_dot() * arm_sin_f32(output_.current.theta_ll);
+  const f32 left_speed = left_wheel_vel +
+                         output_.current.l_l * output_.current.theta_ll_dot * arm_cos_f32(output_.current.theta_ll) +
+                         left_leg_.l0_dot() * arm_sin_f32(output_.current.theta_ll);
 
-  const f32 right_speed =
-      right_wheel_vel +
-      output_.current.l_r * output_.current.theta_lr_dot *
-          arm_cos_f32(output_.current.theta_lr) +
-      right_leg_.l0_dot() * arm_sin_f32(output_.current.theta_lr);
+  const f32 right_speed = right_wheel_vel +
+                          output_.current.l_r * output_.current.theta_lr_dot * arm_cos_f32(output_.current.theta_lr) +
+                          right_leg_.l0_dot() * arm_sin_f32(output_.current.theta_lr);
 
   output_.wheel_speed_mps = 0.5f * (left_speed + right_speed);
 
@@ -212,31 +193,27 @@ void ChassisStateEstimator::UpdateSpeedState(
 /**
  * @brief 左腿前关节角度标定
  */
-rm::f32
-ChassisStateEstimator::ConvertLeftPhi1(const JointFeedback &joint) const {
+rm::f32 ChassisStateEstimator::ConvertLeftPhi1(const JointFeedback &joint) const {
   return joint.pos_rad + config_.left_phi1_offset_rad;
 }
 
 /**
  * @brief 左腿后关节角度标定
  */
-rm::f32
-ChassisStateEstimator::ConvertLeftPhi4(const JointFeedback &joint) const {
+rm::f32 ChassisStateEstimator::ConvertLeftPhi4(const JointFeedback &joint) const {
   return joint.pos_rad + config_.left_phi4_offset_rad;
 }
 
 /**
  * @brief 右腿前关节角度标定
  */
-rm::f32
-ChassisStateEstimator::ConvertRightPhi1(const JointFeedback &joint) const {
+rm::f32 ChassisStateEstimator::ConvertRightPhi1(const JointFeedback &joint) const {
   return -joint.pos_rad + config_.right_phi1_offset_rad;
 }
 
 /**
  * @brief 右腿后关节角度标定
  */
-rm::f32
-ChassisStateEstimator::ConvertRightPhi4(const JointFeedback &joint) const {
+rm::f32 ChassisStateEstimator::ConvertRightPhi4(const JointFeedback &joint) const {
   return -joint.pos_rad + config_.right_phi4_offset_rad;
 }

@@ -55,4 +55,3 @@ class Fsm {
 };
 
 }  // namespace gimbal
-

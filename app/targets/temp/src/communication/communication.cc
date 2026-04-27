@@ -2,8 +2,7 @@
 
 namespace communication {
 
-ChassisReceive::ChassisReceive(rm::hal::CanInterface &can, rm::u32 rx_std_id)
-    : rm::device::CanDevice(can, rx_std_id) {
+ChassisReceive::ChassisReceive(rm::hal::CanInterface &can, rm::u32 rx_std_id) : rm::device::CanDevice(can, rx_std_id) {
   command_.chassis.state = ChassisState::kUnable;
   command_.chassis.leg_length = LegLength::kNormal;
   command_.chassis.move_x = 0;
@@ -29,7 +28,6 @@ void ChassisReceive::RxCallback(const rm::hal::CanFrame *msg) {
   command_.chassis.move_y = static_cast<rm::i8>(msg->data[1]);
   command_.chassis.move_x = static_cast<rm::i8>(msg->data[2]);
   command_.ui.ui1 = msg->data[3];
-
 }
 
 Command ChassisReceive::getCommand() const { return command_; }
@@ -39,5 +37,4 @@ void Communication::SendCommandToGimbal() {
   tx_buf_gimbal_.fill(0);
 }
 
-} // namespace communication
-
+}  // namespace communication

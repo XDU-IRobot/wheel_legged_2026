@@ -76,15 +76,14 @@ class ChassisReceive : public rm::device::CanDevice {
 
  protected:
   Command command_{};
-};  
+};
 
 /**
  * @brief 通信适配层（预留发送到云台的扩展接口）
  */
 class Communication final : public ChassisReceive {
  public:
-  explicit Communication(rm::hal::CanInterface &can, rm::u32 rx_std_id = 0x59U)
-      : ChassisReceive(can, rx_std_id) {}
+  explicit Communication(rm::hal::CanInterface &can, rm::u32 rx_std_id = 0x59U) : ChassisReceive(can, rx_std_id) {}
 
   void SendCommandToGimbal();
 
@@ -92,6 +91,6 @@ class Communication final : public ChassisReceive {
   std::array<rm::u8, 8> tx_buf_gimbal_{};
 };
 
-} // namespace communication
+}  // namespace communication
 
-#endif // SRC_COMMUNICATION_COMMUNICATION_H
+#endif  // SRC_COMMUNICATION_COMMUNICATION_H

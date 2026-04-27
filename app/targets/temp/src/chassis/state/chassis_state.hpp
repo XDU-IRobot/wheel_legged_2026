@@ -82,11 +82,10 @@ struct ChassisStateEstimatorConfig {
   rm::f32 wheel_reduction_ratio{17.0f / 268.0f};
   rm::f32 max_valid_speed_mps{8.0f};
 
-  rm::f32 left_phi1_offset_rad{
-      PI - 1.6824f};
-  rm::f32 left_phi4_offset_rad{-2.465204f };
-  rm::f32 right_phi1_offset_rad{PI - 0.913293f };
-  rm::f32 right_phi4_offset_rad{1.70642f };
+  rm::f32 left_phi1_offset_rad{PI - 1.6824f};
+  rm::f32 left_phi4_offset_rad{-2.465204f};
+  rm::f32 right_phi1_offset_rad{PI - 0.913293f};
+  rm::f32 right_phi4_offset_rad{1.70642f};
 
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};
 };
@@ -162,8 +161,7 @@ class ChassisStateEstimator {
   [[nodiscard]] const wbr::CurrentState &GetCurrentState() const;
 
  private:
-  [[nodiscard]] CalibratedLegKinematicsInput
-  BuildCalibratedLegInput(const ChassisStateEstimatorInput &input) const;
+  [[nodiscard]] CalibratedLegKinematicsInput BuildCalibratedLegInput(const ChassisStateEstimatorInput &input) const;
 
   void UpdateLegState(const ChassisStateEstimatorInput &input, rm::f32 dt_s);
   void UpdateBodyState(const ChassisStateEstimatorInput &input);
@@ -184,4 +182,4 @@ class ChassisStateEstimator {
   rm::modules::LowPassFilterConstDt<float> theta_lr_dot_filter_{};
 };
 
-#endif // BALANCE_CHASSIS_CHASSIS_STATE_HPP
+#endif  // BALANCE_CHASSIS_CHASSIS_STATE_HPP

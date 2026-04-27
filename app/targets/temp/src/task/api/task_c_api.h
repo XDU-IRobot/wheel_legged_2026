@@ -1,7 +1,6 @@
 #ifndef SRC_TASK_TASK_C_API_H
 #define SRC_TASK_TASK_C_API_H
 
-
 /**
  * @file  task/api/task_c_api.h
  * @brief 任务 C 接口（供 FreeRTOS 线程入口调用）
@@ -56,13 +55,8 @@ void MotorTaskInitC(void);
  */
 void MotorTaskUpdateC(void);
 
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif // SRC_TASK_TASK_C_API_H
-
-
-
-
+#endif  // SRC_TASK_TASK_C_API_H

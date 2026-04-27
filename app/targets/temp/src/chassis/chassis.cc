@@ -28,16 +28,14 @@ constexpr f32 kOffGroundSupportForceThresholdN = 10.0f;
 // CAD 数据表（来源：HerKules_VOCAL_SJ_LQR_v4_with_data.m 的 Leg_data_l）。
 // eta 定义为 eta = l_w / l，其中 l_w 为轮心到腿部质心距离，l 为虚拟腿长。
 constexpr f32 kEtaLookupLegLengthM[] = {
-    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f,
-    0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f, 0.25f, 0.26f,
-    0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
+    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
+    0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
 };
 
 constexpr f32 kEtaLookupLwM[] = {
-    0.061990, 0.067466, 0.072986, 0.078550, 0.084158, 0.089810,
-    0.095506, 0.101246, 0.107030, 0.112858, 0.118730, 0.124646,
-    0.130606, 0.136610, 0.142658, 0.148750, 0.154886, 0.161066,
-    0.167290, 0.173558, 0.179870, 0.186226, 0.192626, 0.199070,
+    0.061990, 0.067466, 0.072986, 0.078550, 0.084158, 0.089810, 0.095506, 0.101246,
+    0.107030, 0.112858, 0.118730, 0.124646, 0.130606, 0.136610, 0.142658, 0.148750,
+    0.154886, 0.161066, 0.167290, 0.173558, 0.179870, 0.186226, 0.192626, 0.199070,
 };
 
 f32 ComputeEtaFromLegLength(f32 leg_length_m) {
@@ -51,8 +49,7 @@ f32 ComputeEtaFromLegLength(f32 leg_length_m) {
     const f32 l1 = kEtaLookupLegLengthM[i + 1];
     if (l >= l0 && l <= l1) {
       const f32 ratio = (l - l0) / (l1 - l0);
-      const f32 lw =
-          kEtaLookupLwM[i] + (kEtaLookupLwM[i + 1] - kEtaLookupLwM[i]) * ratio;
+      const f32 lw = kEtaLookupLwM[i] + (kEtaLookupLwM[i + 1] - kEtaLookupLwM[i]) * ratio;
       return lw / l;
     }
   }
@@ -61,55 +58,40 @@ f32 ComputeEtaFromLegLength(f32 leg_length_m) {
 }
 
 f32 ComputeSpringTorqueFromLegLength(f32 leg_length_m) {
-  const f32 x = acosf(
-      (kLegL2M * kLegL2M + kLegL1M * kLegL1M - leg_length_m * leg_length_m) /
-      (2.0f * kLegL2M * kLegL1M));
+  const f32 x =
+      acosf((kLegL2M * kLegL2M + kLegL1M * kLegL1M - leg_length_m * leg_length_m) / (2.0f * kLegL2M * kLegL1M));
   return -(sqrtf(1082.0f - 1070.0f * cosf(x)) * sinf(x - PI / 18.0f) /
            (sqrtf(404.0f - 177.0f * cosf(x - PI / 18.0f)) * sinf(x))) *
          kSpringTorqueScale;
 }
 
 constexpr f32 kCtrlP[240] = {
-    -2.494,    -11.314,  8.6684,   16.033,   -5.0423,  -7.1215,   -4.4352,
-    -14.034,   15.629,   22.941,   -13.921,  -12.103,  -0.78242,  2.5615,
-    -0.83756,  -4.9463,  2.2927,   1.154,    -5.5465,  18.287,    -6.0248,
-    -35.178,   16.331,   8.3203,   -13.53,   -50.072,  11.345,    53.457,
-    -30.045,   -12.072,  -0.42523, -4.4126,  1.2734,   -1.4889,   0.056401,
-    -1.4827,   -2.2208,  15.652,   -24.82,   -40.927,  57.572,    29.386,
-    -0.052456, -0.27998, -2.3225,  0.51579,  -0.75639, 2.9708,    -20.707,
-    57.551,    18.525,   -43.052,  -32.983,  -17.281,  -2.3227,   4.5849,
-    3.645,     -1.1418,  -5.6754,  -3.5824,  -2.494,   8.6684,    -11.314,
-    -7.1215,   -5.0423,  16.033,   -4.4352,  15.629,   -14.034,   -12.103,
-    -13.921,   22.941,   0.78242,  0.83756,  -2.5615,  -1.154,    -2.2927,
-    4.9463,    5.5465,   6.0248,   -18.287,  -8.3203,  -16.331,   35.178,
-    -2.2208,   -24.82,   15.652,   29.386,   57.572,   -40.927,   -0.052456,
-    -2.3225,   -0.27998, 2.9708,   -0.75639, 0.51579,  -13.53,    11.345,
-    -50.072,   -12.072,  -30.045,  53.457,   -0.42523, 1.2734,    -4.4126,
-    -1.4827,   0.056401, -1.4889,  -20.707,  18.525,   57.551,    -17.281,
-    -32.983,   -43.052,  -2.3227,  3.645,    4.5849,   -3.5824,   -5.6754,
-    -1.1418,   2.5402,   0.2878,   -9.1394,  -7.6683,  18.772,    -0.85692,
-    4.0535,    -0.42671, -15.537,  -10.926,  31.146,   0.44319,   -1.1035,
-    0.50541,   -2.4381,  1.2344,   -2.1999,  3.3908,   -7.8139,   3.4065,
-    -17.308,   8.977,    -15.725,  23.985,   19.218,   -12.538,   15.969,
-    16.072,    76.598,   -39.481,  0.64413,  0.55597,  -0.044438, 2.342,
-    4.2572,    -2.047,   1.2649,   -14.808,  -54.699,  42.054,    -40.441,
-    23.515,    0.15168,  -0.77208, -0.7123,  1.0587,   0.50401,   -5.9725,
-    -30.283,   -124.1,   67.032,   168.12,   -23.886,  -57.758,   -2.3512,
-    -11.915,   6.0507,   13.63,    0.48573,  -5.4422,  2.5402,    -9.1394,
-    0.2878,    -0.85692, 18.772,   -7.6683,  4.0535,   -15.537,   -0.42671,
-    0.44319,   31.146,   -10.926,  1.1035,   2.4381,   -0.50541,  -3.3908,
-    2.1999,    -1.2344,  7.8139,   17.308,   -3.4065,  -23.985,   15.725,
-    -8.977,    1.2649,   -54.699,  -14.808,  23.515,   -40.441,   42.054,
-    0.15168,   -0.7123,  -0.77208, -5.9725,  0.50401,  1.0587,    19.218,
-    15.969,    -12.538,  -39.481,  76.598,   16.072,   0.64413,   -0.044438,
-    0.55597,   -2.047,   4.2572,   2.342,    -30.283,  67.032,    -124.1,
-    -57.758,   -23.886,  168.12,   -2.3512,  6.0507,   -11.915,   -5.4422,
-    0.48573,   13.63,
+    -2.494,  -11.314,  8.6684,    16.033,    -5.0423,  -7.1215, -4.4352,  -14.034,  15.629,   22.941,    -13.921,
+    -12.103, -0.78242, 2.5615,    -0.83756,  -4.9463,  2.2927,  1.154,    -5.5465,  18.287,   -6.0248,   -35.178,
+    16.331,  8.3203,   -13.53,    -50.072,   11.345,   53.457,  -30.045,  -12.072,  -0.42523, -4.4126,   1.2734,
+    -1.4889, 0.056401, -1.4827,   -2.2208,   15.652,   -24.82,  -40.927,  57.572,   29.386,   -0.052456, -0.27998,
+    -2.3225, 0.51579,  -0.75639,  2.9708,    -20.707,  57.551,  18.525,   -43.052,  -32.983,  -17.281,   -2.3227,
+    4.5849,  3.645,    -1.1418,   -5.6754,   -3.5824,  -2.494,  8.6684,   -11.314,  -7.1215,  -5.0423,   16.033,
+    -4.4352, 15.629,   -14.034,   -12.103,   -13.921,  22.941,  0.78242,  0.83756,  -2.5615,  -1.154,    -2.2927,
+    4.9463,  5.5465,   6.0248,    -18.287,   -8.3203,  -16.331, 35.178,   -2.2208,  -24.82,   15.652,    29.386,
+    57.572,  -40.927,  -0.052456, -2.3225,   -0.27998, 2.9708,  -0.75639, 0.51579,  -13.53,   11.345,    -50.072,
+    -12.072, -30.045,  53.457,    -0.42523,  1.2734,   -4.4126, -1.4827,  0.056401, -1.4889,  -20.707,   18.525,
+    57.551,  -17.281,  -32.983,   -43.052,   -2.3227,  3.645,   4.5849,   -3.5824,  -5.6754,  -1.1418,   2.5402,
+    0.2878,  -9.1394,  -7.6683,   18.772,    -0.85692, 4.0535,  -0.42671, -15.537,  -10.926,  31.146,    0.44319,
+    -1.1035, 0.50541,  -2.4381,   1.2344,    -2.1999,  3.3908,  -7.8139,  3.4065,   -17.308,  8.977,     -15.725,
+    23.985,  19.218,   -12.538,   15.969,    16.072,   76.598,  -39.481,  0.64413,  0.55597,  -0.044438, 2.342,
+    4.2572,  -2.047,   1.2649,    -14.808,   -54.699,  42.054,  -40.441,  23.515,   0.15168,  -0.77208,  -0.7123,
+    1.0587,  0.50401,  -5.9725,   -30.283,   -124.1,   67.032,  168.12,   -23.886,  -57.758,  -2.3512,   -11.915,
+    6.0507,  13.63,    0.48573,   -5.4422,   2.5402,   -9.1394, 0.2878,   -0.85692, 18.772,   -7.6683,   4.0535,
+    -15.537, -0.42671, 0.44319,   31.146,    -10.926,  1.1035,  2.4381,   -0.50541, -3.3908,  2.1999,    -1.2344,
+    7.8139,  17.308,   -3.4065,   -23.985,   15.725,   -8.977,  1.2649,   -54.699,  -14.808,  23.515,    -40.441,
+    42.054,  0.15168,  -0.7123,   -0.77208,  -5.9725,  0.50401, 1.0587,   19.218,   15.969,   -12.538,   -39.481,
+    76.598,  16.072,   0.64413,   -0.044438, 0.55597,  -2.047,  4.2572,   2.342,    -30.283,  67.032,    -124.1,
+    -57.758, -23.886,  168.12,    -2.3512,   6.0507,   -11.915, -5.4422,  0.48573,  13.63,
 };
-} // namespace
+}  // namespace
 
-Chassis::Chassis(f32 l1, f32 l2)
-    : base_torque{}, left_leg_(l1, l2), right_leg_(l1, l2) {}
+Chassis::Chassis(f32 l1, f32 l2) : base_torque{}, left_leg_(l1, l2), right_leg_(l1, l2) {}
 
 /**
  * @brief 初始化底盘控制器与状态估计器参数。
@@ -144,19 +126,15 @@ void Chassis::Init() {
  */
 void Chassis::Update(const UpdateInput &input) {
   ChassisStateEstimatorInput estimator_input = input.estimator_input;
-  estimator_input.dt_s =
-      estimator_input.dt_s > 0.0f ? estimator_input.dt_s : kControlDtS;
+  estimator_input.dt_s = estimator_input.dt_s > 0.0f ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
   estimator_input.use_external_s_ref = false;
-  estimator_input.use_wheel_speed_direct =
-      (input.fsm_mode == Fsm::State::kSmallGyro);
+  estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSmallGyro);
 
   // 状态估计模块统一负责状态派生与关节标定。
   state_estimator_.Update(estimator_input);
-  const ChassisStateEstimatorOutput &state_output =
-      state_estimator_.GetOutput();
-  const CalibratedLegKinematicsInput &calibrated_leg_input =
-      state_output.calibrated_leg_input;
+  const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
+  const CalibratedLegKinematicsInput &calibrated_leg_input = state_output.calibrated_leg_input;
 
   imu_roll_ = estimator_input.imu.roll_rad;
 
@@ -229,8 +207,7 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
   const f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
   const f32 effective_mass_left_kg = 0.5f * kBodyMassKg + eta_left * kLegMassKg;
-  const f32 effective_mass_right_kg =
-      0.5f * kBodyMassKg + eta_right * kLegMassKg;
+  const f32 effective_mass_right_kg = 0.5f * kBodyMassKg + eta_right * kLegMassKg;
   const f32 gravity_ff_left = effective_mass_left_kg * kGravityMps2;
   const f32 gravity_ff_right = effective_mass_right_kg * kGravityMps2;
   const f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
@@ -238,17 +215,15 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
   const f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   left_l0_pid->Update(params_.leg_target_length_m, avg_leg_length_m);
   right_l0_pid->Update(params_.leg_target_length_m, avg_leg_length_m);
-  const f32 length_force_base =
-      0.5f * (left_l0_pid->out() + right_l0_pid->out());
+  const f32 length_force_base = 0.5f * (left_l0_pid->out() + right_l0_pid->out());
   l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
   r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0());
 
   const f32 left_theta = Wrap(current_state_.theta_ll, -M_PI, M_PI);
   const f32 right_theta = Wrap(current_state_.theta_lr, -M_PI, M_PI);
   const f32 theta_b = current_state_.theta_b;
-  const bool posture_valid =
-      (theta_b >= -0.7f && theta_b <= 0.7f && left_theta >= -0.8f &&
-       left_theta <= 1.4f && right_theta >= -0.8f && right_theta <= 1.4f);
+  const bool posture_valid = (theta_b >= -0.7f && theta_b <= 0.7f && left_theta >= -0.8f && left_theta <= 1.4f &&
+                              right_theta >= -0.8f && right_theta <= 1.4f);
   const bool use_jump_retract1 = (mode == Fsm::State::kJumpRetract1);
   const bool use_jump_extend = (mode == Fsm::State::kJumpExtend);
   const bool use_jump_retract2 = (mode == Fsm::State::kJumpRetract2);
@@ -258,40 +233,29 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
     f32 leg_length_force = length_force_base;
 
     if (use_jump_extend) {
-      left_l0_pid_jump_two->Update(params_.leg_target_length_m,
-                                   avg_leg_length_m);
-      right_l0_pid_jump_two->Update(params_.leg_target_length_m,
-                                    avg_leg_length_m);
-      leg_length_force =
-          0.5f * (left_l0_pid_jump_two->out() + right_l0_pid_jump_two->out());
+      left_l0_pid_jump_two->Update(params_.leg_target_length_m, avg_leg_length_m);
+      right_l0_pid_jump_two->Update(params_.leg_target_length_m, avg_leg_length_m);
+      leg_length_force = 0.5f * (left_l0_pid_jump_two->out() + right_l0_pid_jump_two->out());
       // kJumpExtend keeps normal roll coupling but disables spring compensation.
       left_force_ = leg_length_force + roll_pid->out();
       right_force_ = leg_length_force - roll_pid->out();
     } else if (use_jump_retract2) {
-      left_l0_pid_jump_three->Update(params_.leg_target_length_m,
-                                     avg_leg_length_m);
-      right_l0_pid_jump_three->Update(params_.leg_target_length_m,
-                                      avg_leg_length_m);
-      leg_length_force = 0.5f * (left_l0_pid_jump_three->out() +
-                                 right_l0_pid_jump_three->out());
+      left_l0_pid_jump_three->Update(params_.leg_target_length_m, avg_leg_length_m);
+      right_l0_pid_jump_three->Update(params_.leg_target_length_m, avg_leg_length_m);
+      leg_length_force = 0.5f * (left_l0_pid_jump_three->out() + right_l0_pid_jump_three->out());
       left_force_ = leg_length_force + roll_pid->out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid->out() + r_spring_torque_;
     } else if (use_jump_retract1) {
       left_force_ = leg_length_force + roll_pid->out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid->out() + r_spring_torque_;
     } else {
-      const f32 inertial_ff_left =
-          effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
-          current_state_.phi_dot * current_state_.s_dot;
-      const f32 inertial_ff_right =
-          effective_mass_right_kg *
-          (right_leg_.l0() / (2.0f * wheel_radius_m)) * current_state_.phi_dot *
-          current_state_.s_dot;
+      const f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
+                                   current_state_.phi_dot * current_state_.s_dot;
+      const f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
+                                    current_state_.phi_dot * current_state_.s_dot;
 
-      left_force_ = leg_length_force + gravity_ff_left + roll_pid->out() -
-                    inertial_ff_left + l_spring_torque_;
-      right_force_ = leg_length_force + gravity_ff_right - roll_pid->out() +
-                     inertial_ff_right + r_spring_torque_;
+      left_force_ = leg_length_force + gravity_ff_left + roll_pid->out() - inertial_ff_left + l_spring_torque_;
+      right_force_ = leg_length_force + gravity_ff_right - roll_pid->out() + inertial_ff_right + r_spring_torque_;
     }
 
     left_force = leg_length_force;
@@ -299,8 +263,7 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
 
     const bool off_ground_in_mid_leg =
         (mode == Fsm::State::kNormalMidLeg) &&
-        (left_Fn_ < kOffGroundSupportForceThresholdN ||
-         right_Fn_ < kOffGroundSupportForceThresholdN);
+        (left_Fn_ < kOffGroundSupportForceThresholdN || right_Fn_ < kOffGroundSupportForceThresholdN);
 
     if (use_jump_retract2 || off_ground_in_mid_leg) {
       left_wheel_tau_ = 0.f;
@@ -313,14 +276,10 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
     const f32 t_bl_cmd = -base_torque.t_bl;
     const f32 t_br_cmd = -base_torque.t_br;
 
-    lb_tau_ = left_leg_.jacobi_00() * left_force_ +
-              left_leg_.jacobi_01() * t_bl_cmd;
-    lf_tau_ = left_leg_.jacobi_10() * left_force_ +
-              left_leg_.jacobi_11() * t_bl_cmd;
-    rb_tau_ = right_leg_.jacobi_00() * right_force_ +
-              right_leg_.jacobi_01() * t_br_cmd;
-    rf_tau_ = right_leg_.jacobi_10() * right_force_ +
-              right_leg_.jacobi_11() * t_br_cmd;
+    lb_tau_ = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
+    lf_tau_ = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
+    rb_tau_ = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * t_br_cmd;
+    rf_tau_ = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * t_br_cmd;
 
     lf_tau_ = -lf_tau_;
     lb_tau_ = -lb_tau_;
@@ -331,14 +290,10 @@ void Chassis::ComputeUltiTau(Fsm::State mode) {
     left_force_ = 0.f;
     right_force_ = 0.f;
 
-    lb_tau_ = left_leg_.jacobi_00() * left_force_ +
-              left_leg_.jacobi_01() * (-left_leg_turn_pid->out());
-    lf_tau_ = left_leg_.jacobi_10() * left_force_ +
-              left_leg_.jacobi_11() * (-left_leg_turn_pid->out());
-    rb_tau_ = right_leg_.jacobi_00() * right_force_ +
-              right_leg_.jacobi_01() * (-right_leg_turn_pid->out());
-    rf_tau_ = right_leg_.jacobi_10() * right_force_ +
-              right_leg_.jacobi_11() * (-right_leg_turn_pid->out());
+    lb_tau_ = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid->out());
+    lf_tau_ = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid->out());
+    rb_tau_ = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid->out());
+    rf_tau_ = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid->out());
 
     lf_tau_ = -lf_tau_;
     lb_tau_ = -lb_tau_;
@@ -367,8 +322,8 @@ void Chassis::ComputeRightLegExcitation(float dt_s) {
   sysid_time_s_ += dt_s;
 
   // 设定较慢的速度规律
-  const float T_angle = 8.0f;   // 摆角周期8秒
-  const float T_length = 11.0f; // 腿长周期11秒（不同步，能解耦出更多数据）
+  const float T_angle = 8.0f;    // 摆角周期8秒
+  const float T_length = 11.0f;  // 腿长周期11秒（不同步，能解耦出更多数据）
 
   float phase_angle = 2.0f * M_PI * (sysid_time_s_ / T_angle);
   float phase_length = 2.0f * M_PI * (sysid_time_s_ / T_length);
@@ -421,14 +376,8 @@ void Chassis::ComputeRightLegExcitation(float dt_s) {
   // 通过串口输出数据用于拟合，降频到 100Hz 以免撑爆串口缓冲
   static uint32_t print_cnt = 0;
   if (++print_cnt % 5 == 0) {
-    printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\r\n",
-           sysid_time_s_,
-           t_br_cmd,
-           current_state_.theta_lr,
-           current_state_.theta_lr_dot,
-           filtered_ddtheta_lr_,
-           right_leg_.l0(),
-           length_force);
+    printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\r\n", sysid_time_s_, t_br_cmd, current_state_.theta_lr,
+           current_state_.theta_lr_dot, filtered_ddtheta_lr_, right_leg_.l0(), length_force);
   }
 }
 
@@ -446,28 +395,21 @@ void Chassis::Cal_Fn() {
   constexpr float kLegMassPerSideKg = kLegMassKg;
 
   // J^{-1} 的标准行列式应为 det = J00 * J11 - J01 * J10。
-  const float det_l = left_leg_.jacobi_00() * left_leg_.jacobi_11() -
-                      left_leg_.jacobi_01() * left_leg_.jacobi_10();
-  const float det_r = right_leg_.jacobi_00() * right_leg_.jacobi_11() -
-                      right_leg_.jacobi_01() * right_leg_.jacobi_10();
-  if (fabsf(det_l) < 1e-5f || fabsf(det_r) < 1e-5f ||
-      fabsf(left_leg_.l0()) < 1e-5f || fabsf(right_leg_.l0()) < 1e-5f) {
+  const float det_l = left_leg_.jacobi_00() * left_leg_.jacobi_11() - left_leg_.jacobi_01() * left_leg_.jacobi_10();
+  const float det_r = right_leg_.jacobi_00() * right_leg_.jacobi_11() - right_leg_.jacobi_01() * right_leg_.jacobi_10();
+  if (fabsf(det_l) < 1e-5f || fabsf(det_r) < 1e-5f || fabsf(left_leg_.l0()) < 1e-5f || fabsf(right_leg_.l0()) < 1e-5f) {
     left_Fn_ = 0.0f;
     right_Fn_ = 0.0f;
     return;
   }
 
   // 腿轴向虚拟力（左腿沿现有关节正方向）。
-  l_f = -(left_leg_.jacobi_11() * lb_real_torque_ -
-          left_leg_.jacobi_01() * lf_real_torque_) /
-        det_l;
+  l_f = -(left_leg_.jacobi_11() * lb_real_torque_ - left_leg_.jacobi_01() * lf_real_torque_) / det_l;
 
   // 右腿力矩先统一到与左腿一致的关节正方向，再走同一套解算公式。
   const float rf_tau_unified = -rf_real_torque_;
   const float rb_tau_unified = -rb_real_torque_;
-  r_f = -(right_leg_.jacobi_11() * rb_tau_unified -
-          right_leg_.jacobi_01() * rf_tau_unified) /
-        det_r;
+  r_f = -(right_leg_.jacobi_11() * rb_tau_unified - right_leg_.jacobi_01() * rf_tau_unified) / det_r;
 
   const float theta_ll = Wrap(current_state_.theta_ll, -M_PI, M_PI);
   const float theta_lr = Wrap(current_state_.theta_lr, -M_PI, M_PI);
@@ -477,29 +419,20 @@ void Chassis::Cal_Fn() {
   const float right_F_bh = r_f * arm_cos_f32(theta_lr);
 
   // 文档近似 l_bi ≈ (1 - eta_l) * l_i，故 l_bi_ddot ≈ (1 - eta_l) * l_i_ddot。
-  const float left_l0_ddot =
-      (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
-  const float right_l0_ddot =
-      (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
+  const float left_l0_ddot = (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
+  const float right_l0_ddot = (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
   left_l0_dot_prev_ = left_leg_.l0_dot();
   right_l0_dot_prev_ = right_leg_.l0_dot();
 
   const float eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const float eta_right = ComputeEtaFromLegLength(right_leg_.l0());
-  const float left_leg_dyn_comp =
-      -(1.0f - eta_left) * left_l0_ddot * arm_cos_f32(theta_ll);
-  const float right_leg_dyn_comp =
-      -(1.0f - eta_right) * right_l0_ddot * arm_cos_f32(theta_lr);
+  const float left_leg_dyn_comp = -(1.0f - eta_left) * left_l0_ddot * arm_cos_f32(theta_ll);
+  const float right_leg_dyn_comp = -(1.0f - eta_right) * right_l0_ddot * arm_cos_f32(theta_lr);
 
-  const float gravity_support_left =
-      (0.5f * kBodyMassKg + eta_left * kLegMassPerSideKg) * kGravityMps2;
-  const float gravity_support_right =
-      (0.5f * kBodyMassKg + eta_right * kLegMassPerSideKg) * kGravityMps2;
+  const float gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassPerSideKg) * kGravityMps2;
+  const float gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassPerSideKg) * kGravityMps2;
 
   // 动态项仍按腿质量补偿，避免把机体质量误并入腿长加速度项。
-  left_Fn_ =
-      left_F_bh + gravity_support_left + kLegMassPerSideKg * left_leg_dyn_comp;
-  right_Fn_ = right_F_bh + gravity_support_right +
-              kLegMassPerSideKg * right_leg_dyn_comp;
+  left_Fn_ = left_F_bh + gravity_support_left + kLegMassPerSideKg * left_leg_dyn_comp;
+  right_Fn_ = right_F_bh + gravity_support_right + kLegMassPerSideKg * right_leg_dyn_comp;
 }
-
