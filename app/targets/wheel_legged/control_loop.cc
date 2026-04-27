@@ -1,4 +1,5 @@
 #include "include/globals.hpp"
+#include "include/actuators.hpp"
 
 #include "main.h"
 
@@ -20,6 +21,44 @@ volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
 
 volatile float wl_fm_chassis_leg_length_m{0.0f};
 volatile float wl_fm_chassis_speed_mps{0.0f};
+
+volatile float wl_fm_motor_lf_pos_rad{0.0f};
+volatile float wl_fm_motor_lf_vel_rad_s{0.0f};
+volatile float wl_fm_motor_lf_tau_nm{0.0f};
+volatile float wl_fm_motor_lb_pos_rad{0.0f};
+volatile float wl_fm_motor_lb_vel_rad_s{0.0f};
+volatile float wl_fm_motor_lb_tau_nm{0.0f};
+volatile float wl_fm_motor_rf_pos_rad{0.0f};
+volatile float wl_fm_motor_rf_vel_rad_s{0.0f};
+volatile float wl_fm_motor_rf_tau_nm{0.0f};
+volatile float wl_fm_motor_rb_pos_rad{0.0f};
+volatile float wl_fm_motor_rb_vel_rad_s{0.0f};
+volatile float wl_fm_motor_rb_tau_nm{0.0f};
+volatile float wl_fm_wheel_left_rad_s{0.0f};
+volatile float wl_fm_wheel_right_rad_s{0.0f};
+
+volatile float wl_fm_imu_roll_rad{0.0f};
+volatile float wl_fm_imu_pitch_rad{0.0f};
+volatile float wl_fm_imu_yaw_rad{0.0f};
+volatile float wl_fm_imu_gyro_x_rad_s{0.0f};
+volatile float wl_fm_imu_gyro_y_rad_s{0.0f};
+volatile float wl_fm_imu_gyro_z_rad_s{0.0f};
+volatile float wl_fm_imu_acc_x_mps2{0.0f};
+volatile float wl_fm_imu_acc_y_mps2{0.0f};
+volatile float wl_fm_imu_acc_z_mps2{0.0f};
+
+volatile float wl_fm_model_s_m{0.0f};
+volatile float wl_fm_model_s_dot_mps{0.0f};
+volatile float wl_fm_model_phi_rad{0.0f};
+volatile float wl_fm_model_phi_dot_rad_s{0.0f};
+volatile float wl_fm_model_theta_ll_rad{0.0f};
+volatile float wl_fm_model_theta_ll_dot_rad_s{0.0f};
+volatile float wl_fm_model_theta_lr_rad{0.0f};
+volatile float wl_fm_model_theta_lr_dot_rad_s{0.0f};
+volatile float wl_fm_model_theta_b_rad{0.0f};
+volatile float wl_fm_model_theta_b_dot_rad_s{0.0f};
+volatile float wl_fm_model_l_l_m{0.0f};
+volatile float wl_fm_model_l_r_m{0.0f};
 }
 
 namespace {
@@ -29,6 +68,7 @@ constexpr int16_t kDialJumpReleaseThreshold = 260;
 constexpr int16_t kDialSpinEnableThreshold = -360;
 constexpr int16_t kDialSpinDisableThreshold = -220;
 constexpr float kControlLoopDtS = 0.002f;
+chassis_runtime::Actuators g_actuators{};
 
 struct Dr16RawInput {
   bool online{false};
@@ -41,6 +81,7 @@ struct InputSnapshot {
   bool input_valid{false};
 
   Dr16RawInput dr16{};
+  chassis::ChassisStateEstimatorInput estimator_input{};
 
   bool chassis_enable_request{false};
   chassis::Fsm::LegLengthMode chassis_leg_length_mode{chassis::Fsm::LegLengthMode::kLow};
@@ -128,6 +169,8 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16,
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g,
                                        InputSnapshot &input,
                                        Dr16SemanticState &semantic_state) {
+  g_actuators.FillEstimatorInput(g, input.estimator_input);
+
   Dr16RawInput dr16{
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
       .switch_l = g.dr16.switch_l(),
@@ -199,6 +242,46 @@ void UpdateDebugSnapshot(const uint32_t tick_ms,
 
   wl_fm_chassis_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
+
+  const auto &motor = input.estimator_input;
+  wl_fm_motor_lf_pos_rad = motor.left_leg.front.pos_rad;
+  wl_fm_motor_lf_vel_rad_s = motor.left_leg.front.vel_rad_s;
+  wl_fm_motor_lf_tau_nm = motor.left_leg.front.torque_nm;
+  wl_fm_motor_lb_pos_rad = motor.left_leg.back.pos_rad;
+  wl_fm_motor_lb_vel_rad_s = motor.left_leg.back.vel_rad_s;
+  wl_fm_motor_lb_tau_nm = motor.left_leg.back.torque_nm;
+  wl_fm_motor_rf_pos_rad = motor.right_leg.front.pos_rad;
+  wl_fm_motor_rf_vel_rad_s = motor.right_leg.front.vel_rad_s;
+  wl_fm_motor_rf_tau_nm = motor.right_leg.front.torque_nm;
+  wl_fm_motor_rb_pos_rad = motor.right_leg.back.pos_rad;
+  wl_fm_motor_rb_vel_rad_s = motor.right_leg.back.vel_rad_s;
+  wl_fm_motor_rb_tau_nm = motor.right_leg.back.torque_nm;
+  wl_fm_wheel_left_rad_s = motor.wheel.left_rad_s;
+  wl_fm_wheel_right_rad_s = motor.wheel.right_rad_s;
+
+  wl_fm_imu_roll_rad = motor.imu.roll_rad;
+  wl_fm_imu_pitch_rad = motor.imu.pitch_rad;
+  wl_fm_imu_yaw_rad = motor.imu.yaw_rad;
+  wl_fm_imu_gyro_x_rad_s = motor.imu.gyro_x_rad_s;
+  wl_fm_imu_gyro_y_rad_s = motor.imu.gyro_y_rad_s;
+  wl_fm_imu_gyro_z_rad_s = motor.imu.gyro_z_rad_s;
+  wl_fm_imu_acc_x_mps2 = motor.imu.acc_x_mps2;
+  wl_fm_imu_acc_y_mps2 = motor.imu.acc_y_mps2;
+  wl_fm_imu_acc_z_mps2 = motor.imu.acc_z_mps2;
+
+  const auto &x = chassis_control_output.current_state;
+  wl_fm_model_s_m = x.s;
+  wl_fm_model_s_dot_mps = x.s_dot;
+  wl_fm_model_phi_rad = x.phi;
+  wl_fm_model_phi_dot_rad_s = x.phi_dot;
+  wl_fm_model_theta_ll_rad = x.theta_ll;
+  wl_fm_model_theta_ll_dot_rad_s = x.theta_ll_dot;
+  wl_fm_model_theta_lr_rad = x.theta_lr;
+  wl_fm_model_theta_lr_dot_rad_s = x.theta_lr_dot;
+  wl_fm_model_theta_b_rad = x.theta_b;
+  wl_fm_model_theta_b_dot_rad_s = x.theta_b_dot;
+  wl_fm_model_l_l_m = x.l_l;
+  wl_fm_model_l_r_m = x.l_r;
 }
 
 }  // namespace
@@ -228,10 +311,13 @@ void ControlLoop() {
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
 
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
+  g_actuators.ApplyChassisOutput(*globals, chassis_control_output,
+                                 chassis_output.control.enable_dm);
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output);
 }

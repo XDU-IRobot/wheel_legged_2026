@@ -1,7 +1,9 @@
-#pragma once
+﻿#pragma once
 
-#include <chrono>
 #include <cstdint>
+#include <optional>
+
+#include "fdcan.h"
 
 #include <librm.hpp>
 
@@ -12,40 +14,32 @@
 #include "gimbal/fsm.hpp"
 #include "librm/device/remote/dr16.hpp"
 
-/**
- * @brief 板级全局共享资源
- */
 struct SharedResources {
-  /**
-   * @brief DTCM 外的 DMA 相关资源指针
-   */
+  using DmMitMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
+
+  static constexpr double kJointCanTxLimitHz = 4000.0;
+  static constexpr double kWheelCanTxLimitHz = 1000.0;
+  static constexpr float kPi = 3.14159265358979323846f;
+
   SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};
 
-  /**
-   * @brief 遥控器
-   *
-   * 遥控器接在底盘 MCU 本地，因此直接使用 no_dtcm 中的 rc_uart。
-   */
   rm::device::DR16 dr16{no_dtcm->rc_uart};
 
-  /**
-   * @brief 底盘状态机
-   */
+  // Keep non-pointer members but defer construction to Init() to avoid static init hardfault.
+  std::optional<rm::hal::ThrottledCan<>> joint_can{};
+  std::optional<rm::hal::ThrottledCan<>> wheel_can{};
+  std::optional<DmMitMotor> dm_lf{};
+  std::optional<DmMitMotor> dm_lb{};
+  std::optional<DmMitMotor> dm_rf{};
+  std::optional<DmMitMotor> dm_rb{};
+  std::optional<rm::device::M3508> left_wheel{};
+  std::optional<rm::device::M3508> right_wheel{};
+  std::optional<rm::device::HipnucImu> chassis_imu{};
+
   chassis::Fsm chassis_fsm{};
-
-  /**
-   * @brief 底盘控制模块
-   */
   chassis::Chassis chassis{};
-
-  /**
-   * @brief 云台状态机
-   */
   gimbal::Fsm gimbal_fsm{};
 
-  /**
-   * @brief 获取单例实例
-   */
   static SharedResources &GetInstance() {
     static SharedResources *shared_resources_instance{nullptr};
 
@@ -57,13 +51,44 @@ struct SharedResources {
     return *shared_resources_instance;
   }
 
-  /**
-   * @brief 初始化所有全局对象
-   */
   void Init() {
-    // dr16.SetHeartbeatTimeout(std::chrono::milliseconds(50));
-
     dr16.Begin();
+
+    if (!joint_can.has_value()) {
+      joint_can.emplace(hfdcan1, kJointCanTxLimitHz);
+      joint_can->SetFilter(0, 0);
+      joint_can->Begin();
+    }
+    if (!wheel_can.has_value()) {
+      wheel_can.emplace(hfdcan2, kWheelCanTxLimitHz);
+      wheel_can->SetFilter(0, 0);
+      wheel_can->Begin();
+    }
+
+    if (!dm_lf.has_value()) {
+      dm_lf.emplace(*joint_can,
+                    rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                        0x17, 0x07, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+      dm_lb.emplace(*joint_can,
+                    rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                        0x14, 0x04, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+      dm_rf.emplace(*joint_can,
+                    rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                        0x16, 0x06, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+      dm_rb.emplace(*joint_can,
+                    rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                        0x15, 0x05, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+    }
+
+    if (!left_wheel.has_value()) {
+      left_wheel.emplace(*wheel_can, 0x06);
+      right_wheel.emplace(*wheel_can, 0x05);
+    }
+
+    if (!chassis_imu.has_value()) {
+      chassis_imu.emplace(no_dtcm->imu_uart);
+      chassis_imu->Begin();
+    }
 
     chassis_fsm.Init();
     chassis.Init();
@@ -71,14 +96,6 @@ struct SharedResources {
   }
 };
 
-/**
- * @brief 全局资源指针
- *
- * 建议在 main.cc 中完成赋值：
- *
- *   globals = &Globals::GetInstance();
- *
- */
 extern SharedResources *globals;
 
 extern "C" {
@@ -101,11 +118,44 @@ extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
 
 extern volatile float wl_fm_chassis_leg_length_m;
 extern volatile float wl_fm_chassis_speed_mps;
+
+extern volatile float wl_fm_motor_lf_pos_rad;
+extern volatile float wl_fm_motor_lf_vel_rad_s;
+extern volatile float wl_fm_motor_lf_tau_nm;
+extern volatile float wl_fm_motor_lb_pos_rad;
+extern volatile float wl_fm_motor_lb_vel_rad_s;
+extern volatile float wl_fm_motor_lb_tau_nm;
+extern volatile float wl_fm_motor_rf_pos_rad;
+extern volatile float wl_fm_motor_rf_vel_rad_s;
+extern volatile float wl_fm_motor_rf_tau_nm;
+extern volatile float wl_fm_motor_rb_pos_rad;
+extern volatile float wl_fm_motor_rb_vel_rad_s;
+extern volatile float wl_fm_motor_rb_tau_nm;
+extern volatile float wl_fm_wheel_left_rad_s;
+extern volatile float wl_fm_wheel_right_rad_s;
+
+extern volatile float wl_fm_imu_roll_rad;
+extern volatile float wl_fm_imu_pitch_rad;
+extern volatile float wl_fm_imu_yaw_rad;
+extern volatile float wl_fm_imu_gyro_x_rad_s;
+extern volatile float wl_fm_imu_gyro_y_rad_s;
+extern volatile float wl_fm_imu_gyro_z_rad_s;
+extern volatile float wl_fm_imu_acc_x_mps2;
+extern volatile float wl_fm_imu_acc_y_mps2;
+extern volatile float wl_fm_imu_acc_z_mps2;
+
+extern volatile float wl_fm_model_s_m;
+extern volatile float wl_fm_model_s_dot_mps;
+extern volatile float wl_fm_model_phi_rad;
+extern volatile float wl_fm_model_phi_dot_rad_s;
+extern volatile float wl_fm_model_theta_ll_rad;
+extern volatile float wl_fm_model_theta_ll_dot_rad_s;
+extern volatile float wl_fm_model_theta_lr_rad;
+extern volatile float wl_fm_model_theta_lr_dot_rad_s;
+extern volatile float wl_fm_model_theta_b_rad;
+extern volatile float wl_fm_model_theta_b_dot_rad_s;
+extern volatile float wl_fm_model_l_l_m;
+extern volatile float wl_fm_model_l_r_m;
 }
 
-/**
- * @brief 主控制循环
- *
- * 由 main.cc 中的定时器任务调度器以固定周期调用。
- */
 void ControlLoop();

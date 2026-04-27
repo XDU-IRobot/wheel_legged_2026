@@ -31,6 +31,12 @@ void AppMain() {
 
   for (;;) {
     // globals->ServiceCanQueues();
+    if (globals->joint_can.has_value()) {
+      (void)globals->joint_can->Process();
+    }
+    if (globals->wheel_can.has_value()) {
+      (void)globals->wheel_can->Process();
+    }
   }
 }
 }
