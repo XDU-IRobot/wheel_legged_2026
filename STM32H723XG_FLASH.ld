@@ -241,6 +241,16 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
+  /* Dedicated C/C++ heap in DMA-accessible RAM_D1 */
+  .heap_ram_d1 (NOLOAD) :
+  {
+    . = ALIGN(8);
+    __heap_d1_start = .;
+    . = . + _Min_Heap_Size;
+    __heap_d1_end = .;
+    . = ALIGN(8);
+  } >RAM_D1
+
 
 
   /* Remove information from the standard libraries */
