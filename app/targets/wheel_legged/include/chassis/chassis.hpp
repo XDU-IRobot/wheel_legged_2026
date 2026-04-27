@@ -41,8 +41,7 @@ class Chassis {
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
  private:
-  void ComputeActuatorTorque(const UpdateInput &input,
-                             const ChassisStateEstimatorOutput &state_output);
+  void ComputeActuatorTorque(const UpdateInput &input, const ChassisStateEstimatorOutput &state_output);
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};

@@ -62,8 +62,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   right_leg_.Update(estimator_input.dt_s);
 
   output_.current_state = state_output.current;
-  output_.mean_leg_length_m =
-      0.5f * (state_output.left_leg_length_m + state_output.right_leg_length_m);
+  output_.mean_leg_length_m = 0.5f * (state_output.left_leg_length_m + state_output.right_leg_length_m);
   output_.speed_mps = state_output.fused_speed_mps;
 
   if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
@@ -79,16 +78,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const wbr::CurrentState current = state_output.current;
   base_torque_ = lqr_controller_.ComputeControl(current, input.expected);
 
-  const rm::f32 leg_length_avg =
-      0.5f * (state_output.left_leg_length_m + state_output.right_leg_length_m);
+  const rm::f32 leg_length_avg = 0.5f * (state_output.left_leg_length_m + state_output.right_leg_length_m);
   const rm::f32 leg_length_dot_avg = 0.5f * (left_leg_.l0_dot() + right_leg_.l0_dot());
 
-  const rm::f32 base_leg_force =
-      rm::modules::Clamp(kLegLengthKp * (input.target_leg_length_m - leg_length_avg) -
-                             kLegLengthKd * leg_length_dot_avg,
-                         -kMaxLegForceN, kMaxLegForceN);
-  const rm::f32 roll_coupling =
-      rm::modules::Clamp(-kRollCouplingKp * current.theta_b, -120.0f, 120.0f);
+  const rm::f32 base_leg_force = rm::modules::Clamp(
+      kLegLengthKp * (input.target_leg_length_m - leg_length_avg) - kLegLengthKd * leg_length_dot_avg, -kMaxLegForceN,
+      kMaxLegForceN);
+  const rm::f32 roll_coupling = rm::modules::Clamp(-kRollCouplingKp * current.theta_b, -120.0f, 120.0f);
 
   const rm::f32 left_force = base_leg_force + roll_coupling;
   const rm::f32 right_force = base_leg_force - roll_coupling;

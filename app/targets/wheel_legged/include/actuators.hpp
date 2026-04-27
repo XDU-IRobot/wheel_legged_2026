@@ -8,8 +8,7 @@ namespace chassis_runtime {
 
 class Actuators {
  public:
-  void ProcessCanTx(SharedResources &g, uint32_t joint_budget = 8U,
-                    uint32_t wheel_budget = 4U) {
+  void ProcessCanTx(SharedResources &g, uint32_t joint_budget = 8U, uint32_t wheel_budget = 4U) {
     if (g.joint_can.has_value()) {
       ProcessOneBus(*g.joint_can, joint_budget);
     }
@@ -44,8 +43,7 @@ class Actuators {
     input.imu.acc_z_mps2 = g.chassis_imu->acc_z();
   }
 
-  void ApplyChassisOutput(SharedResources &g, const chassis::Chassis::UpdateOutput &output,
-                          bool enable_dm) {
+  void ApplyChassisOutput(SharedResources &g, const chassis::Chassis::UpdateOutput &output, bool enable_dm) {
     if (!IsReady(g)) {
       return;
     }
@@ -74,9 +72,9 @@ class Actuators {
   bool dm_enabled_latched_{false};
 
   static bool IsReady(const SharedResources &g) {
-    return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() &&
-           g.dm_lb.has_value() && g.dm_rf.has_value() && g.dm_rb.has_value() &&
-           g.left_wheel.has_value() && g.right_wheel.has_value() && g.chassis_imu.has_value();
+    return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() && g.dm_lb.has_value() &&
+           g.dm_rf.has_value() && g.dm_rb.has_value() && g.left_wheel.has_value() && g.right_wheel.has_value() &&
+           g.chassis_imu.has_value();
   }
 
   static int16_t ClampToI16(float value) {
@@ -127,8 +125,7 @@ class Actuators {
     dm_enabled_latched_ = false;
   }
 
-  static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau,
-                               float rb_tau) {
+  static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
     g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
     g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
     g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);

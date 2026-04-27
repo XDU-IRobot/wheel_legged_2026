@@ -15,8 +15,7 @@
  *   .sram4 (NOLOAD) : { *(.sram4) } >RAM_D1
  */
 struct SharedResourcesNoDtcm {
-  rm::hal::stm32::Uart rc_uart{huart5, 18, rm::hal::stm32::UartMode::kNormal,
-                               rm::hal::stm32::UartMode::kDma};
+  rm::hal::stm32::Uart rc_uart{huart5, 18, rm::hal::stm32::UartMode::kNormal, rm::hal::stm32::UartMode::kDma};
   rm::hal::stm32::Uart imu_uart{huart10, 518, rm::hal::stm32::UartMode::kNormal, rm::hal::stm32::UartMode::kDma};
 };
 
