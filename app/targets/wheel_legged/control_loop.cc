@@ -17,6 +17,9 @@ volatile int16_t wl_fm_dr16_dial{0};
 volatile uint8_t wl_fm_dr16_enable_request{0};
 volatile uint8_t wl_fm_dr16_spin_request{0};
 volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
+
+volatile float wl_fm_chassis_leg_length_m{0.0f};
+volatile float wl_fm_chassis_speed_mps{0.0f};
 }
 
 namespace {
@@ -25,6 +28,7 @@ constexpr int16_t kDialJumpTriggerThreshold = 420;
 constexpr int16_t kDialJumpReleaseThreshold = 260;
 constexpr int16_t kDialSpinEnableThreshold = -360;
 constexpr int16_t kDialSpinDisableThreshold = -220;
+constexpr float kControlLoopDtS = 0.002f;
 
 struct Dr16RawInput {
   bool online{false};
@@ -165,7 +169,8 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input,
 void UpdateDebugSnapshot(const uint32_t tick_ms,
                          const InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output,
-                         const gimbal::Fsm::Output &gimbal_output) {
+                         const gimbal::Fsm::Output &gimbal_output,
+                         const chassis::Chassis::UpdateOutput &chassis_control_output) {
   DebugSnapshot debug{};
   debug.tick_ms = tick_ms;
   debug.chassis_mode = chassis_output.mode;
@@ -191,6 +196,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms,
   wl_fm_dr16_spin_request = static_cast<uint8_t>(debug.dr16_chassis_spin_request);
   wl_fm_dr16_jump_trigger_edge =
       static_cast<uint8_t>(debug.dr16_chassis_jump_trigger_edge);
+
+  wl_fm_chassis_leg_length_m = chassis_control_output.mean_leg_length_m;
+  wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
 }
 
 }  // namespace
@@ -204,7 +212,9 @@ void ControlLoop() {
 
   static InputSnapshot input{};
   static Dr16SemanticState dr16_semantic_state{};
+  static chassis::Chassis::UpdateOutput chassis_control_output{};
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
+  input.chassis_current_leg_length_m = chassis_control_output.mean_leg_length_m;
 
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
@@ -212,6 +222,16 @@ void ControlLoop() {
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
 
-  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output);
-}
+  chassis::Chassis::UpdateInput chassis_update_input{};
+  chassis_update_input.fsm_mode = chassis_output.mode;
+  chassis_update_input.enable_output = chassis_output.control.enable_dm;
+  chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
+  chassis_update_input.spin_enable = chassis_output.control.spin_enable;
+  chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
 
+  globals->chassis.Update(chassis_update_input);
+  chassis_control_output = globals->chassis.GetOutput();
+
+  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output);
+}

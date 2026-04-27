@@ -7,6 +7,7 @@
 
 #include "globals_no_dtcm.hpp"
 
+#include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
 #include "gimbal/fsm.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -31,6 +32,11 @@ struct SharedResources {
    * @brief 底盘状态机
    */
   chassis::Fsm chassis_fsm{};
+
+  /**
+   * @brief 底盘控制模块
+   */
+  chassis::Chassis chassis{};
 
   /**
    * @brief 云台状态机
@@ -60,6 +66,7 @@ struct SharedResources {
     dr16.Begin();
 
     chassis_fsm.Init();
+    chassis.Init();
     gimbal_fsm.Init();
   }
 };
@@ -91,6 +98,9 @@ extern volatile int16_t wl_fm_dr16_dial;
 extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
+
+extern volatile float wl_fm_chassis_leg_length_m;
+extern volatile float wl_fm_chassis_speed_mps;
 }
 
 /**
