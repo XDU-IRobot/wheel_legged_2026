@@ -5,8 +5,16 @@
 
 #include <librm.hpp>
 
+/**
+ * @file  targets/wheel_legged/include/chassis/leg_kinematics.hpp
+ * @brief 五连杆腿部运动学解算器
+ */
+
 namespace chassis::wbr {
 
+/**
+ * @brief 单腿运动学模型（正解 + 雅可比）
+ */
 class LegKinematics {
  public:
   LegKinematics(rm::f32 l1 = 0.215f, rm::f32 l2 = 0.254f) : l1_(l1), l2_(l2) {}
@@ -27,6 +35,10 @@ class LegKinematics {
   [[nodiscard]] rm::f32 jacobi_10() const { return jacobi_10_; }
   [[nodiscard]] rm::f32 jacobi_11() const { return jacobi_11_; }
 
+  /**
+   * @brief 单步更新腿部几何量、速度量与雅可比
+   * @param dt_s 控制周期
+   */
   void Update(const rm::f32 dt_s = 0.002f) {
     static constexpr rm::f32 kPi = 3.14159265358979323846f;
     static constexpr rm::f32 kMinSin = 1e-5f;
@@ -104,21 +116,25 @@ class LegKinematics {
   }
 
  private:
+  // 关节角与角速度输入
   rm::f32 phi1_{0.0f};
   rm::f32 phi4_{0.0f};
   rm::f32 w_phi1_{0.0f};
   rm::f32 w_phi4_{0.0f};
 
+  // 中间几何状态
   rm::f32 phi2_{0.0f};
   rm::f32 phi3_{0.0f};
   rm::f32 phi0_{0.0f};
   rm::f32 l0_{0.0f};
   rm::f32 l0_dot_{0.0f};
 
+  // 弹簧相关角状态
   rm::f32 beta_{0.0f};
   rm::f32 beta_last_{0.0f};
   rm::f32 beta_dot_{0.0f};
 
+  // 几何点坐标与速度
   rm::f32 xb_{0.0f};
   rm::f32 yb_{0.0f};
   rm::f32 xd_{0.0f};
@@ -129,15 +145,18 @@ class LegKinematics {
   rm::f32 yc_dot_{0.0f};
   rm::f32 l_bd_{0.0f};
 
+  // 求解 phi2 的中间量
   rm::f32 A0_{0.0f};
   rm::f32 B0_{0.0f};
   rm::f32 C0_{0.0f};
 
+  // 雅可比矩阵元素
   rm::f32 jacobi_00_{0.0f};
   rm::f32 jacobi_01_{0.0f};
   rm::f32 jacobi_10_{0.0f};
   rm::f32 jacobi_11_{0.0f};
 
+  // 连杆参数
   rm::f32 l1_{0.215f};
   rm::f32 l2_{0.254f};
 };

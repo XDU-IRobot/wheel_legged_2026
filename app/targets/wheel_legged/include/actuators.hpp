@@ -1,25 +1,26 @@
-﻿#pragma once
+#pragma once
 
 #include <cstdint>
 
 #include "globals.hpp"
 
+/**
+ * @file  targets/wheel_legged/include/actuators.hpp
+ * @brief 执行器适配层：反馈采集与电机命令下发
+ */
+
 namespace chassis_runtime {
 
+/**
+ * @brief 底盘执行器封装
+ * @note  本类不调用 CAN::Process()，CAN 发送由主循环统一驱动。
+ */
 class Actuators {
  public:
-  void ProcessCanTx(SharedResources &g, uint32_t joint_budget = 8U, uint32_t wheel_budget = 4U) {
-    if (g.joint_can.has_value()) {
-      ProcessOneBus(*g.joint_can, joint_budget);
-    }
-    if (g.wheel_can.has_value()) {
-      ProcessOneBus(*g.wheel_can, wheel_budget);
-    }
-  }
-
+  /**
+   * @brief 从硬件反馈填充状态估计输入
+   */
   void FillEstimatorInput(SharedResources &g, chassis::ChassisStateEstimatorInput &input) {
-    ProcessCanTx(g);
-
     if (!IsReady(g)) {
       return;
     }
@@ -43,6 +44,9 @@ class Actuators {
     input.imu.acc_z_mps2 = g.chassis_imu->acc_z();
   }
 
+  /**
+   * @brief 下发底盘控制输出到关节与轮毂电机
+   */
   void ApplyChassisOutput(SharedResources &g, const chassis::Chassis::UpdateOutput &output, bool enable_dm) {
     if (!IsReady(g)) {
       return;
@@ -63,13 +67,11 @@ class Actuators {
     const float lw_current = enable_dm ? output.lw_tau * kWheelTorqueToCurrent : 0.0f;
     const float rw_current = enable_dm ? output.rw_tau * kWheelTorqueToCurrent : 0.0f;
     SendWheelCurrent(g, lw_current, rw_current);
-
-    ProcessCanTx(g);
   }
 
  private:
-  static constexpr float kWheelTorqueToCurrent = 2436.5f;
-  bool dm_enabled_latched_{false};
+  static constexpr float kWheelTorqueToCurrent = 2436.5f;  ///< 轮毂力矩转电流比例
+  bool dm_enabled_latched_{false};                         ///< DM 使能锁存
 
   static bool IsReady(const SharedResources &g) {
     return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() && g.dm_lb.has_value() &&
@@ -87,14 +89,9 @@ class Actuators {
     return static_cast<int16_t>(value);
   }
 
-  static void ProcessOneBus(rm::hal::ThrottledCan<> &can, uint32_t budget) {
-    for (uint32_t i = 0; i < budget; ++i) {
-      if (!can.Process()) {
-        break;
-      }
-    }
-  }
-
+  /**
+   * @brief 首次使能全部 DM 电机
+   */
   void EnableDmIfNeeded(SharedResources &g) {
     if (dm_enabled_latched_) {
       return;
@@ -112,6 +109,9 @@ class Actuators {
     dm_enabled_latched_ = true;
   }
 
+  /**
+   * @brief 失能全部 DM 电机
+   */
   void DisableDmIfNeeded(SharedResources &g) {
     if (!dm_enabled_latched_) {
       return;

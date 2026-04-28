@@ -7,6 +7,11 @@
 
 #include "tim.h"
 
+/**
+ * @file  targets/wheel_legged/main.cc
+ * @brief 应用入口：初始化共享资源并启动 500Hz 控制任务
+ */
+
 namespace {
 
 constexpr float kControlLoopFrequencyHz = 500.0f;
@@ -21,6 +26,9 @@ SharedResources g_globals;
 
 extern "C" {
 
+/**
+ * @brief 应用主函数（由 C 层启动）
+ */
 void AppMain() {
   globals = &g_globals;
   globals->Init();
@@ -30,7 +38,6 @@ void AppMain() {
   (void)mainloop.Start();
 
   for (;;) {
-    // globals->ServiceCanQueues();
     if (globals->joint_can.has_value()) {
       (void)globals->joint_can->Process();
     }

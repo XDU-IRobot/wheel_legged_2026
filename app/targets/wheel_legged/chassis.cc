@@ -5,9 +5,14 @@
 #include <cmath>
 #include <vector>
 
+/**
+ * @file  targets/wheel_legged/chassis.cc
+ * @brief 底盘控制实现：状态估计、LQR、补偿与力矩输出
+ */
+
 namespace {
 
-constexpr rm::f32 kControlDtS = 0.002f;
+constexpr rm::f32 kControlDtS = 0.002f;  ///< 底盘控制周期（500Hz）
 
 constexpr rm::f32 kLegL1M = 0.215f;
 constexpr rm::f32 kLegL2M = 0.254f;
@@ -91,6 +96,9 @@ bool IsSafeStopMode(const chassis::Fsm::State mode) {
 
 }  // namespace
 
+/**
+ * @brief 初始化 PID 参数、LQR 系数与状态估计器
+ */
 void chassis::Chassis::Init() {
   const auto init_pid = [](rm::modules::PID &pid, const rm::f32 kp, const rm::f32 ki, const rm::f32 kd,
                            const rm::f32 max_out, const rm::f32 max_iout) {
@@ -119,6 +127,9 @@ void chassis::Chassis::Init() {
   SafeStop();
 }
 
+/**
+ * @brief 将所有执行器输出清零
+ */
 void chassis::Chassis::SafeStop() {
   output_.lf_tau = 0.0f;
   output_.lb_tau = 0.0f;
@@ -128,6 +139,10 @@ void chassis::Chassis::SafeStop() {
   output_.rw_tau = 0.0f;
 }
 
+/**
+ * @brief 底盘控制单步更新入口
+ * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
+ */
 void chassis::Chassis::Update(const UpdateInput &input) {
   ChassisStateEstimatorInput estimator_input = input.estimator_input;
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
@@ -178,6 +193,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   ComputeActuatorTorque(input, state_output);
 }
 
+/**
+ * @brief 组合 LQR 与补偿项，计算六电机最终力矩
+ */
 void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              const ChassisStateEstimatorOutput &state_output) {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
@@ -306,6 +324,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   }
 }
 
+/**
+ * @brief 根据实测关节力矩估计左右支撑力
+ */
 void chassis::Chassis::CalSupportForce() {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
 

@@ -4,52 +4,87 @@
 #include "fsm.hpp"
 #include "lqr_controllers.hpp"
 
+/**
+ * @file  targets/wheel_legged/include/chassis/chassis.hpp
+ * @brief 轮腿底盘控制主类
+ */
+
 namespace chassis {
 
+/**
+ * @brief 底盘控制器
+ */
 class Chassis {
  public:
+  /**
+   * @brief 单次控制更新输入
+   */
   struct UpdateInput {
-    ChassisStateEstimatorInput estimator_input{};
-    wbr::ExpectedState expected{};
-    Fsm::State fsm_mode{Fsm::State::kDisabled};
-    bool enable_output{false};
-    bool run_chassis_update{false};
-    bool spin_enable{false};
-    rm::f32 target_leg_length_m{0.18f};
+    ChassisStateEstimatorInput estimator_input{};  ///< 传感器反馈
+    wbr::ExpectedState expected{};                 ///< 期望状态
+    Fsm::State fsm_mode{Fsm::State::kDisabled};    ///< 当前状态机模式
+    bool enable_output{false};                     ///< 是否允许输出电机命令
+    bool run_chassis_update{false};                ///< 是否执行底盘控制计算
+    bool spin_enable{false};                       ///< 是否开启小陀螺
+    rm::f32 target_leg_length_m{0.18f};            ///< 目标腿长
   };
 
+  /**
+   * @brief 单次控制更新输出
+   */
   struct UpdateOutput {
-    rm::f32 lf_tau{0.0f};
-    rm::f32 lb_tau{0.0f};
-    rm::f32 rf_tau{0.0f};
-    rm::f32 rb_tau{0.0f};
-    rm::f32 lw_tau{0.0f};
-    rm::f32 rw_tau{0.0f};
+    rm::f32 lf_tau{0.0f};  ///< 左前关节电机力矩
+    rm::f32 lb_tau{0.0f};  ///< 左后关节电机力矩
+    rm::f32 rf_tau{0.0f};  ///< 右前关节电机力矩
+    rm::f32 rb_tau{0.0f};  ///< 右后关节电机力矩
+    rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
+    rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
-    rm::f32 left_support_force_n{0.0f};
-    rm::f32 right_support_force_n{0.0f};
-    rm::f32 mean_leg_length_m{0.0f};
-    rm::f32 speed_mps{0.0f};
-    rm::f32 wheel_speed_mps{0.0f};
-    rm::f32 raw_wheel_speed_mps{0.0f};
-    rm::f32 raw_accel_speed_mps{0.0f};
-    rm::f32 current_speed_mps{0.0f};
+    rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
+    rm::f32 right_support_force_n{0.0f};  ///< 右腿支撑力估计
+    rm::f32 mean_leg_length_m{0.0f};      ///< 平均腿长
+    rm::f32 speed_mps{0.0f};              ///< 融合车速
+    rm::f32 wheel_speed_mps{0.0f};        ///< 轮系解算车速
+    rm::f32 raw_wheel_speed_mps{0.0f};    ///< 原始轮速观测
+    rm::f32 raw_accel_speed_mps{0.0f};    ///< 原始加速度积分速度
+    rm::f32 current_speed_mps{0.0f};      ///< 速度融合当前估计
 
-    wbr::CurrentState current_state{};
+    wbr::CurrentState current_state{};  ///< 当前状态向量
   };
 
+  /**
+   * @brief 初始化控制器参数与估计器
+   */
   void Init();
+
+  /**
+   * @brief 执行一次底盘控制更新
+   */
   void Update(const UpdateInput &input);
+
+  /**
+   * @brief 安全停机，输出力矩清零
+   */
   void SafeStop();
 
+  /**
+   * @brief 获取最近一次控制输出
+   */
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
  private:
+  /**
+   * @brief 计算六个执行器最终力矩
+   */
   void ComputeActuatorTorque(const UpdateInput &input, const ChassisStateEstimatorOutput &state_output);
+
+  /**
+   * @brief 由关节实测力矩反解支撑力
+   */
   void CalSupportForce();
 
   struct TunableParams {
-    rm::f32 leg_target_length_m{0.18f};
+    rm::f32 leg_target_length_m{0.18f};  ///< 当前腿长目标
   };
 
   ChassisStateEstimator state_estimator_{};

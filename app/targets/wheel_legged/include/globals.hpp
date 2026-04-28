@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <cstdint>
 #include <optional>
@@ -14,6 +14,15 @@
 #include "gimbal/fsm.hpp"
 #include "librm/device/remote/dr16.hpp"
 
+/**
+ * @file  targets/wheel_legged/include/globals.hpp
+ * @brief 轮腿目标共享资源与调试导出变量
+ */
+
+/**
+ * @brief 任务间共享的设备、控制器与状态机对象
+ * @note  与硬件相关的成员在 Init() 中延迟构造，避免静态初始化阶段硬件访问异常
+ */
 struct SharedResources {
   using DmMitMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
 
@@ -25,7 +34,7 @@ struct SharedResources {
 
   rm::device::DR16 dr16{no_dtcm->rc_uart};
 
-  // Keep non-pointer members but defer construction to Init() to avoid static init hardfault.
+  // 保持值语义成员，实际构造延后到 Init()。
   std::optional<rm::hal::ThrottledCan<>> joint_can{};
   std::optional<rm::hal::ThrottledCan<>> wheel_can{};
   std::optional<DmMitMotor> dm_lf{};
@@ -95,26 +104,33 @@ struct SharedResources {
 extern SharedResources *globals;
 
 extern "C" {
+/** @brief 调试导出变量，供上位机与调试器读取 */
 extern volatile uint32_t wl_fm_tick_ms;
 
+/** @brief 底盘/云台状态机模式编号 */
 extern volatile uint8_t wl_fm_chassis_mode;
 extern volatile uint8_t wl_fm_gimbal_mode;
 
+/** @brief 底盘/云台状态机本周期是否发生状态变化 */
 extern volatile uint8_t wl_fm_chassis_state_changed;
 extern volatile uint8_t wl_fm_gimbal_state_changed;
 
+/** @brief 遥控器在线与档位信息 */
 extern volatile uint8_t wl_fm_dr16_online;
 extern volatile int32_t wl_fm_dr16_switch_l;
 extern volatile int32_t wl_fm_dr16_switch_r;
 extern volatile int16_t wl_fm_dr16_dial;
 
+/** @brief 遥控器语义化请求 */
 extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
 
+/** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;
 extern volatile float wl_fm_chassis_speed_mps;
 
+/** @brief 关节与轮毂原始反馈 */
 extern volatile float wl_fm_motor_lf_pos_rad;
 extern volatile float wl_fm_motor_lf_vel_rad_s;
 extern volatile float wl_fm_motor_lf_tau_nm;
@@ -130,6 +146,7 @@ extern volatile float wl_fm_motor_rb_tau_nm;
 extern volatile float wl_fm_wheel_left_rad_s;
 extern volatile float wl_fm_wheel_right_rad_s;
 
+/** @brief 惯导原始反馈 */
 extern volatile float wl_fm_imu_roll_rad;
 extern volatile float wl_fm_imu_pitch_rad;
 extern volatile float wl_fm_imu_yaw_rad;
@@ -140,6 +157,7 @@ extern volatile float wl_fm_imu_acc_x_mps2;
 extern volatile float wl_fm_imu_acc_y_mps2;
 extern volatile float wl_fm_imu_acc_z_mps2;
 
+/** @brief 模型状态向量导出 */
 extern volatile float wl_fm_model_s_m;
 extern volatile float wl_fm_model_s_dot_mps;
 extern volatile float wl_fm_model_phi_rad;

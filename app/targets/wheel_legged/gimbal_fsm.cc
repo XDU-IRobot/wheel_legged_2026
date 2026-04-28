@@ -1,5 +1,10 @@
 #include "include/gimbal/fsm.hpp"
 
+/**
+ * @file  targets/wheel_legged/gimbal_fsm.cc
+ * @brief 云台状态机实现
+ */
+
 namespace {
 
 gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::State mode, const bool host_target_valid,
@@ -69,14 +74,23 @@ gimbal::Fsm::State ResolveOperationalState(const gimbal::Fsm::Input &input) {
 
 }  // namespace
 
+/**
+ * @brief 初始化云台状态机
+ */
 void gimbal::Fsm::Init() { Transit(State::kDisabled); }
 
+/**
+ * @brief 状态迁移
+ */
 void gimbal::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
   mode_ = new_mode;
   output_.mode = mode_;
 }
 
+/**
+ * @brief 单步更新云台状态机并生成控制输出
+ */
 gimbal::Fsm::Output gimbal::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 

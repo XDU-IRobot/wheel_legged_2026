@@ -223,38 +223,38 @@ void KalmanFilter::UpdateP() {
 }
 
 f32* KalmanFilter::Update() {
-  // 0. 获取量测信息
+  // 0. 获取观测量
   Measure();
   if (User_Func0_f) User_Func0_f(this);
 
-  // 1. 先验估计
+  // 1. 先验状态预测
   UpdateXhatMinus();
   if (User_Func1_f) User_Func1_f(this);
 
-  // 2. 预测更新
+  // 2. 先验协方差预测
   UpdatePMinus();
   if (User_Func2_f) User_Func2_f(this);
 
   if (MeasurementValidNum != 0 || UseAutoAdjustment == 0) {
-    // 3. 量测更新
+    // 3. 计算卡尔曼增益
     SetK();
     if (User_Func3_f) User_Func3_f(this);
 
-    // 4. 融合
+    // 4. 状态融合更新
     UpdateXhat();
     if (User_Func4_f) User_Func4_f(this);
 
-    // 5. 修正方差
+    // 5. 协方差修正
     UpdateP();
   } else {
-    // 无有效量测，仅预测
+    // 无有效观测，仅使用预测结果
     std::memcpy(xhat_data, xhatminus_data, sizeof(f32) * xhatSize);
     std::memcpy(P_data, Pminus_data, sizeof(f32) * xhatSize * xhatSize);
   }
 
   if (User_Func5_f) User_Func5_f(this);
 
-  // 避免滤波器过度收敛
+  // 避免滤波器方差过度收敛
   for (u8 i = 0; i < xhatSize; i++) {
     if (P_data[i * xhatSize + i] < StateMinVariance[i]) {
       P_data[i * xhatSize + i] = StateMinVariance[i];

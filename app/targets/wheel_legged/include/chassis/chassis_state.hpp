@@ -9,24 +9,41 @@
 #include "lqr_controllers.hpp"
 #include "../utils/kalman_filter.hpp"
 
+/**
+ * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
+ * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
+ */
+
 namespace chassis {
 
+/**
+ * @brief 单关节反馈
+ */
 struct JointFeedback {
   rm::f32 pos_rad{0.0f};
   rm::f32 vel_rad_s{0.0f};
   rm::f32 torque_nm{0.0f};
 };
 
+/**
+ * @brief 单腿双关节反馈（前/后）
+ */
 struct LegJointFeedback {
   JointFeedback front{};
   JointFeedback back{};
 };
 
+/**
+ * @brief 左右轮反馈
+ */
 struct WheelFeedback {
   rm::f32 left_rad_s{0.0f};
   rm::f32 right_rad_s{0.0f};
 };
 
+/**
+ * @brief 惯导反馈
+ */
 struct ImuFeedback {
   rm::f32 roll_rad{0.0f};
   rm::f32 pitch_rad{0.0f};
@@ -41,6 +58,9 @@ struct ImuFeedback {
   rm::f32 acc_z_mps2{0.0f};
 };
 
+/**
+ * @brief 状态估计器输入
+ */
 struct ChassisStateEstimatorInput {
   LegJointFeedback left_leg{};
   LegJointFeedback right_leg{};
@@ -54,6 +74,9 @@ struct ChassisStateEstimatorInput {
   bool use_wheel_speed_direct{false};
 };
 
+/**
+ * @brief 状态估计器配置参数
+ */
 struct ChassisStateEstimatorConfig {
   rm::f32 leg_l1_m{0.215f};
   rm::f32 leg_l2_m{0.254f};
@@ -70,6 +93,9 @@ struct ChassisStateEstimatorConfig {
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};
 };
 
+/**
+ * @brief 单腿运动学输入（已完成符号/零位标定）
+ */
 struct LegKinematicsJointInput {
   rm::f32 phi1_rad{0.0f};
   rm::f32 phi4_rad{0.0f};
@@ -77,11 +103,17 @@ struct LegKinematicsJointInput {
   rm::f32 w_phi4_rad_s{0.0f};
 };
 
+/**
+ * @brief 双腿运动学输入（已标定）
+ */
 struct CalibratedLegKinematicsInput {
   LegKinematicsJointInput left{};
   LegKinematicsJointInput right{};
 };
 
+/**
+ * @brief 状态估计输出
+ */
 struct ChassisStateEstimatorOutput {
   wbr::CurrentState current{};
 
@@ -99,6 +131,9 @@ struct ChassisStateEstimatorOutput {
   CalibratedLegKinematicsInput calibrated_leg_input{};
 };
 
+/**
+ * @brief 速度融合输入
+ */
 struct SpeedEstimatorInput {
   rm::f32 wheel_speed_mps{0.0f};
   rm::f32 imu_acc_x_mps2{0.0f};
@@ -107,10 +142,14 @@ struct SpeedEstimatorInput {
   rm::f32 dt_s{0.002f};
 };
 
+/**
+ * @brief 速度估计器（轮速+惯导融合）
+ */
 class SpeedEstimator {
  public:
   SpeedEstimator() : kf_(2, 0, 2) {}
 
+  /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
     accel_x_filter_.set_cutoff_frequency(500.0f, 10.0f);
     accel_y_filter_.set_cutoff_frequency(500.0f, 10.0f);
@@ -140,6 +179,7 @@ class SpeedEstimator {
     Reset();
   }
 
+  /** @brief 重置速度估计器状态 */
   void Reset() {
     wheel_speed_mps_ = 0.0f;
     accel_bias_ = 0.0f;
@@ -151,6 +191,7 @@ class SpeedEstimator {
     kf_.xhat_data[1] = 0.0f;
   }
 
+  /** @brief 单步更新速度估计 */
   void Update(const SpeedEstimatorInput &input) {
     const rm::f32 dt_s = (input.dt_s > 1e-5f) ? input.dt_s : 0.002f;
 
@@ -204,8 +245,12 @@ class SpeedEstimator {
   KalmanFilter kf_;
 };
 
+/**
+ * @brief 底盘状态估计器
+ */
 class ChassisStateEstimator {
  public:
+  /** @brief 初始化估计器 */
   void Init(const ChassisStateEstimatorConfig &config) {
     config_ = config;
     left_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
@@ -216,8 +261,10 @@ class ChassisStateEstimator {
     Reset();
   }
 
+  /** @brief 重置估计器输出 */
   void Reset() { output_ = {}; }
 
+  /** @brief 单步更新状态估计 */
   void Update(const ChassisStateEstimatorInput &input) {
     rm::f32 dt_s = input.dt_s;
     if (dt_s <= 0.0f) {
@@ -237,6 +284,7 @@ class ChassisStateEstimator {
   [[nodiscard]] const wbr::CurrentState &GetCurrentState() const { return output_.current; }
 
  private:
+  /** @brief 构建已标定的腿部运动学输入 */
   [[nodiscard]] CalibratedLegKinematicsInput BuildCalibratedLegInput(const ChassisStateEstimatorInput &input) const {
     CalibratedLegKinematicsInput leg_input{};
 
@@ -253,6 +301,7 @@ class ChassisStateEstimator {
     return leg_input;
   }
 
+  /** @brief 更新腿部几何状态与摆角状态 */
   void UpdateLegState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
     static constexpr rm::f32 kPiHalf = 1.57079632679489661923f;
 
@@ -293,6 +342,7 @@ class ChassisStateEstimator {
     output_.current.theta_lr_dot = theta_lr_dot_filter_.apply(raw_theta_lr_dot);
   }
 
+  /** @brief 更新机体俯仰/偏航状态 */
   void UpdateBodyState(const ChassisStateEstimatorInput &input) {
     output_.current.theta_b = input.imu.pitch_rad;
     output_.current.theta_b_dot = input.imu.gyro_y_rad_s;
@@ -300,6 +350,7 @@ class ChassisStateEstimator {
     output_.current.phi_dot = input.imu.gyro_z_rad_s;
   }
 
+  /** @brief 更新速度与位移状态 */
   void UpdateSpeedState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
     const rm::f32 left_wheel_vel = input.wheel.left_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
     const rm::f32 right_wheel_vel = input.wheel.right_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
@@ -344,15 +395,19 @@ class ChassisStateEstimator {
     output_.current.s += output_.current.s_dot * dt_s;
   }
 
+  /** @brief 左腿前关节角度标定 */
   [[nodiscard]] rm::f32 ConvertLeftPhi1(const JointFeedback &joint) const {
     return joint.pos_rad + config_.left_phi1_offset_rad;
   }
+  /** @brief 左腿后关节角度标定 */
   [[nodiscard]] rm::f32 ConvertLeftPhi4(const JointFeedback &joint) const {
     return joint.pos_rad + config_.left_phi4_offset_rad;
   }
+  /** @brief 右腿前关节角度标定 */
   [[nodiscard]] rm::f32 ConvertRightPhi1(const JointFeedback &joint) const {
     return -joint.pos_rad + config_.right_phi1_offset_rad;
   }
+  /** @brief 右腿后关节角度标定 */
   [[nodiscard]] rm::f32 ConvertRightPhi4(const JointFeedback &joint) const {
     return -joint.pos_rad + config_.right_phi4_offset_rad;
   }
