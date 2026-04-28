@@ -1,12 +1,19 @@
 #pragma once
 
 #include <array>
-#include <vector>
 
 #include <librm.hpp>
 
+/**
+ * @file  targets/wheel_legged/include/chassis/lqr_controllers.hpp
+ * @brief 轮腿底盘线性二次调节器与状态向量定义
+ */
+
 namespace chassis::wbr {
 
+/**
+ * @brief 当前状态向量
+ */
 struct CurrentState {
   rm::f32 s{0.0f};
   rm::f32 s_dot{0.0f};
@@ -22,6 +29,9 @@ struct CurrentState {
   rm::f32 l_r{0.0f};
 };
 
+/**
+ * @brief 期望状态向量
+ */
 struct ExpectedState {
   rm::f32 s{0.0f};
   rm::f32 s_dot{0.0f};
@@ -35,23 +45,30 @@ struct ExpectedState {
   rm::f32 theta_b_dot{0.0f};
 };
 
+/**
+ * @brief 调节器输出力矩
+ */
 struct MotorTorque {
-  rm::f32 t_wl{0.0f};
-  rm::f32 t_wr{0.0f};
-  rm::f32 t_bl{0.0f};
-  rm::f32 t_br{0.0f};
+  rm::f32 t_wl{0.0f};  ///< 左轮力矩
+  rm::f32 t_wr{0.0f};  ///< 右轮力矩
+  rm::f32 t_bl{0.0f};  ///< 左腿髋关节等效力矩
+  rm::f32 t_br{0.0f};  ///< 右腿髋关节等效力矩
 };
 
+/**
+ * @brief 基于腿长多项式拟合增益的线性二次调节器
+ */
 class WbrController {
  public:
-  WbrController() { k_coeffs_.assign(40, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}); }
+  /**
+   * @brief 设置调节器拟合系数矩阵
+   * @param coeff_matrix 40x6 多项式系数矩阵
+   */
+  void SetLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) { k_coeffs_ = coeff_matrix; }
 
-  void SetLqrCoefficients(const std::vector<std::array<rm::f32, 6>> &coeff_matrix) {
-    if (coeff_matrix.size() == 40) {
-      k_coeffs_ = coeff_matrix;
-    }
-  }
-
+  /**
+   * @brief 单步控制解算
+   */
   [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected) const {
     static constexpr rm::f32 kPi = 3.14159265358979323846f;
 
@@ -91,6 +108,9 @@ class WbrController {
     return p[0] + p[1] * l_l + p[2] * l_r + p[3] * l_l * l_l + p[4] * l_l * l_r + p[5] * l_r * l_r;
   }
 
+  /**
+   * @brief 由腿长计算当前 4x10 增益矩阵
+   */
   void ComputeKMatrix(const rm::f32 l_l, const rm::f32 l_r, rm::f32 k_matrix[4][10]) const {
     for (int i = 0; i < 4; ++i) {
       for (int j = 0; j < 10; ++j) {
@@ -100,7 +120,7 @@ class WbrController {
     }
   }
 
-  std::vector<std::array<rm::f32, 6>> k_coeffs_{};
+  std::array<std::array<rm::f32, 6>, 40> k_coeffs_{};  ///< 40 组多项式系数
 };
 
 }  // namespace chassis::wbr

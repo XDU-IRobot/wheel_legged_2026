@@ -1,6 +1,6 @@
 /**
  * @file  kalman_filter.hpp
- * @brief Kalman Filter
+ * @brief 卡尔曼滤波器
  */
 
 #ifndef KALMAN_FILTER_HPP
@@ -84,10 +84,10 @@ class KalmanFilter {
   u8 UseAutoAdjustment;
   u8 MeasurementValidNum;
 
-  u8* MeasurementMap;          // 量测与状态的关系
-  f32* MeasurementDegree;      // 测量值对应H矩阵元素值
-  f32* MatR_DiagonalElements;  // 量测方差
-  f32* StateMinVariance;       // 最小方差
+  u8* MeasurementMap;          // 观测量与状态量映射关系
+  f32* MeasurementDegree;      // 观测量对应 H 矩阵元素值
+  f32* MatR_DiagonalElements;  // 观测噪声协方差对角元素
+  f32* StateMinVariance;       // 最小状态方差约束
   u8* temp;
 
   bool SkipEq1 = false;
@@ -101,7 +101,7 @@ class KalmanFilter {
 
   i8 MatStatus;
 
-  // 用户定义函数（C++11风格）
+  // 用户扩展回调（C++11）
   std::function<void(KalmanFilter*)> User_Func0_f;
   std::function<void(KalmanFilter*)> User_Func1_f;
   std::function<void(KalmanFilter*)> User_Func2_f;

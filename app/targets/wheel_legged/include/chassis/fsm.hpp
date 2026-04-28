@@ -15,6 +15,9 @@ using namespace rm;
 
 class Fsm {
  public:
+  /**
+   * @brief 目标腿长档位
+   */
   enum class LegLengthMode {
     kLow,
     kMid,
@@ -22,7 +25,7 @@ class Fsm {
   };
 
   /**
-   * @brief 状态机模式
+   * @brief 底盘状态模式
    */
   enum class State {
     kDisabled,
@@ -38,18 +41,18 @@ class Fsm {
 
   /**
    * @brief 状态机输入
-   * @note  由上层把传感器/遥控状态转换为业务输入
+   * @note  上层需将遥控器、故障检测等原始量转换成该输入
    */
   struct Input {
-    bool input_valid{false};
-    bool force_enable{false};
-    LegLengthMode leg_length_mode{LegLengthMode::kLow};
-    bool spin_enable{false};
-    bool jump_trigger{false};
-    bool fall_detected{false};
-    bool upright_stable{true};
-    float current_leg_length_m{0.0f};
-    uint32_t tick_ms{0};
+    bool input_valid{false};                             ///< 输入是否有效
+    bool force_enable{false};                            ///< 是否使能力控
+    LegLengthMode leg_length_mode{LegLengthMode::kLow};  ///< 目标腿长档位
+    bool spin_enable{false};                             ///< 小陀螺开关
+    bool jump_trigger{false};                            ///< 跳跃触发沿
+    bool fall_detected{false};                           ///< 是否检测到跌倒
+    bool upright_stable{true};                           ///< 是否恢复稳定直立
+    float current_leg_length_m{0.0f};                    ///< 当前腿长
+    uint32_t tick_ms{0};                                 ///< 系统时基（毫秒）
   };
 
   /**
@@ -58,33 +61,28 @@ class Fsm {
   struct Output {
     /**
      * @brief 控制动作输出
-     * @note  供任务层统一执行，避免在任务层写状态分支
      */
     struct ControlOutput {
-      bool enable_dm{false};
-      bool run_chassis_update{false};
-      bool spin_enable{false};
-      bool recovery_enable{false};
-      bool safe_output_required{true};
-      float target_leg_length_m{0.18f};
-      uint8_t jump_phase{0};
+      bool enable_dm{false};             ///< DM 电机使能
+      bool run_chassis_update{false};    ///< 是否执行底盘控制更新
+      bool spin_enable{false};           ///< 速度估计是否使用轮速直通
+      bool recovery_enable{false};       ///< 是否使能恢复逻辑
+      bool safe_output_required{true};   ///< 是否要求安全输出（全零）
+      float target_leg_length_m{0.18f};  ///< 目标腿长
+      uint8_t jump_phase{0};             ///< 跳跃阶段编号，0 表示非跳跃
     };
 
-    State mode{State::kDisabled};
-    bool state_changed{false};
-    ControlOutput control{};
+    State mode{State::kDisabled};  ///< 当前模式
+    bool state_changed{false};     ///< 本周期是否发生状态变化
+    ControlOutput control{};       ///< 控制动作
   };
 
   ~Fsm();
 
-  /**
-   * @brief 初始化状态机
-   */
+  /** @brief 初始化状态机 */
   void Init();
 
-  /**
-   * @brief 执行状态迁移并更新输出
-   */
+  /** @brief 状态迁移并刷新输出 */
   void Transit(State new_mode);
 
   /**

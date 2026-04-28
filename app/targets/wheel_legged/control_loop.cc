@@ -3,6 +3,11 @@
 
 #include "main.h"
 
+/**
+ * @file  targets/wheel_legged/control_loop.cc
+ * @brief 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
+ */
+
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
 volatile uint8_t wl_fm_chassis_mode{0};
@@ -77,6 +82,10 @@ struct Dr16RawInput {
   int16_t dial{0};
 };
 
+/**
+ * @brief 控制循环输入快照
+ * @note  将多源输入收敛为单周期稳定视图。
+ */
 struct InputSnapshot {
   bool input_valid{false};
 
@@ -98,6 +107,9 @@ struct InputSnapshot {
   bool gimbal_fire_request{false};
 };
 
+/**
+ * @brief 调试状态快照
+ */
 struct DebugSnapshot {
   uint32_t tick_ms{0};
   chassis::Fsm::State chassis_mode{chassis::Fsm::State::kDisabled};
@@ -109,6 +121,9 @@ struct DebugSnapshot {
   bool dr16_chassis_jump_trigger_edge{false};
 };
 
+/**
+ * @brief DR16 语义状态（用于边沿/锁存逻辑）
+ */
 struct Dr16SemanticState {
   bool jump_latched{false};
   bool spin_latched{false};
@@ -131,6 +146,9 @@ bool IsEnableSwitch(const rm::device::DR16::SwitchPosition switch_l) {
   return switch_l == rm::device::DR16::SwitchPosition::kMid || switch_l == rm::device::DR16::SwitchPosition::kUp;
 }
 
+/**
+ * @brief 将 DR16 原始输入转换为语义控制输入
+ */
 void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_state, InputSnapshot &input) {
   input.input_valid = dr16.online;
   input.dr16 = dr16;
@@ -161,6 +179,9 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
   input.gimbal_fire_request = false;
 }
 
+/**
+ * @brief 更新传感器快照与 DR16 语义输入
+ */
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input, Dr16SemanticState &semantic_state) {
   g_actuators.FillEstimatorInput(g, input.estimator_input);
 
@@ -173,6 +194,9 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
   ApplyDr16Semantics(dr16, semantic_state, input);
 }
 
+/**
+ * @brief 构建底盘状态机输入
+ */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms) {
   chassis::Fsm::Input fsm_input{};
   fsm_input.input_valid = input.input_valid;
@@ -187,6 +211,9 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   return fsm_input;
 }
 
+/**
+ * @brief 构建云台状态机输入
+ */
 gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output) {
   gimbal::Fsm::Input fsm_input{};
   fsm_input.input_valid = input.input_valid;
@@ -199,6 +226,9 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
   return fsm_input;
 }
 
+/**
+ * @brief 将本周期关键状态写入调试导出变量
+ */
 void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
                          const gimbal::Fsm::Output &gimbal_output,
                          const chassis::Chassis::UpdateOutput &chassis_control_output) {
@@ -273,6 +303,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
 
 }  // namespace
 
+/**
+ * @brief 500Hz 主控制循环
+ */
 void ControlLoop() {
   if (globals == nullptr) {
     return;

@@ -3,6 +3,11 @@
 #include "etl/fsm.h"
 #include "etl/message.h"
 
+/**
+ * @file  targets/wheel_legged/fsm.cc
+ * @brief 底盘状态机实现（基于 ETL FSM）
+ */
+
 namespace {
 
 enum EtlStateId : etl::fsm_state_id_t {
@@ -18,9 +23,9 @@ enum EtlStateId : etl::fsm_state_id_t {
   kStateCount = 9,
 };
 
-constexpr uint32_t kJumpPrepMs = 450U;
-constexpr uint32_t kJumpPushMs = 1000U;
-constexpr uint32_t kJumpRecoverMs = 450U;
+constexpr uint32_t kJumpPrepMs = 450U;     ///< 蓄力阶段时长
+constexpr uint32_t kJumpPushMs = 1000U;    ///< 伸腿阶段最大时长
+constexpr uint32_t kJumpRecoverMs = 450U;  ///< 恢复收腿阶段时长
 constexpr float kJumpPushTargetLegLengthM = 0.35f;
 constexpr float kJumpPushReachTolM = 0.01f;
 
@@ -472,6 +477,9 @@ chassis::Fsm::~Fsm() {
   etl_impl_ = nullptr;
 }
 
+/**
+ * @brief 初始化 ETL 状态机并进入初始状态
+ */
 void chassis::Fsm::Init() {
   if (!etl_impl_) {
     etl_impl_ = new EtlImpl(*this);
@@ -482,6 +490,9 @@ void chassis::Fsm::Init() {
   }
 }
 
+/**
+ * @brief 迁移到底盘新模式并刷新控制输出
+ */
 void chassis::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
   mode_ = new_mode;
@@ -489,6 +500,9 @@ void chassis::Fsm::Transit(const State new_mode) {
   output_.control = BuildControlOutput(mode_, leg_length_mode_);
 }
 
+/**
+ * @brief 状态机单步更新
+ */
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   if (!etl_impl_) {
     Init();
