@@ -114,7 +114,11 @@ class Gimbal {
     pitch_position_pid_.SetKp(25.0f).SetKi(0.8f).SetKd(130.0f).SetMaxOut(10.0f).SetMaxIout(0.4f);
     pitch_speed_pid_.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.0f);
 
-    yaw_position_pid_.SetCircular(true).SetCircularCycle(2.0f * kPi).SetFuzzy(true).SetFuzzyErrorScale(kPi).SetFuzzyDErrorScale(kPi * 100.0f);
+    yaw_position_pid_.SetCircular(true)
+        .SetCircularCycle(2.0f * kPi)
+        .SetFuzzy(true)
+        .SetFuzzyErrorScale(kPi)
+        .SetFuzzyDErrorScale(kPi * 100.0f);
     pitch_position_pid_.SetFuzzy(true).SetFuzzyErrorScale(kPi);
   }
 
