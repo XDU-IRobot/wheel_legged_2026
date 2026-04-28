@@ -82,6 +82,8 @@ volatile float wl_fm_model_l_l_m{0.0f};
 volatile float wl_fm_model_l_r_m{0.0f};
 volatile float wl_fm_yaw_motor_pos_rad{0.0f};
 volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
+volatile float wl_fm_pitch_motor_pos_rad{0.0f};
+volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
 }
 
 namespace {
@@ -368,6 +370,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_right_leg_length_m = x.l_r;
   wl_fm_yaw_motor_pos_rad = gimbal_control_output.yaw_pos_rad;
   wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
+  wl_fm_pitch_motor_pos_rad = gimbal_control_output.pitch_pos_rad;
+  wl_fm_pitch_motor_vel_rad_s = gimbal_control_output.pitch_vel_rad_s;
 }
 
 }  // namespace
@@ -411,10 +415,13 @@ void ControlLoop() {
 
   gimbal::Gimbal::UpdateInput gimbal_update_input{};
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
+  gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
+  gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
+  gimbal_update_input.dt_s = kControlLoopDtS;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
 
