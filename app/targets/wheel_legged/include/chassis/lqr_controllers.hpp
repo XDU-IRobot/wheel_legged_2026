@@ -64,9 +64,7 @@ class WbrController {
    * @brief 设置调节器拟合系数矩阵
    * @param coeff_matrix 40x6 多项式系数矩阵
    */
-  void SetLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) {
-    k_coeffs_ = coeff_matrix;
-  }
+  void SetLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) { k_coeffs_ = coeff_matrix; }
 
   /**
    * @brief 单步控制解算
