@@ -47,6 +47,7 @@ struct SharedResources {
   std::optional<rm::device::HipnucImu> chassis_imu{};
 
   std::optional<DmMitMotor> yaw_motor{};
+  std::optional<DmMitMotor> pitch_motor{};
 
   chassis::Fsm chassis_fsm{};
   chassis::Chassis chassis{};
@@ -94,9 +95,12 @@ struct SharedResources {
       right_wheel.emplace(*wheel_can, 0x05);
     }
 
+    if (!pitch_motor.has_value()) {
+      pitch_motor.emplace(*joint_can, gimbal::Gimbal::kPitchMotorSettings);
+    }
+
     if (!yaw_motor.has_value()) {
-      yaw_motor.emplace(*wheel_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                        0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}});
+      yaw_motor.emplace(*wheel_can, gimbal::Gimbal::kYawMotorSettings);
     }
 
     if (!chassis_imu.has_value()) {
@@ -200,6 +204,8 @@ extern volatile float wl_fm_model_l_l_m;
 extern volatile float wl_fm_model_l_r_m;
 extern volatile float wl_fm_yaw_motor_pos_rad;
 extern volatile float wl_fm_yaw_motor_vel_rad_s;
+extern volatile float wl_fm_pitch_motor_pos_rad;
+extern volatile float wl_fm_pitch_motor_vel_rad_s;
 }
 
 void ControlLoop();
