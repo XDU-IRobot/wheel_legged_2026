@@ -67,6 +67,8 @@ volatile float wl_fm_imu_gyro_z_rad_s{0.0f};
 volatile float wl_fm_imu_acc_x_mps2{0.0f};
 volatile float wl_fm_imu_acc_y_mps2{0.0f};
 volatile float wl_fm_imu_acc_z_mps2{0.0f};
+volatile float wl_fm_gimbal_imu_pitch_rad{0.0f};
+volatile float wl_fm_gimbal_imu_yaw_rad{0.0f};
 
 volatile float wl_fm_model_s_m{0.0f};
 volatile float wl_fm_model_s_dot_mps{0.0f};
@@ -437,6 +439,14 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output.control.enable_dm);
+
+  if (globals->gimbal_imu_feedback_rx.has_value()) {
+    wl_fm_gimbal_imu_pitch_rad = globals->gimbal_imu_feedback_rx->pitch_rad();
+    wl_fm_gimbal_imu_yaw_rad = globals->gimbal_imu_feedback_rx->yaw_rad();
+  } else {
+    wl_fm_gimbal_imu_pitch_rad = 0.0f;
+    wl_fm_gimbal_imu_yaw_rad = 0.0f;
+  }
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }

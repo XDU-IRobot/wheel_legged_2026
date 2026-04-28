@@ -70,6 +70,9 @@ class Gimbal {
     output_.gimbal_enabled = input.gimbal_enable;
 
     if (!input.gimbal_enable) {
+      // Keep CAN traffic active in disabled mode while commanding zero torque.
+      input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+      input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
       DisableMotorsIfNeeded(input);
       ClearPid();
       return;
@@ -89,11 +92,9 @@ class Gimbal {
     output_.pitch_cmd_torque_nm =
         std::clamp(pitch_speed_pid_.out() + pitch_gravity_ff, -kDmTorqueLimitNm, kDmTorqueLimitNm);
 
-    // input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
-    // input.pitch_motor->SetMitCommand(0.0f, 0.0f, output_.pitch_cmd_torque_nm, 0.0f, 0.0f);
-
-    input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-    input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    // Test mode: keep output torque at zero for now.
+    input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
   }
 
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }

@@ -66,6 +66,10 @@ void AppMain() {
       (void)globals->wheel_can->Process();
       wheel_loop_count++;
     }
+    if (globals->gimbal_can.has_value()) {
+      (void)globals->gimbal_can->Process();
+      wheel_loop_count++;
+    }
   }
 }
 }

@@ -11,6 +11,7 @@
 
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
+#include "gimbal_can_feedback_rx_bridge.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -28,7 +29,8 @@ struct SharedResources {
   using DmMitMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
 
   static constexpr double kJointCanTxLimitHz = 4000.0;
-  static constexpr double kWheelCanTxLimitHz = 1000.0;
+  static constexpr double kWheelCanTxLimitHz = 4000.0;
+  static constexpr double kGimbalCanTxLimitHz = 2000.0;
   static constexpr float kPi = 3.14159265358979323846f;
 
   SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};
@@ -38,6 +40,7 @@ struct SharedResources {
   // 保持值语义成员，实际构造延后到 Init()。
   std::optional<rm::hal::ThrottledCan<>> joint_can{};
   std::optional<rm::hal::ThrottledCan<>> wheel_can{};
+  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};
   std::optional<DmMitMotor> dm_lf{};
   std::optional<DmMitMotor> dm_lb{};
   std::optional<DmMitMotor> dm_rf{};
@@ -45,6 +48,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> left_wheel{};
   std::optional<rm::device::M3508> right_wheel{};
   std::optional<rm::device::HipnucImu> chassis_imu{};
+  std::optional<GimbalCanFeedbackRxBridge> gimbal_imu_feedback_rx{};
 
   std::optional<DmMitMotor> yaw_motor{};
   std::optional<DmMitMotor> pitch_motor{};
@@ -78,6 +82,14 @@ struct SharedResources {
       wheel_can->SetFilter(0, 0);
       wheel_can->Begin();
     }
+    if (!gimbal_can.has_value()) {
+      gimbal_can.emplace(hfdcan3, kGimbalCanTxLimitHz);
+      gimbal_can->SetFilter(0, 0);
+      gimbal_can->Begin();
+    }
+    if (!gimbal_imu_feedback_rx.has_value()) {
+      gimbal_imu_feedback_rx.emplace(*gimbal_can);
+    }
 
     if (!dm_lf.has_value()) {
       dm_lf.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
@@ -96,7 +108,7 @@ struct SharedResources {
     }
 
     if (!pitch_motor.has_value()) {
-      pitch_motor.emplace(*joint_can, gimbal::Gimbal::kPitchMotorSettings);
+      pitch_motor.emplace(*gimbal_can, gimbal::Gimbal::kPitchMotorSettings);
     }
 
     if (!yaw_motor.has_value()) {
@@ -188,6 +200,8 @@ extern volatile float wl_fm_imu_gyro_z_rad_s;
 extern volatile float wl_fm_imu_acc_x_mps2;
 extern volatile float wl_fm_imu_acc_y_mps2;
 extern volatile float wl_fm_imu_acc_z_mps2;
+extern volatile float wl_fm_gimbal_imu_pitch_rad;
+extern volatile float wl_fm_gimbal_imu_yaw_rad;
 
 /** @brief 模型状态向量导出 */
 extern volatile float wl_fm_model_s_m;
