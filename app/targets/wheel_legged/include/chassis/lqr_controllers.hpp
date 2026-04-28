@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <vector>
 
 #include <librm.hpp>
 
@@ -61,16 +60,12 @@ struct MotorTorque {
  */
 class WbrController {
  public:
-  WbrController() { k_coeffs_.assign(40, {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}); }
-
   /**
    * @brief 设置调节器拟合系数矩阵
    * @param coeff_matrix 40x6 多项式系数矩阵
    */
-  void SetLqrCoefficients(const std::vector<std::array<rm::f32, 6>> &coeff_matrix) {
-    if (coeff_matrix.size() == 40) {
-      k_coeffs_ = coeff_matrix;
-    }
+  void SetLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) {
+    k_coeffs_ = coeff_matrix;
   }
 
   /**
@@ -127,7 +122,7 @@ class WbrController {
     }
   }
 
-  std::vector<std::array<rm::f32, 6>> k_coeffs_{};  ///< 40 组多项式系数
+  std::array<std::array<rm::f32, 6>, 40> k_coeffs_{};  ///< 40 组多项式系数
 };
 
 }  // namespace chassis::wbr

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <vector>
 
 /**
  * @file  targets/wheel_legged/chassis.cc
@@ -116,7 +115,7 @@ void chassis::Chassis::Init() {
   init_pid(left_leg_turn_pid_, 20.0f, 0.0f, 0.0f, 15.0f, 0.0f);
   init_pid(right_leg_turn_pid_, 20.0f, 0.0f, 0.0f, 15.0f, 0.0f);
 
-  std::vector<std::array<rm::f32, 6>> coeff_vec(40);
+  std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
     std::copy(&kCtrlP[i * 6], &kCtrlP[i * 6 + 6], coeff_vec[i].begin());
   }
