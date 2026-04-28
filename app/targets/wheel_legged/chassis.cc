@@ -20,54 +20,41 @@ constexpr rm::f32 kWheelRadiusM = 0.2025f;
 constexpr rm::f32 kOffGroundSupportForceThresholdN = 10.0f;
 
 constexpr rm::f32 kEtaLookupLegLengthM[] = {
-    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f,
-    0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f, 0.25f, 0.26f,
-    0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
+    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
+    0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
 };
 
 constexpr rm::f32 kEtaLookupLwM[] = {
-    0.061990f, 0.067466f, 0.072986f, 0.078550f, 0.084158f, 0.089810f,
-    0.095506f, 0.101246f, 0.107030f, 0.112858f, 0.118730f, 0.124646f,
-    0.130606f, 0.136610f, 0.142658f, 0.148750f, 0.154886f, 0.161066f,
-    0.167290f, 0.173558f, 0.179870f, 0.186226f, 0.192626f, 0.199070f,
+    0.061990f, 0.067466f, 0.072986f, 0.078550f, 0.084158f, 0.089810f, 0.095506f, 0.101246f,
+    0.107030f, 0.112858f, 0.118730f, 0.124646f, 0.130606f, 0.136610f, 0.142658f, 0.148750f,
+    0.154886f, 0.161066f, 0.167290f, 0.173558f, 0.179870f, 0.186226f, 0.192626f, 0.199070f,
 };
 
 constexpr rm::f32 kCtrlP[240] = {
-    -2.494f,    -11.314f,  8.6684f,   16.033f,   -5.0423f,  -7.1215f,   -4.4352f,
-    -14.034f,   15.629f,   22.941f,   -13.921f,  -12.103f,  -0.78242f,  2.5615f,
-    -0.83756f,  -4.9463f,  2.2927f,   1.154f,    -5.5465f,  18.287f,    -6.0248f,
-    -35.178f,   16.331f,   8.3203f,   -13.53f,   -50.072f,  11.345f,    53.457f,
-    -30.045f,   -12.072f,  -0.42523f, -4.4126f,  1.2734f,   -1.4889f,   0.056401f,
-    -1.4827f,   -2.2208f,  15.652f,   -24.82f,   -40.927f,  57.572f,    29.386f,
-    -0.052456f, -0.27998f, -2.3225f,  0.51579f,  -0.75639f, 2.9708f,    -20.707f,
-    57.551f,    18.525f,   -43.052f,  -32.983f,  -17.281f,  -2.3227f,   4.5849f,
-    3.645f,     -1.1418f,  -5.6754f,  -3.5824f,  -2.494f,   8.6684f,    -11.314f,
-    -7.1215f,   -5.0423f,  16.033f,   -4.4352f,  15.629f,   -14.034f,   -12.103f,
-    -13.921f,   22.941f,   0.78242f,  0.83756f,  -2.5615f,  -1.154f,    -2.2927f,
-    4.9463f,    5.5465f,   6.0248f,   -18.287f,  -8.3203f,  -16.331f,   35.178f,
-    -2.2208f,   -24.82f,   15.652f,   29.386f,   57.572f,   -40.927f,   -0.052456f,
-    -2.3225f,   -0.27998f, 2.9708f,   -0.75639f, 0.51579f,  -13.53f,    11.345f,
-    -50.072f,   -12.072f,  -30.045f,  53.457f,   -0.42523f, 1.2734f,    -4.4126f,
-    -1.4827f,   0.056401f, -1.4889f,  -20.707f,  18.525f,   57.551f,    -17.281f,
-    -32.983f,   -43.052f,  -2.3227f,  3.645f,    4.5849f,   -3.5824f,   -5.6754f,
-    -1.1418f,   2.5402f,   0.2878f,   -9.1394f,  -7.6683f,  18.772f,    -0.85692f,
-    4.0535f,    -0.42671f, -15.537f,  -10.926f,  31.146f,   0.44319f,   -1.1035f,
-    0.50541f,   -2.4381f,  1.2344f,   -2.1999f,  3.3908f,   -7.8139f,   3.4065f,
-    -17.308f,   8.977f,    -15.725f,  23.985f,   19.218f,   -12.538f,   15.969f,
-    16.072f,    76.598f,   -39.481f,  0.64413f,  0.55597f,  -0.044438f, 2.342f,
-    4.2572f,    -2.047f,   1.2649f,   -14.808f,  -54.699f,  42.054f,    -40.441f,
-    23.515f,    0.15168f,  -0.77208f, -0.7123f,  1.0587f,   0.50401f,   -5.9725f,
-    -30.283f,   -124.1f,   67.032f,   168.12f,   -23.886f,  -57.758f,   -2.3512f,
-    -11.915f,   6.0507f,   13.63f,    0.48573f,  -5.4422f,  2.5402f,    -9.1394f,
-    0.2878f,    -0.85692f, 18.772f,   -7.6683f,  4.0535f,   -15.537f,   -0.42671f,
-    0.44319f,   31.146f,   -10.926f,  1.1035f,   2.4381f,   -0.50541f,  -3.3908f,
-    2.1999f,    -1.2344f,  7.8139f,   17.308f,   -3.4065f,  -23.985f,   15.725f,
-    -8.977f,    1.2649f,   -54.699f,  -14.808f,  23.515f,   -40.441f,   42.054f,
-    0.15168f,   -0.7123f,  -0.77208f, -5.9725f,  0.50401f,  1.0587f,    19.218f,
-    15.969f,    -12.538f,  -39.481f,  76.598f,   16.072f,   0.64413f,   -0.044438f,
-    0.55597f,   -2.047f,   4.2572f,   2.342f,    -30.283f,  67.032f,    -124.1f,
-    -57.758f,   -23.886f,  168.12f,   -2.3512f,  6.0507f,   -11.915f,   -5.4422f,
-    0.48573f,   13.63f,
+    -2.494f,    -11.314f, 8.6684f,    16.033f,    -5.0423f,  -7.1215f,  -4.4352f,  -14.034f,  15.629f,   22.941f,
+    -13.921f,   -12.103f, -0.78242f,  2.5615f,    -0.83756f, -4.9463f,  2.2927f,   1.154f,    -5.5465f,  18.287f,
+    -6.0248f,   -35.178f, 16.331f,    8.3203f,    -13.53f,   -50.072f,  11.345f,   53.457f,   -30.045f,  -12.072f,
+    -0.42523f,  -4.4126f, 1.2734f,    -1.4889f,   0.056401f, -1.4827f,  -2.2208f,  15.652f,   -24.82f,   -40.927f,
+    57.572f,    29.386f,  -0.052456f, -0.27998f,  -2.3225f,  0.51579f,  -0.75639f, 2.9708f,   -20.707f,  57.551f,
+    18.525f,    -43.052f, -32.983f,   -17.281f,   -2.3227f,  4.5849f,   3.645f,    -1.1418f,  -5.6754f,  -3.5824f,
+    -2.494f,    8.6684f,  -11.314f,   -7.1215f,   -5.0423f,  16.033f,   -4.4352f,  15.629f,   -14.034f,  -12.103f,
+    -13.921f,   22.941f,  0.78242f,   0.83756f,   -2.5615f,  -1.154f,   -2.2927f,  4.9463f,   5.5465f,   6.0248f,
+    -18.287f,   -8.3203f, -16.331f,   35.178f,    -2.2208f,  -24.82f,   15.652f,   29.386f,   57.572f,   -40.927f,
+    -0.052456f, -2.3225f, -0.27998f,  2.9708f,    -0.75639f, 0.51579f,  -13.53f,   11.345f,   -50.072f,  -12.072f,
+    -30.045f,   53.457f,  -0.42523f,  1.2734f,    -4.4126f,  -1.4827f,  0.056401f, -1.4889f,  -20.707f,  18.525f,
+    57.551f,    -17.281f, -32.983f,   -43.052f,   -2.3227f,  3.645f,    4.5849f,   -3.5824f,  -5.6754f,  -1.1418f,
+    2.5402f,    0.2878f,  -9.1394f,   -7.6683f,   18.772f,   -0.85692f, 4.0535f,   -0.42671f, -15.537f,  -10.926f,
+    31.146f,    0.44319f, -1.1035f,   0.50541f,   -2.4381f,  1.2344f,   -2.1999f,  3.3908f,   -7.8139f,  3.4065f,
+    -17.308f,   8.977f,   -15.725f,   23.985f,    19.218f,   -12.538f,  15.969f,   16.072f,   76.598f,   -39.481f,
+    0.64413f,   0.55597f, -0.044438f, 2.342f,     4.2572f,   -2.047f,   1.2649f,   -14.808f,  -54.699f,  42.054f,
+    -40.441f,   23.515f,  0.15168f,   -0.77208f,  -0.7123f,  1.0587f,   0.50401f,  -5.9725f,  -30.283f,  -124.1f,
+    67.032f,    168.12f,  -23.886f,   -57.758f,   -2.3512f,  -11.915f,  6.0507f,   13.63f,    0.48573f,  -5.4422f,
+    2.5402f,    -9.1394f, 0.2878f,    -0.85692f,  18.772f,   -7.6683f,  4.0535f,   -15.537f,  -0.42671f, 0.44319f,
+    31.146f,    -10.926f, 1.1035f,    2.4381f,    -0.50541f, -3.3908f,  2.1999f,   -1.2344f,  7.8139f,   17.308f,
+    -3.4065f,   -23.985f, 15.725f,    -8.977f,    1.2649f,   -54.699f,  -14.808f,  23.515f,   -40.441f,  42.054f,
+    0.15168f,   -0.7123f, -0.77208f,  -5.9725f,   0.50401f,  1.0587f,   19.218f,   15.969f,   -12.538f,  -39.481f,
+    76.598f,    16.072f,  0.64413f,   -0.044438f, 0.55597f,  -2.047f,   4.2572f,   2.342f,    -30.283f,  67.032f,
+    -124.1f,    -57.758f, -23.886f,   168.12f,    -2.3512f,  6.0507f,   -11.915f,  -5.4422f,  0.48573f,  13.63f,
 };
 
 rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
@@ -191,7 +178,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   ComputeActuatorTorque(input, state_output);
 }
 
-void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input, const ChassisStateEstimatorOutput &state_output) {
+void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
+                                             const ChassisStateEstimatorOutput &state_output) {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
 
   const auto set_all_zero = [this]() {
@@ -256,8 +244,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input, const Cha
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else {
-      const rm::f32 inertial_ff_left =
-          effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) * state_output.current.phi_dot * state_output.current.s_dot;
+      const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
+                                       state_output.current.phi_dot * state_output.current.s_dot;
       const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
                                         state_output.current.phi_dot * state_output.current.s_dot;
 
@@ -265,10 +253,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input, const Cha
       right_force_ = leg_length_force + gravity_ff_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_leg =
-        (input.fsm_mode == Fsm::State::kBalance && input.target_leg_length_m > 0.21f) &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_leg = (input.fsm_mode == Fsm::State::kBalance && input.target_leg_length_m > 0.21f) &&
+                                       (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                        right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
 
     if (use_jump_retract2 || off_ground_in_mid_leg) {
       output_.lw_tau = 0.0f;
@@ -323,7 +310,8 @@ void chassis::Chassis::CalSupportForce() {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
 
   const rm::f32 det_l = left_leg_.jacobi_00() * left_leg_.jacobi_11() - left_leg_.jacobi_01() * left_leg_.jacobi_10();
-  const rm::f32 det_r = right_leg_.jacobi_00() * right_leg_.jacobi_11() - right_leg_.jacobi_01() * right_leg_.jacobi_10();
+  const rm::f32 det_r =
+      right_leg_.jacobi_00() * right_leg_.jacobi_11() - right_leg_.jacobi_01() * right_leg_.jacobi_10();
 
   if (std::fabs(det_l) < 1e-5f || std::fabs(det_r) < 1e-5f || std::fabs(left_leg_.l0()) < 1e-5f ||
       std::fabs(right_leg_.l0()) < 1e-5f) {
