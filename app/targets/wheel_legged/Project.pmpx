@@ -79,15 +79,13 @@
 			<member name="item34" type="CObject_ptr">ObjId0184</member>
 			<member name="item35" type="CObject_ptr">ObjId0217</member>
 			<member name="item36" type="CObject_ptr">ObjId0218</member>
-			<member name="item37" type="CObject_ptr">ObjId0219</member>
-			<member name="item38" type="CObject_ptr">ObjId0220</member>
 		</object>
 		<object name="ObjId0004" type="CVariable">
 			<member name="name" type="string">wl_fm_motor_lb_pos_rad</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lb_pos_rad</member>
-			<member name="last_addr" type="uint32">0x20000454</member>
+			<member name="last_addr" type="uint32">0x200003FC</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -136,7 +134,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lf_pos_rad</member>
-			<member name="last_addr" type="uint32">0x20000448</member>
+			<member name="last_addr" type="uint32">0x200003F0</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -185,7 +183,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rf_pos_rad</member>
-			<member name="last_addr" type="uint32">0x20000460</member>
+			<member name="last_addr" type="uint32">0x20000408</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -234,7 +232,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rb_pos_rad</member>
-			<member name="last_addr" type="uint32">0x2000046C</member>
+			<member name="last_addr" type="uint32">0x20000414</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -283,7 +281,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_ll_rad</member>
-			<member name="last_addr" type="uint32">0x200004CC</member>
+			<member name="last_addr" type="uint32">0x2000047C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -332,7 +330,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_lr_rad</member>
-			<member name="last_addr" type="uint32">0x200004D4</member>
+			<member name="last_addr" type="uint32">0x20000484</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -381,7 +379,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_ll_dot_rad_s</member>
-			<member name="last_addr" type="uint32">0x200004D0</member>
+			<member name="last_addr" type="uint32">0x20000480</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -430,7 +428,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_lr_dot_rad_s</member>
-			<member name="last_addr" type="uint32">0x200004D8</member>
+			<member name="last_addr" type="uint32">0x20000488</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -479,7 +477,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_imu_yaw_rad</member>
-			<member name="last_addr" type="uint32">0x200004A0</member>
+			<member name="last_addr" type="uint32">0x20000450</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -528,7 +526,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_imu_pitch_rad</member>
-			<member name="last_addr" type="uint32">0x2000049C</member>
+			<member name="last_addr" type="uint32">0x2000044C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -577,7 +575,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_imu_roll_rad</member>
-			<member name="last_addr" type="uint32">0x20000498</member>
+			<member name="last_addr" type="uint32">0x20000448</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -626,7 +624,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_phi_rad</member>
-			<member name="last_addr" type="uint32">0x200004C4</member>
+			<member name="last_addr" type="uint32">0x20000474</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -675,7 +673,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_phi_dot_rad_s</member>
-			<member name="last_addr" type="uint32">0x200004C8</member>
+			<member name="last_addr" type="uint32">0x20000478</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -724,7 +722,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_b_rad</member>
-			<member name="last_addr" type="uint32">0x200004DC</member>
+			<member name="last_addr" type="uint32">0x2000048C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -773,7 +771,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_theta_b_dot_rad_s</member>
-			<member name="last_addr" type="uint32">0x200004E0</member>
+			<member name="last_addr" type="uint32">0x20000490</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -822,7 +820,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_wheel_left_rad_s</member>
-			<member name="last_addr" type="uint32">0x20000478</member>
+			<member name="last_addr" type="uint32">0x20000428</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -871,7 +869,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_wheel_right_rad_s</member>
-			<member name="last_addr" type="uint32">0x2000047C</member>
+			<member name="last_addr" type="uint32">0x2000042C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -920,7 +918,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_s_m</member>
-			<member name="last_addr" type="uint32">0x200004BC</member>
+			<member name="last_addr" type="uint32">0x2000046C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -969,7 +967,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_model_s_dot_mps</member>
-			<member name="last_addr" type="uint32">0x200004C0</member>
+			<member name="last_addr" type="uint32">0x20000470</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1018,7 +1016,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lf_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000450</member>
+			<member name="last_addr" type="uint32">0x200003F8</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1067,7 +1065,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lb_tau_nm</member>
-			<member name="last_addr" type="uint32">0x2000045C</member>
+			<member name="last_addr" type="uint32">0x20000404</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1116,7 +1114,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rf_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000468</member>
+			<member name="last_addr" type="uint32">0x20000410</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1165,7 +1163,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rb_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000474</member>
+			<member name="last_addr" type="uint32">0x2000041C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1214,7 +1212,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_wheel_left_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000480</member>
+			<member name="last_addr" type="uint32">0x20000430</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1263,7 +1261,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_wheel_right_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000484</member>
+			<member name="last_addr" type="uint32">0x20000434</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1312,7 +1310,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lf_out_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000488</member>
+			<member name="last_addr" type="uint32">0x20000438</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1361,7 +1359,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_lb_out_tau_nm</member>
-			<member name="last_addr" type="uint32">0x2000048C</member>
+			<member name="last_addr" type="uint32">0x2000043C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1410,7 +1408,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rf_out_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000490</member>
+			<member name="last_addr" type="uint32">0x20000440</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1459,7 +1457,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_motor_rb_out_tau_nm</member>
-			<member name="last_addr" type="uint32">0x20000494</member>
+			<member name="last_addr" type="uint32">0x20000444</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1508,7 +1506,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_can_loop_freq_hz</member>
-			<member name="last_addr" type="uint32">0x20000410</member>
+			<member name="last_addr" type="uint32">0x200003B8</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1557,7 +1555,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_timer_period_us</member>
-			<member name="last_addr" type="uint32">0x2000041C</member>
+			<member name="last_addr" type="uint32">0x200003C4</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1606,7 +1604,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_joint_can_fps</member>
-			<member name="last_addr" type="uint32">0x20000414</member>
+			<member name="last_addr" type="uint32">0x200003BC</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1655,7 +1653,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_chassis_leg_length_m</member>
-			<member name="last_addr" type="uint32">0x20000438</member>
+			<member name="last_addr" type="uint32">0x200003E0</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1704,7 +1702,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_left_leg_length_m</member>
-			<member name="last_addr" type="uint32">0x2000043C</member>
+			<member name="last_addr" type="uint32">0x200003E4</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1753,7 +1751,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_fm_right_leg_length_m</member>
-			<member name="last_addr" type="uint32">0x20000440</member>
+			<member name="last_addr" type="uint32">0x200003E8</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1798,109 +1796,11 @@
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
 		<object name="ObjId0217" type="CVariable">
-			<member name="name" type="string">wl_fm_gimbal_mode</member>
+			<member name="name" type="string">wl_fm_motor_yaw_pos_rad</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_fm_gimbal_mode</member>
-			<member name="last_addr" type="uint32">0x20000421</member>
-			<member name="byte_size" type="sint32">1</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0218" type="CVariable">
-			<member name="name" type="string">wl_fm_chassis_mode</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_fm_chassis_mode</member>
+			<member name="address" type="string">wl_fm_motor_yaw_pos_rad</member>
 			<member name="last_addr" type="uint32">0x20000420</member>
-			<member name="byte_size" type="sint32">1</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0219" type="CVariable">
-			<member name="name" type="string">wl_fm_yaw_motor_pos_rad</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_fm_yaw_motor_pos_rad</member>
-			<member name="last_addr" type="uint32">0x200004EC</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -1944,12 +1844,12 @@
 			<member name="modif_address" type="string"/>
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
-		<object name="ObjId0220" type="CVariable">
-			<member name="name" type="string">wl_fm_wheel_can_fps</member>
+		<object name="ObjId0218" type="CVariable">
+			<member name="name" type="string">wl_fm_motor_yaw_vel_rad_s</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_fm_wheel_can_fps</member>
-			<member name="last_addr" type="uint32">0x20000418</member>
+			<member name="address" type="string">wl_fm_motor_yaw_vel_rad_s</member>
+			<member name="last_addr" type="uint32">0x20000424</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2076,8 +1976,6 @@
 			<member name="item34" type="CObject_ptr">ObjId0184</member>
 			<member name="item35" type="CObject_ptr">ObjId0217</member>
 			<member name="item36" type="CObject_ptr">ObjId0218</member>
-			<member name="item37" type="CObject_ptr">ObjId0219</member>
-			<member name="item38" type="CObject_ptr">ObjId0220</member>
 		</object>
 		<object name="ObjId0038" type="CObList"/>
 		<object name="ObjId0039" type="CObList">
@@ -3479,13 +3377,9 @@
 			<member name="key34" type="CObject_ptr">ObjId0184</member>
 			<member name="value34" type="CObject_ptr">ObjId0206</member>
 			<member name="key35" type="CObject_ptr">ObjId0217</member>
-			<member name="value35" type="CObject_ptr">ObjId0221</member>
+			<member name="value35" type="CObject_ptr">ObjId0219</member>
 			<member name="key36" type="CObject_ptr">ObjId0218</member>
-			<member name="value36" type="CObject_ptr">ObjId0223</member>
-			<member name="key37" type="CObject_ptr">ObjId0219</member>
-			<member name="value37" type="CObject_ptr">ObjId0225</member>
-			<member name="key38" type="CObject_ptr">ObjId0220</member>
-			<member name="value38" type="CObject_ptr">ObjId0227</member>
+			<member name="value36" type="CObject_ptr">ObjId0221</member>
 		</object>
 		<object name="ObjId0101" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
@@ -3662,26 +3556,16 @@
 			<member name="row_cell_formats" type="CObArrayEx">ObjId0207</member>
 		</object>
 		<object name="ObjId0207" type="CObArray" length="0"/>
+		<object name="ObjId0219" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0220</member>
+		</object>
+		<object name="ObjId0220" type="CObArray" length="0"/>
 		<object name="ObjId0221" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
 			<member name="row_cell_formats" type="CObArrayEx">ObjId0222</member>
 		</object>
 		<object name="ObjId0222" type="CObArray" length="0"/>
-		<object name="ObjId0223" type="CPrjItemBlock_VarInfo">
-			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0224</member>
-		</object>
-		<object name="ObjId0224" type="CObArray" length="0"/>
-		<object name="ObjId0225" type="CPrjItemBlock_VarInfo">
-			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0226</member>
-		</object>
-		<object name="ObjId0226" type="CObArray" length="0"/>
-		<object name="ObjId0227" type="CPrjItemBlock_VarInfo">
-			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0228</member>
-		</object>
-		<object name="ObjId0228" type="CObArray" length="0"/>
 		<object name="ObjId0147" type="CFlashProgDlg">
 			<member name="is_default" type="sint32">1</member>
 			<member name="csw_addr" type="string">fprgCSW</member>
