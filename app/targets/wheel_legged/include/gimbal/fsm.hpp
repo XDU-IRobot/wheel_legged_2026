@@ -34,12 +34,12 @@ class Fsm {
    * @brief 状态机输入
    */
   struct Input {
-    bool input_valid{false};             ///< 输入是否有效
-    bool enable_request{false};          ///< 云台使能请求
-    bool safe_request{false};            ///< 安全模式请求
-    bool host_target_valid{false};       ///< 上位机目标是否有效
-    bool chassis_recovery_active{false}; ///< 底盘恢复状态标志
-    bool fire_request{false};            ///< 开火请求
+    bool input_valid{false};              ///< 输入是否有效
+    bool enable_request{false};           ///< 云台使能请求
+    bool safe_request{false};             ///< 安全模式请求
+    bool host_target_valid{false};        ///< 上位机目标是否有效
+    bool chassis_recovery_active{false};  ///< 底盘恢复状态标志
+    bool fire_request{false};             ///< 开火请求
   };
 
   /**
