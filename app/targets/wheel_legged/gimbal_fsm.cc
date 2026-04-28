@@ -28,8 +28,7 @@ gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &
   gimbal::Fsm::Output::ControlOutput control{};
   const wheel_legged::ModeRequest &request = input.request;
 
-  const bool use_host_target =
-      request.target_source == wheel_legged::TargetSource::kHost && request.host_target_valid;
+  const bool use_host_target = request.target_source == wheel_legged::TargetSource::kHost && request.host_target_valid;
   control.active_target_source = use_host_target ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
   control.gimbal_target = use_host_target ? request.host_target : request.rc_target;
 

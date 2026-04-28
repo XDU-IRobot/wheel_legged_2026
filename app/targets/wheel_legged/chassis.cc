@@ -85,9 +85,7 @@ rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
          kSpringTorqueScale;
 }
 
-bool IsSafeStopMode(const chassis::Fsm::State mode) {
-  return mode == chassis::Fsm::State::kDisabled;
-}
+bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
 
 }  // namespace
 
