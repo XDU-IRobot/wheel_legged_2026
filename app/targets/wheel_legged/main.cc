@@ -45,8 +45,7 @@ void AppMain() {
       const uint32_t now_ms = HAL_GetTick();
       const uint32_t elapsed = now_ms - last_ms;
       if (elapsed >= 500) {
-        wl_fm_can_loop_freq_hz =
-            static_cast<float>(loop_count) * 1000.0f / static_cast<float>(elapsed);
+        wl_fm_can_loop_freq_hz = static_cast<float>(loop_count) * 1000.0f / static_cast<float>(elapsed);
         loop_count = 0;
         last_ms = now_ms;
       }
