@@ -37,13 +37,12 @@ class Fsm {
    */
   struct Output {
     struct ControlOutput {
-      bool gimbal_enable{false};                          ///< 云台使能
-      bool align_to_chassis_forward{false};               ///< 是否对齐底盘前向
-      bool fire_allowed{false};                           ///< 是否允许开火
-      bool shoot_request{false};                          ///< 本周期开火请求
-      wheel_legged::TargetSource active_target_source{
-          wheel_legged::TargetSource::kRc};               ///< 目标来源
-      wheel_legged::GimbalTarget gimbal_target{};         ///< 本周期目标
+      bool gimbal_enable{false};                                                         ///< 云台使能
+      bool align_to_chassis_forward{false};                                              ///< 是否对齐底盘前向
+      bool fire_allowed{false};                                                          ///< 是否允许开火
+      bool shoot_request{false};                                                         ///< 本周期开火请求
+      wheel_legged::TargetSource active_target_source{wheel_legged::TargetSource::kRc};  ///< 目标来源
+      wheel_legged::GimbalTarget gimbal_target{};                                        ///< 本周期目标
     };
 
     State mode{State::kDisabled};  ///< 当前状态

@@ -294,8 +294,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   debug.gimbal_mode = gimbal_output.mode;
   debug.chassis_state_changed = chassis_output.state_changed;
   debug.gimbal_state_changed = gimbal_output.state_changed;
-  debug.dr16_enable_request = input.mode_request.input_valid &&
-                              input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled;
+  debug.dr16_enable_request =
+      input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled;
   debug.dr16_spin_request = input.mode_request.spin_hold;
   debug.dr16_jump_trigger_edge = input.mode_request.jump_trigger;
 
