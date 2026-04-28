@@ -66,13 +66,13 @@ bool IsJumpState(const chassis::Fsm::State mode) {
 float ResolveLegLengthTarget(const chassis::Fsm::LegLengthMode leg_length_mode) {
   switch (leg_length_mode) {
     case chassis::Fsm::LegLengthMode::kLow:
-      return 0.18f;
+      return 0.15f;
     case chassis::Fsm::LegLengthMode::kMid:
-      return 0.23f;
+      return 0.20f;
     case chassis::Fsm::LegLengthMode::kHigh:
       return 0.23f;
     default:
-      return 0.18f;
+      return 0.15f;
   }
 }
 

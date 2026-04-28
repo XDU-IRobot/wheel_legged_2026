@@ -128,10 +128,14 @@ extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
 
 /** @brief 系统时序测量 */
 extern volatile float wl_fm_can_loop_freq_hz;
+extern volatile float wl_fm_joint_can_fps;
+extern volatile float wl_fm_wheel_can_fps;
 extern volatile float wl_fm_timer_period_us;
 
 /** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;
+extern volatile float wl_fm_left_leg_length_m;
+extern volatile float wl_fm_right_leg_length_m;
 extern volatile float wl_fm_chassis_speed_mps;
 
 /** @brief 关节与轮毂原始反馈 */

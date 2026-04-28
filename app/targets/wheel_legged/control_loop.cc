@@ -11,6 +11,8 @@
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
 volatile float wl_fm_can_loop_freq_hz{0.0f};
+volatile float wl_fm_joint_can_fps{0.0f};
+volatile float wl_fm_wheel_can_fps{0.0f};
 volatile float wl_fm_timer_period_us{0.0f};
 volatile uint8_t wl_fm_chassis_mode{0};
 volatile uint8_t wl_fm_gimbal_mode{0};
@@ -27,6 +29,8 @@ volatile uint8_t wl_fm_dr16_spin_request{0};
 volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
 
 volatile float wl_fm_chassis_leg_length_m{0.0f};
+volatile float wl_fm_left_leg_length_m{0.0f};
+volatile float wl_fm_right_leg_length_m{0.0f};
 volatile float wl_fm_chassis_speed_mps{0.0f};
 
 volatile float wl_fm_motor_lf_pos_rad{0.0f};
@@ -212,8 +216,10 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   fsm_input.leg_length_mode = input.chassis_leg_length_mode;
   fsm_input.spin_enable = input.chassis_spin_request;
   fsm_input.jump_trigger = input.chassis_jump_request;
-  fsm_input.fall_detected = input.chassis_fall_detected;
-  fsm_input.upright_stable = input.chassis_upright_stable;
+  // fsm_input.fall_detected = input.chassis_fall_detected;
+  // fsm_input.upright_stable = input.chassis_upright_stable;
+  fsm_input.fall_detected = false;
+  fsm_input.upright_stable = true;
   fsm_input.current_leg_length_m = input.chassis_current_leg_length_m;
   fsm_input.tick_ms = tick_ms;
   return fsm_input;
@@ -228,8 +234,9 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
   fsm_input.enable_request = input.gimbal_enable_request;
   fsm_input.safe_request = input.gimbal_safe_request;
   fsm_input.host_target_valid = input.gimbal_host_target_valid;
-  fsm_input.chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                                      chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight;
+  // fsm_input.chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+  //                                     chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight;
+  fsm_input.chassis_recovery_active = false;
   fsm_input.fire_request = input.gimbal_fire_request;
   return fsm_input;
 }
@@ -313,6 +320,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_model_theta_b_dot_rad_s = x.theta_b_dot;
   wl_fm_model_l_l_m = x.l_l;
   wl_fm_model_l_r_m = x.l_r;
+  wl_fm_left_leg_length_m = x.l_l;
+  wl_fm_right_leg_length_m = x.l_r;
 }
 
 }  // namespace
