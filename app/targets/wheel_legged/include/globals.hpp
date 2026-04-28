@@ -126,6 +126,10 @@ extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
 
+/** @brief 系统时序测量 */
+extern volatile float wl_fm_can_loop_freq_hz;
+extern volatile float wl_fm_timer_period_us;
+
 /** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;
 extern volatile float wl_fm_chassis_speed_mps;
@@ -145,6 +149,14 @@ extern volatile float wl_fm_motor_rb_vel_rad_s;
 extern volatile float wl_fm_motor_rb_tau_nm;
 extern volatile float wl_fm_wheel_left_rad_s;
 extern volatile float wl_fm_wheel_right_rad_s;
+extern volatile float wl_fm_wheel_left_tau_nm;
+extern volatile float wl_fm_wheel_right_tau_nm;
+
+/** @brief 关节与轮毂控制输出力矩 */
+extern volatile float wl_fm_motor_lf_out_tau_nm;
+extern volatile float wl_fm_motor_lb_out_tau_nm;
+extern volatile float wl_fm_motor_rf_out_tau_nm;
+extern volatile float wl_fm_motor_rb_out_tau_nm;
 
 /** @brief 惯导原始反馈 */
 extern volatile float wl_fm_imu_roll_rad;

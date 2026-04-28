@@ -10,6 +10,8 @@
 
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
+volatile float wl_fm_can_loop_freq_hz{0.0f};
+volatile float wl_fm_timer_period_us{0.0f};
 volatile uint8_t wl_fm_chassis_mode{0};
 volatile uint8_t wl_fm_gimbal_mode{0};
 volatile uint8_t wl_fm_chassis_state_changed{0};
@@ -41,6 +43,12 @@ volatile float wl_fm_motor_rb_vel_rad_s{0.0f};
 volatile float wl_fm_motor_rb_tau_nm{0.0f};
 volatile float wl_fm_wheel_left_rad_s{0.0f};
 volatile float wl_fm_wheel_right_rad_s{0.0f};
+volatile float wl_fm_wheel_left_tau_nm{0.0f};
+volatile float wl_fm_wheel_right_tau_nm{0.0f};
+volatile float wl_fm_motor_lf_out_tau_nm{0.0f};
+volatile float wl_fm_motor_lb_out_tau_nm{0.0f};
+volatile float wl_fm_motor_rf_out_tau_nm{0.0f};
+volatile float wl_fm_motor_rb_out_tau_nm{0.0f};
 
 volatile float wl_fm_imu_roll_rad{0.0f};
 volatile float wl_fm_imu_pitch_rad{0.0f};
@@ -275,6 +283,12 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_motor_rb_tau_nm = motor.right_leg.back.torque_nm;
   wl_fm_wheel_left_rad_s = motor.wheel.left_rad_s;
   wl_fm_wheel_right_rad_s = motor.wheel.right_rad_s;
+  wl_fm_wheel_left_tau_nm = chassis_control_output.lw_tau;
+  wl_fm_wheel_right_tau_nm = chassis_control_output.rw_tau;
+  wl_fm_motor_lf_out_tau_nm = chassis_control_output.lf_tau;
+  wl_fm_motor_lb_out_tau_nm = chassis_control_output.lb_tau;
+  wl_fm_motor_rf_out_tau_nm = chassis_control_output.rf_tau;
+  wl_fm_motor_rb_out_tau_nm = chassis_control_output.rb_tau;
 
   wl_fm_imu_roll_rad = motor.imu.roll_rad;
   wl_fm_imu_pitch_rad = motor.imu.pitch_rad;
@@ -309,6 +323,19 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
 void ControlLoop() {
   if (globals == nullptr) {
     return;
+  }
+
+  {
+    static uint32_t invoke_count = 0;
+    static uint32_t last_ms = 0;
+    invoke_count++;
+    const uint32_t now_ms = HAL_GetTick();
+    const uint32_t elapsed = now_ms - last_ms;
+    if (elapsed >= 500) {
+      wl_fm_timer_period_us = static_cast<float>(elapsed) * 1000.0f / static_cast<float>(invoke_count);
+      invoke_count = 0;
+      last_ms = now_ms;
+    }
   }
 
   const uint32_t now_ms = HAL_GetTick();
