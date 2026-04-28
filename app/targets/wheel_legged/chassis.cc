@@ -108,7 +108,7 @@ void chassis::Chassis::Init() {
   init_pid(left_leg_turn_pid_, 20.0f, 0.0f, 0.0f, 15.0f, 0.0f);
   init_pid(right_leg_turn_pid_, 20.0f, 0.0f, 0.0f, 15.0f, 0.0f);
 
-  std::vector<std::array<rm::f32, 6>> coeff_vec(40);
+  std::vector<std::array<f32, 6>> coeff_vec(40);
   for (int i = 0; i < 40; ++i) {
     std::copy(&kCtrlP[i * 6], &kCtrlP[i * 6 + 6], coeff_vec[i].begin());
   }
