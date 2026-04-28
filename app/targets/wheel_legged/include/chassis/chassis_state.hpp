@@ -85,10 +85,10 @@ struct ChassisStateEstimatorConfig {
   rm::f32 wheel_reduction_ratio{17.0f / 268.0f};
   rm::f32 max_valid_speed_mps{8.0f};
 
-  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};//2.94
-  rm::f32 left_phi4_offset_rad{0.59f};//-0.59
-  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};//2.4
-  rm::f32 right_phi4_offset_rad{-1.87f};//-1.87
+  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  // 2.94
+  rm::f32 left_phi4_offset_rad{0.59f};                            //-0.59
+  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  // 2.4
+  rm::f32 right_phi4_offset_rad{-1.87f};                          //-1.87
 
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};
 };
