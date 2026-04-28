@@ -7,108 +7,95 @@
 
 namespace {
 
-gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::State mode, const bool host_target_valid,
-                                                      const bool fire_request) {
+gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input) {
+  const wheel_legged::ModeRequest &request = input.request;
+
+  if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    return gimbal::Fsm::State::kDisabled;
+  }
+  if (input.chassis_recovery_active) {
+    return gimbal::Fsm::State::kRecoveryAlign;
+  }
+  if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
+    return gimbal::Fsm::State::kCombat;
+  }
+  return request.service_profile == wheel_legged::ServiceProfile::kChassisAndGimbalSafe
+             ? gimbal::Fsm::State::kServiceSafe
+             : gimbal::Fsm::State::kServiceWithFire;
+}
+
+gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &input, const gimbal::Fsm::State mode) {
   gimbal::Fsm::Output::ControlOutput control{};
+  const wheel_legged::ModeRequest &request = input.request;
+
+  const bool use_host_target =
+      request.target_source == wheel_legged::TargetSource::kHost && request.host_target_valid;
+  control.active_target_source = use_host_target ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
+  control.gimbal_target = use_host_target ? request.host_target : request.rc_target;
 
   switch (mode) {
     case gimbal::Fsm::State::kDisabled:
       control.gimbal_enable = false;
-      control.align_to_chassis_forward = false;
       control.fire_allowed = false;
       control.shoot_request = false;
-      control.target_source = gimbal::Fsm::TargetSource::kRemote;
+      control.align_to_chassis_forward = false;
       break;
 
-    case gimbal::Fsm::State::kSafe:
+    case gimbal::Fsm::State::kServiceWithFire:
       control.gimbal_enable = true;
+      control.fire_allowed = true;
+      control.shoot_request = request.fire_request;
       control.align_to_chassis_forward = false;
+      break;
+
+    case gimbal::Fsm::State::kServiceSafe:
+      control.gimbal_enable = true;
       control.fire_allowed = false;
       control.shoot_request = false;
-      control.target_source = gimbal::Fsm::TargetSource::kRemote;
+      control.align_to_chassis_forward = false;
       break;
 
-    case gimbal::Fsm::State::kManualControl:
+    case gimbal::Fsm::State::kCombat:
       control.gimbal_enable = true;
-      control.align_to_chassis_forward = false;
       control.fire_allowed = true;
-      control.shoot_request = fire_request;
-      control.target_source = gimbal::Fsm::TargetSource::kRemote;
-      break;
-
-    case gimbal::Fsm::State::kHostControl:
-      control.gimbal_enable = true;
+      control.shoot_request = request.fire_request;
       control.align_to_chassis_forward = false;
-      control.fire_allowed = true;
-      control.shoot_request = fire_request;
-      control.target_source = host_target_valid ? gimbal::Fsm::TargetSource::kHost : gimbal::Fsm::TargetSource::kRemote;
       break;
 
     case gimbal::Fsm::State::kRecoveryAlign:
       control.gimbal_enable = true;
-      control.align_to_chassis_forward = true;
       control.fire_allowed = false;
       control.shoot_request = false;
-      control.target_source = gimbal::Fsm::TargetSource::kRemote;
+      control.align_to_chassis_forward = true;
       break;
   }
 
   return control;
 }
 
-gimbal::Fsm::State ResolveOperationalState(const gimbal::Fsm::Input &input) {
-  if (!input.enable_request) {
-    return gimbal::Fsm::State::kDisabled;
-  }
-  if (input.chassis_recovery_active) {
-    return gimbal::Fsm::State::kRecoveryAlign;
-  }
-  if (input.safe_request) {
-    return gimbal::Fsm::State::kSafe;
-  }
-  if (input.host_target_valid) {
-    return gimbal::Fsm::State::kHostControl;
-  }
-  return gimbal::Fsm::State::kManualControl;
-}
-
 }  // namespace
 
-/**
- * @brief 初始化云台状态机
- */
-void gimbal::Fsm::Init() { Transit(State::kDisabled); }
+void gimbal::Fsm::Init() {
+  mode_ = State::kDisabled;
+  output_ = {};
+  output_.mode = mode_;
+  output_.control = BuildControlOutput(Input{}, mode_);
+}
 
-/**
- * @brief 状态迁移
- */
 void gimbal::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
   mode_ = new_mode;
   output_.mode = mode_;
 }
 
-/**
- * @brief 单步更新云台状态机并生成控制输出
- */
 gimbal::Fsm::Output gimbal::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 
-  if (!input.input_valid) {
-    Transit(State::kDisabled);
-    output_.control = BuildControlOutput(mode_, false, false);
-    return output_;
-  }
-
-  const State requested = ResolveOperationalState(input);
+  const State requested = ResolveMode(input);
   if (requested != mode_) {
     Transit(requested);
   }
 
-  if (mode_ == State::kDisabled && input.enable_request) {
-    Transit(State::kSafe);
-  }
-
-  output_.control = BuildControlOutput(mode_, input.host_target_valid, input.fire_request);
+  output_.control = BuildControlOutput(input, mode_);
   return output_;
 }

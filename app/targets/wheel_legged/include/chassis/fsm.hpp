@@ -1,6 +1,6 @@
 #pragma once
 
-#include "librm/core/typedefs.hpp"
+#include "../fsm_common.hpp"
 
 #include <cstdint>
 
@@ -11,26 +11,16 @@
 
 namespace chassis {
 
-using namespace rm;
-
 class Fsm {
  public:
   /**
-   * @brief 目标腿长档位
-   */
-  enum class LegLengthMode {
-    kLow,
-    kMid,
-    kHigh,
-  };
-
-  /**
    * @brief 底盘状态模式
    */
-  enum class State {
-    kDisabled,
-    kStandby,
-    kBalance,
+  enum class State : uint8_t {
+    kDisabled = 0,
+    kLowLeg,
+    kMidLeg,
+    kHighLeg,
     kSpin,
     kJumpPrep,
     kJumpPush,
@@ -41,18 +31,10 @@ class Fsm {
 
   /**
    * @brief 状态机输入
-   * @note  上层需将遥控器、故障检测等原始量转换成该输入
+   * @note  由 control_loop 生成统一语义请求并传入。
    */
   struct Input {
-    bool input_valid{false};                             ///< 输入是否有效
-    bool force_enable{false};                            ///< 是否使能力控
-    LegLengthMode leg_length_mode{LegLengthMode::kLow};  ///< 目标腿长档位
-    bool spin_enable{false};                             ///< 小陀螺开关
-    bool jump_trigger{false};                            ///< 跳跃触发沿
-    bool fall_detected{false};                           ///< 是否检测到跌倒
-    bool upright_stable{true};                           ///< 是否恢复稳定直立
-    float current_leg_length_m{0.0f};                    ///< 当前腿长
-    uint32_t tick_ms{0};                                 ///< 系统时基（毫秒）
+    wheel_legged::ModeRequest request{};
   };
 
   /**
@@ -68,7 +50,8 @@ class Fsm {
       bool spin_enable{false};           ///< 速度估计是否使用轮速直通
       bool recovery_enable{false};       ///< 是否使能恢复逻辑
       bool safe_output_required{true};   ///< 是否要求安全输出（全零）
-      float target_leg_length_m{0.18f};  ///< 目标腿长
+      wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
+      float target_leg_length_m{0.15f};  ///< 目标腿长
       uint8_t jump_phase{0};             ///< 跳跃阶段编号，0 表示非跳跃
     };
 
@@ -96,10 +79,9 @@ class Fsm {
   [[nodiscard]] State mode() const { return mode_; }
 
  private:
-  struct EtlImpl;
   State mode_{State::kDisabled};
-  LegLengthMode leg_length_mode_{LegLengthMode::kLow};
-  EtlImpl *etl_impl_{nullptr};
+  wheel_legged::LegProfile requested_leg_profile_{wheel_legged::LegProfile::kLow};
+  uint32_t state_enter_tick_ms_{0};
   Output output_{};
 };
 

@@ -86,7 +86,7 @@ rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
 }
 
 bool IsSafeStopMode(const chassis::Fsm::State mode) {
-  return mode == chassis::Fsm::State::kDisabled || mode == chassis::Fsm::State::kStandby;
+  return mode == chassis::Fsm::State::kDisabled;
 }
 
 }  // namespace
@@ -269,11 +269,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // right_force_ = r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_leg = (input.fsm_mode == Fsm::State::kBalance && input.target_leg_length_m > 0.21f) &&
-                                       (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-                                        right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_high_leg =
+        ((input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
+         input.target_leg_length_m > 0.21f) &&
+        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
 
-    if (use_jump_retract2 || off_ground_in_mid_leg) {
+    if (use_jump_retract2 || off_ground_in_mid_high_leg) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {

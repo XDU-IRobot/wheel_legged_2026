@@ -2,6 +2,8 @@
 #include "include/actuators.hpp"
 
 #include "main.h"
+#include <cstddef>
+#include <cmath>
 
 /**
  * @file  targets/wheel_legged/control_loop.cc
@@ -18,6 +20,8 @@ volatile uint8_t wl_fm_chassis_mode{0};
 volatile uint8_t wl_fm_gimbal_mode{0};
 volatile uint8_t wl_fm_chassis_state_changed{0};
 volatile uint8_t wl_fm_gimbal_state_changed{0};
+volatile char wl_fm_chassis_mode_text[32]{"Disabled"};
+volatile char wl_fm_gimbal_mode_text[32]{"Disabled"};
 
 volatile uint8_t wl_fm_dr16_online{0};
 volatile int32_t wl_fm_dr16_switch_l{0};
@@ -76,14 +80,15 @@ volatile float wl_fm_model_theta_b_rad{0.0f};
 volatile float wl_fm_model_theta_b_dot_rad_s{0.0f};
 volatile float wl_fm_model_l_l_m{0.0f};
 volatile float wl_fm_model_l_r_m{0.0f};
+volatile float wl_fm_yaw_motor_pos_rad{0.0f};
+volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
 }
 
 namespace {
 
-constexpr int16_t kDialJumpTriggerThreshold = 420;
-constexpr int16_t kDialJumpReleaseThreshold = 260;
-constexpr int16_t kDialSpinEnableThreshold = -360;
-constexpr int16_t kDialSpinDisableThreshold = -220;
+constexpr int16_t kWheelSpinThreshold = 220;
+constexpr int16_t kWheelActionThreshold = 320;
+constexpr int16_t kWheelCenterThreshold = 80;
 constexpr float kControlLoopDtS = 0.002f;
 chassis_runtime::Actuators g_actuators{};
 
@@ -103,21 +108,63 @@ struct InputSnapshot {
 
   Dr16RawInput dr16{};
   chassis::ChassisStateEstimatorInput estimator_input{};
-
-  bool chassis_enable_request{false};
-  chassis::Fsm::LegLengthMode chassis_leg_length_mode{chassis::Fsm::LegLengthMode::kLow};
-  bool chassis_spin_request{false};
-  bool chassis_jump_request{false};
-  bool chassis_fall_detected{false};
-  bool chassis_upright_stable{true};
-  float chassis_current_leg_length_m{0.0f};
-
-  bool gimbal_enable_request{false};
-  bool gimbal_safe_request{true};
-  bool gimbal_host_target_external_valid{false};
-  bool gimbal_host_target_valid{false};
-  bool gimbal_fire_request{false};
+  wheel_legged::ModeRequest mode_request{};
 };
+
+const char *ToChassisModeText(const chassis::Fsm::State mode) {
+  switch (mode) {
+    case chassis::Fsm::State::kDisabled:
+      return "Disabled";
+    case chassis::Fsm::State::kLowLeg:
+      return "LowLeg";
+    case chassis::Fsm::State::kMidLeg:
+      return "MidLeg";
+    case chassis::Fsm::State::kHighLeg:
+      return "HighLeg";
+    case chassis::Fsm::State::kSpin:
+      return "Spin";
+    case chassis::Fsm::State::kJumpPrep:
+      return "JumpPrep";
+    case chassis::Fsm::State::kJumpPush:
+      return "JumpPush";
+    case chassis::Fsm::State::kJumpRecover:
+      return "JumpRecover";
+    case chassis::Fsm::State::kRecoveryFallCheck:
+      return "RecoveryFallCheck";
+    case chassis::Fsm::State::kRecoverySelfRight:
+      return "RecoverySelfRight";
+    default:
+      return "Unknown";
+  }
+}
+
+const char *ToGimbalModeText(const gimbal::Fsm::State mode) {
+  switch (mode) {
+    case gimbal::Fsm::State::kDisabled:
+      return "Disabled";
+    case gimbal::Fsm::State::kServiceWithFire:
+      return "ServiceWithFire";
+    case gimbal::Fsm::State::kServiceSafe:
+      return "ServiceSafe";
+    case gimbal::Fsm::State::kCombat:
+      return "Combat";
+    case gimbal::Fsm::State::kRecoveryAlign:
+      return "RecoveryAlign";
+    default:
+      return "Unknown";
+  }
+}
+
+void CopyTextToVolatile(volatile char *dst, size_t dst_size, const char *src) {
+  if (dst_size == 0U) {
+    return;
+  }
+  size_t i = 0U;
+  for (; i + 1U < dst_size && src[i] != '\0'; ++i) {
+    dst[i] = src[i];
+  }
+  dst[i] = '\0';
+}
 
 /**
  * @brief 调试状态快照
@@ -128,34 +175,40 @@ struct DebugSnapshot {
   gimbal::Fsm::State gimbal_mode{gimbal::Fsm::State::kDisabled};
   bool chassis_state_changed{false};
   bool gimbal_state_changed{false};
-  bool dr16_chassis_enable_request{false};
-  bool dr16_chassis_spin_request{false};
-  bool dr16_chassis_jump_trigger_edge{false};
+  bool dr16_enable_request{false};
+  bool dr16_spin_request{false};
+  bool dr16_jump_trigger_edge{false};
 };
 
 /**
  * @brief DR16 语义状态（用于边沿/锁存逻辑）
  */
 struct Dr16SemanticState {
-  bool jump_latched{false};
-  bool spin_latched{false};
+  bool wheel_action_armed{true};
 };
 
-chassis::Fsm::LegLengthMode ResolveLegLengthMode(const rm::device::DR16::SwitchPosition switch_r) {
+wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
   switch (switch_r) {
-    case rm::device::DR16::SwitchPosition::kDown:
-      return chassis::Fsm::LegLengthMode::kLow;
     case rm::device::DR16::SwitchPosition::kMid:
-      return chassis::Fsm::LegLengthMode::kMid;
+      return wheel_legged::LegProfile::kMid;
     case rm::device::DR16::SwitchPosition::kUp:
-      return chassis::Fsm::LegLengthMode::kHigh;
+      return wheel_legged::LegProfile::kHigh;
+    case rm::device::DR16::SwitchPosition::kDown:
     default:
-      return chassis::Fsm::LegLengthMode::kLow;
+      return wheel_legged::LegProfile::kLow;
   }
 }
 
-bool IsEnableSwitch(const rm::device::DR16::SwitchPosition switch_l) {
-  return switch_l == rm::device::DR16::SwitchPosition::kMid || switch_l == rm::device::DR16::SwitchPosition::kUp;
+wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchPosition switch_l) {
+  switch (switch_l) {
+    case rm::device::DR16::SwitchPosition::kUp:
+      return wheel_legged::DomainRequest::kCombat;
+    case rm::device::DR16::SwitchPosition::kMid:
+      return wheel_legged::DomainRequest::kService;
+    case rm::device::DR16::SwitchPosition::kDown:
+    default:
+      return wheel_legged::DomainRequest::kDisabled;
+  }
 }
 
 /**
@@ -164,31 +217,32 @@ bool IsEnableSwitch(const rm::device::DR16::SwitchPosition switch_l) {
 void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_state, InputSnapshot &input) {
   input.input_valid = dr16.online;
   input.dr16 = dr16;
+  wheel_legged::ModeRequest request{};
+  request.input_valid = dr16.online;
+  request.domain_request = ResolveDomainRequest(dr16.switch_l);
+  request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalWithFire;
+  request.leg_request = ResolveLegProfile(dr16.switch_r);
 
-  const bool chassis_enable = dr16.online && IsEnableSwitch(dr16.switch_l);
-  input.chassis_enable_request = chassis_enable;
-  input.chassis_leg_length_mode = ResolveLegLengthMode(dr16.switch_r);
+  request.spin_hold = dr16.dial >= kWheelSpinThreshold;
 
-  if (dr16.dial <= kDialSpinEnableThreshold) {
-    semantic_state.spin_latched = true;
-  } else if (dr16.dial >= kDialSpinDisableThreshold) {
-    semantic_state.spin_latched = false;
+  if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
+    semantic_state.wheel_action_armed = true;
   }
-  input.chassis_spin_request = chassis_enable && semantic_state.spin_latched;
-
-  const bool jump_level = dr16.dial >= kDialJumpTriggerThreshold;
-  input.chassis_jump_request = chassis_enable && jump_level && !semantic_state.jump_latched;
-  if (jump_level) {
-    semantic_state.jump_latched = true;
-  } else if (dr16.dial <= kDialJumpReleaseThreshold) {
-    semantic_state.jump_latched = false;
+  const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
+  if (wheel_action_trigger) {
+    semantic_state.wheel_action_armed = false;
   }
+  request.jump_trigger = wheel_action_trigger;
 
-  input.gimbal_enable_request = chassis_enable;
-  input.gimbal_safe_request = dr16.switch_r == rm::device::DR16::SwitchPosition::kDown;
-  const bool host_mode_selected = dr16.switch_r == rm::device::DR16::SwitchPosition::kUp;
-  input.gimbal_host_target_valid = host_mode_selected && input.gimbal_host_target_external_valid;
-  input.gimbal_fire_request = false;
+  request.fire_request = false;
+  request.target_source = wheel_legged::TargetSource::kRc;
+  request.host_target_valid = false;
+  request.fall_detected = false;
+  request.fall_detected_hold_ms = 0U;
+  request.upright_stable = true;
+  request.tick_ms = 0U;
+
+  input.mode_request = request;
 }
 
 /**
@@ -211,17 +265,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
  */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms) {
   chassis::Fsm::Input fsm_input{};
-  fsm_input.input_valid = input.input_valid;
-  fsm_input.force_enable = input.chassis_enable_request;
-  fsm_input.leg_length_mode = input.chassis_leg_length_mode;
-  fsm_input.spin_enable = input.chassis_spin_request;
-  fsm_input.jump_trigger = input.chassis_jump_request;
-  // fsm_input.fall_detected = input.chassis_fall_detected;
-  // fsm_input.upright_stable = input.chassis_upright_stable;
-  fsm_input.fall_detected = false;
-  fsm_input.upright_stable = true;
-  fsm_input.current_leg_length_m = input.chassis_current_leg_length_m;
-  fsm_input.tick_ms = tick_ms;
+  fsm_input.request = input.mode_request;
+  fsm_input.request.tick_ms = tick_ms;
   return fsm_input;
 }
 
@@ -230,14 +275,9 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
  */
 gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output) {
   gimbal::Fsm::Input fsm_input{};
-  fsm_input.input_valid = input.input_valid;
-  fsm_input.enable_request = input.gimbal_enable_request;
-  fsm_input.safe_request = input.gimbal_safe_request;
-  fsm_input.host_target_valid = input.gimbal_host_target_valid;
-  // fsm_input.chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-  //                                     chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight;
-  fsm_input.chassis_recovery_active = false;
-  fsm_input.fire_request = input.gimbal_fire_request;
+  fsm_input.request = input.mode_request;
+  fsm_input.chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+                                      chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight;
   return fsm_input;
 }
 
@@ -246,31 +286,35 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
  */
 void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
                          const gimbal::Fsm::Output &gimbal_output,
-                         const chassis::Chassis::UpdateOutput &chassis_control_output) {
+                         const chassis::Chassis::UpdateOutput &chassis_control_output,
+                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output) {
   DebugSnapshot debug{};
   debug.tick_ms = tick_ms;
   debug.chassis_mode = chassis_output.mode;
   debug.gimbal_mode = gimbal_output.mode;
   debug.chassis_state_changed = chassis_output.state_changed;
   debug.gimbal_state_changed = gimbal_output.state_changed;
-  debug.dr16_chassis_enable_request = input.chassis_enable_request;
-  debug.dr16_chassis_spin_request = input.chassis_spin_request;
-  debug.dr16_chassis_jump_trigger_edge = input.chassis_jump_request;
+  debug.dr16_enable_request = input.mode_request.input_valid &&
+                              input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled;
+  debug.dr16_spin_request = input.mode_request.spin_hold;
+  debug.dr16_jump_trigger_edge = input.mode_request.jump_trigger;
 
   wl_fm_tick_ms = debug.tick_ms;
   wl_fm_chassis_mode = static_cast<uint8_t>(debug.chassis_mode);
   wl_fm_gimbal_mode = static_cast<uint8_t>(debug.gimbal_mode);
   wl_fm_chassis_state_changed = static_cast<uint8_t>(debug.chassis_state_changed);
   wl_fm_gimbal_state_changed = static_cast<uint8_t>(debug.gimbal_state_changed);
+  CopyTextToVolatile(wl_fm_chassis_mode_text, sizeof(wl_fm_chassis_mode_text), ToChassisModeText(debug.chassis_mode));
+  CopyTextToVolatile(wl_fm_gimbal_mode_text, sizeof(wl_fm_gimbal_mode_text), ToGimbalModeText(debug.gimbal_mode));
 
   wl_fm_dr16_online = static_cast<uint8_t>(input.dr16.online);
   wl_fm_dr16_switch_l = static_cast<int32_t>(input.dr16.switch_l);
   wl_fm_dr16_switch_r = static_cast<int32_t>(input.dr16.switch_r);
   wl_fm_dr16_dial = input.dr16.dial;
 
-  wl_fm_dr16_enable_request = static_cast<uint8_t>(debug.dr16_chassis_enable_request);
-  wl_fm_dr16_spin_request = static_cast<uint8_t>(debug.dr16_chassis_spin_request);
-  wl_fm_dr16_jump_trigger_edge = static_cast<uint8_t>(debug.dr16_chassis_jump_trigger_edge);
+  wl_fm_dr16_enable_request = static_cast<uint8_t>(debug.dr16_enable_request);
+  wl_fm_dr16_spin_request = static_cast<uint8_t>(debug.dr16_spin_request);
+  wl_fm_dr16_jump_trigger_edge = static_cast<uint8_t>(debug.dr16_jump_trigger_edge);
 
   wl_fm_chassis_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
@@ -322,6 +366,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_model_l_r_m = x.l_r;
   wl_fm_left_leg_length_m = x.l_l;
   wl_fm_right_leg_length_m = x.l_r;
+  wl_fm_yaw_motor_pos_rad = gimbal_control_output.yaw_pos_rad;
+  wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
 }
 
 }  // namespace
@@ -352,14 +398,25 @@ void ControlLoop() {
   static InputSnapshot input{};
   static Dr16SemanticState dr16_semantic_state{};
   static chassis::Chassis::UpdateOutput chassis_control_output{};
+  static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
-  input.chassis_current_leg_length_m = chassis_control_output.mean_leg_length_m;
+  input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
+  input.mode_request.tick_ms = now_ms;
 
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
+
+  gimbal::Gimbal::UpdateInput gimbal_update_input{};
+  gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
+  gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
+  gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
+  gimbal_update_input.target = gimbal_output.control.gimbal_target;
+  gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
+  globals->gimbal.Update(gimbal_update_input);
+  gimbal_control_output = globals->gimbal.GetOutput();
 
   chassis::Chassis::UpdateInput chassis_update_input{};
   chassis_update_input.fsm_mode = chassis_output.mode;
@@ -374,5 +431,5 @@ void ControlLoop() {
   chassis_control_output = globals->chassis.GetOutput();
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output.control.enable_dm);
 
-  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output);
+  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }

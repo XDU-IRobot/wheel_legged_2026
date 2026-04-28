@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../fsm_common.hpp"
+
 #include <cstdint>
 
 /**
@@ -14,32 +16,20 @@ class Fsm {
   /**
    * @brief 云台状态
    */
-  enum class State {
-    kDisabled,
-    kSafe,
-    kManualControl,
-    kHostControl,
+  enum class State : uint8_t {
+    kDisabled = 0,
+    kServiceWithFire,
+    kServiceSafe,
+    kCombat,
     kRecoveryAlign,
-  };
-
-  /**
-   * @brief 目标来源
-   */
-  enum class TargetSource {
-    kRemote,
-    kHost,
   };
 
   /**
    * @brief 状态机输入
    */
   struct Input {
-    bool input_valid{false};              ///< 输入是否有效
-    bool enable_request{false};           ///< 云台使能请求
-    bool safe_request{false};             ///< 安全模式请求
-    bool host_target_valid{false};        ///< 上位机目标是否有效
+    wheel_legged::ModeRequest request{};
     bool chassis_recovery_active{false};  ///< 底盘恢复状态标志
-    bool fire_request{false};             ///< 开火请求
   };
 
   /**
@@ -51,7 +41,9 @@ class Fsm {
       bool align_to_chassis_forward{false};               ///< 是否对齐底盘前向
       bool fire_allowed{false};                           ///< 是否允许开火
       bool shoot_request{false};                          ///< 本周期开火请求
-      TargetSource target_source{TargetSource::kRemote};  ///< 目标来源
+      wheel_legged::TargetSource active_target_source{
+          wheel_legged::TargetSource::kRc};               ///< 目标来源
+      wheel_legged::GimbalTarget gimbal_target{};         ///< 本周期目标
     };
 
     State mode{State::kDisabled};  ///< 当前状态

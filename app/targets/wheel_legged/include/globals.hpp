@@ -12,6 +12,7 @@
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
 #include "gimbal/fsm.hpp"
+#include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
 
 /**
@@ -45,9 +46,12 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};
   std::optional<rm::device::HipnucImu> chassis_imu{};
 
+  std::optional<DmMitMotor> yaw_motor{};
+
   chassis::Fsm chassis_fsm{};
   chassis::Chassis chassis{};
   gimbal::Fsm gimbal_fsm{};
+  gimbal::Gimbal gimbal{};
 
   static SharedResources &GetInstance() {
     static SharedResources *shared_resources_instance{nullptr};
@@ -90,6 +94,11 @@ struct SharedResources {
       right_wheel.emplace(*wheel_can, 0x05);
     }
 
+    if (!yaw_motor.has_value()) {
+      yaw_motor.emplace(*wheel_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
+                                        0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}});
+    }
+
     if (!chassis_imu.has_value()) {
       chassis_imu.emplace(no_dtcm->imu_uart);
       chassis_imu->Begin();
@@ -98,6 +107,7 @@ struct SharedResources {
     chassis_fsm.Init();
     chassis.Init();
     gimbal_fsm.Init();
+    gimbal.Init();
   }
 };
 
@@ -114,6 +124,8 @@ extern volatile uint8_t wl_fm_gimbal_mode;
 /** @brief 底盘/云台状态机本周期是否发生状态变化 */
 extern volatile uint8_t wl_fm_chassis_state_changed;
 extern volatile uint8_t wl_fm_gimbal_state_changed;
+extern volatile char wl_fm_chassis_mode_text[32];
+extern volatile char wl_fm_gimbal_mode_text[32];
 
 /** @brief 遥控器在线与档位信息 */
 extern volatile uint8_t wl_fm_dr16_online;
@@ -186,6 +198,8 @@ extern volatile float wl_fm_model_theta_b_rad;
 extern volatile float wl_fm_model_theta_b_dot_rad_s;
 extern volatile float wl_fm_model_l_l_m;
 extern volatile float wl_fm_model_l_r_m;
+extern volatile float wl_fm_yaw_motor_pos_rad;
+extern volatile float wl_fm_yaw_motor_vel_rad_s;
 }
 
 void ControlLoop();

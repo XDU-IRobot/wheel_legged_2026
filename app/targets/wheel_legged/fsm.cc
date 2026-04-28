@@ -1,112 +1,113 @@
 #include "include/chassis/fsm.hpp"
 
-#include "etl/fsm.h"
-#include "etl/message.h"
-
 /**
  * @file  targets/wheel_legged/fsm.cc
- * @brief 底盘状态机实现（基于 ETL FSM）
+ * @brief 底盘状态机实现
  */
 
 namespace {
 
-enum EtlStateId : etl::fsm_state_id_t {
-  kDisabledState = 0,
-  kStandbyState = 1,
-  kBalanceState = 2,
-  kSpinState = 3,
-  kJumpPrepState = 4,
-  kJumpPushState = 5,
-  kJumpRecoverState = 6,
-  kRecoveryFallCheckState = 7,
-  kRecoverySelfRightState = 8,
-  kStateCount = 9,
-};
+constexpr uint32_t kJumpPrepMs = 450U;
+constexpr uint32_t kJumpPushMaxMs = 1000U;
+constexpr uint32_t kJumpRecoverMs = 450U;
+constexpr uint32_t kRecoveryFallConfirmMs = 220U;
+constexpr uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-constexpr uint32_t kJumpPrepMs = 450U;     ///< 蓄力阶段时长
-constexpr uint32_t kJumpPushMs = 1000U;    ///< 伸腿阶段最大时长
-constexpr uint32_t kJumpRecoverMs = 450U;  ///< 恢复收腿阶段时长
-constexpr float kJumpPushTargetLegLengthM = 0.35f;
-constexpr float kJumpPushReachTolM = 0.01f;
+constexpr float kLowLegLengthM = 0.15f;
+constexpr float kMidLegLengthM = 0.20f;
+constexpr float kHighLegLengthM = 0.35f;
+constexpr float kJumpPrepLegLengthM = 0.13f;
+constexpr float kJumpPushLegLengthM = 0.36f;
+constexpr float kJumpRecoverLegLengthM = 0.20f;
+constexpr float kJumpPushReachedLegLengthM = 0.30f;
 
-constexpr EtlStateId ToEtlStateId(const chassis::Fsm::State mode) {
-  switch (mode) {
-    case chassis::Fsm::State::kDisabled:
-      return kDisabledState;
-    case chassis::Fsm::State::kStandby:
-      return kStandbyState;
-    case chassis::Fsm::State::kBalance:
-      return kBalanceState;
-    case chassis::Fsm::State::kSpin:
-      return kSpinState;
-    case chassis::Fsm::State::kJumpPrep:
-      return kJumpPrepState;
-    case chassis::Fsm::State::kJumpPush:
-      return kJumpPushState;
-    case chassis::Fsm::State::kJumpRecover:
-      return kJumpRecoverState;
-    case chassis::Fsm::State::kRecoveryFallCheck:
-      return kRecoveryFallCheckState;
-    case chassis::Fsm::State::kRecoverySelfRight:
-      return kRecoverySelfRightState;
+bool IsJumpState(const chassis::Fsm::State state) {
+  return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
+         state == chassis::Fsm::State::kJumpRecover;
+}
+
+float LegLengthForProfile(const wheel_legged::LegProfile profile) {
+  switch (profile) {
+    case wheel_legged::LegProfile::kMid:
+      return kMidLegLengthM;
+    case wheel_legged::LegProfile::kHigh:
+      return kHighLegLengthM;
+    case wheel_legged::LegProfile::kLow:
     default:
-      return kDisabledState;
+      return kLowLegLengthM;
   }
 }
 
-chassis::Fsm::State ResolveDriveState(const bool spin_enable) {
-  return spin_enable ? chassis::Fsm::State::kSpin : chassis::Fsm::State::kBalance;
-}
-
-bool IsJumpState(const chassis::Fsm::State mode) {
-  return mode == chassis::Fsm::State::kJumpPrep || mode == chassis::Fsm::State::kJumpPush ||
-         mode == chassis::Fsm::State::kJumpRecover;
-}
-
-float ResolveLegLengthTarget(const chassis::Fsm::LegLengthMode leg_length_mode) {
-  switch (leg_length_mode) {
-    case chassis::Fsm::LegLengthMode::kLow:
-      return 0.15f;
-    case chassis::Fsm::LegLengthMode::kMid:
-      return 0.20f;
-    case chassis::Fsm::LegLengthMode::kHigh:
-      return 0.23f;
+wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequest &request) {
+  switch (request.leg_request) {
+    case wheel_legged::LegProfile::kMid:
+      return wheel_legged::LegProfile::kMid;
+    case wheel_legged::LegProfile::kHigh:
+      return wheel_legged::LegProfile::kHigh;
+    case wheel_legged::LegProfile::kLow:
     default:
-      return 0.15f;
+      return wheel_legged::LegProfile::kLow;
   }
 }
 
-chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State mode,
-                                                       const chassis::Fsm::LegLengthMode leg_length_mode) {
+chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile profile) {
+  switch (profile) {
+    case wheel_legged::LegProfile::kMid:
+      return chassis::Fsm::State::kMidLeg;
+    case wheel_legged::LegProfile::kHigh:
+      return chassis::Fsm::State::kHighLeg;
+    case wheel_legged::LegProfile::kLow:
+    default:
+      return chassis::Fsm::State::kLowLeg;
+  }
+}
+
+chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State state,
+                                                       const wheel_legged::LegProfile requested_leg_profile) {
   chassis::Fsm::Output::ControlOutput control{};
-  switch (mode) {
+  control.leg_profile = wheel_legged::LegProfile::kLow;
+  control.target_leg_length_m = kLowLegLengthM;
+
+  switch (state) {
     case chassis::Fsm::State::kDisabled:
       control.enable_dm = false;
       control.run_chassis_update = false;
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = true;
-      control.target_leg_length_m = 0.18f;
       control.jump_phase = 0U;
       break;
 
-    case chassis::Fsm::State::kStandby:
-      control.enable_dm = false;
-      control.run_chassis_update = false;
-      control.spin_enable = false;
-      control.recovery_enable = false;
-      control.safe_output_required = true;
-      control.target_leg_length_m = 0.18f;
-      control.jump_phase = 0U;
-      break;
-
-    case chassis::Fsm::State::kBalance:
+    case chassis::Fsm::State::kLowLeg:
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.target_leg_length_m = ResolveLegLengthTarget(leg_length_mode);
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = kLowLegLengthM;
+      control.jump_phase = 0U;
+      break;
+
+    case chassis::Fsm::State::kMidLeg:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kMid;
+      control.target_leg_length_m = kMidLegLengthM;
+      control.jump_phase = 0U;
+      break;
+
+    case chassis::Fsm::State::kHighLeg:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kHigh;
+      control.target_leg_length_m = kHighLegLengthM;
       control.jump_phase = 0U;
       break;
 
@@ -116,7 +117,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = true;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.target_leg_length_m = ResolveLegLengthTarget(chassis::Fsm::LegLengthMode::kLow);
+      control.leg_profile = requested_leg_profile;
+      control.target_leg_length_m = LegLengthForProfile(requested_leg_profile);
       control.jump_phase = 0U;
       break;
 
@@ -126,7 +128,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.target_leg_length_m = 0.14f;
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = kJumpPrepLegLengthM;
       control.jump_phase = 1U;
       break;
 
@@ -136,7 +139,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.target_leg_length_m = 0.38f;
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = kJumpPushLegLengthM;
       control.jump_phase = 2U;
       break;
 
@@ -146,37 +150,20 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.target_leg_length_m = 0.2f;
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = kJumpRecoverLegLengthM;
       control.jump_phase = 3U;
       break;
 
     case chassis::Fsm::State::kRecoveryFallCheck:
-      control.enable_dm = true;
-      control.run_chassis_update = true;
-      control.spin_enable = false;
-      control.recovery_enable = true;
-      control.safe_output_required = false;
-      control.target_leg_length_m = ResolveLegLengthTarget(leg_length_mode);
-      control.jump_phase = 0U;
-      break;
-
     case chassis::Fsm::State::kRecoverySelfRight:
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = false;
       control.recovery_enable = true;
       control.safe_output_required = false;
-      control.target_leg_length_m = ResolveLegLengthTarget(chassis::Fsm::LegLengthMode::kLow);
-      control.jump_phase = 0U;
-      break;
-
-    default:
-      control.enable_dm = false;
-      control.run_chassis_update = false;
-      control.spin_enable = false;
-      control.recovery_enable = false;
-      control.safe_output_required = true;
-      control.target_leg_length_m = ResolveLegLengthTarget(leg_length_mode);
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = kLowLegLengthM;
       control.jump_phase = 0U;
       break;
   }
@@ -184,356 +171,126 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
   return control;
 }
 
-struct ModeRequestEvent : public etl::message<1> {
-  bool force_enable;
-  bool spin_enable;
-  bool jump_trigger_rise;
-  bool fall_detected;
-  bool upright_stable;
-  float current_leg_length_m;
-  uint32_t tick_ms;
-
-  explicit ModeRequestEvent(const bool force_enable, const bool spin_enable, const bool jump_trigger_rise,
-                            const bool fall_detected, const bool upright_stable, const float current_leg_length_m,
-                            const uint32_t tick_ms)
-      : force_enable(force_enable),
-        spin_enable(spin_enable),
-        jump_trigger_rise(jump_trigger_rise),
-        fall_detected(fall_detected),
-        upright_stable(upright_stable),
-        current_leg_length_m(current_leg_length_m),
-        tick_ms(tick_ms) {}
-};
-
-etl::fsm_state_id_t ResolveRequestedState(const ModeRequestEvent &event) {
-  return ToEtlStateId(ResolveDriveState(event.spin_enable));
-}
-
-class FsmEtlContext;
-
-class DisabledState : public etl::fsm_state<FsmEtlContext, DisabledState, kDisabledState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class StandbyState : public etl::fsm_state<FsmEtlContext, StandbyState, kStandbyState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class BalanceState : public etl::fsm_state<FsmEtlContext, BalanceState, kBalanceState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class SpinState : public etl::fsm_state<FsmEtlContext, SpinState, kSpinState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class JumpPrepState : public etl::fsm_state<FsmEtlContext, JumpPrepState, kJumpPrepState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class JumpPushState : public etl::fsm_state<FsmEtlContext, JumpPushState, kJumpPushState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class JumpRecoverState : public etl::fsm_state<FsmEtlContext, JumpRecoverState, kJumpRecoverState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class RecoveryFallCheckState
-    : public etl::fsm_state<FsmEtlContext, RecoveryFallCheckState, kRecoveryFallCheckState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class RecoverySelfRightState
-    : public etl::fsm_state<FsmEtlContext, RecoverySelfRightState, kRecoverySelfRightState, ModeRequestEvent> {
- public:
-  etl::fsm_state_id_t on_event(const ModeRequestEvent &event);
-  etl::fsm_state_id_t on_event_unknown(const etl::imessage &);
-  etl::fsm_state_id_t on_enter_state();
-};
-
-class FsmEtlContext : public etl::fsm {
- public:
-  explicit FsmEtlContext(chassis::Fsm &owner) : etl::fsm(0x41), owner_(owner) {
-    states_[0] = &disabled_;
-    states_[1] = &standby_;
-    states_[2] = &balance_;
-    states_[3] = &spin_;
-    states_[4] = &jump_prep_;
-    states_[5] = &jump_push_;
-    states_[6] = &jump_recover_;
-    states_[7] = &recovery_fall_check_;
-    states_[8] = &recovery_self_right_;
-    set_states(states_, kStateCount);
-  }
-
-  void ApplyMode(chassis::Fsm::State mode) { owner_.Transit(mode); }
-  void Dispatch(const ModeRequestEvent &event) {
-    tick_ms_ = event.tick_ms;
-    receive(event);
-  }
-  void MarkJumpPhaseEnter() { jump_phase_enter_ms_ = tick_ms_; }
-  uint32_t JumpPhaseElapsedMs() const { return tick_ms_ - jump_phase_enter_ms_; }
-
- private:
-  chassis::Fsm &owner_;
-  DisabledState disabled_;
-  StandbyState standby_;
-  BalanceState balance_;
-  SpinState spin_;
-  JumpPrepState jump_prep_;
-  JumpPushState jump_push_;
-  JumpRecoverState jump_recover_;
-  RecoveryFallCheckState recovery_fall_check_;
-  RecoverySelfRightState recovery_self_right_;
-  etl::ifsm_state *states_[kStateCount]{};
-  uint32_t tick_ms_{0};
-  uint32_t jump_phase_enter_ms_{0};
-};
-
-etl::fsm_state_id_t DisabledState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return No_State_Change;
-  }
-  if (event.jump_trigger_rise) {
-    return kJumpPrepState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t DisabledState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t DisabledState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kDisabled);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t StandbyState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  if (event.jump_trigger_rise) {
-    return kJumpPrepState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t StandbyState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t StandbyState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kStandby);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t BalanceState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  if (event.jump_trigger_rise) {
-    return kJumpPrepState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t BalanceState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t BalanceState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kBalance);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t SpinState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  if (event.jump_trigger_rise) {
-    return kJumpPrepState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t SpinState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t SpinState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kSpin);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t JumpPrepState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  return get_fsm_context().JumpPhaseElapsedMs() >= kJumpPrepMs ? kJumpPushState : No_State_Change;
-}
-
-etl::fsm_state_id_t JumpPrepState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t JumpPrepState::on_enter_state() {
-  get_fsm_context().MarkJumpPhaseEnter();
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kJumpPrep);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t JumpPushState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  const bool leg_reached = event.current_leg_length_m >= (kJumpPushTargetLegLengthM - kJumpPushReachTolM);
-  if (leg_reached || get_fsm_context().JumpPhaseElapsedMs() >= kJumpPushMs) {
-    return kJumpRecoverState;
-  }
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t JumpPushState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t JumpPushState::on_enter_state() {
-  get_fsm_context().MarkJumpPhaseEnter();
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kJumpPush);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t JumpRecoverState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  if (get_fsm_context().JumpPhaseElapsedMs() < kJumpRecoverMs) {
-    return No_State_Change;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t JumpRecoverState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t JumpRecoverState::on_enter_state() {
-  get_fsm_context().MarkJumpPhaseEnter();
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kJumpRecover);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t RecoveryFallCheckState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t RecoveryFallCheckState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t RecoveryFallCheckState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kRecoveryFallCheck);
-  return No_State_Change;
-}
-
-etl::fsm_state_id_t RecoverySelfRightState::on_event(const ModeRequestEvent &event) {
-  if (!event.force_enable) {
-    return kDisabledState;
-  }
-  return ResolveRequestedState(event);
-}
-
-etl::fsm_state_id_t RecoverySelfRightState::on_event_unknown(const etl::imessage &) { return No_State_Change; }
-
-etl::fsm_state_id_t RecoverySelfRightState::on_enter_state() {
-  get_fsm_context().ApplyMode(chassis::Fsm::State::kRecoverySelfRight);
-  return No_State_Change;
-}
-
 }  // namespace
 
-struct chassis::Fsm::EtlImpl {
-  explicit EtlImpl(chassis::Fsm &owner) : context(owner) {}
+chassis::Fsm::~Fsm() = default;
 
-  FsmEtlContext context;
-  bool last_jump_trigger{false};
-};
-
-chassis::Fsm::~Fsm() {
-  delete etl_impl_;
-  etl_impl_ = nullptr;
-}
-
-/**
- * @brief 初始化 ETL 状态机并进入初始状态
- */
 void chassis::Fsm::Init() {
-  if (!etl_impl_) {
-    etl_impl_ = new EtlImpl(*this);
-  }
-
-  if (etl_impl_ && !etl_impl_->context.is_started()) {
-    etl_impl_->context.start(true);
-  }
+  mode_ = State::kDisabled;
+  requested_leg_profile_ = wheel_legged::LegProfile::kLow;
+  state_enter_tick_ms_ = 0U;
+  output_ = {};
+  output_.mode = mode_;
+  output_.control = BuildControlOutput(mode_, requested_leg_profile_);
 }
 
-/**
- * @brief 迁移到底盘新模式并刷新控制输出
- */
 void chassis::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
   mode_ = new_mode;
   output_.mode = mode_;
-  output_.control = BuildControlOutput(mode_, leg_length_mode_);
+  output_.control = BuildControlOutput(mode_, requested_leg_profile_);
 }
 
-/**
- * @brief 状态机单步更新
- */
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
-  if (!etl_impl_) {
-    Init();
-  }
-
   output_.state_changed = false;
 
-  if (!input.input_valid) {
+  const wheel_legged::ModeRequest &request = input.request;
+  requested_leg_profile_ = ResolveRequestedLegProfile(request);
+
+  if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    if (mode_ != State::kDisabled) {
+      state_enter_tick_ms_ = request.tick_ms;
+    }
     Transit(State::kDisabled);
-    etl_impl_->last_jump_trigger = false;
     return output_;
   }
 
-  leg_length_mode_ = input.leg_length_mode;
+  const uint32_t elapsed_ms = request.tick_ms - state_enter_tick_ms_;
+  const State requested_normal_state = ResolveRequestedNormalState(requested_leg_profile_);
 
-  const bool jump_trigger_rise = input.jump_trigger && !etl_impl_->last_jump_trigger;
-  etl_impl_->last_jump_trigger = input.jump_trigger;
+  State next_mode = mode_;
 
-  const bool should_dispatch = jump_trigger_rise || IsJumpState(mode_) ||
-                               (ToEtlStateId(ResolveDriveState(input.spin_enable)) != ToEtlStateId(mode_)) ||
-                               (mode_ == State::kDisabled && input.force_enable) ||
-                               (mode_ != State::kDisabled && !input.force_enable);
+  switch (mode_) {
+    case State::kDisabled:
+      next_mode = requested_normal_state;
+      break;
 
-  if (!should_dispatch) {
-    output_.control = BuildControlOutput(mode_, leg_length_mode_);
-    return output_;
+    case State::kLowLeg:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kLow) {
+        next_mode = State::kJumpPrep;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
+      } else {
+        next_mode = requested_normal_state;
+      }
+      break;
+
+    case State::kMidLeg:
+    case State::kHighLeg:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
+      } else {
+        next_mode = requested_normal_state;
+      }
+      break;
+
+    case State::kSpin:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (!request.spin_hold) {
+        next_mode = requested_normal_state;
+      }
+      break;
+
+    case State::kJumpPrep:
+      if (elapsed_ms >= kJumpPrepMs) {
+        next_mode = State::kJumpPush;
+      }
+      break;
+
+    case State::kJumpPush:
+      if (request.current_leg_length_m >= kJumpPushReachedLegLengthM || elapsed_ms >= kJumpPushMaxMs) {
+        next_mode = State::kJumpRecover;
+      }
+      break;
+
+    case State::kJumpRecover:
+      if (elapsed_ms >= kJumpRecoverMs) {
+        next_mode = State::kLowLeg;
+      }
+      break;
+
+    case State::kRecoveryFallCheck:
+      if (request.fall_detected_hold_ms >= kRecoveryFallConfirmMs) {
+        next_mode = State::kRecoverySelfRight;
+      } else if (!request.fall_detected) {
+        next_mode = State::kLowLeg;
+      }
+      break;
+
+    case State::kRecoverySelfRight:
+      if (elapsed_ms >= kRecoverySelfRightTimeoutMs) {
+        next_mode = State::kDisabled;
+      } else if (request.upright_stable) {
+        next_mode = State::kLowLeg;
+      }
+      break;
   }
 
-  etl_impl_->context.Dispatch(ModeRequestEvent{input.force_enable, input.spin_enable, jump_trigger_rise,
-                                               input.fall_detected, input.upright_stable, input.current_leg_length_m,
-                                               input.tick_ms});
+  if (next_mode != mode_) {
+    state_enter_tick_ms_ = request.tick_ms;
+  }
+
+  Transit(next_mode);
+
+  if (!IsJumpState(mode_) && (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg ||
+                              mode_ == State::kSpin)) {
+    output_.control = BuildControlOutput(mode_, requested_leg_profile_);
+  }
 
   return output_;
 }
