@@ -138,7 +138,8 @@ struct Dr16RawInput {
 
 float MapDr16RightYToForwardSpeed(const int16_t right_y) {
   const float normalized = static_cast<float>(right_y) / static_cast<float>(kDr16AxisMaxAbs);
-  return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps, kTargetForwardSpeedMaxMps);
+  return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps,
+                            kTargetForwardSpeedMaxMps);
 }
 
 float NormalizeDr16Axis(const int16_t axis) {
