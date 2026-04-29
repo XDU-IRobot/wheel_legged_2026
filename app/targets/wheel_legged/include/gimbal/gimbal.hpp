@@ -5,6 +5,7 @@
 
 #include "librm.hpp"
 
+#include "common/controllers/gimbal_2dof.hpp"
 #include "../fsm_common.hpp"
 
 namespace gimbal {
@@ -26,6 +27,8 @@ class Gimbal {
     wheel_legged::GimbalTarget target{};
     float chassis_yaw_rad{0.0f};
     float chassis_pitch_rad{0.0f};
+    float gimbal_imu_yaw_rad{0.0f};
+    float gimbal_imu_pitch_rad{0.0f};
     float dt_s{kDefaultDtS};
   };
 
@@ -59,17 +62,18 @@ class Gimbal {
       return;
     }
 
-    output_.yaw_pos_rad = input.yaw_motor->pos();
+    output_.yaw_pos_rad = input.gimbal_imu_yaw_rad;
     output_.yaw_vel_rad_s = input.yaw_motor->vel();
-    output_.pitch_pos_rad = input.pitch_motor->pos();
+    output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
     output_.pitch_vel_rad_s = input.pitch_motor->vel();
 
     const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
-    output_.yaw_target_rad = std::clamp(rm::modules::Wrap(desired_yaw, -kPi, kPi), -kYawLimitRad, kYawLimitRad);
+    output_.yaw_target_rad = desired_yaw;
     output_.pitch_target_rad = std::clamp(input.target.pitch_rad, kPitchMinRad, kPitchMaxRad);
     output_.gimbal_enabled = input.gimbal_enable;
 
     if (!input.gimbal_enable) {
+      controller_.Enable(false);
       // Keep CAN traffic active in disabled mode while commanding zero torque.
       input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
       input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -81,20 +85,19 @@ class Gimbal {
     EnableMotorsIfNeeded(input);
 
     const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : kDefaultDtS;
-    yaw_position_pid_.Update(output_.yaw_target_rad, output_.yaw_pos_rad, dt_s);
-    pitch_position_pid_.Update(output_.pitch_target_rad, output_.pitch_pos_rad, dt_s);
+    controller_.Enable(true);
+    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+    controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
+                       dt_s);
 
-    yaw_speed_pid_.Update(yaw_position_pid_.out(), output_.yaw_vel_rad_s, dt_s);
-    pitch_speed_pid_.Update(pitch_position_pid_.out(), output_.pitch_vel_rad_s, dt_s);
-
-    output_.yaw_cmd_torque_nm = std::clamp(yaw_speed_pid_.out(), -kDmTorqueLimitNm, kDmTorqueLimitNm);
+    output_.yaw_cmd_torque_nm = std::clamp(controller_.output().yaw, -kDmTorqueLimitNm, kDmTorqueLimitNm);
     const float pitch_gravity_ff = kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
     output_.pitch_cmd_torque_nm =
-        std::clamp(pitch_speed_pid_.out() + pitch_gravity_ff, -kDmTorqueLimitNm, kDmTorqueLimitNm);
+        std::clamp(controller_.output().pitch + pitch_gravity_ff, -kDmTorqueLimitNm, kDmTorqueLimitNm);
 
     // Test mode: keep output torque at zero for now.
-    input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
+    input.pitch_motor->SetMitCommand(0.0f, 0.0f, output_.pitch_cmd_torque_nm, 0.0f, 0.0f);
   }
 
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
@@ -102,32 +105,24 @@ class Gimbal {
  private:
   static constexpr float kPi = 3.14159265358979323846f;
   static constexpr float kDefaultDtS = 0.002f;
-  static constexpr float kYawLimitRad = 3.0f;
-  static constexpr float kPitchMinRad = -0.3f;
-  static constexpr float kPitchMaxRad = 0.68f;
+  static constexpr float kPitchMinRad = -0.2f;
+  static constexpr float kPitchMaxRad = 0.25f;
   static constexpr float kDmTorqueLimitNm = 10.0f;
   static constexpr float kPitchGravityCompensationNm = 1.3f;
 
   void ConfigurePid() {
-    yaw_position_pid_.SetKp(22.0f).SetKi(1.0f).SetKd(120.0f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    yaw_speed_pid_.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.0f);
+    controller_.pid().yaw_position.SetKp(13.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().yaw_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
 
-    pitch_position_pid_.SetKp(25.0f).SetKi(0.8f).SetKd(130.0f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    pitch_speed_pid_.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.0f);
-
-    yaw_position_pid_.SetCircular(true)
-        .SetCircularCycle(2.0f * kPi)
-        .SetFuzzy(true)
-        .SetFuzzyErrorScale(kPi)
-        .SetFuzzyDErrorScale(kPi * 100.0f);
-    pitch_position_pid_.SetFuzzy(true).SetFuzzyErrorScale(kPi);
+    controller_.pid().pitch_position.SetKp(13.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().pitch_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
   }
 
   void ClearPid() {
-    yaw_position_pid_.Clear();
-    yaw_speed_pid_.Clear();
-    pitch_position_pid_.Clear();
-    pitch_speed_pid_.Clear();
+    controller_.pid().yaw_position.Clear();
+    controller_.pid().yaw_speed.Clear();
+    controller_.pid().pitch_position.Clear();
+    controller_.pid().pitch_speed.Clear();
   }
 
   void EnableMotorsIfNeeded(const UpdateInput &input) {
@@ -156,10 +151,7 @@ class Gimbal {
 
   bool motors_enabled_latched_{false};
 
-  rm::modules::PID yaw_position_pid_{};
-  rm::modules::PID yaw_speed_pid_{};
-  rm::modules::PID pitch_position_pid_{};
-  rm::modules::PID pitch_speed_pid_{};
+  Gimbal2Dof controller_{};
 
   UpdateOutput output_{};
 };
