@@ -30,7 +30,7 @@ struct SharedResources {
 
   static constexpr double kJointCanTxLimitHz = 4000.0;
   static constexpr double kWheelCanTxLimitHz = 4000.0;
-  static constexpr double kGimbalCanTxLimitHz = 2000.0;
+  static constexpr double kGimbalCanTxLimitHz = 4000.0;
   static constexpr float kPi = 3.14159265358979323846f;
 
   SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};
