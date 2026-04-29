@@ -16,8 +16,8 @@ class Gimbal {
   using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
   // DM MIT motor settings for wheel-legged gimbal motors.
-  static inline const DmMitSettings kPitchMotorSettings{0x12, 0x11, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-  static inline const DmMitSettings kYawMotorSettings{0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+  static inline const DmMitSettings kPitchMotorSettings{0x05, 0x04, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+  static inline const DmMitSettings kYawMotorSettings{0x10, 0x09, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
   struct UpdateInput {
     DmMitMotor *yaw_motor{nullptr};
@@ -111,11 +111,11 @@ class Gimbal {
   static constexpr float kPitchGravityCompensationNm = 1.3f;
 
   void ConfigurePid() {
-    controller_.pid().yaw_position.SetKp(13.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    controller_.pid().yaw_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
+    controller_.pid().yaw_position.SetKp(25.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().yaw_speed.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
 
-    controller_.pid().pitch_position.SetKp(13.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    controller_.pid().pitch_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
+    controller_.pid().pitch_position.SetKp(26.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().pitch_speed.SetKp(0.55f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
   }
 
   void ClearPid() {

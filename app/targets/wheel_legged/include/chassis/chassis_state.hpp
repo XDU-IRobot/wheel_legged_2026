@@ -13,7 +13,7 @@
  * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
  * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
  */
-
+inline f32 wheelspeed_debug = 0.f;
 namespace chassis {
 
 /**
@@ -85,10 +85,10 @@ struct ChassisStateEstimatorConfig {
   rm::f32 wheel_reduction_ratio{17.0f / 268.0f};
   rm::f32 max_valid_speed_mps{8.0f};
 
-  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  // 2.94
-  rm::f32 left_phi4_offset_rad{0.59f};                            //-0.59
-  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  // 2.4
-  rm::f32 right_phi4_offset_rad{-1.87f};                          //-1.87
+  rm::f32 left_phi1_offset_rad{-1.50f + M_PI };
+  rm::f32 left_phi4_offset_rad{-1.50f};
+  rm::f32 right_phi1_offset_rad{-1.44f + M_PI };
+  rm::f32 right_phi4_offset_rad{-1.68f};
 
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};
 };
@@ -151,8 +151,8 @@ class SpeedEstimator {
 
   /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
-    accel_x_filter_.set_cutoff_frequency(500.0f, 10.0f);
-    accel_y_filter_.set_cutoff_frequency(500.0f, 10.0f);
+    accel_x_filter_.set_cutoff_frequency(500.0f, 5.0f);
+    accel_y_filter_.set_cutoff_frequency(500.0f, 5.0f);
 
     kf_.UseAutoAdjustment = 0;
     std::memset(kf_.xhat_data, 0, sizeof(rm::f32) * 2);
@@ -198,7 +198,7 @@ class SpeedEstimator {
     wheel_speed_mps_ = input.wheel_speed_mps;
 
     const rm::f32 acc_x = accel_x_filter_.apply(input.imu_acc_x_mps2);
-    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2);
+    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2 - 0.75f);
     rm::f32 accel_forward = acc_x - acc_y * std::sin(input.imu_pitch_rad);
 
     if (accel_bias_count_ < 1500) {
@@ -362,7 +362,8 @@ class ChassisStateEstimator {
         right_wheel_vel + output_.current.l_r * output_.current.theta_lr_dot * std::cos(output_.current.theta_lr) +
         right_leg_.l0_dot() * std::sin(output_.current.theta_lr);
 
-    output_.wheel_speed_mps = 0.5f * (left_speed + right_speed);
+    output_.wheel_speed_mps = 0.5f * (left_wheel_vel + right_wheel_vel);
+    wheelspeed_debug = output_.wheel_speed_mps;
 
     if (input.use_wheel_speed_direct) {
       output_.raw_wheel_speed_mps = output_.wheel_speed_mps;

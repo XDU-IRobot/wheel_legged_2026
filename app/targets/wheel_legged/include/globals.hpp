@@ -93,13 +93,13 @@ struct SharedResources {
 
     if (!dm_lf.has_value()) {
       dm_lf.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x17, 0x07, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+                                    0x02, 0x01, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
       dm_lb.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x14, 0x04, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+                                    0x04, 0x03, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
       dm_rf.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x16, 0x06, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+                                    0x06, 0x05, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
       dm_rb.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x15, 0x05, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+                                    0x08, 0x07, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
     }
 
     if (!left_wheel.has_value()) {

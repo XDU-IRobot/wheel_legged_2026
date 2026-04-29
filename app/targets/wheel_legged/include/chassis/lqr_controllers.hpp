@@ -84,7 +84,7 @@ class WbrController {
     x_err[5] = current.theta_ll_dot - expected.theta_ll_dot;
     x_err[6] = current.theta_lr - expected.theta_lr;
     x_err[7] = current.theta_lr_dot - expected.theta_lr_dot;
-    x_err[8] = current.theta_b - expected.theta_b;
+    x_err[8] = current.theta_b - expected.theta_b + 0.045f;
     x_err[9] = current.theta_b_dot - expected.theta_b_dot;
 
     rm::f32 u_vec[4]{};
