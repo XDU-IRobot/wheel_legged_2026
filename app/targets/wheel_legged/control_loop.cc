@@ -114,6 +114,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kYawFollowFixedTargetRad = -1.72f;
 chassis_runtime::Actuators g_actuators{};
 
 struct SdotRampParams {
@@ -539,7 +540,7 @@ void ControlLoop() {
   static float lock_point_alpha = 0.0f;
   static float lock_point_s_ref = 0.0f;
   static uint32_t lock_point_last_switch_tick = 0U;
-  static rm::modules::PID yaw_follow_pid{3.2f, 0.0f, 10.f, 5.f, 0.f};
+  static rm::modules::PID yaw_follow_pid{5.5f, 0.0f, 0.9f, 5.f, 0.f};
   static bool yaw_follow_pid_initialized = false;
   static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
 
@@ -643,8 +644,13 @@ void ControlLoop() {
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
   } else {
-    const float relative_yaw_rad = rm::modules::Wrap(input.dr16.gimbal_imu_yaw_rad - current_state.phi, -kPi, kPi);
-    yaw_follow_pid.Update(0.0f, relative_yaw_rad, kControlLoopDtS);
+    const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+    const float yaw_target_a_rad = kYawFollowFixedTargetRad;
+    const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi, -kPi, kPi);
+    const float yaw_err_to_a = std::fabs(rm::modules::Wrap(yaw_target_a_rad - yaw_motor_rad, -kPi, kPi));
+    const float yaw_err_to_b = std::fabs(rm::modules::Wrap(yaw_target_b_rad - yaw_motor_rad, -kPi, kPi));
+    const float yaw_target_rad = (yaw_err_to_a <= yaw_err_to_b) ? yaw_target_a_rad : yaw_target_b_rad;
+    yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
     RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;

@@ -62,7 +62,7 @@ class Gimbal {
       return;
     }
 
-    output_.yaw_pos_rad = input.yaw_motor->pos();
+    output_.yaw_pos_rad = input.gimbal_imu_yaw_rad;
     output_.yaw_vel_rad_s = input.yaw_motor->vel();
     output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
     output_.pitch_vel_rad_s = input.pitch_motor->vel();
