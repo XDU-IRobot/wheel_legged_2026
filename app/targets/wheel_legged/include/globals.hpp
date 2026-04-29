@@ -216,8 +216,10 @@ extern volatile float wl_fm_model_theta_b_rad;
 extern volatile float wl_fm_model_theta_b_dot_rad_s;
 extern volatile float wl_fm_model_l_l_m;
 extern volatile float wl_fm_model_l_r_m;
+extern volatile float wl_fm_yaw_target_rad;
 extern volatile float wl_fm_yaw_motor_pos_rad;
 extern volatile float wl_fm_yaw_motor_vel_rad_s;
+extern volatile float wl_fm_pitch_target_rad;
 extern volatile float wl_fm_pitch_motor_pos_rad;
 extern volatile float wl_fm_pitch_motor_vel_rad_s;
 }

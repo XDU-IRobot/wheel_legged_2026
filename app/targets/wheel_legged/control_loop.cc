@@ -2,6 +2,7 @@
 #include "include/actuators.hpp"
 
 #include "main.h"
+#include <algorithm>
 #include <cstddef>
 #include <cmath>
 
@@ -82,8 +83,10 @@ volatile float wl_fm_model_theta_b_rad{0.0f};
 volatile float wl_fm_model_theta_b_dot_rad_s{0.0f};
 volatile float wl_fm_model_l_l_m{0.0f};
 volatile float wl_fm_model_l_r_m{0.0f};
+volatile float wl_fm_yaw_target_rad{0.0f};
 volatile float wl_fm_yaw_motor_pos_rad{0.0f};
 volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
+volatile float wl_fm_pitch_target_rad{0.0f};
 volatile float wl_fm_pitch_motor_pos_rad{0.0f};
 volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
 }
@@ -94,13 +97,23 @@ constexpr int16_t kWheelSpinThreshold = 220;
 constexpr int16_t kWheelActionThreshold = 320;
 constexpr int16_t kWheelCenterThreshold = 80;
 constexpr float kControlLoopDtS = 0.002f;
+constexpr float kRcStickMax = 660.0f;
+constexpr float kRcYawRateMaxRadS = 1.0f;
+constexpr float kRcPitchRateMaxRadS = 1.0f;
+constexpr float kPi = 3.14159265358979323846f;
+constexpr float kPitchTargetMinRad = -0.2f;
+constexpr float kPitchTargetMaxRad = 0.25f;
 chassis_runtime::Actuators g_actuators{};
 
 struct Dr16RawInput {
   bool online{false};
   rm::device::DR16::SwitchPosition switch_l{rm::device::DR16::SwitchPosition::kUnknown};
   rm::device::DR16::SwitchPosition switch_r{rm::device::DR16::SwitchPosition::kUnknown};
+  int16_t left_x{0};
+  int16_t left_y{0};
   int16_t dial{0};
+  float gimbal_imu_yaw_rad{0.0f};
+  float gimbal_imu_pitch_rad{0.0f};
 };
 
 /**
@@ -189,7 +202,26 @@ struct DebugSnapshot {
  */
 struct Dr16SemanticState {
   bool wheel_action_armed{true};
+  bool gimbal_target_initialized{false};
+  bool gimbal_imu_yaw_initialized{false};
+  float gimbal_imu_yaw_raw_last{0.0f};
+  float gimbal_imu_yaw_continuous_rad{0.0f};
+  wheel_legged::GimbalTarget rc_target{};
 };
+
+float UpdateContinuousYaw(Dr16SemanticState &semantic_state, const float yaw_raw_rad) {
+  if (!semantic_state.gimbal_imu_yaw_initialized) {
+    semantic_state.gimbal_imu_yaw_raw_last = yaw_raw_rad;
+    semantic_state.gimbal_imu_yaw_continuous_rad = yaw_raw_rad;
+    semantic_state.gimbal_imu_yaw_initialized = true;
+    return semantic_state.gimbal_imu_yaw_continuous_rad;
+  }
+
+  const float yaw_delta = rm::modules::Wrap(yaw_raw_rad - semantic_state.gimbal_imu_yaw_raw_last, -kPi, kPi);
+  semantic_state.gimbal_imu_yaw_continuous_rad += yaw_delta;
+  semantic_state.gimbal_imu_yaw_raw_last = yaw_raw_rad;
+  return semantic_state.gimbal_imu_yaw_continuous_rad;
+}
 
 wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
   switch (switch_r) {
@@ -221,6 +253,8 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_state, InputSnapshot &input) {
   input.input_valid = dr16.online;
   input.dr16 = dr16;
+  input.dr16.gimbal_imu_yaw_rad = UpdateContinuousYaw(semantic_state, dr16.gimbal_imu_yaw_rad);
+
   wheel_legged::ModeRequest request{};
   request.input_valid = dr16.online;
   request.domain_request = ResolveDomainRequest(dr16.switch_l);
@@ -240,6 +274,23 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
 
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
+  if (!dr16.online || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    semantic_state.rc_target.yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+    semantic_state.rc_target.pitch_rad = 0.0f;
+    semantic_state.gimbal_target_initialized = false;
+  } else {
+    if (!semantic_state.gimbal_target_initialized) {
+      semantic_state.rc_target.yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+      semantic_state.rc_target.pitch_rad = 0.0f;
+      semantic_state.gimbal_target_initialized = true;
+    }
+    const float yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+    const float pitch_delta = static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+    semantic_state.rc_target.yaw_rad += yaw_delta;
+    semantic_state.rc_target.pitch_rad =
+        std::clamp(semantic_state.rc_target.pitch_rad + pitch_delta, kPitchTargetMinRad, kPitchTargetMaxRad);
+  }
+  request.rc_target = semantic_state.rc_target;
   request.host_target_valid = false;
   request.fall_detected = false;
   request.fall_detected_hold_ms = 0U;
@@ -259,7 +310,11 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
       .switch_l = g.dr16.switch_l(),
       .switch_r = g.dr16.switch_r(),
+      .left_x = g.dr16.left_x(),
+      .left_y = g.dr16.left_y(),
       .dial = g.dr16.dial(),
+      .gimbal_imu_yaw_rad = g.gimbal_imu_feedback_rx.has_value() ? g.gimbal_imu_feedback_rx->yaw_rad() : 0.0f,
+      .gimbal_imu_pitch_rad = g.gimbal_imu_feedback_rx.has_value() ? g.gimbal_imu_feedback_rx->pitch_rad() : 0.0f,
   };
   ApplyDr16Semantics(dr16, semantic_state, input);
 }
@@ -370,8 +425,10 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_model_l_r_m = x.l_r;
   wl_fm_left_leg_length_m = x.l_l;
   wl_fm_right_leg_length_m = x.l_r;
+  wl_fm_yaw_target_rad = gimbal_control_output.yaw_target_rad;
   wl_fm_yaw_motor_pos_rad = gimbal_control_output.yaw_pos_rad;
   wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
+  wl_fm_pitch_target_rad = gimbal_control_output.pitch_target_rad;
   wl_fm_pitch_motor_pos_rad = gimbal_control_output.pitch_pos_rad;
   wl_fm_pitch_motor_vel_rad_s = gimbal_control_output.pitch_vel_rad_s;
 }
@@ -423,6 +480,8 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
   gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
+  gimbal_update_input.gimbal_imu_yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+  gimbal_update_input.gimbal_imu_pitch_rad = input.dr16.gimbal_imu_pitch_rad;
   gimbal_update_input.dt_s = kControlLoopDtS;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
