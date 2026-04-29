@@ -87,7 +87,8 @@ class Gimbal {
     const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : kDefaultDtS;
     controller_.Enable(true);
     controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
-    controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s, dt_s);
+    controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
+                       dt_s);
 
     output_.yaw_cmd_torque_nm = std::clamp(controller_.output().yaw, -kDmTorqueLimitNm, kDmTorqueLimitNm);
     const float pitch_gravity_ff = kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
