@@ -98,10 +98,10 @@ constexpr int16_t kWheelActionThreshold = 320;
 constexpr int16_t kWheelCenterThreshold = 80;
 constexpr float kControlLoopDtS = 0.002f;
 constexpr float kRcStickMax = 660.0f;
-constexpr float kRcYawRateMaxRadS = 1.0f;
-constexpr float kRcPitchRateMaxRadS = 1.0f;
+constexpr float kRcYawRateMaxRadS = -2.5f;
+constexpr float kRcPitchRateMaxRadS = 1.5f;
 constexpr float kPi = 3.14159265358979323846f;
-constexpr float kPitchTargetMinRad = -0.2f;
+constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 chassis_runtime::Actuators g_actuators{};
 
