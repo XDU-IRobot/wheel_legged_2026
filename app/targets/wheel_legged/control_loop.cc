@@ -113,6 +113,7 @@ constexpr float kRcPitchRateMaxRadS = 1.5f;
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
+constexpr float kYawFollowRampStepRadS = 0.05f;
 chassis_runtime::Actuators g_actuators{};
 
 struct SdotRampParams {
@@ -160,6 +161,20 @@ void RampValueToTarget(const float target, float &value, const SdotRampParams &r
     value -= step;
     if (value < target) {
       value = target;
+    }
+  }
+}
+
+void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot) {
+  if (filtered_yaw_dot < target_yaw_dot) {
+    filtered_yaw_dot += kYawFollowRampStepRadS;
+    if (filtered_yaw_dot > target_yaw_dot) {
+      filtered_yaw_dot = target_yaw_dot;
+    }
+  } else if (filtered_yaw_dot > target_yaw_dot) {
+    filtered_yaw_dot -= kYawFollowRampStepRadS;
+    if (filtered_yaw_dot < target_yaw_dot) {
+      filtered_yaw_dot = target_yaw_dot;
     }
   }
 }
@@ -518,12 +533,21 @@ void ControlLoop() {
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
   static float filtered_s_dot = 0.0f;
+  static float filtered_yaw_dot = 0.0f;
   static float expected_s = 0.0f;
   static bool lock_point_target = false;
   static float lock_point_alpha = 0.0f;
   static float lock_point_s_ref = 0.0f;
   static uint32_t lock_point_last_switch_tick = 0U;
+  static rm::modules::PID yaw_follow_pid{3.2f, 0.0f, 10.f, 5.f, 0.f};
+  static bool yaw_follow_pid_initialized = false;
   static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
+
+  if (!yaw_follow_pid_initialized) {
+    yaw_follow_pid.SetCircular(true).SetCircularCycle(2.0f * kPi);
+    yaw_follow_pid_initialized = true;
+  }
+
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
   input.mode_request.tick_ms = now_ms;
@@ -562,6 +586,8 @@ void ControlLoop() {
   if (mode_changed) {
     expected_s = current_state.s;
     filtered_s_dot = current_state.s_dot;
+    filtered_yaw_dot = 0.0f;
+    yaw_follow_pid.Clear();
     lock_point_target = false;
     lock_point_alpha = 0.0f;
     lock_point_s_ref = expected_s;
@@ -608,6 +634,21 @@ void ControlLoop() {
   chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
+  chassis_update_input.expected.phi = current_state.phi;
+  chassis_update_input.expected.phi_dot = 0.0f;
+
+  const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                  chassis_output.control.run_chassis_update && gimbal_output.control.gimbal_enable;
+  if (!yaw_follow_enabled) {
+    filtered_yaw_dot = 0.0f;
+    yaw_follow_pid.Clear();
+  } else {
+    const float relative_yaw_rad = rm::modules::Wrap(input.dr16.gimbal_imu_yaw_rad - current_state.phi, -kPi, kPi);
+    yaw_follow_pid.Update(0.0f, relative_yaw_rad, kControlLoopDtS);
+    const float target_yaw_dot = -yaw_follow_pid.out();
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
+    chassis_update_input.expected.phi_dot = filtered_yaw_dot;
+  }
 
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
