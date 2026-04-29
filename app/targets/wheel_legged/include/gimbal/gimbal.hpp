@@ -62,7 +62,7 @@ class Gimbal {
       return;
     }
 
-    output_.yaw_pos_rad = input.gimbal_imu_yaw_rad;
+    output_.yaw_pos_rad = input.yaw_motor->pos();
     output_.yaw_vel_rad_s = input.yaw_motor->vel();
     output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
     output_.pitch_vel_rad_s = input.pitch_motor->vel();
@@ -111,8 +111,8 @@ class Gimbal {
   static constexpr float kPitchGravityCompensationNm = 1.3f;
 
   void ConfigurePid() {
-    controller_.pid().yaw_position.SetKp(13.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    controller_.pid().yaw_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
+    controller_.pid().yaw_position.SetKp(15.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(1.0f);
+    controller_.pid().yaw_speed.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.4f);
 
     controller_.pid().pitch_position.SetKp(13.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
     controller_.pid().pitch_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);

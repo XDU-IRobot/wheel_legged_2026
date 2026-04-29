@@ -274,25 +274,8 @@ struct DebugSnapshot {
 struct Dr16SemanticState {
   bool wheel_action_armed{true};
   bool gimbal_target_initialized{false};
-  bool gimbal_imu_yaw_initialized{false};
-  float gimbal_imu_yaw_raw_last{0.0f};
-  float gimbal_imu_yaw_continuous_rad{0.0f};
   wheel_legged::GimbalTarget rc_target{};
 };
-
-float UpdateContinuousYaw(Dr16SemanticState &semantic_state, const float yaw_raw_rad) {
-  if (!semantic_state.gimbal_imu_yaw_initialized) {
-    semantic_state.gimbal_imu_yaw_raw_last = yaw_raw_rad;
-    semantic_state.gimbal_imu_yaw_continuous_rad = yaw_raw_rad;
-    semantic_state.gimbal_imu_yaw_initialized = true;
-    return semantic_state.gimbal_imu_yaw_continuous_rad;
-  }
-
-  const float yaw_delta = rm::modules::Wrap(yaw_raw_rad - semantic_state.gimbal_imu_yaw_raw_last, -kPi, kPi);
-  semantic_state.gimbal_imu_yaw_continuous_rad += yaw_delta;
-  semantic_state.gimbal_imu_yaw_raw_last = yaw_raw_rad;
-  return semantic_state.gimbal_imu_yaw_continuous_rad;
-}
 
 wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
   switch (switch_r) {
@@ -324,7 +307,7 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_state, InputSnapshot &input) {
   input.input_valid = dr16.online;
   input.dr16 = dr16;
-  input.dr16.gimbal_imu_yaw_rad = UpdateContinuousYaw(semantic_state, dr16.gimbal_imu_yaw_rad);
+  const float yaw_motor_pos_rad = input.estimator_input.yaw_motor_rad;
 
   wheel_legged::ModeRequest request{};
   request.input_valid = dr16.online;
@@ -346,18 +329,18 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
   if (!dr16.online || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
-    semantic_state.rc_target.yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+    semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
   } else {
     if (!semantic_state.gimbal_target_initialized) {
-      semantic_state.rc_target.yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+      semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
       semantic_state.rc_target.pitch_rad = 0.0f;
       semantic_state.gimbal_target_initialized = true;
     }
     const float yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
     const float pitch_delta = static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
-    semantic_state.rc_target.yaw_rad += yaw_delta;
+    semantic_state.rc_target.yaw_rad = rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -kPi, kPi);
     semantic_state.rc_target.pitch_rad =
         std::clamp(semantic_state.rc_target.pitch_rad + pitch_delta, kPitchTargetMinRad, kPitchTargetMaxRad);
   }
