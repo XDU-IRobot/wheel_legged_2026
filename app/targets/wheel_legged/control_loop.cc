@@ -94,14 +94,84 @@ constexpr int16_t kWheelSpinThreshold = 220;
 constexpr int16_t kWheelActionThreshold = 320;
 constexpr int16_t kWheelCenterThreshold = 80;
 constexpr float kControlLoopDtS = 0.002f;
+constexpr int16_t kDr16AxisMaxAbs = 660;
+constexpr float kTargetForwardSpeedMaxMps = 1.8f;
+constexpr float kVxInputDeadbandNorm = 0.1f;
+constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
+constexpr float kLockPointExitSpeedThresholdMps = 0.55f;
+constexpr float kLockPointEnterInputThreshold = 0.08f;
+constexpr float kLockPointExitInputThreshold = 0.12f;
+constexpr uint32_t kLockPointMinDwellTicks = 100U;  // 200ms @500Hz
+constexpr float kLockPointAlphaRiseStep = 0.015f;
+constexpr float kLockPointAlphaFallStep = 0.018f;
 chassis_runtime::Actuators g_actuators{};
+
+struct SdotRampParams {
+  float accel_step;
+  float brake_step;
+};
+
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.01f};
+constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.006f};
+constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
 struct Dr16RawInput {
   bool online{false};
   rm::device::DR16::SwitchPosition switch_l{rm::device::DR16::SwitchPosition::kUnknown};
   rm::device::DR16::SwitchPosition switch_r{rm::device::DR16::SwitchPosition::kUnknown};
+  int16_t right_y{0};
   int16_t dial{0};
 };
+
+float MapDr16RightYToForwardSpeed(const int16_t right_y) {
+  const float normalized = static_cast<float>(right_y) / static_cast<float>(kDr16AxisMaxAbs);
+  return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps, kTargetForwardSpeedMaxMps);
+}
+
+float NormalizeDr16Axis(const int16_t axis) {
+  return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(kDr16AxisMaxAbs), -1.0f, 1.0f);
+}
+
+void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {
+  const bool direction_changed = (value * target) < 0.0f;
+  const bool magnitude_reduced = std::fabs(target) < std::fabs(value);
+  const float step = (direction_changed || magnitude_reduced) ? ramp_params.brake_step : ramp_params.accel_step;
+
+  if (value < target) {
+    value += step;
+    if (value > target) {
+      value = target;
+    }
+  } else if (value > target) {
+    value -= step;
+    if (value < target) {
+      value = target;
+    }
+  }
+}
+
+void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
+  if (target_lock) {
+    alpha_lock = rm::modules::Clamp(alpha_lock + kLockPointAlphaRiseStep, 0.0f, 1.0f);
+  } else {
+    alpha_lock = rm::modules::Clamp(alpha_lock - kLockPointAlphaFallStep, 0.0f, 1.0f);
+  }
+}
+
+SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
+  switch (mode) {
+    case chassis::Fsm::State::kLowLeg:
+      return kSdotRampLowLeg;
+    case chassis::Fsm::State::kHighLeg:
+      return kSdotRampHighLeg;
+    case chassis::Fsm::State::kMidLeg:
+    case chassis::Fsm::State::kJumpPrep:
+    case chassis::Fsm::State::kJumpPush:
+    case chassis::Fsm::State::kJumpRecover:
+    default:
+      return kSdotRampMidLeg;
+  }
+}
 
 /**
  * @brief 控制循环输入快照
@@ -259,6 +329,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
       .switch_l = g.dr16.switch_l(),
       .switch_r = g.dr16.switch_r(),
+      .right_y = g.dr16.right_y(),
       .dial = g.dr16.dial(),
   };
   ApplyDr16Semantics(dr16, semantic_state, input);
@@ -405,6 +476,13 @@ void ControlLoop() {
   static Dr16SemanticState dr16_semantic_state{};
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
+  static float filtered_s_dot = 0.0f;
+  static float expected_s = 0.0f;
+  static bool lock_point_target = false;
+  static float lock_point_alpha = 0.0f;
+  static float lock_point_s_ref = 0.0f;
+  static uint32_t lock_point_last_switch_tick = 0U;
+  static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
   input.mode_request.tick_ms = now_ms;
@@ -435,6 +513,58 @@ void ControlLoop() {
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
+
+  const auto &current_state = chassis_control_output.current_state;
+  const bool mode_changed = (chassis_output.mode != last_chassis_mode);
+  if (mode_changed) {
+    expected_s = current_state.s;
+    filtered_s_dot = current_state.s_dot;
+    lock_point_target = false;
+    lock_point_alpha = 0.0f;
+    lock_point_s_ref = expected_s;
+    lock_point_last_switch_tick = now_ms;
+    last_chassis_mode = chassis_output.mode;
+  }
+
+  const float input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_y) : 0.0f;
+  float target_s_dot = 0.0f;
+  if (std::fabs(input_norm) > kVxInputDeadbandNorm) {
+    target_s_dot = input.dr16.online ? MapDr16RightYToForwardSpeed(input.dr16.right_y) : 0.0f;
+  }
+
+  const bool lockpoint_enabled =
+      (chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output.mode != chassis::Fsm::State::kSpin);
+  if (!lockpoint_enabled) {
+    lock_point_target = false;
+  } else {
+    const float speed_abs = std::fabs(current_state.s_dot);
+    const float input_abs = std::fabs(input_norm);
+    const bool request_lock =
+        (speed_abs < kLockPointEnterSpeedThresholdMps) && (input_abs < kLockPointEnterInputThreshold);
+    const bool request_unlock =
+        (speed_abs > kLockPointExitSpeedThresholdMps) || (input_abs > kLockPointExitInputThreshold);
+    const uint32_t elapsed = now_ms - lock_point_last_switch_tick;
+
+    if (!lock_point_target && request_lock && elapsed >= kLockPointMinDwellTicks) {
+      lock_point_target = true;
+      lock_point_s_ref = current_state.s;
+      lock_point_last_switch_tick = now_ms;
+    } else if (lock_point_target && request_unlock && elapsed >= kLockPointMinDwellTicks) {
+      lock_point_target = false;
+      lock_point_last_switch_tick = now_ms;
+    }
+  }
+
+  UpdateLockPointBlend(lock_point_target, lock_point_alpha);
+  if (lock_point_alpha < 0.02f) {
+    lock_point_s_ref = current_state.s;
+  }
+
+  const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
+  RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
+  chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
+  expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
+  chassis_update_input.expected.s = expected_s;
 
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
