@@ -34,7 +34,7 @@ struct CurrentState {
  */
 struct ExpectedState {
   rm::f32 s{0.0f};             ///< 期望纵向位移
-  rm::f32 s_dot{0.0f};         ///< 期望纵向速度
+  rm::f32 s_dot{0.05f};        ///< 期望纵向速度
   rm::f32 phi{0.0f};           ///< 期望偏航角
   rm::f32 phi_dot{0.0f};       ///< 期望偏航角速度
   rm::f32 theta_ll{0.0f};      ///< 期望左腿摆角

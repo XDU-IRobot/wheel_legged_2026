@@ -30,6 +30,9 @@ volatile float wl_fm_chassis_leg_length_m{0.0f};
 volatile float wl_fm_left_leg_length_m{0.0f};
 volatile float wl_fm_right_leg_length_m{0.0f};
 volatile float wl_fm_chassis_speed_mps{0.0f};
+volatile float wl_fm_left_support_force_n{0.0f};
+volatile float wl_fm_right_support_force_n{0.0f};
+volatile uint8_t wl_fm_off_ground_in_mid_high_leg{0};
 
 volatile float wl_fm_motor_lf_pos_rad{0.0f};
 volatile float wl_fm_motor_lf_vel_rad_s{0.0f};
@@ -93,7 +96,7 @@ constexpr int16_t kWheelActionThreshold = 320;
 constexpr int16_t kWheelCenterThreshold = 80;
 constexpr float kControlLoopDtS = 0.002f;
 constexpr int16_t kDr16AxisMaxAbs = 660;
-constexpr float kTargetForwardSpeedMaxMps = 2.f;
+constexpr float kTargetForwardSpeedMaxMps = 1.8f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
 constexpr float kVyInputDeadbandNorm = 0.1f;
 constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
@@ -110,8 +113,8 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
-constexpr float kSpinTargetYawDotRadS = 6.0f;
-constexpr float kYawFollowFixedTargetRad = 0.f;
+constexpr float kSpinYawTargetOffsetRad = 0.55f;
+constexpr float kYawFollowFixedTargetRad = -1.72f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
 constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
@@ -495,6 +498,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
 
   wl_fm_chassis_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
+  wl_fm_left_support_force_n = chassis_control_output.left_support_force_n;
+  wl_fm_right_support_force_n = chassis_control_output.right_support_force_n;
+  wl_fm_off_ground_in_mid_high_leg = static_cast<uint8_t>(chassis_control_output.off_ground_in_mid_high_leg);
 
   const auto &motor = input.estimator_input;
   wl_fm_motor_lf_pos_rad = motor.left_leg.front.pos_rad;
@@ -574,7 +580,7 @@ void ControlLoop() {
   static float lock_point_alpha = 0.0f;
   static float lock_point_s_ref = 0.0f;
   static uint32_t lock_point_last_switch_tick = 0U;
-  static rm::modules::PID yaw_follow_pid{5.5f, 0.0f, 0.9f, 5.f, 0.f};
+  static rm::modules::PID yaw_follow_pid{8.f, 0.0f, 1.2f, 6.f, 0.f};
   static bool yaw_follow_pid_initialized = false;
   static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
   static bool gimbal_startup_align_complete = false;
@@ -681,7 +687,6 @@ void ControlLoop() {
     filtered_s_dot = current_state.s_dot;
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
-    yaw_follow_target_initialized = false;
     lock_point_target = false;
     lock_point_alpha = 0.0f;
     lock_point_s_ref = expected_s;
@@ -811,8 +816,11 @@ void ControlLoop() {
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   // 底盘偏航期望跟随云台偏航电机，保持车体尽量对准云台中心方向。
   if (spin_control_enabled) {
-    yaw_follow_pid.Clear();
-    RampYawDotToTarget(kSpinTargetYawDotRadS, filtered_yaw_dot);
+    const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+    const float yaw_target_rad = rm::modules::Wrap(yaw_motor_rad + kSpinYawTargetOffsetRad, -kPi, kPi);
+    yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
+    const float target_yaw_dot = -yaw_follow_pid.out();
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;

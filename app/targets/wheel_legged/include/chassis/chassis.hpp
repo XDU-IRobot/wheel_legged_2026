@@ -48,6 +48,7 @@ class Chassis {
     rm::f32 raw_wheel_speed_mps{0.0f};    ///< 原始轮速观测
     rm::f32 raw_accel_speed_mps{0.0f};    ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};      ///< 速度融合当前估计
+    bool off_ground_in_mid_high_leg{false};
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };

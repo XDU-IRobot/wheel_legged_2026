@@ -38,7 +38,7 @@ class Actuators {
     input.imu.roll_rad = g.chassis_imu->roll();
     input.imu.pitch_rad = -g.chassis_imu->pitch();
     input.imu.yaw_rad = g.chassis_imu->yaw();
-    input.imu.gyro_x_rad_s = g.chassis_imu->gyro_x();
+    input.imu.gyro_x_rad_s = g.chassis_imu->gyro_y();
     input.imu.gyro_y_rad_s = -g.chassis_imu->gyro_x();
     input.imu.gyro_z_rad_s = g.chassis_imu->gyro_z();
     input.imu.acc_x_mps2 = g.chassis_imu->acc_x();
