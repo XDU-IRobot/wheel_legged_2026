@@ -113,6 +113,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kSpinYawRampStepRadS = 0.005f;
 constexpr float kSpinYawTargetOffsetRad = 0.55f;
 constexpr float kYawFollowFixedTargetRad = 0.f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
@@ -207,14 +208,14 @@ void RampValueToTarget(const float target, float &value, const SdotRampParams &r
 /**
  * @brief 限制底盘偏航跟随角速度变化率
  */
-void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot) {
+void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot, const float ramp_step) {
   if (filtered_yaw_dot < target_yaw_dot) {
-    filtered_yaw_dot += kYawFollowRampStepRadS;
+    filtered_yaw_dot += ramp_step;
     if (filtered_yaw_dot > target_yaw_dot) {
       filtered_yaw_dot = target_yaw_dot;
     }
   } else if (filtered_yaw_dot > target_yaw_dot) {
-    filtered_yaw_dot -= kYawFollowRampStepRadS;
+    filtered_yaw_dot -= ramp_step;
     if (filtered_yaw_dot < target_yaw_dot) {
       filtered_yaw_dot = target_yaw_dot;
     }
@@ -821,7 +822,7 @@ void ControlLoop() {
     const float yaw_target_rad = rm::modules::Wrap(yaw_motor_rad + kSpinYawTargetOffsetRad, -kPi, kPi);
     yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;
@@ -831,7 +832,7 @@ void ControlLoop() {
     const float yaw_target_rad = yaw_follow_target.target_rad;
     yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot, kYawFollowRampStepRadS);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   }
 
