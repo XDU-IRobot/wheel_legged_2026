@@ -688,6 +688,7 @@ void ControlLoop() {
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
     lock_point_target = false;
+    yaw_follow_target_initialized = false;
     lock_point_alpha = 0.0f;
     lock_point_s_ref = expected_s;
     lock_point_last_switch_tick = now_ms;
