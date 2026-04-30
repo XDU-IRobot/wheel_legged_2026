@@ -35,9 +35,11 @@ class Actuators {
     input.wheel.left_rad_s = -static_cast<float>(g.left_wheel->rpm()) * SharedResources::kPi / 30.0f;
     input.wheel.right_rad_s = static_cast<float>(g.right_wheel->rpm()) * SharedResources::kPi / 30.0f;
 
-    input.imu.roll_rad = g.chassis_imu->roll();
-    input.imu.pitch_rad = -g.chassis_imu->pitch();
-    input.imu.yaw_rad = g.chassis_imu->yaw();
+    f32 euler_rpy_temp[3], quaternion_temp[4] = {g.chassis_imu->quat_w(), g.chassis_imu->quat_x(), g.chassis_imu->quat_y(), g.chassis_imu->quat_z()};
+    modules::QuatToEuler(quaternion_temp, euler_rpy_temp);
+    input.imu.roll_rad =  euler_rpy_temp[1];
+    input.imu.pitch_rad = -euler_rpy_temp[0];
+    input.imu.yaw_rad = euler_rpy_temp[2];
     input.imu.gyro_x_rad_s = g.chassis_imu->gyro_y();
     input.imu.gyro_y_rad_s = -g.chassis_imu->gyro_x();
     input.imu.gyro_z_rad_s = g.chassis_imu->gyro_z();
