@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../fsm_common.hpp"
+#include "../wheel_legged_params.hpp"
 
 #include <cstdint>
 
@@ -51,8 +52,8 @@ class Fsm {
       bool recovery_enable{false};                                           ///< 是否使能恢复逻辑
       bool safe_output_required{true};                                       ///< 是否要求安全输出（全零）
       wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
-      float target_leg_length_m{0.15f};                                      ///< 目标腿长
-      uint8_t jump_phase{0};                                                 ///< 跳跃阶段编号，0 表示非跳跃
+      float target_leg_length_m{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 目标腿长
+      uint8_t jump_phase{0};  ///< 跳跃阶段编号，0 表示非跳跃
     };
 
     State mode{State::kDisabled};  ///< 当前模式

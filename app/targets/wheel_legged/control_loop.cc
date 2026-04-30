@@ -9,7 +9,7 @@
  * @file  targets/wheel_legged/control_loop.cc
  * @brief 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-
+float debug_expect_x_dot;
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
 volatile uint8_t wl_fm_chassis_mode{0};
@@ -91,52 +91,54 @@ volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
 
 namespace {
 
-constexpr int16_t kWheelSpinThreshold = 220;
-constexpr int16_t kWheelActionThreshold = 320;
-constexpr int16_t kWheelCenterThreshold = 80;
-constexpr float kControlLoopDtS = 0.002f;
-constexpr int16_t kDr16AxisMaxAbs = 660;
-constexpr float kTargetForwardSpeedMaxMps = 1.8f;
-constexpr float kVxInputDeadbandNorm = 0.1f;
-constexpr float kVyInputDeadbandNorm = 0.1f;
-constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
-constexpr float kLockPointExitSpeedThresholdMps = 0.55f;
-constexpr float kLockPointEnterInputThreshold = 0.08f;
-constexpr float kLockPointExitInputThreshold = 0.12f;
-constexpr uint32_t kLockPointMinDwellTicks = 100U;  // 200ms @500Hz
-constexpr float kLockPointAlphaRiseStep = 0.015f;
-constexpr float kLockPointAlphaFallStep = 0.018f;
-constexpr float kRcStickMax = 660.0f;
-constexpr float kRcYawRateMaxRadS = -2.5f;
-constexpr float kRcPitchRateMaxRadS = 1.5f;
-constexpr float kPi = 3.14159265358979323846f;
-constexpr float kPitchTargetMinRad = -0.35;
-constexpr float kPitchTargetMaxRad = 0.25f;
-constexpr float kYawFollowRampStepRadS = 0.04f;
-constexpr float kSpinYawRampStepRadS = 0.02f;
-constexpr float kSpinYawTargetOffsetRad = 0.55f;
-constexpr float kYawFollowFixedTargetRad = 0.f;
-constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
-constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
-constexpr uint32_t kGimbalStartupYawAlignStableTicks = 50U;  // 100ms @500Hz
-constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
-constexpr float kYawFollowDriveReadyVelRadS = 0.25f;
-constexpr uint32_t kYawFollowDriveReadyStableTicks = 50U;  // 100ms @500Hz
-// LQR 姿态偏置：用于补偿重心/机械装配等导致的稳态零点偏移。
-constexpr float kExpectedThetaLlBiasRad = 0.0f;
-constexpr float kExpectedThetaLrBiasRad = 0.0f;
-constexpr float kExpectedThetaBBiasRad = 0.0f;
+constexpr int16_t kWheelSpinThreshold = wheel_legged::params::active::control_loop::kWheelSpinThreshold;
+constexpr int16_t kWheelActionThreshold = wheel_legged::params::active::control_loop::kWheelActionThreshold;
+constexpr int16_t kWheelCenterThreshold = wheel_legged::params::active::control_loop::kWheelCenterThreshold;
+constexpr float kControlLoopDtS = wheel_legged::params::active::control_loop::kControlLoopDtS;
+constexpr int16_t kDr16AxisMaxAbs = wheel_legged::params::active::control_loop::kDr16AxisMaxAbs;
+constexpr float kTargetForwardSpeedMaxMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMaxMps;
+constexpr float kVxInputDeadbandNorm = wheel_legged::params::active::control_loop::kVxInputDeadbandNorm;
+constexpr float kVyInputDeadbandNorm = wheel_legged::params::active::control_loop::kVyInputDeadbandNorm;
+constexpr float kLockPointEnterSpeedThresholdMps =
+    wheel_legged::params::active::control_loop::kLockPointEnterSpeedThresholdMps;
+constexpr float kLockPointExitSpeedThresholdMps =
+    wheel_legged::params::active::control_loop::kLockPointExitSpeedThresholdMps;
+constexpr float kLockPointEnterInputThreshold =
+    wheel_legged::params::active::control_loop::kLockPointEnterInputThreshold;
+constexpr float kLockPointExitInputThreshold = wheel_legged::params::active::control_loop::kLockPointExitInputThreshold;
+constexpr uint32_t kLockPointMinDwellTicks = wheel_legged::params::active::control_loop::kLockPointMinDwellTicks;
+constexpr float kLockPointAlphaRiseStep = wheel_legged::params::active::control_loop::kLockPointAlphaRiseStep;
+constexpr float kLockPointAlphaFallStep = wheel_legged::params::active::control_loop::kLockPointAlphaFallStep;
+constexpr float kRcStickMax = wheel_legged::params::active::control_loop::kRcStickMax;
+constexpr float kRcYawRateMaxRadS = wheel_legged::params::active::control_loop::kRcYawRateMaxRadS;
+constexpr float kRcPitchRateMaxRadS = wheel_legged::params::active::control_loop::kRcPitchRateMaxRadS;
+constexpr float kPi = wheel_legged::params::active::kPi;
+constexpr float kPitchTargetMinRad = wheel_legged::params::active::control_loop::kPitchTargetMinRad;
+constexpr float kPitchTargetMaxRad = wheel_legged::params::active::control_loop::kPitchTargetMaxRad;
+constexpr float kYawFollowRampStepRadS = wheel_legged::params::active::control_loop::kYawFollowRampStepRadS;
+constexpr float kSpinYawRampStepRadS = wheel_legged::params::active::control_loop::kSpinYawRampStepRadS;
+constexpr float kSpinYawTargetOffsetRad = wheel_legged::params::active::control_loop::kSpinYawTargetOffsetRad;
+constexpr float kYawFollowFixedTargetRad = wheel_legged::params::active::control_loop::kYawFollowFixedTargetRad;
+constexpr float kYawFollowSideOffsetRad = wheel_legged::params::active::control_loop::kYawFollowSideOffsetRad;
+constexpr float kGimbalStartupYawAlignErrorRad =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad;
+constexpr float kGimbalStartupYawAlignVelRadS =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
+constexpr uint32_t kGimbalStartupYawAlignStableTicks =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignStableTicks;
+constexpr float kYawFollowDriveReadyErrorRad = wheel_legged::params::active::control_loop::kYawFollowDriveReadyErrorRad;
+constexpr float kYawFollowDriveReadyVelRadS = wheel_legged::params::active::control_loop::kYawFollowDriveReadyVelRadS;
+constexpr uint32_t kYawFollowDriveReadyStableTicks =
+    wheel_legged::params::active::control_loop::kYawFollowDriveReadyStableTicks;
+constexpr float kExpectedThetaLlBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaLlBiasRad;
+constexpr float kExpectedThetaLrBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaLrBiasRad;
+constexpr float kExpectedThetaBBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaBBiasRad;
 chassis_runtime::Actuators g_actuators{};
 
-struct SdotRampParams {
-  float accel_step;
-  float brake_step;
-};
-
-constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
-constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
-constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+using SdotRampParams = wheel_legged::params::active::control_loop::SdotRampParams;
+constexpr SdotRampParams kSdotRampLowLeg = wheel_legged::params::active::control_loop::kSdotRampLowLeg;
+constexpr SdotRampParams kSdotRampMidLeg = wheel_legged::params::active::control_loop::kSdotRampMidLeg;
+constexpr SdotRampParams kSdotRampHighLeg = wheel_legged::params::active::control_loop::kSdotRampHighLeg;
 
 enum class YawFollowAlignMode : uint8_t {
   kForward = 0,
@@ -581,7 +583,11 @@ void ControlLoop() {
   static float lock_point_alpha = 0.0f;
   static float lock_point_s_ref = 0.0f;
   static uint32_t lock_point_last_switch_tick = 0U;
-  static rm::modules::PID yaw_follow_pid{9.f, 0.0f, 2.5f, 5.f, 0.f};
+  static rm::modules::PID yaw_follow_pid{wheel_legged::params::active::control_loop::kYawFollowPid.kp,
+                                         wheel_legged::params::active::control_loop::kYawFollowPid.ki,
+                                         wheel_legged::params::active::control_loop::kYawFollowPid.kd,
+                                         wheel_legged::params::active::control_loop::kYawFollowPid.max_out,
+                                         wheel_legged::params::active::control_loop::kYawFollowPid.max_iout};
   static bool yaw_follow_pid_initialized = false;
   static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
   static bool gimbal_startup_align_complete = false;
@@ -805,6 +811,7 @@ void ControlLoop() {
   RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
   // LQR 期望量：纵向速度来自斜坡，纵向位置在定点锁定时逐步切到锁定参考。
   chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
+  debug_expect_x_dot = chassis_update_input.expected.s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
   wl_fm_target_s_dot_mps = chassis_update_input.expected.s_dot;

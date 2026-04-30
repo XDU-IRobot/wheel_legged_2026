@@ -5,6 +5,8 @@
 
 #include <librm.hpp>
 
+#include "../wheel_legged_params.hpp"
+
 /**
  * @file  targets/wheel_legged/include/chassis/leg_kinematics.hpp
  * @brief 五连杆腿部运动学解算器
@@ -17,7 +19,9 @@ namespace chassis::wbr {
  */
 class LegKinematics {
  public:
-  LegKinematics(rm::f32 l1 = 0.215f, rm::f32 l2 = 0.254f) : l1_(l1), l2_(l2) {}
+  LegKinematics(rm::f32 l1 = wheel_legged::params::active::chassis::kLegL1M,
+                rm::f32 l2 = wheel_legged::params::active::chassis::kLegL2M)
+      : l1_(l1), l2_(l2) {}
 
   void SetPhi1(const rm::f32 phi1) { phi1_ = phi1; }
   void SetPhi4(const rm::f32 phi4) { phi4_ = phi4; }
@@ -39,12 +43,14 @@ class LegKinematics {
    * @brief 单步更新腿部几何量、速度量与雅可比
    * @param dt_s 控制周期
    */
-  void Update(const rm::f32 dt_s = 0.002f) {
-    static constexpr rm::f32 kPi = 3.14159265358979323846f;
-    static constexpr rm::f32 kMinSin = 1e-5f;
-    static constexpr rm::f32 kMinLen = 1e-5f;
+  void Update(const rm::f32 dt_s = wheel_legged::params::active::leg_kinematics::kDefaultDtS) {
+    static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
+    static constexpr rm::f32 kMinSin = wheel_legged::params::active::leg_kinematics::kMinSin;
+    static constexpr rm::f32 kMinLen = wheel_legged::params::active::leg_kinematics::kMinLen;
 
-    const rm::f32 dt = (dt_s > 1e-5f) ? dt_s : 0.002f;
+    const rm::f32 dt = (dt_s > wheel_legged::params::active::leg_kinematics::kMinLen)
+                           ? dt_s
+                           : wheel_legged::params::active::leg_kinematics::kDefaultDtS;
 
     const rm::f32 prev_l0 = l0_;
 
@@ -157,8 +163,8 @@ class LegKinematics {
   rm::f32 jacobi_11_{0.0f};
 
   // 连杆参数
-  rm::f32 l1_{0.215f};
-  rm::f32 l2_{0.254f};
+  rm::f32 l1_{wheel_legged::params::active::chassis::kLegL1M};
+  rm::f32 l2_{wheel_legged::params::active::chassis::kLegL2M};
 };
 
 }  // namespace chassis::wbr

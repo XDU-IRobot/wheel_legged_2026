@@ -3,6 +3,7 @@
 #include "chassis_state.hpp"
 #include "fsm.hpp"
 #include "lqr_controllers.hpp"
+#include "../wheel_legged_params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/chassis.hpp
@@ -26,7 +27,7 @@ class Chassis {
     bool enable_output{false};                     ///< 是否允许输出电机命令
     bool run_chassis_update{false};                ///< 是否执行底盘控制计算
     bool spin_enable{false};                       ///< 是否开启小陀螺
-    rm::f32 target_leg_length_m{0.18f};            ///< 目标腿长
+    rm::f32 target_leg_length_m{wheel_legged::params::active::chassis_fsm::kMidLegLengthM};  ///< 目标腿长
   };
 
   /**
@@ -85,13 +86,15 @@ class Chassis {
   void CalSupportForce();
 
   struct TunableParams {
-    rm::f32 leg_target_length_m{0.18f};  ///< 当前腿长目标
+    rm::f32 leg_target_length_m{wheel_legged::params::active::chassis_fsm::kMidLegLengthM};  ///< 当前腿长目标
   };
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
-  wbr::LegKinematics left_leg_{0.215f, 0.254f};
-  wbr::LegKinematics right_leg_{0.215f, 0.254f};
+  wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
+                               wheel_legged::params::active::chassis::kLegL2M};
+  wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,
+                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::MotorTorque base_torque_{};
   TunableParams params_{};
 
