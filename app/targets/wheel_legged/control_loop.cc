@@ -208,8 +208,7 @@ void RampValueToTarget(const float target, float &value, const SdotRampParams &r
 /**
  * @brief 限制底盘偏航跟随角速度变化率
  */
-void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot,
-                        const float ramp_step ) {
+void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot, const float ramp_step) {
   if (filtered_yaw_dot < target_yaw_dot) {
     filtered_yaw_dot += ramp_step;
     if (filtered_yaw_dot > target_yaw_dot) {
@@ -833,7 +832,7 @@ void ControlLoop() {
     const float yaw_target_rad = yaw_follow_target.target_rad;
     yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot,kYawFollowRampStepRadS);
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot, kYawFollowRampStepRadS);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   }
 
