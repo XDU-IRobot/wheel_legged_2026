@@ -9,7 +9,6 @@
  * @file  targets/wheel_legged/control_loop.cc
  * @brief 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-float debug_expect_x_dot;
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
 volatile uint8_t wl_fm_chassis_mode{0};
@@ -811,7 +810,6 @@ void ControlLoop() {
   RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
   // LQR 期望量：纵向速度来自斜坡，纵向位置在定点锁定时逐步切到锁定参考。
   chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
-  debug_expect_x_dot = chassis_update_input.expected.s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
   wl_fm_target_s_dot_mps = chassis_update_input.expected.s_dot;
