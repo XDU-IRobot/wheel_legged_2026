@@ -331,7 +331,6 @@ class ChassisStateEstimator {
     return leg_input;
   }
 
-
   /** @brief 更新腿部几何状态与摆角状态 */
   void UpdateLegState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
     static constexpr rm::f32 kPiHalf = wheel_legged::params::active::state_estimator::kThetaPiHalf;
