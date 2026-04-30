@@ -192,17 +192,26 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
-                           wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
-                          wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
-  const float max_step = ramp_rate * kControlDtS;
-  const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
-  if (std::fabs(error) <= max_step) {
-    smoothed_leg_target_length_m_ = input.target_leg_length_m;
+  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg ||
+                             input.fsm_mode == Fsm::State::kMidLeg ||
+                             input.fsm_mode == Fsm::State::kHighLeg ||
+                             input.fsm_mode == Fsm::State::kSpin);
+  if (ramp_enabled) {
+    const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
+                             wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
+                            wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
+    const float max_step = ramp_rate * kControlDtS;
+    const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+    if (std::fabs(error) <= max_step) {
+      smoothed_leg_target_length_m_ = input.target_leg_length_m;
+    } else {
+      smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
+    }
+    params_.leg_target_length_m = smoothed_leg_target_length_m_;
   } else {
-    smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
+    smoothed_leg_target_length_m_ = input.target_leg_length_m;
+    params_.leg_target_length_m = input.target_leg_length_m;
   }
-  params_.leg_target_length_m = smoothed_leg_target_length_m_;
   ComputeActuatorTorque(input, state_output);
 }
 
