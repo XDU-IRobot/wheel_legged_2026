@@ -95,6 +95,7 @@ constexpr float kControlLoopDtS = 0.002f;
 constexpr int16_t kDr16AxisMaxAbs = 660;
 constexpr float kTargetForwardSpeedMaxMps = 1.8f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
+constexpr float kVyInputDeadbandNorm = 0.1f;
 constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
 constexpr float kLockPointExitSpeedThresholdMps = 0.55f;
 constexpr float kLockPointEnterInputThreshold = 0.08f;
@@ -109,10 +110,15 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kSpinTargetYawDotRadS = 6.0f;
 constexpr float kYawFollowFixedTargetRad = -1.72f;
+constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
 constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = 50U;  // 100ms @500Hz
+constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
+constexpr float kYawFollowDriveReadyVelRadS = 0.25f;
+constexpr uint32_t kYawFollowDriveReadyStableTicks = 50U;  // 100ms @500Hz
 // LQR 姿态偏置：用于补偿重心/机械装配等导致的稳态零点偏移。
 constexpr float kExpectedThetaLlBiasRad = 0.0f;
 constexpr float kExpectedThetaLrBiasRad = 0.0f;
@@ -124,15 +130,27 @@ struct SdotRampParams {
   float brake_step;
 };
 
-constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.002f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
 constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
 constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+
+enum class YawFollowAlignMode : uint8_t {
+  kForward = 0,
+  kSidePositive,
+  kSideNegative,
+};
+
+struct YawFollowTargetSelection {
+  float target_rad{0.0f};
+  float drive_sign{1.0f};
+};
 
 struct Dr16RawInput {
   bool online{false};
   rm::device::DR16::SwitchPosition switch_l{rm::device::DR16::SwitchPosition::kUnknown};
   rm::device::DR16::SwitchPosition switch_r{rm::device::DR16::SwitchPosition::kUnknown};
   int16_t right_y{0};
+  int16_t right_x{0};
   int16_t left_x{0};
   int16_t left_y{0};
   int16_t dial{0};
@@ -145,6 +163,12 @@ struct Dr16RawInput {
  */
 float MapDr16RightYToForwardSpeed(const int16_t right_y) {
   const float normalized = static_cast<float>(right_y) / static_cast<float>(kDr16AxisMaxAbs);
+  return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps,
+                            kTargetForwardSpeedMaxMps);
+}
+
+float MapDr16RightXToSideSpeed(const int16_t right_x) {
+  const float normalized = static_cast<float>(right_x) / static_cast<float>(kDr16AxisMaxAbs);
   return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps,
                             kTargetForwardSpeedMaxMps);
 }
@@ -208,12 +232,42 @@ void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
 /**
  * @brief 选择距离当前偏航电机角最近的车头对齐目标
  */
-float SelectNearestYawCenterTarget(const float yaw_motor_rad) {
-  const float yaw_target_a_rad = kYawFollowFixedTargetRad;
-  const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi, -kPi, kPi);
+YawFollowTargetSelection SelectNearestYawTarget(const float yaw_motor_rad, const float target_offset_rad) {
+  const float yaw_target_a_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + target_offset_rad, -kPi, kPi);
+  const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi + target_offset_rad, -kPi, kPi);
   const float yaw_err_to_a = std::fabs(rm::modules::Wrap(yaw_target_a_rad - yaw_motor_rad, -kPi, kPi));
   const float yaw_err_to_b = std::fabs(rm::modules::Wrap(yaw_target_b_rad - yaw_motor_rad, -kPi, kPi));
-  return (yaw_err_to_a <= yaw_err_to_b) ? yaw_target_a_rad : yaw_target_b_rad;
+  if (yaw_err_to_a <= yaw_err_to_b) {
+    return {yaw_target_a_rad, 1.0f};
+  }
+  return {yaw_target_b_rad, -1.0f};
+}
+
+float SelectNearestYawCenterTarget(const float yaw_motor_rad) {
+  return SelectNearestYawTarget(yaw_motor_rad, 0.0f).target_rad;
+}
+
+float YawFollowTargetOffset(const YawFollowAlignMode mode) {
+  switch (mode) {
+    case YawFollowAlignMode::kSidePositive:
+      return kYawFollowSideOffsetRad;
+    case YawFollowAlignMode::kSideNegative:
+      return -kYawFollowSideOffsetRad;
+    case YawFollowAlignMode::kForward:
+    default:
+      return 0.0f;
+  }
+}
+
+float YawFollowDriveSign(const YawFollowAlignMode mode, const float target_drive_sign) {
+  switch (mode) {
+    case YawFollowAlignMode::kSideNegative:
+      return -target_drive_sign;
+    case YawFollowAlignMode::kForward:
+    case YawFollowAlignMode::kSidePositive:
+    default:
+      return target_drive_sign;
+  }
 }
 
 /**
@@ -223,6 +277,11 @@ bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad,
   const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
   return yaw_err_rad <= kGimbalStartupYawAlignErrorRad &&
          std::fabs(yaw_motor_vel_rad_s) <= kGimbalStartupYawAlignVelRadS;
+}
+
+bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
+  const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
+  return yaw_err_rad <= kYawFollowDriveReadyErrorRad && std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
 }
 
 /**
@@ -368,6 +427,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .switch_l = g.dr16.switch_l(),
       .switch_r = g.dr16.switch_r(),
       .right_y = g.dr16.right_y(),
+      .right_x = g.dr16.right_x(),
       .left_x = g.dr16.left_x(),
       .left_y = g.dr16.left_y(),
       .dial = g.dr16.dial(),
@@ -521,6 +581,11 @@ void ControlLoop() {
   static bool gimbal_startup_align_was_active = false;
   static uint32_t gimbal_startup_align_stable_ticks = 0U;
   static float gimbal_startup_align_target_rad = kYawFollowFixedTargetRad;
+  static YawFollowAlignMode yaw_follow_align_mode = YawFollowAlignMode::kForward;
+  static YawFollowTargetSelection yaw_follow_target{};
+  static bool yaw_follow_target_initialized = false;
+  static bool yaw_follow_drive_ready = false;
+  static uint32_t yaw_follow_drive_ready_stable_ticks = 0U;
 
   if (!yaw_follow_pid_initialized) {
     yaw_follow_pid.SetCircular(true).SetCircularCycle(2.0f * kPi);
@@ -623,10 +688,77 @@ void ControlLoop() {
     last_chassis_mode = chassis_output.mode;
   }
 
-  const float input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_y) : 0.0f;
+  const float forward_input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_y) : 0.0f;
+  const float side_input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_x) : 0.0f;
+  const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
+  const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
+
+  YawFollowAlignMode requested_yaw_follow_align_mode = yaw_follow_align_mode;
+  if (!input.dr16.online || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
+  } else if (forward_input_active) {
+    requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
+  } else if (side_input_active) {
+    requested_yaw_follow_align_mode =
+        (side_input_norm > 0.0f) ? YawFollowAlignMode::kSidePositive : YawFollowAlignMode::kSideNegative;
+  }
+
+  const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != yaw_follow_align_mode;
+  if (!input.dr16.online || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    yaw_follow_align_mode = YawFollowAlignMode::kForward;
+    yaw_follow_target_initialized = false;
+    yaw_follow_drive_ready = false;
+    yaw_follow_drive_ready_stable_ticks = 0U;
+  } else if (yaw_follow_mode_changed || !yaw_follow_target_initialized) {
+    yaw_follow_align_mode = requested_yaw_follow_align_mode;
+    yaw_follow_target =
+        SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(yaw_follow_align_mode));
+    yaw_follow_target_initialized = true;
+    yaw_follow_drive_ready = false;
+    yaw_follow_drive_ready_stable_ticks = 0U;
+    filtered_yaw_dot = 0.0f;
+    yaw_follow_pid.Clear();
+  }
+
+  if (!yaw_follow_target_initialized) {
+    yaw_follow_target =
+        SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(yaw_follow_align_mode));
+    yaw_follow_target_initialized = true;
+  }
+
+  const float yaw_follow_drive_sign = YawFollowDriveSign(yaw_follow_align_mode, yaw_follow_target.drive_sign);
+  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
+                                    chassis_output.control.run_chassis_update;
+
+  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                          chassis_output_enable && chassis_output.control.run_chassis_update &&
+                                          gimbal_output.control.gimbal_enable;
+  if (!spin_control_enabled && !yaw_follow_drive_ready) {
+    const bool yaw_motor_ready = globals->yaw_motor.has_value();
+    const float yaw_motor_vel_rad_s = yaw_motor_ready ? globals->yaw_motor->vel() : 0.0f;
+    if (yaw_follow_control_enabled && yaw_motor_ready &&
+        IsYawFollowDriveReady(yaw_follow_target.target_rad, input.estimator_input.yaw_motor_rad, yaw_motor_vel_rad_s)) {
+      ++yaw_follow_drive_ready_stable_ticks;
+    } else {
+      yaw_follow_drive_ready_stable_ticks = 0U;
+    }
+    if (yaw_follow_drive_ready_stable_ticks >= kYawFollowDriveReadyStableTicks) {
+      yaw_follow_drive_ready = true;
+    }
+  } else if (spin_control_enabled) {
+    yaw_follow_drive_ready = false;
+    yaw_follow_drive_ready_stable_ticks = 0U;
+  }
+
   float target_s_dot = 0.0f;
-  if (std::fabs(input_norm) > kVxInputDeadbandNorm) {
-    target_s_dot = input.dr16.online ? MapDr16RightYToForwardSpeed(input.dr16.right_y) : 0.0f;
+  if (spin_control_enabled) {
+    target_s_dot = 0.0f;
+  } else if (!yaw_follow_drive_ready) {
+    target_s_dot = 0.0f;
+  } else if (forward_input_active) {
+    target_s_dot = input.dr16.online ? yaw_follow_drive_sign * MapDr16RightYToForwardSpeed(input.dr16.right_y) : 0.0f;
+  } else if (side_input_active) {
+    target_s_dot = input.dr16.online ? yaw_follow_drive_sign * MapDr16RightXToSideSpeed(input.dr16.right_x) : 0.0f;
   }
   if (!chassis_output_enable) {
     target_s_dot = 0.0f;
@@ -639,7 +771,7 @@ void ControlLoop() {
     lock_point_target = false;
   } else {
     const float speed_abs = std::fabs(current_state.s_dot);
-    const float input_abs = std::fabs(input_norm);
+    const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
     const bool request_lock =
         (speed_abs < kLockPointEnterSpeedThresholdMps) && (input_abs < kLockPointEnterInputThreshold);
     const bool request_unlock =
@@ -675,15 +807,18 @@ void ControlLoop() {
   chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
-  const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output_enable &&
-                                  chassis_output.control.run_chassis_update && gimbal_output.control.gimbal_enable;
+  const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   // 底盘偏航期望跟随云台偏航电机，保持车体尽量对准云台中心方向。
-  if (!yaw_follow_enabled) {
+  if (spin_control_enabled) {
+    yaw_follow_pid.Clear();
+    RampYawDotToTarget(kSpinTargetYawDotRadS, filtered_yaw_dot);
+    chassis_update_input.expected.phi_dot = filtered_yaw_dot;
+  } else if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
   } else {
     const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
-    const float yaw_target_rad = SelectNearestYawCenterTarget(yaw_motor_rad);
+    const float yaw_target_rad = yaw_follow_target.target_rad;
     yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
     RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
