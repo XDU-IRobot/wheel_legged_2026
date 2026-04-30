@@ -7,6 +7,7 @@
 
 #include <librm.hpp>
 
+#include "wheel_legged_params.hpp"
 #include "globals_no_dtcm.hpp"
 
 #include "chassis/chassis.hpp"
@@ -27,11 +28,6 @@
  */
 struct SharedResources {
   using DmMitMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
-
-  static constexpr double kJointCanTxLimitHz = 4000.0;
-  static constexpr double kWheelCanTxLimitHz = 4000.0;
-  static constexpr double kGimbalCanTxLimitHz = 4000.0;
-  static constexpr float kPi = 3.14159265358979323846f;
 
   SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};  ///< DMA 相关外设资源
 
@@ -79,17 +75,17 @@ struct SharedResources {
     dr16.Begin();
 
     if (!joint_can.has_value()) {
-      joint_can.emplace(hfdcan1, kJointCanTxLimitHz);
+      joint_can.emplace(hfdcan1, wheel_legged::params::active::globals::kJointCanTxLimitHz);
       joint_can->SetFilter(0, 0);
       joint_can->Begin();
     }
     if (!wheel_can.has_value()) {
-      wheel_can.emplace(hfdcan2, kWheelCanTxLimitHz);
+      wheel_can.emplace(hfdcan2, wheel_legged::params::active::globals::kWheelCanTxLimitHz);
       wheel_can->SetFilter(0, 0);
       wheel_can->Begin();
     }
     if (!gimbal_can.has_value()) {
-      gimbal_can.emplace(hfdcan3, kGimbalCanTxLimitHz);
+      gimbal_can.emplace(hfdcan3, wheel_legged::params::active::globals::kGimbalCanTxLimitHz);
       gimbal_can->SetFilter(0, 0);
       gimbal_can->Begin();
     }
@@ -98,27 +94,23 @@ struct SharedResources {
     }
 
     if (!dm_lf.has_value()) {
-      dm_lf.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x17, 0x07, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
-      dm_lb.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x14, 0x04, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
-      dm_rf.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x16, 0x06, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
-      dm_rb.emplace(*joint_can, rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>{
-                                    0x15, 0x05, kPi, 45.0f, 54.0f, {0, 500}, {0, 10}});
+      dm_lf.emplace(*joint_can, wheel_legged::params::active::globals::kDmLfSettings);
+      dm_lb.emplace(*joint_can, wheel_legged::params::active::globals::kDmLbSettings);
+      dm_rf.emplace(*joint_can, wheel_legged::params::active::globals::kDmRfSettings);
+      dm_rb.emplace(*joint_can, wheel_legged::params::active::globals::kDmRbSettings);
     }
 
     if (!left_wheel.has_value()) {
-      left_wheel.emplace(*wheel_can, 0x06);
-      right_wheel.emplace(*wheel_can, 0x05);
+      left_wheel.emplace(*wheel_can, wheel_legged::params::active::globals::kLeftWheelId);
+      right_wheel.emplace(*wheel_can, wheel_legged::params::active::globals::kRightWheelId);
     }
 
     if (!pitch_motor.has_value()) {
-      pitch_motor.emplace(*gimbal_can, gimbal::Gimbal::kPitchMotorSettings);
+      pitch_motor.emplace(*gimbal_can, wheel_legged::params::active::gimbal::kPitchMotorSettings);
     }
 
     if (!yaw_motor.has_value()) {
-      yaw_motor.emplace(*wheel_can, gimbal::Gimbal::kYawMotorSettings);
+      yaw_motor.emplace(*wheel_can, wheel_legged::params::active::gimbal::kYawMotorSettings);
     }
 
     if (!chassis_imu.has_value()) {

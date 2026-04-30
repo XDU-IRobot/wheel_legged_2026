@@ -3,6 +3,7 @@
 #include <array>
 
 #include <librm.hpp>
+#include "../wheel_legged_params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/lqr_controllers.hpp
@@ -34,7 +35,7 @@ struct CurrentState {
  */
 struct ExpectedState {
   rm::f32 s{0.0f};             ///< 期望纵向位移
-  rm::f32 s_dot{0.05f};        ///< 期望纵向速度
+  rm::f32 s_dot{wheel_legged::params::active::state_estimator::kDefaultExpectedSdotMps};  ///< 期望纵向速度
   rm::f32 phi{0.0f};           ///< 期望偏航角
   rm::f32 phi_dot{0.0f};       ///< 期望偏航角速度
   rm::f32 theta_ll{0.0f};      ///< 期望左腿摆角
@@ -70,7 +71,7 @@ class WbrController {
    * @brief 单步控制解算
    */
   [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected) const {
-    static constexpr rm::f32 kPi = 3.14159265358979323846f;
+    static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
 
     rm::f32 k_matrix[4][10]{};
     ComputeKMatrix(current.l_l, current.l_r, k_matrix);

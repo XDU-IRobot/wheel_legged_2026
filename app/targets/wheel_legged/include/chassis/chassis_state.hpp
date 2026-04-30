@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <cstring>
 
 #include <librm.hpp>
 
+#include "../wheel_legged_params.hpp"
 #include "leg_kinematics.hpp"
 #include "lqr_controllers.hpp"
 #include "../utils/kalman_filter.hpp"
@@ -67,7 +68,7 @@ struct ChassisStateEstimatorInput {
   WheelFeedback wheel{};         ///< 左右轮反馈
   ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{0.002f};                ///< 估计周期
+  rm::f32 dt_s{wheel_legged::params::active::state_estimator::kDefaultDtS};  ///< 估计周期
   rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
   rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
   bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移
@@ -78,19 +79,19 @@ struct ChassisStateEstimatorInput {
  * @brief 状态估计器配置参数
  */
 struct ChassisStateEstimatorConfig {
-  rm::f32 leg_l1_m{0.215f};  ///< 五连杆主动杆长度
-  rm::f32 leg_l2_m{0.254f};  ///< 五连杆从动杆长度
+  rm::f32 leg_l1_m{wheel_legged::params::active::state_estimator::kLegL1M};  ///< 五连杆主动杆长度
+  rm::f32 leg_l2_m{wheel_legged::params::active::state_estimator::kLegL2M};  ///< 五连杆从动杆长度
 
-  rm::f32 wheel_radius_m{0.0575f};                ///< 轮半径
-  rm::f32 wheel_reduction_ratio{17.0f / 268.0f};  ///< 轮电机到车轮的速度换算比例
-  rm::f32 max_valid_speed_mps{8.0f};              ///< 融合速度可信上限
+  rm::f32 wheel_radius_m{wheel_legged::params::active::state_estimator::kWheelRadiusM};  ///< 轮半径
+  rm::f32 wheel_reduction_ratio{wheel_legged::params::active::state_estimator::kWheelReductionRatio};  ///< 轮电机到车轮的速度换算比例
+  rm::f32 max_valid_speed_mps{wheel_legged::params::active::state_estimator::kMaxValidSpeedMps};  ///< 融合速度可信上限
 
-  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  ///< 左腿前关节零位偏移
-  rm::f32 left_phi4_offset_rad{0.59f};                            ///< 左腿后关节零位偏移
-  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  ///< 右腿前关节零位偏移
-  rm::f32 right_phi4_offset_rad{-1.87f};                          ///< 右腿后关节零位偏移
+  rm::f32 left_phi1_offset_rad{wheel_legged::params::active::state_estimator::kLeftPhi1OffsetRad};  ///< 左腿前关节零位偏移
+  rm::f32 left_phi4_offset_rad{wheel_legged::params::active::state_estimator::kLeftPhi4OffsetRad};  ///< 左腿后关节零位偏移
+  rm::f32 right_phi1_offset_rad{wheel_legged::params::active::state_estimator::kRightPhi1OffsetRad};  ///< 右腿前关节零位偏移
+  rm::f32 right_phi4_offset_rad{wheel_legged::params::active::state_estimator::kRightPhi4OffsetRad};  ///< 右腿后关节零位偏移
 
-  rm::f32 theta_dot_filter_cutoff_hz{8.0f};  ///< 腿摆角速度低通截止频率
+  rm::f32 theta_dot_filter_cutoff_hz{wheel_legged::params::active::state_estimator::kThetaDotFilterCutoffHz};  ///< 腿摆角速度低通截止频率
 };
 
 /**
@@ -139,7 +140,7 @@ struct SpeedEstimatorInput {
   rm::f32 imu_acc_x_mps2{0.0f};   ///< 惯导 x 轴加速度
   rm::f32 imu_acc_y_mps2{0.0f};   ///< 惯导 y 轴加速度
   rm::f32 imu_pitch_rad{0.0f};    ///< 机体俯仰角，用于重力/姿态补偿
-  rm::f32 dt_s{0.002f};           ///< 估计周期
+  rm::f32 dt_s{wheel_legged::params::active::state_estimator::kDefaultDtS};  ///< 估计周期
 };
 
 /**
@@ -151,8 +152,10 @@ class SpeedEstimator {
 
   /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
-    accel_x_filter_.set_cutoff_frequency(500.0f, 10.0f);
-    accel_y_filter_.set_cutoff_frequency(500.0f, 10.0f);
+    accel_x_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
+                                         wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
+    accel_y_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
+                                         wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
 
     kf_.UseAutoAdjustment = 0;
     std::memset(kf_.xhat_data, 0, sizeof(rm::f32) * 2);
@@ -160,12 +163,26 @@ class SpeedEstimator {
     std::memset(kf_.MeasuredVector, 0, sizeof(rm::f32) * 2);
     std::memset(kf_.FilteredValue, 0, sizeof(rm::f32) * 2);
 
-    constexpr rm::f32 dt = 0.002f;
-    const rm::f32 f_mat[4] = {1.0f, dt, 0.0f, 1.0f};
-    const rm::f32 q_mat[4] = {0.0005f, 0.0f, 0.0f, 0.04f};
-    const rm::f32 r_mat[4] = {0.5f, 0.0f, 0.0f, 2.0f};
-    const rm::f32 p_mat[4] = {10.0f, 0.0f, 0.0f, 10.0f};
-    const rm::f32 h_mat[4] = {1.0f, 0.0f, 0.0f, 1.0f};
+    const rm::f32 f_mat[4] = {wheel_legged::params::active::state_estimator::kKalmanF[0],
+                              wheel_legged::params::active::state_estimator::kKalmanF[1],
+                              wheel_legged::params::active::state_estimator::kKalmanF[2],
+                              wheel_legged::params::active::state_estimator::kKalmanF[3]};
+    const rm::f32 q_mat[4] = {wheel_legged::params::active::state_estimator::kKalmanQ[0],
+                              wheel_legged::params::active::state_estimator::kKalmanQ[1],
+                              wheel_legged::params::active::state_estimator::kKalmanQ[2],
+                              wheel_legged::params::active::state_estimator::kKalmanQ[3]};
+    const rm::f32 r_mat[4] = {wheel_legged::params::active::state_estimator::kKalmanR[0],
+                              wheel_legged::params::active::state_estimator::kKalmanR[1],
+                              wheel_legged::params::active::state_estimator::kKalmanR[2],
+                              wheel_legged::params::active::state_estimator::kKalmanR[3]};
+    const rm::f32 p_mat[4] = {wheel_legged::params::active::state_estimator::kKalmanP[0],
+                              wheel_legged::params::active::state_estimator::kKalmanP[1],
+                              wheel_legged::params::active::state_estimator::kKalmanP[2],
+                              wheel_legged::params::active::state_estimator::kKalmanP[3]};
+    const rm::f32 h_mat[4] = {wheel_legged::params::active::state_estimator::kKalmanH[0],
+                              wheel_legged::params::active::state_estimator::kKalmanH[1],
+                              wheel_legged::params::active::state_estimator::kKalmanH[2],
+                              wheel_legged::params::active::state_estimator::kKalmanH[3]};
 
     std::memcpy(kf_.F_data, f_mat, sizeof(f_mat));
     std::memcpy(kf_.Q_data, q_mat, sizeof(q_mat));
@@ -173,8 +190,8 @@ class SpeedEstimator {
     std::memcpy(kf_.P_data, p_mat, sizeof(p_mat));
     std::memcpy(kf_.H_data, h_mat, sizeof(h_mat));
 
-    kf_.StateMinVariance[0] = 1e-5f;
-    kf_.StateMinVariance[1] = 1e-5f;
+    kf_.StateMinVariance[0] = wheel_legged::params::active::state_estimator::kKalmanMinVariance;
+    kf_.StateMinVariance[1] = wheel_legged::params::active::state_estimator::kKalmanMinVariance;
 
     Reset();
   }
@@ -193,7 +210,9 @@ class SpeedEstimator {
 
   /** @brief 单步更新速度估计 */
   void Update(const SpeedEstimatorInput &input) {
-    const rm::f32 dt_s = (input.dt_s > 1e-5f) ? input.dt_s : 0.002f;
+    const rm::f32 dt_s = (input.dt_s > wheel_legged::params::active::state_estimator::kKalmanMinVariance)
+                             ? input.dt_s
+                             : wheel_legged::params::active::state_estimator::kDefaultDtS;
 
     wheel_speed_mps_ = input.wheel_speed_mps;
 
@@ -201,7 +220,7 @@ class SpeedEstimator {
     const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2);
     rm::f32 accel_forward = acc_x - acc_y * std::sin(input.imu_pitch_rad);
 
-    if (accel_bias_count_ < 1500) {
+    if (accel_bias_count_ < static_cast<int>(wheel_legged::params::active::state_estimator::kAccelBiasInitSamples)) {
       accel_bias_sum_ += accel_forward;
       ++accel_bias_count_;
       accel_bias_ = accel_bias_sum_ / static_cast<rm::f32>(accel_bias_count_);
@@ -209,12 +228,14 @@ class SpeedEstimator {
 
     accel_forward -= accel_bias_;
 
-    if (std::fabs(wheel_speed_mps_) < 0.02f && std::fabs(accel_forward) < 0.5f) {
+    if (std::fabs(wheel_speed_mps_) < wheel_legged::params::active::state_estimator::kAccelZeroWheelSpeedThresholdMps &&
+        std::fabs(accel_forward) < wheel_legged::params::active::state_estimator::kAccelZeroHighThresholdMps2) {
       accel_forward = 0.0f;
     }
 
     accel_speed_raw_ += accel_forward * dt_s;
-    if (std::fabs(wheel_speed_mps_) < 0.02f && std::fabs(accel_forward) < 0.2f) {
+    if (std::fabs(wheel_speed_mps_) < wheel_legged::params::active::state_estimator::kAccelZeroWheelSpeedThresholdMps &&
+        std::fabs(accel_forward) < wheel_legged::params::active::state_estimator::kAccelZeroLowThresholdMps2) {
       accel_speed_raw_ = 0.0f;
     }
 
@@ -223,7 +244,8 @@ class SpeedEstimator {
     kf_.Update();
     current_speed_mps_ = kf_.FilteredValue[0];
 
-    if (std::fabs(wheel_speed_mps_) < 0.02f && std::fabs(accel_forward) < 0.2f) {
+    if (std::fabs(wheel_speed_mps_) < wheel_legged::params::active::state_estimator::kAccelZeroWheelSpeedThresholdMps &&
+        std::fabs(accel_forward) < wheel_legged::params::active::state_estimator::kAccelZeroLowThresholdMps2) {
       current_speed_mps_ = 0.0f;
       kf_.xhat_data[0] = 0.0f;
     }
@@ -255,8 +277,10 @@ class ChassisStateEstimator {
     config_ = config;
     left_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
     right_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
-    theta_ll_dot_filter_.set_cutoff_frequency(500.0f, config_.theta_dot_filter_cutoff_hz);
-    theta_lr_dot_filter_.set_cutoff_frequency(500.0f, config_.theta_dot_filter_cutoff_hz);
+    theta_ll_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
+                                              config_.theta_dot_filter_cutoff_hz);
+    theta_lr_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
+                                              config_.theta_dot_filter_cutoff_hz);
     speed_estimator_.Init();
     Reset();
   }
@@ -268,7 +292,7 @@ class ChassisStateEstimator {
   void Update(const ChassisStateEstimatorInput &input) {
     rm::f32 dt_s = input.dt_s;
     if (dt_s <= 0.0f) {
-      dt_s = 0.002f;
+      dt_s = wheel_legged::params::active::state_estimator::kDefaultDtS;
     }
 
     UpdateBodyState(input);
@@ -303,7 +327,7 @@ class ChassisStateEstimator {
 
   /** @brief 更新腿部几何状态与摆角状态 */
   void UpdateLegState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
-    static constexpr rm::f32 kPiHalf = 1.57079632679489661923f;
+    static constexpr rm::f32 kPiHalf = wheel_legged::params::active::state_estimator::kThetaPiHalf;
 
     const rm::f32 prev_theta_ll = output_.current.theta_ll;
     const rm::f32 prev_theta_lr = output_.current.theta_lr;
@@ -416,10 +440,13 @@ class ChassisStateEstimator {
   ChassisStateEstimatorConfig config_{};
   ChassisStateEstimatorOutput output_{};
   SpeedEstimator speed_estimator_{};
-  wbr::LegKinematics left_leg_{0.215f, 0.254f};
-  wbr::LegKinematics right_leg_{0.215f, 0.254f};
+  wbr::LegKinematics left_leg_{wheel_legged::params::active::state_estimator::kLegL1M,
+                               wheel_legged::params::active::state_estimator::kLegL2M};
+  wbr::LegKinematics right_leg_{wheel_legged::params::active::state_estimator::kLegL1M,
+                                wheel_legged::params::active::state_estimator::kLegL2M};
   rm::modules::LowPassFilterConstDt<rm::f32> theta_ll_dot_filter_{};
   rm::modules::LowPassFilterConstDt<rm::f32> theta_lr_dot_filter_{};
 };
 
 }  // namespace chassis
+

@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "globals.hpp"
+#include "wheel_legged_params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/actuators.hpp
@@ -32,8 +33,8 @@ class Actuators {
     input.right_leg.back = {g.dm_rb->pos(), g.dm_rb->vel(), g.dm_rb->tau()};
 
     // 左右轮安装方向相反，此处先转换为车体前进方向一致的轮速符号。
-    input.wheel.left_rad_s = -static_cast<float>(g.left_wheel->rpm()) * SharedResources::kPi / 30.0f;
-    input.wheel.right_rad_s = static_cast<float>(g.right_wheel->rpm()) * SharedResources::kPi / 30.0f;
+    input.wheel.left_rad_s = -static_cast<float>(g.left_wheel->rpm()) * wheel_legged::params::active::kPi / 30.0f;
+    input.wheel.right_rad_s = static_cast<float>(g.right_wheel->rpm()) * wheel_legged::params::active::kPi / 30.0f;
 
     input.imu.roll_rad = g.chassis_imu->roll();
     input.imu.pitch_rad = -g.chassis_imu->pitch();
@@ -68,13 +69,12 @@ class Actuators {
     SendDmMitCommand(g, lf_tau, lb_tau, rf_tau, rb_tau);
 
     // M3508 接收电流命令，底盘控制器输出的轮端力矩在此做比例换算。
-    const float lw_current = enable_dm ? output.lw_tau * kWheelTorqueToCurrent : 0.0f;
-    const float rw_current = enable_dm ? output.rw_tau * kWheelTorqueToCurrent : 0.0f;
+    const float lw_current = enable_dm ? output.lw_tau * wheel_legged::params::active::actuators::kWheelTorqueToCurrent : 0.0f;
+    const float rw_current = enable_dm ? output.rw_tau * wheel_legged::params::active::actuators::kWheelTorqueToCurrent : 0.0f;
     SendWheelCurrent(g, lw_current, rw_current);
   }
 
  private:
-  static constexpr float kWheelTorqueToCurrent = 2436.5f;  ///< 轮毂力矩转电流比例
   bool dm_enabled_latched_{false};                         ///< DM 使能锁存
 
   static bool IsReady(const SharedResources &g) {
@@ -84,11 +84,11 @@ class Actuators {
   }
 
   static int16_t ClampToI16(float value) {
-    if (value > 16000.0f) {
-      return 16000;
+    if (value > wheel_legged::params::active::actuators::kWheelCurrentClampAbs) {
+      return static_cast<int16_t>(wheel_legged::params::active::actuators::kWheelCurrentClampAbs);
     }
-    if (value < -16000.0f) {
-      return -16000;
+    if (value < -wheel_legged::params::active::actuators::kWheelCurrentClampAbs) {
+      return static_cast<int16_t>(-wheel_legged::params::active::actuators::kWheelCurrentClampAbs);
     }
     return static_cast<int16_t>(value);
   }

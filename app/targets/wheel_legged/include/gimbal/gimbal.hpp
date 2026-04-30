@@ -7,6 +7,7 @@
 
 #include "common/controllers/gimbal_2dof.hpp"
 #include "../fsm_common.hpp"
+#include "../wheel_legged_params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp
@@ -21,13 +22,6 @@ namespace gimbal {
 class Gimbal {
  public:
   using DmMitMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
-  using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
-
-  /** @brief 轮腿云台俯仰电机 DM MIT 参数 */
-  static inline const DmMitSettings kPitchMotorSettings{0x12, 0x11, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-
-  /** @brief 轮腿云台偏航电机 DM MIT 参数 */
-  static inline const DmMitSettings kYawMotorSettings{0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
   /**
    * @brief 单次云台控制更新输入
@@ -44,7 +38,7 @@ class Gimbal {
     float yaw_motor_rad{0.0f};             ///< 偏航电机编码器角度
     float gimbal_imu_yaw_rad{0.0f};        ///< 云台惯导偏航角
     float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
-    float dt_s{kDefaultDtS};               ///< 控制周期
+    float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
   };
 
   /**
@@ -95,7 +89,8 @@ class Gimbal {
 
     const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
     output_.yaw_target_rad = desired_yaw;
-    output_.pitch_target_rad = std::clamp(input.target.pitch_rad, kPitchMinRad, kPitchMaxRad);
+    output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
+                                          wheel_legged::params::active::gimbal::kPitchMaxRad);
     output_.gimbal_enabled = input.gimbal_enable;
 
     if (!input.gimbal_enable) {
@@ -115,16 +110,21 @@ class Gimbal {
     }
     last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
 
-    const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : kDefaultDtS;
+    const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
     controller_.Enable(true);
     controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 
-    output_.yaw_cmd_torque_nm = std::clamp(controller_.output().yaw, -kDmTorqueLimitNm, kDmTorqueLimitNm);
-    const float pitch_gravity_ff = kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
+    output_.yaw_cmd_torque_nm = std::clamp(controller_.output().yaw,
+                                           -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                                           wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    const float pitch_gravity_ff =
+        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
     output_.pitch_cmd_torque_nm =
-        std::clamp(controller_.output().pitch + pitch_gravity_ff, -kDmTorqueLimitNm, kDmTorqueLimitNm);
+        std::clamp(controller_.output().pitch + pitch_gravity_ff,
+                   -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 
     // 仅使用 MIT 力矩通道，位置/速度前馈由外层控制器显式置零。
     input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
@@ -137,20 +137,16 @@ class Gimbal {
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
  private:
-  static constexpr float kPi = 3.14159265358979323846f;
-  static constexpr float kDefaultDtS = 0.002f;
-  static constexpr float kPitchMinRad = -0.2f;
-  static constexpr float kPitchMaxRad = 0.25f;
-  static constexpr float kDmTorqueLimitNm = 10.0f;
-  static constexpr float kPitchGravityCompensationNm = 1.3f;
-
   /** @brief 配置双环 PID 参数 */
   void ConfigurePid() {
-    controller_.pid().yaw_position.SetKp(15.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(1.0f);
-    controller_.pid().yaw_speed.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.4f);
-
-    controller_.pid().pitch_position.SetKp(13.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    controller_.pid().pitch_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
+    const auto &yaw_pos = wheel_legged::params::active::gimbal::kYawPositionPid;
+    const auto &yaw_spd = wheel_legged::params::active::gimbal::kYawSpeedPid;
+    const auto &pitch_pos = wheel_legged::params::active::gimbal::kPitchPositionPid;
+    const auto &pitch_spd = wheel_legged::params::active::gimbal::kPitchSpeedPid;
+    controller_.pid().yaw_position.SetKp(yaw_pos.kp).SetKi(yaw_pos.ki).SetKd(yaw_pos.kd).SetMaxOut(yaw_pos.max_out).SetMaxIout(yaw_pos.max_iout);
+    controller_.pid().yaw_speed.SetKp(yaw_spd.kp).SetKi(yaw_spd.ki).SetKd(yaw_spd.kd).SetMaxOut(yaw_spd.max_out).SetMaxIout(yaw_spd.max_iout);
+    controller_.pid().pitch_position.SetKp(pitch_pos.kp).SetKi(pitch_pos.ki).SetKd(pitch_pos.kd).SetMaxOut(pitch_pos.max_out).SetMaxIout(pitch_pos.max_iout);
+    controller_.pid().pitch_speed.SetKp(pitch_spd.kp).SetKi(pitch_spd.ki).SetKd(pitch_spd.kd).SetMaxOut(pitch_spd.max_out).SetMaxIout(pitch_spd.max_iout);
   }
 
   /** @brief 清空双环 PID 积分与历史状态 */

@@ -12,12 +12,6 @@
  * @brief 应用入口：初始化共享资源并启动 500Hz 控制任务
  */
 
-namespace {
-
-constexpr float kControlLoopFrequencyHz = 500.0f;
-
-}  // namespace
-
 SharedResources *globals{nullptr};
 __attribute__((section(".sram4"))) SharedResourcesNoDtcm globals_no_dtcm;
 namespace {
@@ -34,7 +28,8 @@ void AppMain() {
   globals->Init();
 
   TimerTaskScheduler mainloop{&htim13};
-  mainloop.AddTask(kControlLoopFrequencyHz, etl::delegate<void()>::create<ControlLoop>(), "ControlLoop");
+  mainloop.AddTask(wheel_legged::params::active::main::kControlLoopFrequencyHz,
+                   etl::delegate<void()>::create<ControlLoop>(), "ControlLoop");
   (void)mainloop.Start();
 
   for (;;) {
