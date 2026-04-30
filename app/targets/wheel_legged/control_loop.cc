@@ -113,6 +113,10 @@ constexpr float kYawFollowFixedTargetRad = -1.72f;
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
 constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = 50U;  // 100ms @500Hz
+// LQR 姿态偏置：用于补偿重心/机械装配等导致的稳态零点偏移。
+constexpr float kExpectedThetaLlBiasRad = 0.0f;
+constexpr float kExpectedThetaLrBiasRad = 0.0f;
+constexpr float kExpectedThetaBBiasRad = 0.0f;
 chassis_runtime::Actuators g_actuators{};
 
 struct SdotRampParams {
@@ -120,8 +124,8 @@ struct SdotRampParams {
   float brake_step;
 };
 
-constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.01f};
-constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.006f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.002f};
+constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
 constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
 struct Dr16RawInput {
@@ -667,6 +671,9 @@ void ControlLoop() {
   wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
+  chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
+  chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
+  chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output_enable &&
                                   chassis_output.control.run_chassis_update && gimbal_output.control.gimbal_enable;
