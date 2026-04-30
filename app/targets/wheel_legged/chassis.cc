@@ -123,6 +123,7 @@ void chassis::Chassis::Init() {
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
   SafeStop();
+  smoothed_leg_target_length_m_ = params_.leg_target_length_m;
 }
 
 /**
@@ -191,7 +192,17 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  params_.leg_target_length_m = input.target_leg_length_m;
+  const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
+                           wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
+                          wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
+  const float max_step = ramp_rate * kControlDtS;
+  const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+  if (std::fabs(error) <= max_step) {
+    smoothed_leg_target_length_m_ = input.target_leg_length_m;
+  } else {
+    smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
+  }
+  params_.leg_target_length_m = smoothed_leg_target_length_m_;
   ComputeActuatorTorque(input, state_output);
 }
 

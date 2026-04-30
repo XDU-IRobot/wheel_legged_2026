@@ -87,6 +87,7 @@ inline constexpr float kJumpPrepLegLengthM = 0.13f;
 inline constexpr float kJumpPushLegLengthM = 0.36f;
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;
 inline constexpr float kJumpPushReachedLegLengthM = 0.30f;
+inline constexpr float kLegLengthRampTimeS = 0.5f;
 }  // namespace chassis_fsm
 
 namespace chassis {
@@ -322,6 +323,7 @@ inline constexpr float kJumpPrepLegLengthM = 0.13f;
 inline constexpr float kJumpPushLegLengthM = 0.36f;
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;
 inline constexpr float kJumpPushReachedLegLengthM = 0.30f;
+inline constexpr float kLegLengthRampTimeS = 0.5f;
 }  // namespace chassis_fsm
 
 namespace chassis {
@@ -557,6 +559,7 @@ inline constexpr float kJumpPrepLegLengthM = 0.13f;
 inline constexpr float kJumpPushLegLengthM = 0.36f;
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;
 inline constexpr float kJumpPushReachedLegLengthM = 0.30f;
+inline constexpr float kLegLengthRampTimeS = 0.5f;
 }  // namespace chassis_fsm
 
 namespace chassis {
