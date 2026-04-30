@@ -86,6 +86,10 @@ volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
 volatile float wl_fm_pitch_target_rad{0.0f};
 volatile float wl_fm_pitch_motor_pos_rad{0.0f};
 volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
+volatile uint8_t wl_fm_yaw_motor_status{0};
+volatile uint8_t wl_fm_pitch_motor_status{0};
+volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
+volatile uint8_t wl_fm_pitch_motor_raw_status_byte{0};
 }
 
 namespace {
@@ -854,6 +858,10 @@ void ControlLoop() {
     wl_fm_gimbal_imu_pitch_rad = 0.0f;
     wl_fm_gimbal_imu_yaw_rad = 0.0f;
   }
+  wl_fm_yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
+  wl_fm_pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;
+  wl_fm_yaw_motor_raw_status_byte = globals->yaw_motor.has_value() ? globals->yaw_motor->raw_status_byte() : 0;
+  wl_fm_pitch_motor_raw_status_byte = globals->pitch_motor.has_value() ? globals->pitch_motor->raw_status_byte() : 0;
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }
