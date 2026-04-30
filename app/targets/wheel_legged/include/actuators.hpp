@@ -25,11 +25,13 @@ class Actuators {
       return;
     }
 
+    // 关节反馈保持硬件原始符号，统一标定在 ChassisStateEstimator 内完成。
     input.left_leg.front = {g.dm_lf->pos(), g.dm_lf->vel(), g.dm_lf->tau()};
     input.left_leg.back = {g.dm_lb->pos(), g.dm_lb->vel(), g.dm_lb->tau()};
     input.right_leg.front = {g.dm_rf->pos(), g.dm_rf->vel(), g.dm_rf->tau()};
     input.right_leg.back = {g.dm_rb->pos(), g.dm_rb->vel(), g.dm_rb->tau()};
 
+    // 左右轮安装方向相反，此处先转换为车体前进方向一致的轮速符号。
     input.wheel.left_rad_s = -static_cast<float>(g.left_wheel->rpm()) * SharedResources::kPi / 30.0f;
     input.wheel.right_rad_s = static_cast<float>(g.right_wheel->rpm()) * SharedResources::kPi / 30.0f;
 
@@ -65,6 +67,7 @@ class Actuators {
     const float rb_tau = enable_dm ? output.rb_tau : 0.0f;
     SendDmMitCommand(g, lf_tau, lb_tau, rf_tau, rb_tau);
 
+    // M3508 接收电流命令，底盘控制器输出的轮端力矩在此做比例换算。
     const float lw_current = enable_dm ? output.lw_tau * kWheelTorqueToCurrent : 0.0f;
     const float rw_current = enable_dm ? output.rw_tau * kWheelTorqueToCurrent : 0.0f;
     SendWheelCurrent(g, lw_current, rw_current);

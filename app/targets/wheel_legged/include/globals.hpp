@@ -33,31 +33,34 @@ struct SharedResources {
   static constexpr double kGimbalCanTxLimitHz = 4000.0;
   static constexpr float kPi = 3.14159265358979323846f;
 
-  SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};
+  SharedResourcesNoDtcm *no_dtcm{&globals_no_dtcm};  ///< DMA 相关外设资源
 
-  rm::device::DR16 dr16{no_dtcm->rc_uart};
+  rm::device::DR16 dr16{no_dtcm->rc_uart};  ///< 遥控器接收机
 
   // 保持值语义成员，实际构造延后到 Init()。
-  std::optional<rm::hal::ThrottledCan<>> joint_can{};
-  std::optional<rm::hal::ThrottledCan<>> wheel_can{};
-  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};
-  std::optional<DmMitMotor> dm_lf{};
-  std::optional<DmMitMotor> dm_lb{};
-  std::optional<DmMitMotor> dm_rf{};
-  std::optional<DmMitMotor> dm_rb{};
-  std::optional<rm::device::M3508> left_wheel{};
-  std::optional<rm::device::M3508> right_wheel{};
-  std::optional<rm::device::HipnucImu> chassis_imu{};
-  std::optional<GimbalCanFeedbackRxBridge> gimbal_imu_feedback_rx{};
+  std::optional<rm::hal::ThrottledCan<>> joint_can{};      ///< 腿部 DM 电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> wheel_can{};      ///< 轮毂/偏航电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};     ///< 云台俯仰与云台惯导 CAN
+  std::optional<DmMitMotor> dm_lf{};                       ///< 左前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_lb{};                       ///< 左后腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rf{};                       ///< 右前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rb{};                       ///< 右后腿关节 DM 电机
+  std::optional<rm::device::M3508> left_wheel{};           ///< 左轮 M3508
+  std::optional<rm::device::M3508> right_wheel{};          ///< 右轮 M3508
+  std::optional<rm::device::HipnucImu> chassis_imu{};      ///< 底盘惯导
+  std::optional<GimbalCanFeedbackRxBridge> gimbal_imu_feedback_rx{};  ///< 云台惯导 CAN 反馈
 
-  std::optional<DmMitMotor> yaw_motor{};
-  std::optional<DmMitMotor> pitch_motor{};
+  std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
+  std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
-  chassis::Fsm chassis_fsm{};
-  chassis::Chassis chassis{};
-  gimbal::Fsm gimbal_fsm{};
-  gimbal::Gimbal gimbal{};
+  chassis::Fsm chassis_fsm{};  ///< 底盘状态机
+  chassis::Chassis chassis{};  ///< 底盘控制器
+  gimbal::Fsm gimbal_fsm{};    ///< 云台状态机
+  gimbal::Gimbal gimbal{};     ///< 云台控制器
 
+  /**
+   * @brief 懒加载单例入口
+   */
   static SharedResources &GetInstance() {
     static SharedResources *shared_resources_instance{nullptr};
 
@@ -69,6 +72,9 @@ struct SharedResources {
     return *shared_resources_instance;
   }
 
+  /**
+   * @brief 初始化外设对象、状态机与控制器
+   */
   void Init() {
     dr16.Begin();
 

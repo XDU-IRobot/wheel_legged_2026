@@ -7,10 +7,16 @@
 
 namespace {
 
+/**
+ * @brief 判断统一语义请求是否要求云台关闭
+ */
 bool IsInputDisabled(const wheel_legged::ModeRequest &request) {
   return !request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled;
 }
 
+/**
+ * @brief 在输入有效时解析云台常规工作模式
+ */
 gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
   const wheel_legged::ModeRequest &request = input.request;
 
@@ -28,6 +34,9 @@ gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
              : gimbal::Fsm::State::kServiceWithFire;
 }
 
+/**
+ * @brief 解析含启动归中约束的云台目标模式
+ */
 gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fsm::State current_mode) {
   const wheel_legged::ModeRequest &request = input.request;
   if (IsInputDisabled(request)) {
@@ -44,6 +53,9 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
   return input.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
 }
 
+/**
+ * @brief 根据云台模式生成控制动作
+ */
 gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &input, const gimbal::Fsm::State mode) {
   gimbal::Fsm::Output::ControlOutput control{};
   const wheel_legged::ModeRequest &request = input.request;

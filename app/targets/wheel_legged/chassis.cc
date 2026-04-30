@@ -57,6 +57,9 @@ constexpr rm::f32 kCtrlP[240] = {
     -32.217,  58.629,  -102.98, -53.87,  -9.6325, 128.97,  -2.4581,  6.1347,  -11.298, -5.8269,  1.1081,   12.22,
 };
 
+/**
+ * @brief 根据腿长插值估算腿部等效质心系数
+ */
 rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   constexpr size_t kCount = sizeof(kEtaLookupLegLengthM) / sizeof(rm::f32);
   const rm::f32 min_l = kEtaLookupLegLengthM[0];
@@ -76,6 +79,9 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   return kEtaLookupLwM[kCount - 1] / max_l;
 }
 
+/**
+ * @brief 根据腿长估算机械弹簧对关节的等效补偿力矩
+ */
 rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
   const rm::f32 x =
@@ -85,6 +91,9 @@ rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
          kSpringTorqueScale;
 }
 
+/**
+ * @brief 是否处于强制安全零输出模式
+ */
 bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
 
 }  // namespace
@@ -137,6 +146,7 @@ void chassis::Chassis::SafeStop() {
  * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
  */
 void chassis::Chassis::Update(const UpdateInput &input) {
+  // 先刷新估计器，保证即使输出关闭也能持续导出传感器与状态观测。
   ChassisStateEstimatorInput estimator_input = input.estimator_input;
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
@@ -147,6 +157,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
 
   const CalibratedLegKinematicsInput &leg_input = state_output.calibrated_leg_input;
+  // 控制器内部复用估计器已标定的腿部角度，避免二次做零位/符号转换。
   left_leg_.SetPhi1(leg_input.left.phi1_rad);
   left_leg_.SetPhi4(leg_input.left.phi4_rad);
   left_leg_.SetWPhi1(leg_input.left.w_phi1_rad_s);
@@ -177,6 +188,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.left_support_force_n = left_support_force_est_n_;
   output_.right_support_force_n = right_support_force_est_n_;
 
+  // 状态估计与调试量已更新；不允许输出时在这里截断所有执行器命令。
   if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
     SafeStop();
     return;
@@ -239,6 +251,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     roll_pid_.Update(0.003f, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
+    // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
       left_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
       right_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -255,6 +268,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else {
+      // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
                                        state_output.current.phi_dot * state_output.current.s_dot;
       const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -273,6 +287,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
 
+    // 离地或跳跃回收时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
     if (use_jump_retract2 || off_ground_in_mid_high_leg) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
@@ -292,6 +307,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
   } else {
+    // 姿态越界时不再执行 LQR 支撑，转为腿部摆角收回，轮端保持零力矩。
     left_leg_turn_pid_.Update(-5.5f, state_output.current.theta_ll_dot);
     right_leg_turn_pid_.Update(-5.5f, state_output.current.theta_lr_dot);
 

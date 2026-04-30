@@ -134,16 +134,25 @@ struct Dr16RawInput {
   float gimbal_imu_pitch_rad{0.0f};
 };
 
+/**
+ * @brief 将 DR16 右摇杆映射为底盘前进速度目标
+ */
 float MapDr16RightYToForwardSpeed(const int16_t right_y) {
   const float normalized = static_cast<float>(right_y) / static_cast<float>(kDr16AxisMaxAbs);
   return rm::modules::Clamp(normalized * kTargetForwardSpeedMaxMps, -kTargetForwardSpeedMaxMps,
                             kTargetForwardSpeedMaxMps);
 }
 
+/**
+ * @brief 将 DR16 通道归一化到 [-1, 1]
+ */
 float NormalizeDr16Axis(const int16_t axis) {
   return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(kDr16AxisMaxAbs), -1.0f, 1.0f);
 }
 
+/**
+ * @brief 按模式相关斜率逼近期望速度
+ */
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {
   const bool direction_changed = (value * target) < 0.0f;
   const bool magnitude_reduced = std::fabs(target) < std::fabs(value);
@@ -162,6 +171,9 @@ void RampValueToTarget(const float target, float &value, const SdotRampParams &r
   }
 }
 
+/**
+ * @brief 限制底盘偏航跟随角速度变化率
+ */
 void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot) {
   if (filtered_yaw_dot < target_yaw_dot) {
     filtered_yaw_dot += kYawFollowRampStepRadS;
@@ -176,6 +188,9 @@ void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot) {
   }
 }
 
+/**
+ * @brief 更新定点锁定混合权重
+ */
 void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
   if (target_lock) {
     alpha_lock = rm::modules::Clamp(alpha_lock + kLockPointAlphaRiseStep, 0.0f, 1.0f);
@@ -184,6 +199,9 @@ void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
   }
 }
 
+/**
+ * @brief 选择距离当前偏航电机角最近的车头对齐目标
+ */
 float SelectNearestYawCenterTarget(const float yaw_motor_rad) {
   const float yaw_target_a_rad = kYawFollowFixedTargetRad;
   const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi, -kPi, kPi);
@@ -192,12 +210,18 @@ float SelectNearestYawCenterTarget(const float yaw_motor_rad) {
   return (yaw_err_to_a <= yaw_err_to_b) ? yaw_target_a_rad : yaw_target_b_rad;
 }
 
+/**
+ * @brief 判断启动归中是否达到角度和速度稳定条件
+ */
 bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
   const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
   return yaw_err_rad <= kGimbalStartupYawAlignErrorRad &&
          std::fabs(yaw_motor_vel_rad_s) <= kGimbalStartupYawAlignVelRadS;
 }
 
+/**
+ * @brief 根据底盘模式选择纵向速度斜坡参数
+ */
 SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
   switch (mode) {
     case chassis::Fsm::State::kLowLeg:
@@ -289,6 +313,7 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
 
   request.spin_hold = dr16.dial >= kWheelSpinThreshold;
 
+  // 拨轮回中后重新布防，负向越过阈值时只产生一次跳跃触发边沿。
   if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
     semantic_state.wheel_action_armed = true;
   }
@@ -300,6 +325,7 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
 
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
+  // 遥控器云台目标采用积分形式；输入失效或关闭时跟随当前电机角，避免下次使能突跳。
   if (!dr16.online || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
@@ -496,10 +522,12 @@ void ControlLoop() {
     yaw_follow_pid_initialized = true;
   }
 
+  // 1. 采集硬件反馈并将 DR16 原始输入折叠为整车语义请求。
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
   input.mode_request.tick_ms = now_ms;
 
+  // 2. 状态机先消费同一份语义请求，输出本周期底盘/云台控制意图。
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
@@ -508,12 +536,14 @@ void ControlLoop() {
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
 
+  // 3. 进入启动归中时锁定最近的车头方向，归中完成前底盘暂缓输出。
   if (gimbal_startup_align_active && !gimbal_startup_align_was_active) {
     gimbal_startup_align_complete = false;
     gimbal_startup_align_stable_ticks = 0U;
     gimbal_startup_align_target_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
   }
 
+  // 4. 组装云台控制输入，云台控制器直接写入 yaw/pitch DM MIT 命令。
   gimbal::Gimbal::UpdateInput gimbal_update_input{};
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
@@ -534,6 +564,7 @@ void ControlLoop() {
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
 
+  // 5. 云台启动归中闭环判稳；完成后把遥控器积分目标对齐到当前云台惯导角。
   if (!gimbal_output.control.gimbal_enable) {
     gimbal_startup_align_complete = false;
     gimbal_startup_align_was_active = false;
@@ -565,6 +596,7 @@ void ControlLoop() {
       !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
   const bool chassis_output_enable = chassis_output.control.enable_dm && chassis_startup_ready;
 
+  // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
   chassis::Chassis::UpdateInput chassis_update_input{};
   chassis_update_input.fsm_mode = chassis_output.mode;
   chassis_update_input.enable_output = chassis_output_enable;
@@ -576,6 +608,7 @@ void ControlLoop() {
 
   const auto &current_state = chassis_control_output.current_state;
   const bool mode_changed = (chassis_output.mode != last_chassis_mode);
+  // 状态切换时重置速度斜坡、定点锁定和偏航跟随，避免继承上一模式的控制残留。
   if (mode_changed) {
     expected_s = current_state.s;
     filtered_s_dot = current_state.s_dot;
@@ -597,6 +630,7 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
+  // 低速且无输入时进入定点锁定，将期望位移混合到锁定点以抑制慢漂。
   const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                                           chassis_output.mode != chassis::Fsm::State::kSpin);
   if (!lockpoint_enabled) {
@@ -627,6 +661,7 @@ void ControlLoop() {
 
   const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
   RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
+  // LQR 期望量：纵向速度来自斜坡，纵向位置在定点锁定时逐步切到锁定参考。
   chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
@@ -635,6 +670,7 @@ void ControlLoop() {
 
   const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output_enable &&
                                   chassis_output.control.run_chassis_update && gimbal_output.control.gimbal_enable;
+  // 底盘偏航期望跟随云台偏航电机，保持车体尽量对准云台中心方向。
   if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
@@ -647,10 +683,12 @@ void ControlLoop() {
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   }
 
+  // 7. 底盘控制器完成状态估计、LQR/补偿解算，执行器适配层负责实际电机下发。
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
+  // 8. 导出关键内部量，供上位机/调试器观察本周期数据流。
   if (globals->gimbal_imu_feedback_rx.has_value()) {
     wl_fm_gimbal_imu_pitch_rad = globals->gimbal_imu_feedback_rx->pitch_rad();
     wl_fm_gimbal_imu_yaw_rad = globals->gimbal_imu_feedback_rx->yaw_rad();
