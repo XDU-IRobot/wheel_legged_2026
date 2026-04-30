@@ -129,6 +129,8 @@ class Gimbal {
     // 仅使用 MIT 力矩通道，位置/速度前馈由外层控制器显式置零。
     input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
     input.pitch_motor->SetMitCommand(0.0f, 0.0f, output_.pitch_cmd_torque_nm, 0.0f, 0.0f);
+    // input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    // input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
   }
 
   /** @brief 获取最近一次云台控制输出 */

@@ -66,6 +66,8 @@ volatile float wl_fm_gimbal_imu_yaw_rad{0.0f};
 
 volatile float wl_fm_model_s_m{0.0f};
 volatile float wl_fm_model_s_dot_mps{0.0f};
+volatile float wl_fm_target_s_m{0.0f};
+volatile float wl_fm_target_s_dot_mps{0.0f};
 volatile float wl_fm_model_phi_rad{0.0f};
 volatile float wl_fm_model_phi_dot_rad_s{0.0f};
 volatile float wl_fm_model_theta_ll_rad{0.0f};
@@ -661,6 +663,8 @@ void ControlLoop() {
   chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
+  wl_fm_target_s_dot_mps = chassis_update_input.expected.s_dot;
+  wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
 

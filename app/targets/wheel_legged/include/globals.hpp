@@ -204,6 +204,8 @@ extern volatile float wl_fm_gimbal_imu_yaw_rad;
 /** @brief 模型状态向量导出 */
 extern volatile float wl_fm_model_s_m;
 extern volatile float wl_fm_model_s_dot_mps;
+extern volatile float wl_fm_target_s_m;
+extern volatile float wl_fm_target_s_dot_mps;
 extern volatile float wl_fm_model_phi_rad;
 extern volatile float wl_fm_model_phi_dot_rad_s;
 extern volatile float wl_fm_model_theta_ll_rad;
