@@ -21,11 +21,17 @@ constexpr float kJumpPushLegLengthM = 0.36f;
 constexpr float kJumpRecoverLegLengthM = 0.20f;
 constexpr float kJumpPushReachedLegLengthM = 0.30f;
 
+/**
+ * @brief 判断当前模式是否属于跳跃流程
+ */
 bool IsJumpState(const chassis::Fsm::State state) {
   return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
          state == chassis::Fsm::State::kJumpRecover;
 }
 
+/**
+ * @brief 将语义腿长档位转换为物理目标腿长
+ */
 float LegLengthForProfile(const wheel_legged::LegProfile profile) {
   switch (profile) {
     case wheel_legged::LegProfile::kMid:
@@ -38,6 +44,9 @@ float LegLengthForProfile(const wheel_legged::LegProfile profile) {
   }
 }
 
+/**
+ * @brief 规范化请求中的腿长档位
+ */
 wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequest &request) {
   switch (request.leg_request) {
     case wheel_legged::LegProfile::kMid:
@@ -50,6 +59,9 @@ wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequ
   }
 }
 
+/**
+ * @brief 将腿长档位映射为常规底盘模式
+ */
 chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile profile) {
   switch (profile) {
     case wheel_legged::LegProfile::kMid:
@@ -62,6 +74,9 @@ chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile p
   }
 }
 
+/**
+ * @brief 根据状态机构造底盘控制动作
+ */
 chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State state,
                                                        const wheel_legged::LegProfile requested_leg_profile) {
   chassis::Fsm::Output::ControlOutput control{};
@@ -197,6 +212,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const wheel_legged::ModeRequest &request = input.request;
   requested_leg_profile_ = ResolveRequestedLegProfile(request);
 
+  // 输入失效或请求关闭时立即退回 Disabled，并由执行器层输出零力矩。
   if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     if (mode_ != State::kDisabled) {
       state_enter_tick_ms_ = request.tick_ms;
@@ -210,6 +226,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   State next_mode = mode_;
 
+  // 状态机只处理模式时序；具体力矩由 Chassis 根据输出的 ControlOutput 计算。
   switch (mode_) {
     case State::kDisabled:
       next_mode = requested_normal_state;

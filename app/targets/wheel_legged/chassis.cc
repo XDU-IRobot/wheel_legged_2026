@@ -8,7 +8,6 @@
  * @file  targets/wheel_legged/chassis.cc
  * @brief 底盘控制实现：状态估计、LQR、补偿与力矩输出
  */
-f32 raw_speed_debug = 0.f , wheel_speed_debug = 0.f;
 
 namespace {
 
@@ -36,48 +35,30 @@ constexpr rm::f32 kEtaLookupLwM[] = {
 };
 
 constexpr rm::f32 kCtrlP[240] = {
--0.41234,  -1.9599,  1.5429,  2.8395,  -0.55211,  -1.7357,
-     -1.8142,  -7.4163,  6.7232,  11.034,  -2.894,  -7.5529,
-     -1.1737,  4.7833,  -1.1061,  -7.486,  3.4587,  1.125,
-     -3.3622,  13.865,  -3.205,  -21.609,  10.166,  3.2376,
-     -5.0368,  -53.01,  11.132,  56.718,  -30.805,  -10.218,
-     -0.83188,  -3.4609,  1.082,  0.43876,  -1.0954,  -1.3589,
-     -3.647,  15.585,  -12.756,  -28.088,  48.291,  9.7429,
-     -0.27503,  0.68018,  -1.0458,  -1.0708,  1.3811,  0.46763,
-     -9.3081,  17.746,  12.044,  -4.1156,  -18.825,  -11.158,
-     -1.5087,  2.442,  2.5795,  0.18091,  -3.674,  -2.6369,
-     -0.41234,  1.5429,  -1.9599,  -1.7357,  -0.55211,  2.8395,
-     -1.8142,  6.7232,  -7.4163,  -7.5529,  -2.894,  11.034,
-     1.1737,  1.1061,  -4.7833,  -1.125,  -3.4587,  7.486,
-     3.3622,  3.205,  -13.865,  -3.2376,  -10.166,  21.609,
-     -3.647,  -12.756,  15.585,  9.7429,  48.291,  -28.088,
-     -0.27503,  -1.0458,  0.68018,  0.46763,  1.3811,  -1.0708,
-     -5.0368,  11.132,  -53.01,  -10.218,  -30.805,  56.718,
-     -0.83188,  1.082,  -3.4609,  -1.3589,  -1.0954,  0.43876,
-     -9.3081,  12.044,  17.746,  -11.158,  -18.825,  -4.1156,
-     -1.5087,  2.5795,  2.442,  -2.6369,  -3.674,  0.18091,
-     0.50883,  -0.57374,  -0.76142,  -0.8255,  2.2449,  -0.26726,
-     2.1502,  -2.7387,  -3.4244,  -2.7523,  9.6329,  -0.81739,
-     -0.79688,  -3.6824,  -3.1471,  8.042,  -2.402,  4.226,
-     -2.2799,  -10.865,  -9.1642,  23.478,  -7.0604,  12.211,
-     12.225,  21.144,  16.918,  -37.801,  48.467,  -30.003,
-     2.0058,  -4.8641,  1.058,  8.477,  3.4941,  -2.3332,
-     0.79952,  -32.261,  -32.525,  58.262,  -33.71,  17.256,
-     -0.27104,  -1.9501,  1.3499,  3.4741,  -2.2596,  -5.8946,
-     -14.109,  -58.465,  28.165,  70.979,  0.26429,  -27.932,
-     -1.6228,  -8.921,  4.63,  9.9387,  0.92218,  -4.831,
-     0.50883,  -0.76142,  -0.57374,  -0.26726,  2.2449,  -0.8255,
-     2.1502,  -3.4244,  -2.7387,  -0.81739,  9.6329,  -2.7523,
-     0.79688,  3.1471,  3.6824,  -4.226,  2.402,  -8.042,
-     2.2799,  9.1642,  10.865,  -12.211,  7.0604,  -23.478,
-     0.79952,  -32.525,  -32.261,  17.256,  -33.71,  58.262,
-     -0.27104,  1.3499,  -1.9501,  -5.8946,  -2.2596,  3.4741,
-     12.225,  16.918,  21.144,  -30.003,  48.467,  -37.801,
-     2.0058,  1.058,  -4.8641,  -2.3332,  3.4941,  8.477,
-     -14.109,  28.165,  -58.465,  -27.932,  0.26429,  70.979,
-     -1.6228,  4.63,  -8.921,  -4.831,  0.92218,  9.9387,
-};
+    -6.4023, -32.43,  26.987,  48.31,   -17.626, -23.58,  -9.1593,  -32.115,   36.484,    53.708,  -35.494, -29.288,
+    -1.8644, 6.9629,  -2.3819, -10.093, 2.4113,  3.2883,  -5.9224,  22.484,    -7.9455,   -32.209, 7.5338,  11.073,
+    -15.33,  -85.936, 22.293,  81.512,  -12.674, -27.899, -1.0307,  -7.5754,   3.3724,    -4.8252, 1.7317,  -4.2342,
+    -6.8171, 19.359,  -17.348, -24.925, 19.084,  14.102,  -0.5427,  -0.60498,  -1.8188,   3.8993,  -9.2146, 2.0734,
+    -24.863, 49.919,  32.407,  -24.218, -44.417, -28.556, -3.1443,  3.7348,    7.2199,    1.4122,  -8.6015, -6.9574,
+    -6.4023, 26.987,  -32.43,  -23.58,  -17.626, 48.31,   -9.1593,  36.484,    -32.115,   -29.288, -35.494, 53.708,
+    1.8644,  2.3819,  -6.9629, -3.2883, -2.4113, 10.093,  5.9224,   7.9455,    -22.484,   -11.073, -7.5338, 32.209,
+    -6.8171, -17.348, 19.359,  14.102,  19.084,  -24.925, -0.5427,  -1.8188,   -0.60498,  2.0734,  -9.2146, 3.8993,
+    -15.33,  22.293,  -85.936, -27.899, -12.674, 81.512,  -1.0307,  3.3724,    -7.5754,   -4.2342, 1.7317,  -4.8252,
+    -24.863, 32.407,  49.919,  -28.556, -44.417, -24.218, -3.1443,  7.2199,    3.7348,    -6.9574, -8.6015, 1.4122,
+    6.0136,  3.9864,  -20.631, -26.942, 35.73,   7.0398,  7.601,    3.7194,    -28.277,   -30.876, 49.773,  9.6895,
+    -1.0462, -4.6797, -3.7563, 9.4845,  -3.18,   5.2909,  -3.3283,  -15.259,   -11.922,   30.577,  -10.412, 16.623,
+    31.864,  -46.531, 18.803,  69.74,   55.156,  -39.648, 1.9362,   -2.071,    -0.043944, 8.4472,  3.5604,  -2.1211,
+    -4.1763, -28.192, -18.292, 52.655,  -37.332, -19.427, -0.33365, -1.4512,   2.337,     0.19983, 2.4441,  -11.262,
+    -39.092, -129.33, 64.175,  162.07,  1.1558,  -68.44,  -2.3916,  -12.611,   4.7066,    12.445,  4.5242,  -5.5482,
+    6.0136,  -20.631, 3.9864,  7.0398,  35.73,   -26.942, 7.601,    -28.277,   3.7194,    9.6895,  49.773,  -30.876,
+    1.0462,  3.7563,  4.6797,  -5.2909, 3.18,    -9.4845, 3.3283,   11.922,    15.259,    -16.623, 10.412,  -30.577,
+    -4.1763, -18.292, -28.192, -19.427, -37.332, 52.655,  -0.33365, 2.337,     -1.4512,   -11.262, 2.4441,  0.19983,
+    31.864,  18.803,  -46.531, -39.648, 55.156,  69.74,   1.9362,   -0.043944, -2.071,    -2.1211, 3.5604,  8.4472,
+    -39.092, 64.175,  -129.33, -68.44,  1.1558,  162.07,  -2.3916,  4.7066,    -12.611,   -5.5482, 4.5242,  12.445};
 
+/**
+ * @brief 根据腿长插值估算腿部等效质心系数
+ */
 rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   constexpr size_t kCount = sizeof(kEtaLookupLegLengthM) / sizeof(rm::f32);
   const rm::f32 min_l = kEtaLookupLegLengthM[0];
@@ -97,6 +78,9 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   return kEtaLookupLwM[kCount - 1] / max_l;
 }
 
+/**
+ * @brief 根据腿长估算机械弹簧对关节的等效补偿力矩
+ */
 rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
   static constexpr rm::f32 kPi = 3.14159265358979323846f;
   const rm::f32 x =
@@ -106,6 +90,9 @@ rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
          kSpringTorqueScale;
 }
 
+/**
+ * @brief 是否处于强制安全零输出模式
+ */
 bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
 
 }  // namespace
@@ -158,6 +145,7 @@ void chassis::Chassis::SafeStop() {
  * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
  */
 void chassis::Chassis::Update(const UpdateInput &input) {
+  // 先刷新估计器，保证即使输出关闭也能持续导出传感器与状态观测。
   ChassisStateEstimatorInput estimator_input = input.estimator_input;
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
@@ -168,6 +156,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
 
   const CalibratedLegKinematicsInput &leg_input = state_output.calibrated_leg_input;
+  // 控制器内部复用估计器已标定的腿部角度，避免二次做零位/符号转换。
   left_leg_.SetPhi1(leg_input.left.phi1_rad);
   left_leg_.SetPhi4(leg_input.left.phi4_rad);
   left_leg_.SetWPhi1(leg_input.left.w_phi1_rad_s);
@@ -193,13 +182,12 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
   output_.raw_accel_speed_mps = state_output.raw_accel_speed_mps;
   output_.current_speed_mps = state_output.current_speed_mps;
-  raw_speed_debug = output_.raw_accel_speed_mps;
-  wheel_speed_debug = output_.raw_wheel_speed_mps;
 
   CalSupportForce();
   output_.left_support_force_n = left_support_force_est_n_;
   output_.right_support_force_n = right_support_force_est_n_;
 
+  // 状态估计与调试量已更新；不允许输出时在这里截断所有执行器命令。
   if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
     SafeStop();
     return;
@@ -262,6 +250,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     roll_pid_.Update(0.003f, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
+    // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
       left_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
       right_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -278,6 +267,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else {
+      // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
                                        state_output.current.phi_dot * state_output.current.s_dot;
       const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -286,6 +276,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = leg_length_force + gravity_ff_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
       right_force_ = leg_length_force + gravity_ff_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
 
+      // left_force_ = l_spring_torque_;
+      // right_force_ = r_spring_torque_;
     }
 
     const bool off_ground_in_mid_high_leg =
@@ -294,6 +286,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
 
+    // 离地或跳跃回收时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
     if (use_jump_retract2 || off_ground_in_mid_high_leg) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
@@ -313,6 +306,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
   } else {
+    // 姿态越界时不再执行 LQR 支撑，转为腿部摆角收回，轮端保持零力矩。
     left_leg_turn_pid_.Update(-5.5f, state_output.current.theta_ll_dot);
     right_leg_turn_pid_.Update(-5.5f, state_output.current.theta_lr_dot);
 

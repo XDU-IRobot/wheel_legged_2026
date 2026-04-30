@@ -7,10 +7,20 @@
 
 namespace {
 
-gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input) {
+/**
+ * @brief 判断统一语义请求是否要求云台关闭
+ */
+bool IsInputDisabled(const wheel_legged::ModeRequest &request) {
+  return !request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled;
+}
+
+/**
+ * @brief 在输入有效时解析云台常规工作模式
+ */
+gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
   const wheel_legged::ModeRequest &request = input.request;
 
-  if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if (IsInputDisabled(request)) {
     return gimbal::Fsm::State::kDisabled;
   }
   if (input.chassis_recovery_active) {
@@ -24,6 +34,28 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input) {
              : gimbal::Fsm::State::kServiceWithFire;
 }
 
+/**
+ * @brief 解析含启动归中约束的云台目标模式
+ */
+gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fsm::State current_mode) {
+  const wheel_legged::ModeRequest &request = input.request;
+  if (IsInputDisabled(request)) {
+    return gimbal::Fsm::State::kDisabled;
+  }
+
+  const gimbal::Fsm::State normal_mode = ResolveNormalMode(input);
+  if (current_mode == gimbal::Fsm::State::kDisabled) {
+    return gimbal::Fsm::State::kStartupAlign;
+  }
+  if (current_mode == gimbal::Fsm::State::kStartupAlign) {
+    return input.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
+  }
+  return input.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
+}
+
+/**
+ * @brief 根据云台模式生成控制动作
+ */
 gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &input, const gimbal::Fsm::State mode) {
   gimbal::Fsm::Output::ControlOutput control{};
   const wheel_legged::ModeRequest &request = input.request;
@@ -35,6 +67,13 @@ gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &
   switch (mode) {
     case gimbal::Fsm::State::kDisabled:
       control.gimbal_enable = false;
+      control.fire_allowed = false;
+      control.shoot_request = false;
+      control.align_to_chassis_forward = false;
+      break;
+
+    case gimbal::Fsm::State::kStartupAlign:
+      control.gimbal_enable = true;
       control.fire_allowed = false;
       control.shoot_request = false;
       control.align_to_chassis_forward = false;
@@ -90,7 +129,7 @@ void gimbal::Fsm::Transit(const State new_mode) {
 gimbal::Fsm::Output gimbal::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 
-  const State requested = ResolveMode(input);
+  const State requested = ResolveMode(input, mode_);
   if (requested != mode_) {
     Transit(requested);
   }

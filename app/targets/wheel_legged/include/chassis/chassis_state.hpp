@@ -13,7 +13,7 @@
  * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
  * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
  */
-inline f32 wheelspeed_debug = 0.f;
+
 namespace chassis {
 
 /**
@@ -62,35 +62,35 @@ struct ImuFeedback {
  * @brief 状态估计器输入
  */
 struct ChassisStateEstimatorInput {
-  LegJointFeedback left_leg{};
-  LegJointFeedback right_leg{};
-  WheelFeedback wheel{};
-  ImuFeedback imu{};
+  LegJointFeedback left_leg{};   ///< 左腿关节反馈
+  LegJointFeedback right_leg{};  ///< 右腿关节反馈
+  WheelFeedback wheel{};         ///< 左右轮反馈
+  ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{0.002f};
-  rm::f32 yaw_motor_rad{0.0f};
-  rm::f32 s_ref_m{0.0f};
-  bool use_external_s_ref{false};
-  bool use_wheel_speed_direct{false};
+  rm::f32 dt_s{0.002f};                ///< 估计周期
+  rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
+  rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
+  bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移
+  bool use_wheel_speed_direct{false};  ///< 是否跳过速度融合并直接使用轮速
 };
 
 /**
  * @brief 状态估计器配置参数
  */
 struct ChassisStateEstimatorConfig {
-  rm::f32 leg_l1_m{0.215f};
-  rm::f32 leg_l2_m{0.254f};
+  rm::f32 leg_l1_m{0.215f};  ///< 五连杆主动杆长度
+  rm::f32 leg_l2_m{0.254f};  ///< 五连杆从动杆长度
 
-  rm::f32 wheel_radius_m{0.0575f};
-  rm::f32 wheel_reduction_ratio{17.0f / 268.0f};
-  rm::f32 max_valid_speed_mps{8.0f};
+  rm::f32 wheel_radius_m{0.0575f};                ///< 轮半径
+  rm::f32 wheel_reduction_ratio{17.0f / 268.0f};  ///< 轮电机到车轮的速度换算比例
+  rm::f32 max_valid_speed_mps{8.0f};              ///< 融合速度可信上限
 
-  rm::f32 left_phi1_offset_rad{-1.50f + M_PI };
-  rm::f32 left_phi4_offset_rad{-1.50f};
-  rm::f32 right_phi1_offset_rad{-1.44f + M_PI };
-  rm::f32 right_phi4_offset_rad{-1.68f};
+  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  ///< 左腿前关节零位偏移
+  rm::f32 left_phi4_offset_rad{0.59f};                            ///< 左腿后关节零位偏移
+  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  ///< 右腿前关节零位偏移
+  rm::f32 right_phi4_offset_rad{-1.87f};                          ///< 右腿后关节零位偏移
 
-  rm::f32 theta_dot_filter_cutoff_hz{8.0f};
+  rm::f32 theta_dot_filter_cutoff_hz{8.0f};  ///< 腿摆角速度低通截止频率
 };
 
 /**
@@ -115,31 +115,31 @@ struct CalibratedLegKinematicsInput {
  * @brief 状态估计输出
  */
 struct ChassisStateEstimatorOutput {
-  wbr::CurrentState current{};
+  wbr::CurrentState current{};  ///< LQR 使用的当前状态向量
 
-  rm::f32 wheel_speed_mps{0.0f};
-  rm::f32 fused_speed_mps{0.0f};
-  rm::f32 raw_wheel_speed_mps{0.0f};
-  rm::f32 raw_accel_speed_mps{0.0f};
-  rm::f32 current_speed_mps{0.0f};
+  rm::f32 wheel_speed_mps{0.0f};      ///< 由轮速和腿部运动学解算的车速
+  rm::f32 fused_speed_mps{0.0f};      ///< 轮速/惯导融合后的车速
+  rm::f32 raw_wheel_speed_mps{0.0f};  ///< 速度滤波器中的原始轮速
+  rm::f32 raw_accel_speed_mps{0.0f};  ///< 加速度积分得到的原始速度
+  rm::f32 current_speed_mps{0.0f};    ///< 速度滤波器当前输出
 
-  rm::f32 left_leg_length_m{0.0f};
-  rm::f32 right_leg_length_m{0.0f};
-  rm::f32 left_leg_angle_rad{0.0f};
-  rm::f32 right_leg_angle_rad{0.0f};
+  rm::f32 left_leg_length_m{0.0f};    ///< 左腿长
+  rm::f32 right_leg_length_m{0.0f};   ///< 右腿长
+  rm::f32 left_leg_angle_rad{0.0f};   ///< 左腿摆角
+  rm::f32 right_leg_angle_rad{0.0f};  ///< 右腿摆角
 
-  CalibratedLegKinematicsInput calibrated_leg_input{};
+  CalibratedLegKinematicsInput calibrated_leg_input{};  ///< 供控制器复用的已标定腿部输入
 };
 
 /**
  * @brief 速度融合输入
  */
 struct SpeedEstimatorInput {
-  rm::f32 wheel_speed_mps{0.0f};
-  rm::f32 imu_acc_x_mps2{0.0f};
-  rm::f32 imu_acc_y_mps2{0.0f};
-  rm::f32 imu_pitch_rad{0.0f};
-  rm::f32 dt_s{0.002f};
+  rm::f32 wheel_speed_mps{0.0f};  ///< 轮系速度观测
+  rm::f32 imu_acc_x_mps2{0.0f};   ///< 惯导 x 轴加速度
+  rm::f32 imu_acc_y_mps2{0.0f};   ///< 惯导 y 轴加速度
+  rm::f32 imu_pitch_rad{0.0f};    ///< 机体俯仰角，用于重力/姿态补偿
+  rm::f32 dt_s{0.002f};           ///< 估计周期
 };
 
 /**
@@ -151,8 +151,8 @@ class SpeedEstimator {
 
   /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
-    accel_x_filter_.set_cutoff_frequency(500.0f, 5.0f);
-    accel_y_filter_.set_cutoff_frequency(500.0f, 5.0f);
+    accel_x_filter_.set_cutoff_frequency(500.0f, 10.0f);
+    accel_y_filter_.set_cutoff_frequency(500.0f, 10.0f);
 
     kf_.UseAutoAdjustment = 0;
     std::memset(kf_.xhat_data, 0, sizeof(rm::f32) * 2);
@@ -198,7 +198,7 @@ class SpeedEstimator {
     wheel_speed_mps_ = input.wheel_speed_mps;
 
     const rm::f32 acc_x = accel_x_filter_.apply(input.imu_acc_x_mps2);
-    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2 - 0.75f);
+    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2);
     rm::f32 accel_forward = acc_x - acc_y * std::sin(input.imu_pitch_rad);
 
     if (accel_bias_count_ < 1500) {
@@ -362,8 +362,7 @@ class ChassisStateEstimator {
         right_wheel_vel + output_.current.l_r * output_.current.theta_lr_dot * std::cos(output_.current.theta_lr) +
         right_leg_.l0_dot() * std::sin(output_.current.theta_lr);
 
-    output_.wheel_speed_mps = 0.5f * (left_wheel_vel + right_wheel_vel);
-    wheelspeed_debug = output_.wheel_speed_mps;
+    output_.wheel_speed_mps = 0.5f * (left_speed + right_speed);
 
     if (input.use_wheel_speed_direct) {
       output_.raw_wheel_speed_mps = output_.wheel_speed_mps;

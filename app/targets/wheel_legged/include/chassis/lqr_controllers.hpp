@@ -15,34 +15,34 @@ namespace chassis::wbr {
  * @brief 当前状态向量
  */
 struct CurrentState {
-  rm::f32 s{0.0f};
-  rm::f32 s_dot{0.0f};
-  rm::f32 phi{0.0f};
-  rm::f32 phi_dot{0.0f};
-  rm::f32 theta_ll{0.0f};
-  rm::f32 theta_ll_dot{0.0f};
-  rm::f32 theta_lr{0.0f};
-  rm::f32 theta_lr_dot{0.0f};
-  rm::f32 theta_b{0.0f};
-  rm::f32 theta_b_dot{0.0f};
-  rm::f32 l_l{0.0f};
-  rm::f32 l_r{0.0f};
+  rm::f32 s{0.0f};             ///< 车体纵向位移
+  rm::f32 s_dot{0.0f};         ///< 车体纵向速度
+  rm::f32 phi{0.0f};           ///< 车体偏航角
+  rm::f32 phi_dot{0.0f};       ///< 车体偏航角速度
+  rm::f32 theta_ll{0.0f};      ///< 左腿摆角
+  rm::f32 theta_ll_dot{0.0f};  ///< 左腿摆角速度
+  rm::f32 theta_lr{0.0f};      ///< 右腿摆角
+  rm::f32 theta_lr_dot{0.0f};  ///< 右腿摆角速度
+  rm::f32 theta_b{0.0f};       ///< 机体俯仰角
+  rm::f32 theta_b_dot{0.0f};   ///< 机体俯仰角速度
+  rm::f32 l_l{0.0f};           ///< 左腿长
+  rm::f32 l_r{0.0f};           ///< 右腿长
 };
 
 /**
  * @brief 期望状态向量
  */
 struct ExpectedState {
-  rm::f32 s{0.0f};
-  rm::f32 s_dot{0.0f};
-  rm::f32 phi{0.0f};
-  rm::f32 phi_dot{0.0f};
-  rm::f32 theta_ll{0.0f};
-  rm::f32 theta_ll_dot{0.0f};
-  rm::f32 theta_lr{0.0f};
-  rm::f32 theta_lr_dot{0.0f};
-  rm::f32 theta_b{0.0f};
-  rm::f32 theta_b_dot{0.0f};
+  rm::f32 s{0.0f};             ///< 期望纵向位移
+  rm::f32 s_dot{0.0f};         ///< 期望纵向速度
+  rm::f32 phi{0.0f};           ///< 期望偏航角
+  rm::f32 phi_dot{0.0f};       ///< 期望偏航角速度
+  rm::f32 theta_ll{0.0f};      ///< 期望左腿摆角
+  rm::f32 theta_ll_dot{0.0f};  ///< 期望左腿摆角速度
+  rm::f32 theta_lr{0.0f};      ///< 期望右腿摆角
+  rm::f32 theta_lr_dot{0.0f};  ///< 期望右腿摆角速度
+  rm::f32 theta_b{0.0f};       ///< 期望机体俯仰角
+  rm::f32 theta_b_dot{0.0f};   ///< 期望机体俯仰角速度
 };
 
 /**

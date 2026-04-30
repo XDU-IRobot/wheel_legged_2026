@@ -11,6 +11,7 @@
 #if defined(__arm__) || defined(__aarch64__) || defined(STM32)
 #include "arm_math.h"
 #else
+// 非嵌入式构建仅提供 CMSIS-DSP 矩阵 API 占位定义，便于语法检查，不执行真实矩阵运算。
 #include <cstdint>
 typedef struct {
   uint16_t numRows;

@@ -38,37 +38,14 @@ void AppMain() {
   (void)mainloop.Start();
 
   for (;;) {
-    static uint32_t joint_loop_count = 0;
-    static uint32_t wheel_loop_count = 0;
-
-    {
-      static uint32_t loop_count = 0;
-      static uint32_t last_ms = 0;
-      loop_count++;
-      const uint32_t now_ms = HAL_GetTick();
-      const uint32_t elapsed = now_ms - last_ms;
-      if (elapsed >= 500) {
-        wl_fm_can_loop_freq_hz = static_cast<float>(loop_count) * 1000.0f / static_cast<float>(elapsed);
-        wl_fm_joint_can_fps = static_cast<float>(joint_loop_count) * 1000.0f / static_cast<float>(elapsed);
-        wl_fm_wheel_can_fps = static_cast<float>(wheel_loop_count) * 1000.0f / static_cast<float>(elapsed);
-        loop_count = 0;
-        joint_loop_count = 0;
-        wheel_loop_count = 0;
-        last_ms = now_ms;
-      }
-    }
-
     if (globals->joint_can.has_value()) {
       (void)globals->joint_can->Process();
-      joint_loop_count++;
     }
     if (globals->wheel_can.has_value()) {
       (void)globals->wheel_can->Process();
-      wheel_loop_count++;
     }
     if (globals->gimbal_can.has_value()) {
       (void)globals->gimbal_can->Process();
-      wheel_loop_count++;
     }
   }
 }
