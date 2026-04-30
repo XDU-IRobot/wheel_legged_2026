@@ -140,8 +140,6 @@ extern volatile uint8_t wl_fm_gimbal_mode;
 /** @brief 底盘/云台状态机本周期是否发生状态变化 */
 extern volatile uint8_t wl_fm_chassis_state_changed;
 extern volatile uint8_t wl_fm_gimbal_state_changed;
-extern volatile char wl_fm_chassis_mode_text[32];
-extern volatile char wl_fm_gimbal_mode_text[32];
 
 /** @brief 遥控器在线与档位信息 */
 extern volatile uint8_t wl_fm_dr16_online;
@@ -154,11 +152,6 @@ extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
 
-/** @brief 系统时序测量 */
-extern volatile float wl_fm_can_loop_freq_hz;
-extern volatile float wl_fm_joint_can_fps;
-extern volatile float wl_fm_wheel_can_fps;
-extern volatile float wl_fm_timer_period_us;
 
 /** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;

@@ -3,7 +3,6 @@
 
 #include "main.h"
 #include <algorithm>
-#include <cstddef>
 #include <cmath>
 
 /**
@@ -13,16 +12,10 @@
 
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
-volatile float wl_fm_can_loop_freq_hz{0.0f};
-volatile float wl_fm_joint_can_fps{0.0f};
-volatile float wl_fm_wheel_can_fps{0.0f};
-volatile float wl_fm_timer_period_us{0.0f};
 volatile uint8_t wl_fm_chassis_mode{0};
 volatile uint8_t wl_fm_gimbal_mode{0};
 volatile uint8_t wl_fm_chassis_state_changed{0};
 volatile uint8_t wl_fm_gimbal_state_changed{0};
-volatile char wl_fm_chassis_mode_text[32]{"Disabled"};
-volatile char wl_fm_gimbal_mode_text[32]{"Disabled"};
 
 volatile uint8_t wl_fm_dr16_online{0};
 volatile int32_t wl_fm_dr16_switch_l{0};
@@ -115,6 +108,9 @@ constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
 constexpr float kYawFollowFixedTargetRad = -1.72f;
+constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
+constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
+constexpr uint32_t kGimbalStartupYawAlignStableTicks = 50U;  // 100ms @500Hz
 chassis_runtime::Actuators g_actuators{};
 
 struct SdotRampParams {
@@ -188,6 +184,20 @@ void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
   }
 }
 
+float SelectNearestYawCenterTarget(const float yaw_motor_rad) {
+  const float yaw_target_a_rad = kYawFollowFixedTargetRad;
+  const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi, -kPi, kPi);
+  const float yaw_err_to_a = std::fabs(rm::modules::Wrap(yaw_target_a_rad - yaw_motor_rad, -kPi, kPi));
+  const float yaw_err_to_b = std::fabs(rm::modules::Wrap(yaw_target_b_rad - yaw_motor_rad, -kPi, kPi));
+  return (yaw_err_to_a <= yaw_err_to_b) ? yaw_target_a_rad : yaw_target_b_rad;
+}
+
+bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
+  const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
+  return yaw_err_rad <= kGimbalStartupYawAlignErrorRad &&
+         std::fabs(yaw_motor_vel_rad_s) <= kGimbalStartupYawAlignVelRadS;
+}
+
 SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
   switch (mode) {
     case chassis::Fsm::State::kLowLeg:
@@ -215,60 +225,6 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};
 };
 
-const char *ToChassisModeText(const chassis::Fsm::State mode) {
-  switch (mode) {
-    case chassis::Fsm::State::kDisabled:
-      return "Disabled";
-    case chassis::Fsm::State::kLowLeg:
-      return "LowLeg";
-    case chassis::Fsm::State::kMidLeg:
-      return "MidLeg";
-    case chassis::Fsm::State::kHighLeg:
-      return "HighLeg";
-    case chassis::Fsm::State::kSpin:
-      return "Spin";
-    case chassis::Fsm::State::kJumpPrep:
-      return "JumpPrep";
-    case chassis::Fsm::State::kJumpPush:
-      return "JumpPush";
-    case chassis::Fsm::State::kJumpRecover:
-      return "JumpRecover";
-    case chassis::Fsm::State::kRecoveryFallCheck:
-      return "RecoveryFallCheck";
-    case chassis::Fsm::State::kRecoverySelfRight:
-      return "RecoverySelfRight";
-    default:
-      return "Unknown";
-  }
-}
-
-const char *ToGimbalModeText(const gimbal::Fsm::State mode) {
-  switch (mode) {
-    case gimbal::Fsm::State::kDisabled:
-      return "Disabled";
-    case gimbal::Fsm::State::kServiceWithFire:
-      return "ServiceWithFire";
-    case gimbal::Fsm::State::kServiceSafe:
-      return "ServiceSafe";
-    case gimbal::Fsm::State::kCombat:
-      return "Combat";
-    case gimbal::Fsm::State::kRecoveryAlign:
-      return "RecoveryAlign";
-    default:
-      return "Unknown";
-  }
-}
-
-void CopyTextToVolatile(volatile char *dst, size_t dst_size, const char *src) {
-  if (dst_size == 0U) {
-    return;
-  }
-  size_t i = 0U;
-  for (; i + 1U < dst_size && src[i] != '\0'; ++i) {
-    dst[i] = src[i];
-  }
-  dst[i] = '\0';
-}
 
 /**
  * @brief 调试状态快照
@@ -403,11 +359,13 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
 /**
  * @brief 构建云台状态机输入
  */
-gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output) {
+gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
+                                       const bool startup_align_complete) {
   gimbal::Fsm::Input fsm_input{};
   fsm_input.request = input.mode_request;
   fsm_input.chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
                                       chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight;
+  fsm_input.startup_align_complete = startup_align_complete;
   return fsm_input;
 }
 
@@ -434,8 +392,6 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_gimbal_mode = static_cast<uint8_t>(debug.gimbal_mode);
   wl_fm_chassis_state_changed = static_cast<uint8_t>(debug.chassis_state_changed);
   wl_fm_gimbal_state_changed = static_cast<uint8_t>(debug.gimbal_state_changed);
-  CopyTextToVolatile(wl_fm_chassis_mode_text, sizeof(wl_fm_chassis_mode_text), ToChassisModeText(debug.chassis_mode));
-  CopyTextToVolatile(wl_fm_gimbal_mode_text, sizeof(wl_fm_gimbal_mode_text), ToGimbalModeText(debug.gimbal_mode));
 
   wl_fm_dr16_online = static_cast<uint8_t>(input.dr16.online);
   wl_fm_dr16_switch_l = static_cast<int32_t>(input.dr16.switch_l);
@@ -514,19 +470,6 @@ void ControlLoop() {
     return;
   }
 
-  {
-    static uint32_t invoke_count = 0;
-    static uint32_t last_ms = 0;
-    invoke_count++;
-    const uint32_t now_ms = HAL_GetTick();
-    const uint32_t elapsed = now_ms - last_ms;
-    if (elapsed >= 500) {
-      wl_fm_timer_period_us = static_cast<float>(elapsed) * 1000.0f / static_cast<float>(invoke_count);
-      invoke_count = 0;
-      last_ms = now_ms;
-    }
-  }
-
   const uint32_t now_ms = HAL_GetTick();
 
   static InputSnapshot input{};
@@ -543,6 +486,10 @@ void ControlLoop() {
   static rm::modules::PID yaw_follow_pid{5.5f, 0.0f, 0.9f, 5.f, 0.f};
   static bool yaw_follow_pid_initialized = false;
   static chassis::Fsm::State last_chassis_mode = chassis::Fsm::State::kDisabled;
+  static bool gimbal_startup_align_complete = false;
+  static bool gimbal_startup_align_was_active = false;
+  static uint32_t gimbal_startup_align_stable_ticks = 0U;
+  static float gimbal_startup_align_target_rad = kYawFollowFixedTargetRad;
 
   if (!yaw_follow_pid_initialized) {
     yaw_follow_pid.SetCircular(true).SetCircularCycle(2.0f * kPi);
@@ -556,8 +503,16 @@ void ControlLoop() {
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
-  const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output);
+  const gimbal::Fsm::Input gimbal_input =
+      BuildGimbalFsmInput(input, chassis_output, gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
+  const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
+
+  if (gimbal_startup_align_active && !gimbal_startup_align_was_active) {
+    gimbal_startup_align_complete = false;
+    gimbal_startup_align_stable_ticks = 0U;
+    gimbal_startup_align_target_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+  }
 
   gimbal::Gimbal::UpdateInput gimbal_update_input{};
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
@@ -565,17 +520,54 @@ void ControlLoop() {
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
+  gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
+  if (gimbal_startup_align_active) {
+    gimbal_update_input.align_to_chassis_forward = false;
+    gimbal_update_input.target.yaw_rad = gimbal_startup_align_target_rad;
+  }
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
   gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
+  gimbal_update_input.yaw_motor_rad = input.estimator_input.yaw_motor_rad;
   gimbal_update_input.gimbal_imu_yaw_rad = input.dr16.gimbal_imu_yaw_rad;
   gimbal_update_input.gimbal_imu_pitch_rad = input.dr16.gimbal_imu_pitch_rad;
   gimbal_update_input.dt_s = kControlLoopDtS;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
 
+  if (!gimbal_output.control.gimbal_enable) {
+    gimbal_startup_align_complete = false;
+    gimbal_startup_align_was_active = false;
+    gimbal_startup_align_stable_ticks = 0U;
+  } else if (gimbal_startup_align_active) {
+    const bool yaw_motor_ready = globals->yaw_motor.has_value();
+    const float yaw_motor_vel_rad_s = yaw_motor_ready ? globals->yaw_motor->vel() : 0.0f;
+    if (yaw_motor_ready &&
+        IsYawAtStartupTarget(gimbal_startup_align_target_rad, input.estimator_input.yaw_motor_rad,
+                             yaw_motor_vel_rad_s)) {
+      ++gimbal_startup_align_stable_ticks;
+    } else {
+      gimbal_startup_align_stable_ticks = 0U;
+    }
+
+    if (gimbal_startup_align_stable_ticks >= kGimbalStartupYawAlignStableTicks) {
+      gimbal_startup_align_complete = true;
+      if (input.mode_request.target_source == wheel_legged::TargetSource::kRc) {
+        dr16_semantic_state.rc_target.yaw_rad = input.dr16.gimbal_imu_yaw_rad;
+      }
+    }
+    gimbal_startup_align_was_active = true;
+  } else {
+    gimbal_startup_align_was_active = false;
+    gimbal_startup_align_stable_ticks = 0U;
+  }
+
+  const bool chassis_startup_ready =
+      !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
+  const bool chassis_output_enable = chassis_output.control.enable_dm && chassis_startup_ready;
+
   chassis::Chassis::UpdateInput chassis_update_input{};
   chassis_update_input.fsm_mode = chassis_output.mode;
-  chassis_update_input.enable_output = chassis_output.control.enable_dm;
+  chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
@@ -601,9 +593,12 @@ void ControlLoop() {
   if (std::fabs(input_norm) > kVxInputDeadbandNorm) {
     target_s_dot = input.dr16.online ? MapDr16RightYToForwardSpeed(input.dr16.right_y) : 0.0f;
   }
+  if (!chassis_output_enable) {
+    target_s_dot = 0.0f;
+  }
 
-  const bool lockpoint_enabled =
-      (chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output.mode != chassis::Fsm::State::kSpin);
+  const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                                          chassis_output.mode != chassis::Fsm::State::kSpin);
   if (!lockpoint_enabled) {
     lock_point_target = false;
   } else {
@@ -638,18 +633,14 @@ void ControlLoop() {
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
 
-  const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
+  const bool yaw_follow_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && chassis_output_enable &&
                                   chassis_output.control.run_chassis_update && gimbal_output.control.gimbal_enable;
   if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
   } else {
     const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
-    const float yaw_target_a_rad = kYawFollowFixedTargetRad;
-    const float yaw_target_b_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + kPi, -kPi, kPi);
-    const float yaw_err_to_a = std::fabs(rm::modules::Wrap(yaw_target_a_rad - yaw_motor_rad, -kPi, kPi));
-    const float yaw_err_to_b = std::fabs(rm::modules::Wrap(yaw_target_b_rad - yaw_motor_rad, -kPi, kPi));
-    const float yaw_target_rad = (yaw_err_to_a <= yaw_err_to_b) ? yaw_target_a_rad : yaw_target_b_rad;
+    const float yaw_target_rad = SelectNearestYawCenterTarget(yaw_motor_rad);
     yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -yaw_follow_pid.out();
     RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
@@ -658,7 +649,7 @@ void ControlLoop() {
 
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
-  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output.control.enable_dm);
+  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
   if (globals->gimbal_imu_feedback_rx.has_value()) {
     wl_fm_gimbal_imu_pitch_rad = globals->gimbal_imu_feedback_rx->pitch_rad();
@@ -670,3 +661,4 @@ void ControlLoop() {
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }
+

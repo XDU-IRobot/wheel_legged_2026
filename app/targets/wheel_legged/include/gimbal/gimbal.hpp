@@ -24,9 +24,11 @@ class Gimbal {
     DmMitMotor *pitch_motor{nullptr};
     bool gimbal_enable{false};
     bool align_to_chassis_forward{false};
+    bool use_yaw_motor_feedback{false};
     wheel_legged::GimbalTarget target{};
     float chassis_yaw_rad{0.0f};
     float chassis_pitch_rad{0.0f};
+    float yaw_motor_rad{0.0f};
     float gimbal_imu_yaw_rad{0.0f};
     float gimbal_imu_pitch_rad{0.0f};
     float dt_s{kDefaultDtS};
@@ -48,6 +50,7 @@ class Gimbal {
 
   void Init() {
     motors_enabled_latched_ = false;
+    last_use_yaw_motor_feedback_ = false;
     ConfigurePid();
     ClearPid();
     output_ = {};
@@ -58,11 +61,12 @@ class Gimbal {
 
     if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
       motors_enabled_latched_ = false;
+      last_use_yaw_motor_feedback_ = false;
       ClearPid();
       return;
     }
 
-    output_.yaw_pos_rad = input.gimbal_imu_yaw_rad;
+    output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
     output_.yaw_vel_rad_s = input.yaw_motor->vel();
     output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
     output_.pitch_vel_rad_s = input.pitch_motor->vel();
@@ -79,10 +83,15 @@ class Gimbal {
       input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
       DisableMotorsIfNeeded(input);
       ClearPid();
+      last_use_yaw_motor_feedback_ = false;
       return;
     }
 
     EnableMotorsIfNeeded(input);
+    if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
+      ClearPid();
+    }
+    last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
 
     const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : kDefaultDtS;
     controller_.Enable(true);
@@ -150,6 +159,7 @@ class Gimbal {
   }
 
   bool motors_enabled_latched_{false};
+  bool last_use_yaw_motor_feedback_{false};
 
   Gimbal2Dof controller_{};
 
