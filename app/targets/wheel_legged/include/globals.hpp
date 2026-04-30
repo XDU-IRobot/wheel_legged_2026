@@ -163,6 +163,9 @@ extern volatile float wl_fm_chassis_leg_length_m;
 extern volatile float wl_fm_left_leg_length_m;
 extern volatile float wl_fm_right_leg_length_m;
 extern volatile float wl_fm_chassis_speed_mps;
+extern volatile float wl_fm_left_support_force_n;
+extern volatile float wl_fm_right_support_force_n;
+extern volatile uint8_t wl_fm_off_ground_in_mid_high_leg;
 
 /** @brief 关节与轮毂原始反馈 */
 extern volatile float wl_fm_motor_lf_pos_rad;
