@@ -611,6 +611,8 @@ void ControlLoop() {
   // 1. 采集硬件反馈并将 DR16 原始输入折叠为整车语义请求。
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
+  input.mode_request.theta_ll_rad = chassis_control_output.current_state.theta_ll;
+  input.mode_request.theta_lr_rad = chassis_control_output.current_state.theta_lr;
   input.mode_request.tick_ms = now_ms;
 
   // 2. 状态机先消费同一份语义请求，输出本周期底盘/云台控制意图。
@@ -820,8 +822,12 @@ void ControlLoop() {
   wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
-  chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
-  chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
+  chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLlBiasRad;
+  chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLrBiasRad;
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;

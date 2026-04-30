@@ -266,6 +266,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
+  const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
 
   if (posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
@@ -307,8 +308,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 离地或跳跃回收时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
-    if (use_jump_retract2 || off_ground_in_mid_high_leg) {
+    // 离地、跳跃回收或上台阶时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
+    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {
