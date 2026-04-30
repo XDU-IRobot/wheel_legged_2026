@@ -681,6 +681,7 @@ void ControlLoop() {
     filtered_s_dot = current_state.s_dot;
     filtered_yaw_dot = 0.0f;
     yaw_follow_pid.Clear();
+    yaw_follow_target_initialized = false;
     lock_point_target = false;
     lock_point_alpha = 0.0f;
     lock_point_s_ref = expected_s;
