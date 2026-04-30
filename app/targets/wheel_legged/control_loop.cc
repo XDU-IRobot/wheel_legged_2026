@@ -113,7 +113,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kPitchTargetMinRad = -0.35;
 constexpr float kPitchTargetMaxRad = 0.25f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
-constexpr float kSpinTargetYawDotRadS = 3.0f;
+constexpr float kSpinYawTargetOffsetRad = 0.55f;
 constexpr float kYawFollowFixedTargetRad = -1.72f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
@@ -816,8 +816,11 @@ void ControlLoop() {
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   // 底盘偏航期望跟随云台偏航电机，保持车体尽量对准云台中心方向。
   if (spin_control_enabled) {
-    yaw_follow_pid.Clear();
-    RampYawDotToTarget(kSpinTargetYawDotRadS, filtered_yaw_dot);
+    const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+    const float yaw_target_rad = rm::modules::Wrap(yaw_motor_rad + kSpinYawTargetOffsetRad, -kPi, kPi);
+    yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
+    const float target_yaw_dot = -yaw_follow_pid.out();
+    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;
