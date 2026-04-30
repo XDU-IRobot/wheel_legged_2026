@@ -257,7 +257,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       break;
 
     case State::kJumpPush:
-      if (request.current_leg_length_m >= wheel_legged::params::active::chassis_fsm::kJumpPushReachedLegLengthM || elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpPushMaxMs) {
+      if (request.current_leg_length_m >= wheel_legged::params::active::chassis_fsm::kJumpPushReachedLegLengthM ||
+          elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpPushMaxMs) {
         next_mode = State::kJumpRecover;
       }
       break;
@@ -298,4 +299,3 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   return output_;
 }
-

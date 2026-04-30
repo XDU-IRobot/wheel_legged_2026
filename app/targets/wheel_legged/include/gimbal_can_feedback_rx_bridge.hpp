@@ -16,8 +16,10 @@
  */
 class GimbalCanFeedbackRxBridge final : public rm::device::CanDevice {
  public:
-  static constexpr rm::u16 kRxStdId0 = wheel_legged::params::active::gimbal_can_bridge::kRxStdId;    ///< 云台惯导反馈标准帧 ID
-  static constexpr rm::usize kPayloadSize = wheel_legged::params::active::gimbal_can_bridge::kPayloadSize;  ///< pitch/yaw 两个 int16
+  static constexpr rm::u16 kRxStdId0 =
+      wheel_legged::params::active::gimbal_can_bridge::kRxStdId;  ///< 云台惯导反馈标准帧 ID
+  static constexpr rm::usize kPayloadSize =
+      wheel_legged::params::active::gimbal_can_bridge::kPayloadSize;  ///< pitch/yaw 两个 int16
 
   /** @brief 绑定 CAN 总线并注册接收 ID */
   explicit GimbalCanFeedbackRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdId0) {}
@@ -65,4 +67,3 @@ class GimbalCanFeedbackRxBridge final : public rm::device::CanDevice {
   rm::f32 yaw_rad_{0.0f};                          ///< 云台惯导偏航角
   rm::u32 frame_count_{0U};                        ///< 有效接收帧计数
 };
-
