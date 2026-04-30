@@ -249,7 +249,6 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};
 };
 
-
 /**
  * @brief 调试状态快照
  */
@@ -531,8 +530,7 @@ void ControlLoop() {
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
-  const gimbal::Fsm::Input gimbal_input =
-      BuildGimbalFsmInput(input, chassis_output, gimbal_startup_align_complete);
+  const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
 
@@ -572,9 +570,8 @@ void ControlLoop() {
   } else if (gimbal_startup_align_active) {
     const bool yaw_motor_ready = globals->yaw_motor.has_value();
     const float yaw_motor_vel_rad_s = yaw_motor_ready ? globals->yaw_motor->vel() : 0.0f;
-    if (yaw_motor_ready &&
-        IsYawAtStartupTarget(gimbal_startup_align_target_rad, input.estimator_input.yaw_motor_rad,
-                             yaw_motor_vel_rad_s)) {
+    if (yaw_motor_ready && IsYawAtStartupTarget(gimbal_startup_align_target_rad, input.estimator_input.yaw_motor_rad,
+                                                yaw_motor_vel_rad_s)) {
       ++gimbal_startup_align_stable_ticks;
     } else {
       gimbal_startup_align_stable_ticks = 0U;
@@ -592,8 +589,7 @@ void ControlLoop() {
     gimbal_startup_align_stable_ticks = 0U;
   }
 
-  const bool chassis_startup_ready =
-      !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
+  const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
   const bool chassis_output_enable = chassis_output.control.enable_dm && chassis_startup_ready;
 
   // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
@@ -632,7 +628,7 @@ void ControlLoop() {
 
   // 低速且无输入时进入定点锁定，将期望位移混合到锁定点以抑制慢漂。
   const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                                          chassis_output.mode != chassis::Fsm::State::kSpin);
+                                                           chassis_output.mode != chassis::Fsm::State::kSpin);
   if (!lockpoint_enabled) {
     lock_point_target = false;
   } else {
@@ -699,4 +695,3 @@ void ControlLoop() {
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }
-

@@ -38,7 +38,6 @@ void AppMain() {
   (void)mainloop.Start();
 
   for (;;) {
-
     if (globals->joint_can.has_value()) {
       (void)globals->joint_can->Process();
     }
