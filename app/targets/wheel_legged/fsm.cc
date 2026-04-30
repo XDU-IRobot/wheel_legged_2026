@@ -15,7 +15,7 @@ constexpr uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
 constexpr float kLowLegLengthM = 0.15f;
 constexpr float kMidLegLengthM = 0.20f;
-constexpr float kHighLegLengthM = 0.35f;
+constexpr float kHighLegLengthM = 0.3f;
 constexpr float kJumpPrepLegLengthM = 0.13f;
 constexpr float kJumpPushLegLengthM = 0.36f;
 constexpr float kJumpRecoverLegLengthM = 0.20f;

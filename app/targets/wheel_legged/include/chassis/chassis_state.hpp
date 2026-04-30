@@ -85,10 +85,10 @@ struct ChassisStateEstimatorConfig {
   rm::f32 wheel_reduction_ratio{17.0f / 268.0f};  ///< 轮电机到车轮的速度换算比例
   rm::f32 max_valid_speed_mps{8.0f};              ///< 融合速度可信上限
 
-  rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  ///< 左腿前关节零位偏移
-  rm::f32 left_phi4_offset_rad{0.59f};                            ///< 左腿后关节零位偏移
-  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  ///< 右腿前关节零位偏移
-  rm::f32 right_phi4_offset_rad{-1.87f};                          ///< 右腿后关节零位偏移
+  rm::f32 left_phi1_offset_rad{-1.50f + M_PI};  ///< 左腿前关节零位偏移
+  rm::f32 left_phi4_offset_rad{-1.50f};                            ///< 左腿后关节零位偏移
+  rm::f32 right_phi1_offset_rad{-1.44f + M_PI};  ///< 右腿前关节零位偏移
+  rm::f32 right_phi4_offset_rad{-1.68f};                          ///< 右腿后关节零位偏移
 
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};  ///< 腿摆角速度低通截止频率
 };
@@ -344,7 +344,7 @@ class ChassisStateEstimator {
 
   /** @brief 更新机体俯仰/偏航状态 */
   void UpdateBodyState(const ChassisStateEstimatorInput &input) {
-    output_.current.theta_b = input.imu.pitch_rad;
+    output_.current.theta_b = input.imu.pitch_rad - 0.074f;
     output_.current.theta_b_dot = input.imu.gyro_y_rad_s;
     output_.current.phi = input.imu.yaw_rad;
     output_.current.phi_dot = input.imu.gyro_z_rad_s;

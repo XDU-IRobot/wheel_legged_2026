@@ -74,7 +74,7 @@ class Actuators {
   }
 
  private:
-  static constexpr float kWheelTorqueToCurrent = 2436.5f;  ///< 轮毂力矩转电流比例
+  static constexpr float kWheelTorqueToCurrent = 2300.1f;  ///< 轮毂力矩转电流比例
   bool dm_enabled_latched_{false};                         ///< DM 使能锁存
 
   static bool IsReady(const SharedResources &g) {

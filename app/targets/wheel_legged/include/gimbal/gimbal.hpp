@@ -24,10 +24,10 @@ class Gimbal {
   using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
   /** @brief 轮腿云台俯仰电机 DM MIT 参数 */
-  static inline const DmMitSettings kPitchMotorSettings{0x12, 0x11, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+  static inline const DmMitSettings kPitchMotorSettings{0x05, 0x04, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
   /** @brief 轮腿云台偏航电机 DM MIT 参数 */
-  static inline const DmMitSettings kYawMotorSettings{0x13, 0x03, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+  static inline const DmMitSettings kYawMotorSettings{0x10, 0x09, 3.141593f, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
   /**
    * @brief 单次云台控制更新输入
@@ -146,11 +146,11 @@ class Gimbal {
 
   /** @brief 配置双环 PID 参数 */
   void ConfigurePid() {
-    controller_.pid().yaw_position.SetKp(15.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(1.0f);
-    controller_.pid().yaw_speed.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(6.0f).SetMaxIout(0.4f);
+    controller_.pid().yaw_position.SetKp(25.0f).SetKi(0.0f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().yaw_speed.SetKp(0.6f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
 
-    controller_.pid().pitch_position.SetKp(13.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
-    controller_.pid().pitch_speed.SetKp(0.85f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
+    controller_.pid().pitch_position.SetKp(26.0f).SetKi(0.f).SetKd(0.05f).SetMaxOut(10.0f).SetMaxIout(0.4f);
+    controller_.pid().pitch_speed.SetKp(0.55f).SetKi(0.0f).SetKd(0.0f).SetMaxOut(8.0f).SetMaxIout(0.0f);
   }
 
   /** @brief 清空双环 PID 积分与历史状态 */
