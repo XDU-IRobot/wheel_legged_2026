@@ -83,15 +83,21 @@ struct ChassisStateEstimatorConfig {
   rm::f32 leg_l2_m{wheel_legged::params::active::state_estimator::kLegL2M};  ///< 五连杆从动杆长度
 
   rm::f32 wheel_radius_m{wheel_legged::params::active::state_estimator::kWheelRadiusM};  ///< 轮半径
-  rm::f32 wheel_reduction_ratio{wheel_legged::params::active::state_estimator::kWheelReductionRatio};  ///< 轮电机到车轮的速度换算比例
+  rm::f32 wheel_reduction_ratio{
+      wheel_legged::params::active::state_estimator::kWheelReductionRatio};  ///< 轮电机到车轮的速度换算比例
   rm::f32 max_valid_speed_mps{wheel_legged::params::active::state_estimator::kMaxValidSpeedMps};  ///< 融合速度可信上限
 
-  rm::f32 left_phi1_offset_rad{wheel_legged::params::active::state_estimator::kLeftPhi1OffsetRad};  ///< 左腿前关节零位偏移
-  rm::f32 left_phi4_offset_rad{wheel_legged::params::active::state_estimator::kLeftPhi4OffsetRad};  ///< 左腿后关节零位偏移
-  rm::f32 right_phi1_offset_rad{wheel_legged::params::active::state_estimator::kRightPhi1OffsetRad};  ///< 右腿前关节零位偏移
-  rm::f32 right_phi4_offset_rad{wheel_legged::params::active::state_estimator::kRightPhi4OffsetRad};  ///< 右腿后关节零位偏移
+  rm::f32 left_phi1_offset_rad{
+      wheel_legged::params::active::state_estimator::kLeftPhi1OffsetRad};  ///< 左腿前关节零位偏移
+  rm::f32 left_phi4_offset_rad{
+      wheel_legged::params::active::state_estimator::kLeftPhi4OffsetRad};  ///< 左腿后关节零位偏移
+  rm::f32 right_phi1_offset_rad{
+      wheel_legged::params::active::state_estimator::kRightPhi1OffsetRad};  ///< 右腿前关节零位偏移
+  rm::f32 right_phi4_offset_rad{
+      wheel_legged::params::active::state_estimator::kRightPhi4OffsetRad};  ///< 右腿后关节零位偏移
 
-  rm::f32 theta_dot_filter_cutoff_hz{wheel_legged::params::active::state_estimator::kThetaDotFilterCutoffHz};  ///< 腿摆角速度低通截止频率
+  rm::f32 theta_dot_filter_cutoff_hz{
+      wheel_legged::params::active::state_estimator::kThetaDotFilterCutoffHz};  ///< 腿摆角速度低通截止频率
 };
 
 /**
@@ -449,4 +455,3 @@ class ChassisStateEstimator {
 };
 
 }  // namespace chassis
-

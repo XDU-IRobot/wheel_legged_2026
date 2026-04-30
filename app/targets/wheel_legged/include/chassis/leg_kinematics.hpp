@@ -48,8 +48,9 @@ class LegKinematics {
     static constexpr rm::f32 kMinSin = wheel_legged::params::active::leg_kinematics::kMinSin;
     static constexpr rm::f32 kMinLen = wheel_legged::params::active::leg_kinematics::kMinLen;
 
-    const rm::f32 dt =
-        (dt_s > wheel_legged::params::active::leg_kinematics::kMinLen) ? dt_s : wheel_legged::params::active::leg_kinematics::kDefaultDtS;
+    const rm::f32 dt = (dt_s > wheel_legged::params::active::leg_kinematics::kMinLen)
+                           ? dt_s
+                           : wheel_legged::params::active::leg_kinematics::kDefaultDtS;
 
     const rm::f32 prev_l0 = l0_;
 

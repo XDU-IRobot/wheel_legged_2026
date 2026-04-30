@@ -91,8 +91,10 @@ class Chassis {
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
-  wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M, wheel_legged::params::active::chassis::kLegL2M};
-  wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M, wheel_legged::params::active::chassis::kLegL2M};
+  wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
+                               wheel_legged::params::active::chassis::kLegL2M};
+  wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,
+                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::MotorTorque base_torque_{};
   TunableParams params_{};
 

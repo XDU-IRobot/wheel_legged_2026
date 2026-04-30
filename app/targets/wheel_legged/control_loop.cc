@@ -99,9 +99,12 @@ constexpr int16_t kDr16AxisMaxAbs = wheel_legged::params::active::control_loop::
 constexpr float kTargetForwardSpeedMaxMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMaxMps;
 constexpr float kVxInputDeadbandNorm = wheel_legged::params::active::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = wheel_legged::params::active::control_loop::kVyInputDeadbandNorm;
-constexpr float kLockPointEnterSpeedThresholdMps = wheel_legged::params::active::control_loop::kLockPointEnterSpeedThresholdMps;
-constexpr float kLockPointExitSpeedThresholdMps = wheel_legged::params::active::control_loop::kLockPointExitSpeedThresholdMps;
-constexpr float kLockPointEnterInputThreshold = wheel_legged::params::active::control_loop::kLockPointEnterInputThreshold;
+constexpr float kLockPointEnterSpeedThresholdMps =
+    wheel_legged::params::active::control_loop::kLockPointEnterSpeedThresholdMps;
+constexpr float kLockPointExitSpeedThresholdMps =
+    wheel_legged::params::active::control_loop::kLockPointExitSpeedThresholdMps;
+constexpr float kLockPointEnterInputThreshold =
+    wheel_legged::params::active::control_loop::kLockPointEnterInputThreshold;
 constexpr float kLockPointExitInputThreshold = wheel_legged::params::active::control_loop::kLockPointExitInputThreshold;
 constexpr uint32_t kLockPointMinDwellTicks = wheel_legged::params::active::control_loop::kLockPointMinDwellTicks;
 constexpr float kLockPointAlphaRiseStep = wheel_legged::params::active::control_loop::kLockPointAlphaRiseStep;
@@ -117,12 +120,16 @@ constexpr float kSpinYawRampStepRadS = wheel_legged::params::active::control_loo
 constexpr float kSpinYawTargetOffsetRad = wheel_legged::params::active::control_loop::kSpinYawTargetOffsetRad;
 constexpr float kYawFollowFixedTargetRad = wheel_legged::params::active::control_loop::kYawFollowFixedTargetRad;
 constexpr float kYawFollowSideOffsetRad = wheel_legged::params::active::control_loop::kYawFollowSideOffsetRad;
-constexpr float kGimbalStartupYawAlignErrorRad = wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad;
-constexpr float kGimbalStartupYawAlignVelRadS = wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
-constexpr uint32_t kGimbalStartupYawAlignStableTicks = wheel_legged::params::active::control_loop::kGimbalStartupYawAlignStableTicks;
+constexpr float kGimbalStartupYawAlignErrorRad =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad;
+constexpr float kGimbalStartupYawAlignVelRadS =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
+constexpr uint32_t kGimbalStartupYawAlignStableTicks =
+    wheel_legged::params::active::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr float kYawFollowDriveReadyErrorRad = wheel_legged::params::active::control_loop::kYawFollowDriveReadyErrorRad;
 constexpr float kYawFollowDriveReadyVelRadS = wheel_legged::params::active::control_loop::kYawFollowDriveReadyVelRadS;
-constexpr uint32_t kYawFollowDriveReadyStableTicks = wheel_legged::params::active::control_loop::kYawFollowDriveReadyStableTicks;
+constexpr uint32_t kYawFollowDriveReadyStableTicks =
+    wheel_legged::params::active::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kExpectedThetaLlBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaLlBiasRad;
 constexpr float kExpectedThetaLrBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = wheel_legged::params::active::control_loop::kExpectedThetaBBiasRad;

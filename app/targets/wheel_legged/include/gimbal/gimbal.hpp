@@ -116,15 +116,14 @@ class Gimbal {
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 
-    output_.yaw_cmd_torque_nm = std::clamp(controller_.output().yaw,
-                                           -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                                           wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    output_.yaw_cmd_torque_nm =
+        std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     const float pitch_gravity_ff =
         wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
-    output_.pitch_cmd_torque_nm =
-        std::clamp(controller_.output().pitch + pitch_gravity_ff,
-                   -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
+                                             -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                                             wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 
     // 仅使用 MIT 力矩通道，位置/速度前馈由外层控制器显式置零。
     input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
@@ -143,10 +142,30 @@ class Gimbal {
     const auto &yaw_spd = wheel_legged::params::active::gimbal::kYawSpeedPid;
     const auto &pitch_pos = wheel_legged::params::active::gimbal::kPitchPositionPid;
     const auto &pitch_spd = wheel_legged::params::active::gimbal::kPitchSpeedPid;
-    controller_.pid().yaw_position.SetKp(yaw_pos.kp).SetKi(yaw_pos.ki).SetKd(yaw_pos.kd).SetMaxOut(yaw_pos.max_out).SetMaxIout(yaw_pos.max_iout);
-    controller_.pid().yaw_speed.SetKp(yaw_spd.kp).SetKi(yaw_spd.ki).SetKd(yaw_spd.kd).SetMaxOut(yaw_spd.max_out).SetMaxIout(yaw_spd.max_iout);
-    controller_.pid().pitch_position.SetKp(pitch_pos.kp).SetKi(pitch_pos.ki).SetKd(pitch_pos.kd).SetMaxOut(pitch_pos.max_out).SetMaxIout(pitch_pos.max_iout);
-    controller_.pid().pitch_speed.SetKp(pitch_spd.kp).SetKi(pitch_spd.ki).SetKd(pitch_spd.kd).SetMaxOut(pitch_spd.max_out).SetMaxIout(pitch_spd.max_iout);
+    controller_.pid()
+        .yaw_position.SetKp(yaw_pos.kp)
+        .SetKi(yaw_pos.ki)
+        .SetKd(yaw_pos.kd)
+        .SetMaxOut(yaw_pos.max_out)
+        .SetMaxIout(yaw_pos.max_iout);
+    controller_.pid()
+        .yaw_speed.SetKp(yaw_spd.kp)
+        .SetKi(yaw_spd.ki)
+        .SetKd(yaw_spd.kd)
+        .SetMaxOut(yaw_spd.max_out)
+        .SetMaxIout(yaw_spd.max_iout);
+    controller_.pid()
+        .pitch_position.SetKp(pitch_pos.kp)
+        .SetKi(pitch_pos.ki)
+        .SetKd(pitch_pos.kd)
+        .SetMaxOut(pitch_pos.max_out)
+        .SetMaxIout(pitch_pos.max_iout);
+    controller_.pid()
+        .pitch_speed.SetKp(pitch_spd.kp)
+        .SetKi(pitch_spd.ki)
+        .SetKd(pitch_spd.kd)
+        .SetMaxOut(pitch_spd.max_out)
+        .SetMaxIout(pitch_spd.max_iout);
   }
 
   /** @brief 清空双环 PID 积分与历史状态 */

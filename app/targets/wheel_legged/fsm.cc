@@ -213,7 +213,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   State next_mode = mode_;
 
-  // 鐘舵€佹満鍙鐞嗘ā寮忔椂搴忥紱鍏蜂綋鍔涚煩鐢?Chassis 鏍规嵁杈撳嚭鐨?ControlOutput 璁＄畻銆?
+  // 鐘舵€佹満鍙鐞嗘ā寮忔椂搴忥紱鍏蜂綋鍔涚煩鐢?Chassis 鏍规嵁杈撳嚭鐨?ControlOutput
+  // 璁＄畻銆?
   switch (mode_) {
     case State::kDisabled:
       next_mode = requested_normal_state;
@@ -257,7 +258,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       break;
 
     case State::kJumpPush:
-      if (request.current_leg_length_m >= wheel_legged::params::active::chassis_fsm::kJumpPushReachedLegLengthM || elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpPushMaxMs) {
+      if (request.current_leg_length_m >= wheel_legged::params::active::chassis_fsm::kJumpPushReachedLegLengthM ||
+          elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpPushMaxMs) {
         next_mode = State::kJumpRecover;
       }
       break;
@@ -298,4 +300,3 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   return output_;
 }
-

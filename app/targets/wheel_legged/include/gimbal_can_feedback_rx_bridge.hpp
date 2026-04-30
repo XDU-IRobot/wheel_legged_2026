@@ -16,8 +16,10 @@
  */
 class GimbalCanFeedbackRxBridge final : public rm::device::CanDevice {
  public:
-  static constexpr rm::u16 kRxStdId0 = wheel_legged::params::active::gimbal_can_bridge::kRxStdId;    ///< 浜戝彴鎯鍙嶉鏍囧噯甯?ID
-  static constexpr rm::usize kPayloadSize = wheel_legged::params::active::gimbal_can_bridge::kPayloadSize;  ///< pitch/yaw 涓や釜 int16
+  static constexpr rm::u16 kRxStdId0 =
+      wheel_legged::params::active::gimbal_can_bridge::kRxStdId;  ///< 浜戝彴鎯鍙嶉鏍囧噯甯?ID
+  static constexpr rm::usize kPayloadSize =
+      wheel_legged::params::active::gimbal_can_bridge::kPayloadSize;  ///< pitch/yaw 涓や釜 int16
 
   /** @brief 缁戝畾 CAN 鎬荤嚎骞舵敞鍐屾帴鏀?ID */
   explicit GimbalCanFeedbackRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdId0) {}
@@ -65,4 +67,3 @@ class GimbalCanFeedbackRxBridge final : public rm::device::CanDevice {
   rm::f32 yaw_rad_{0.0f};                          ///< 浜戝彴鎯鍋忚埅瑙?
   rm::u32 frame_count_{0U};                        ///< 鏈夋晥鎺ユ敹甯ц鏁?
 };
-

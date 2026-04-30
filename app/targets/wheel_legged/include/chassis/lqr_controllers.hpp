@@ -34,16 +34,16 @@ struct CurrentState {
  * @brief 期望状态向量
  */
 struct ExpectedState {
-  rm::f32 s{0.0f};             ///< 期望纵向位移
+  rm::f32 s{0.0f};                                                                        ///< 期望纵向位移
   rm::f32 s_dot{wheel_legged::params::active::state_estimator::kDefaultExpectedSdotMps};  ///< 期望纵向速度
-  rm::f32 phi{0.0f};           ///< 期望偏航角
-  rm::f32 phi_dot{0.0f};       ///< 期望偏航角速度
-  rm::f32 theta_ll{0.0f};      ///< 期望左腿摆角
-  rm::f32 theta_ll_dot{0.0f};  ///< 期望左腿摆角速度
-  rm::f32 theta_lr{0.0f};      ///< 期望右腿摆角
-  rm::f32 theta_lr_dot{0.0f};  ///< 期望右腿摆角速度
-  rm::f32 theta_b{0.0f};       ///< 期望机体俯仰角
-  rm::f32 theta_b_dot{0.0f};   ///< 期望机体俯仰角速度
+  rm::f32 phi{0.0f};                                                                      ///< 期望偏航角
+  rm::f32 phi_dot{0.0f};                                                                  ///< 期望偏航角速度
+  rm::f32 theta_ll{0.0f};                                                                 ///< 期望左腿摆角
+  rm::f32 theta_ll_dot{0.0f};                                                             ///< 期望左腿摆角速度
+  rm::f32 theta_lr{0.0f};                                                                 ///< 期望右腿摆角
+  rm::f32 theta_lr_dot{0.0f};                                                             ///< 期望右腿摆角速度
+  rm::f32 theta_b{0.0f};                                                                  ///< 期望机体俯仰角
+  rm::f32 theta_b_dot{0.0f};  ///< 期望机体俯仰角速度
 };
 
 /**
