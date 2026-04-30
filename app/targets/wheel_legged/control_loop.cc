@@ -281,8 +281,7 @@ bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad,
 
 bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
   const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
-  return yaw_err_rad <= kYawFollowDriveReadyErrorRad &&
-         std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
+  return yaw_err_rad <= kYawFollowDriveReadyErrorRad && std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
 }
 
 /**
@@ -728,8 +727,8 @@ void ControlLoop() {
   }
 
   const float yaw_follow_drive_sign = YawFollowDriveSign(yaw_follow_align_mode, yaw_follow_target.drive_sign);
-  const bool spin_control_enabled =
-      chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable && chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
+                                    chassis_output.control.run_chassis_update;
 
   const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                           chassis_output_enable && chassis_output.control.run_chassis_update &&
