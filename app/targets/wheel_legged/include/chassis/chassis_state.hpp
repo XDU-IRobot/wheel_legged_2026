@@ -67,11 +67,11 @@ struct ChassisStateEstimatorInput {
   WheelFeedback wheel{};         ///< 左右轮反馈
   ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{0.002f};                  ///< 估计周期
-  rm::f32 yaw_motor_rad{0.0f};           ///< 云台偏航电机角度，供底盘跟随使用
-  rm::f32 s_ref_m{0.0f};                 ///< 外部位移参考
-  bool use_external_s_ref{false};        ///< 是否用外部位移参考覆盖积分位移
-  bool use_wheel_speed_direct{false};    ///< 是否跳过速度融合并直接使用轮速
+  rm::f32 dt_s{0.002f};                ///< 估计周期
+  rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
+  rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
+  bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移
+  bool use_wheel_speed_direct{false};  ///< 是否跳过速度融合并直接使用轮速
 };
 
 /**
@@ -81,14 +81,14 @@ struct ChassisStateEstimatorConfig {
   rm::f32 leg_l1_m{0.215f};  ///< 五连杆主动杆长度
   rm::f32 leg_l2_m{0.254f};  ///< 五连杆从动杆长度
 
-  rm::f32 wheel_radius_m{0.0575f};                    ///< 轮半径
-  rm::f32 wheel_reduction_ratio{17.0f / 268.0f};      ///< 轮电机到车轮的速度换算比例
-  rm::f32 max_valid_speed_mps{8.0f};                  ///< 融合速度可信上限
+  rm::f32 wheel_radius_m{0.0575f};                ///< 轮半径
+  rm::f32 wheel_reduction_ratio{17.0f / 268.0f};  ///< 轮电机到车轮的速度换算比例
+  rm::f32 max_valid_speed_mps{8.0f};              ///< 融合速度可信上限
 
   rm::f32 left_phi1_offset_rad{3.14159265358979323846f - 2.94f};  ///< 左腿前关节零位偏移
   rm::f32 left_phi4_offset_rad{0.59f};                            ///< 左腿后关节零位偏移
-  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};   ///< 右腿前关节零位偏移
-  rm::f32 right_phi4_offset_rad{-1.87f};                           ///< 右腿后关节零位偏移
+  rm::f32 right_phi1_offset_rad{3.14159265358979323846f + 2.4f};  ///< 右腿前关节零位偏移
+  rm::f32 right_phi4_offset_rad{-1.87f};                          ///< 右腿后关节零位偏移
 
   rm::f32 theta_dot_filter_cutoff_hz{8.0f};  ///< 腿摆角速度低通截止频率
 };
@@ -117,16 +117,16 @@ struct CalibratedLegKinematicsInput {
 struct ChassisStateEstimatorOutput {
   wbr::CurrentState current{};  ///< LQR 使用的当前状态向量
 
-  rm::f32 wheel_speed_mps{0.0f};       ///< 由轮速和腿部运动学解算的车速
-  rm::f32 fused_speed_mps{0.0f};       ///< 轮速/惯导融合后的车速
-  rm::f32 raw_wheel_speed_mps{0.0f};   ///< 速度滤波器中的原始轮速
-  rm::f32 raw_accel_speed_mps{0.0f};   ///< 加速度积分得到的原始速度
-  rm::f32 current_speed_mps{0.0f};     ///< 速度滤波器当前输出
+  rm::f32 wheel_speed_mps{0.0f};      ///< 由轮速和腿部运动学解算的车速
+  rm::f32 fused_speed_mps{0.0f};      ///< 轮速/惯导融合后的车速
+  rm::f32 raw_wheel_speed_mps{0.0f};  ///< 速度滤波器中的原始轮速
+  rm::f32 raw_accel_speed_mps{0.0f};  ///< 加速度积分得到的原始速度
+  rm::f32 current_speed_mps{0.0f};    ///< 速度滤波器当前输出
 
-  rm::f32 left_leg_length_m{0.0f};     ///< 左腿长
-  rm::f32 right_leg_length_m{0.0f};    ///< 右腿长
-  rm::f32 left_leg_angle_rad{0.0f};    ///< 左腿摆角
-  rm::f32 right_leg_angle_rad{0.0f};   ///< 右腿摆角
+  rm::f32 left_leg_length_m{0.0f};    ///< 左腿长
+  rm::f32 right_leg_length_m{0.0f};   ///< 右腿长
+  rm::f32 left_leg_angle_rad{0.0f};   ///< 左腿摆角
+  rm::f32 right_leg_angle_rad{0.0f};  ///< 右腿摆角
 
   CalibratedLegKinematicsInput calibrated_leg_input{};  ///< 供控制器复用的已标定腿部输入
 };
@@ -135,11 +135,11 @@ struct ChassisStateEstimatorOutput {
  * @brief 速度融合输入
  */
 struct SpeedEstimatorInput {
-  rm::f32 wheel_speed_mps{0.0f};   ///< 轮系速度观测
-  rm::f32 imu_acc_x_mps2{0.0f};    ///< 惯导 x 轴加速度
-  rm::f32 imu_acc_y_mps2{0.0f};    ///< 惯导 y 轴加速度
-  rm::f32 imu_pitch_rad{0.0f};     ///< 机体俯仰角，用于重力/姿态补偿
-  rm::f32 dt_s{0.002f};            ///< 估计周期
+  rm::f32 wheel_speed_mps{0.0f};  ///< 轮系速度观测
+  rm::f32 imu_acc_x_mps2{0.0f};   ///< 惯导 x 轴加速度
+  rm::f32 imu_acc_y_mps2{0.0f};   ///< 惯导 y 轴加速度
+  rm::f32 imu_pitch_rad{0.0f};    ///< 机体俯仰角，用于重力/姿态补偿
+  rm::f32 dt_s{0.002f};           ///< 估计周期
 };
 
 /**

@@ -61,19 +61,19 @@ struct ModeRequest {
   ServiceProfile service_profile{ServiceProfile::kChassisAndGimbalWithFire};  ///< 维护域策略
   LegProfile leg_request{LegProfile::kLow};                                   ///< 腿长档位请求
 
-  bool spin_hold{false};               ///< 小陀螺保持请求
-  bool jump_trigger{false};            ///< 跳跃边沿触发请求
-  bool fire_request{false};            ///< 发射请求
-  float current_leg_length_m{0.0f};    ///< 当前平均腿长反馈
+  bool spin_hold{false};             ///< 小陀螺保持请求
+  bool jump_trigger{false};          ///< 跳跃边沿触发请求
+  bool fire_request{false};          ///< 发射请求
+  float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈
 
   TargetSource target_source{TargetSource::kRc};  ///< 当前目标来源偏好
   GimbalTarget rc_target{};                       ///< 遥控器积分得到的目标
   GimbalTarget host_target{};                     ///< 上位机目标
   bool host_target_valid{false};                  ///< 上位机目标是否有效
 
-  bool fall_detected{false};             ///< 是否检测到倒地
-  uint32_t fall_detected_hold_ms{0};     ///< 倒地持续时间
-  bool upright_stable{false};            ///< 是否已恢复稳定直立
+  bool fall_detected{false};          ///< 是否检测到倒地
+  uint32_t fall_detected_hold_ms{0};  ///< 倒地持续时间
+  bool upright_stable{false};         ///< 是否已恢复稳定直立
 
   uint32_t tick_ms{0};  ///< 当前系统时间戳
 };

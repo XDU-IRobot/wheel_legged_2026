@@ -33,18 +33,18 @@ class Gimbal {
    * @brief 单次云台控制更新输入
    */
   struct UpdateInput {
-    DmMitMotor *yaw_motor{nullptr};           ///< 偏航 DM 电机对象
-    DmMitMotor *pitch_motor{nullptr};         ///< 俯仰 DM 电机对象
-    bool gimbal_enable{false};                ///< 是否使能云台输出
-    bool align_to_chassis_forward{false};     ///< 是否对齐车体前方
-    bool use_yaw_motor_feedback{false};       ///< 是否用偏航电机编码器作为偏航反馈
-    wheel_legged::GimbalTarget target{};      ///< 云台角度目标
-    float chassis_yaw_rad{0.0f};              ///< 车体偏航角
-    float chassis_pitch_rad{0.0f};            ///< 车体俯仰角，用于俯仰重力补偿
-    float yaw_motor_rad{0.0f};                ///< 偏航电机编码器角度
-    float gimbal_imu_yaw_rad{0.0f};           ///< 云台惯导偏航角
-    float gimbal_imu_pitch_rad{0.0f};         ///< 云台惯导俯仰角
-    float dt_s{kDefaultDtS};                  ///< 控制周期
+    DmMitMotor *yaw_motor{nullptr};        ///< 偏航 DM 电机对象
+    DmMitMotor *pitch_motor{nullptr};      ///< 俯仰 DM 电机对象
+    bool gimbal_enable{false};             ///< 是否使能云台输出
+    bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
+    bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
+    wheel_legged::GimbalTarget target{};   ///< 云台角度目标
+    float chassis_yaw_rad{0.0f};           ///< 车体偏航角
+    float chassis_pitch_rad{0.0f};         ///< 车体俯仰角，用于俯仰重力补偿
+    float yaw_motor_rad{0.0f};             ///< 偏航电机编码器角度
+    float gimbal_imu_yaw_rad{0.0f};        ///< 云台惯导偏航角
+    float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
+    float dt_s{kDefaultDtS};               ///< 控制周期
   };
 
   /**
@@ -53,10 +53,10 @@ class Gimbal {
   struct UpdateOutput {
     bool gimbal_enabled{false};  ///< 本周期云台是否使能
 
-    float yaw_target_rad{0.0f};      ///< 偏航目标角
-    float yaw_pos_rad{0.0f};         ///< 偏航反馈角
-    float yaw_vel_rad_s{0.0f};       ///< 偏航反馈角速度
-    float yaw_cmd_torque_nm{0.0f};   ///< 偏航输出力矩
+    float yaw_target_rad{0.0f};     ///< 偏航目标角
+    float yaw_pos_rad{0.0f};        ///< 偏航反馈角
+    float yaw_vel_rad_s{0.0f};      ///< 偏航反馈角速度
+    float yaw_cmd_torque_nm{0.0f};  ///< 偏航输出力矩
 
     float pitch_target_rad{0.0f};     ///< 俯仰目标角
     float pitch_pos_rad{0.0f};        ///< 俯仰反馈角

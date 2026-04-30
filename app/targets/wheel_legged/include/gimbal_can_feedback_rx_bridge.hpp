@@ -15,8 +15,8 @@
  */
 class GimbalCanFeedbackRxBridge final : public rm::device::CanDevice {
  public:
-  static constexpr rm::u16 kRxStdId0 = 0x119;      ///< 云台惯导反馈标准帧 ID
-  static constexpr rm::usize kPayloadSize = 4U;    ///< pitch/yaw 两个 int16
+  static constexpr rm::u16 kRxStdId0 = 0x119;    ///< 云台惯导反馈标准帧 ID
+  static constexpr rm::usize kPayloadSize = 4U;  ///< pitch/yaw 两个 int16
 
   /** @brief 绑定 CAN 总线并注册接收 ID */
   explicit GimbalCanFeedbackRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdId0) {}
