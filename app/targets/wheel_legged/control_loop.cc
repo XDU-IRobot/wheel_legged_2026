@@ -687,9 +687,9 @@ void ControlLoop() {
 
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
   // 姿态越界时绕过云台归中检查，直接使能底盘电机执行姿态恢复。
-  const bool chassis_output_enable =
-      chassis_posture_invalid ? chassis_output.control.enable_dm
-                              : chassis_output.control.enable_dm && chassis_startup_ready;
+  const bool chassis_output_enable = chassis_posture_invalid
+                                         ? chassis_output.control.enable_dm
+                                         : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
   chassis::Chassis::UpdateInput chassis_update_input{};
