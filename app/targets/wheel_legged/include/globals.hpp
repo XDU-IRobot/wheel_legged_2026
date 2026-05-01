@@ -243,6 +243,7 @@ extern volatile uint8_t wl_fm_yaw_motor_status;
 extern volatile uint8_t wl_fm_pitch_motor_status;
 extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
+extern volatile uint8_t wl_fm_posture_valid;
 }
 
 void ControlLoop();

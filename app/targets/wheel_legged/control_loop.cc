@@ -90,6 +90,7 @@ volatile uint8_t wl_fm_yaw_motor_status{0};
 volatile uint8_t wl_fm_pitch_motor_status{0};
 volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
 volatile uint8_t wl_fm_pitch_motor_raw_status_byte{0};
+volatile uint8_t wl_fm_posture_valid{0};
 }
 
 namespace {
@@ -559,11 +560,12 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_left_leg_length_m = x.l_l;
   wl_fm_right_leg_length_m = x.l_r;
   wl_fm_yaw_target_rad = gimbal_control_output.yaw_target_rad;
-  wl_fm_yaw_motor_pos_rad = gimbal_control_output.yaw_pos_rad;
+  wl_fm_yaw_motor_pos_rad = input.estimator_input.yaw_motor_rad;
   wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
   wl_fm_pitch_target_rad = gimbal_control_output.pitch_target_rad;
   wl_fm_pitch_motor_pos_rad = gimbal_control_output.pitch_pos_rad;
   wl_fm_pitch_motor_vel_rad_s = gimbal_control_output.pitch_vel_rad_s;
+  wl_fm_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }
 
 }  // namespace
@@ -639,6 +641,11 @@ void ControlLoop() {
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
+  // 底盘姿态越界时强制失能云台，避免云台在机器人倾倒时继续输出力矩。
+  const bool chassis_posture_invalid = !chassis_control_output.posture_valid;
+  if (chassis_posture_invalid) {
+    gimbal_update_input.gimbal_enable = false;
+  }
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
@@ -657,7 +664,7 @@ void ControlLoop() {
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
 
   // 5. 云台启动归中闭环判稳；完成后把遥控器积分目标对齐到当前云台惯导角。
-  if (!gimbal_output.control.gimbal_enable) {
+  if (!gimbal_output.control.gimbal_enable || chassis_posture_invalid) {
     gimbal_startup_align_complete = false;
     gimbal_startup_align_was_active = false;
     gimbal_startup_align_stable_ticks = 0U;
@@ -684,7 +691,10 @@ void ControlLoop() {
   }
 
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
-  const bool chassis_output_enable = chassis_output.control.enable_dm && chassis_startup_ready;
+  // 姿态越界时绕过云台归中检查，直接使能底盘电机执行姿态恢复。
+  const bool chassis_output_enable = chassis_posture_invalid
+                                         ? chassis_output.control.enable_dm
+                                         : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
   chassis::Chassis::UpdateInput chassis_update_input{};
