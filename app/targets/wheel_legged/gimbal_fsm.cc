@@ -22,7 +22,6 @@ gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
 
   if (IsInputDisabled(request)) {
     return gimbal::Fsm::State::kDisabled;
-    
   }
   if (input.chassis_recovery_active) {
     return gimbal::Fsm::State::kRecoveryAlign;
