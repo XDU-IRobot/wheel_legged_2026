@@ -91,6 +91,7 @@ volatile uint8_t wl_fm_yaw_motor_status{0};
 volatile uint8_t wl_fm_pitch_motor_status{0};
 volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
 volatile uint8_t wl_fm_pitch_motor_raw_status_byte{0};
+volatile uint8_t wl_fm_posture_valid{0};
 }
 
 namespace {
@@ -100,6 +101,7 @@ constexpr int16_t kWheelActionThreshold = wheel_legged::params::active::control_
 constexpr int16_t kWheelCenterThreshold = wheel_legged::params::active::control_loop::kWheelCenterThreshold;
 constexpr float kControlLoopDtS = wheel_legged::params::active::control_loop::kControlLoopDtS;
 constexpr int16_t kDr16AxisMaxAbs = wheel_legged::params::active::control_loop::kDr16AxisMaxAbs;
+constexpr float kTargetForwardSpeedMinMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMinMps;
 
 constexpr uint16_t kRcKeyW = 0x0001;
 constexpr uint16_t kRcKeyS = 0x0002;
@@ -128,7 +130,9 @@ constexpr float kPitchTargetMinRad = wheel_legged::params::active::control_loop:
 constexpr float kPitchTargetMaxRad = wheel_legged::params::active::control_loop::kPitchTargetMaxRad;
 constexpr float kYawFollowRampStepRadS = wheel_legged::params::active::control_loop::kYawFollowRampStepRadS;
 constexpr float kSpinYawRampStepRadS = wheel_legged::params::active::control_loop::kSpinYawRampStepRadS;
-constexpr float kSpinYawTargetOffsetRad = wheel_legged::params::active::control_loop::kSpinYawTargetOffsetRad;
+constexpr float kSpinTargetYawDotRadS = wheel_legged::params::active::control_loop::kSpinTargetYawDotRadS;
+constexpr float kSpinTranslationGain = wheel_legged::params::active::control_loop::kSpinTranslationGain;
+constexpr float kSpinThetaLlBiasRad = wheel_legged::params::active::control_loop::kSpinThetaLlBiasRad;
 constexpr float kYawFollowFixedTargetRad = wheel_legged::params::active::control_loop::kYawFollowFixedTargetRad;
 constexpr float kYawFollowSideOffsetRad = wheel_legged::params::active::control_loop::kYawFollowSideOffsetRad;
 constexpr float kGimbalStartupYawAlignErrorRad =
@@ -638,11 +642,12 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_left_leg_length_m = x.l_l;
   wl_fm_right_leg_length_m = x.l_r;
   wl_fm_yaw_target_rad = gimbal_control_output.yaw_target_rad;
-  wl_fm_yaw_motor_pos_rad = gimbal_control_output.yaw_pos_rad;
+  wl_fm_yaw_motor_pos_rad = input.estimator_input.yaw_motor_rad;
   wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
   wl_fm_pitch_target_rad = gimbal_control_output.pitch_target_rad;
   wl_fm_pitch_motor_pos_rad = gimbal_control_output.pitch_pos_rad;
   wl_fm_pitch_motor_vel_rad_s = gimbal_control_output.pitch_vel_rad_s;
+  wl_fm_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }
 
 }  // namespace
@@ -669,6 +674,7 @@ void ControlLoop() {
   static float lock_point_alpha = 0.0f;
   static float lock_point_s_ref = 0.0f;
   static uint32_t lock_point_last_switch_tick = 0U;
+  static bool was_requesting_lock = false;
   static rm::modules::PID yaw_follow_pid{wheel_legged::params::active::control_loop::kYawFollowPid.kp,
                                          wheel_legged::params::active::control_loop::kYawFollowPid.ki,
                                          wheel_legged::params::active::control_loop::kYawFollowPid.kd,
@@ -720,11 +726,16 @@ void ControlLoop() {
     gimbal_startup_align_target_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
   }
 
-  // 4. 组装云台控制输入，云台控制器直接写入 yaw/pitch DM MIT 命令。
+  // 4. 组装云台控制输入，云台控制器仅计算力矩，电机命令由 Actuators 统一下发。
   gimbal::Gimbal::UpdateInput gimbal_update_input{};
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
+  // 底盘姿态越界时强制失能云台，避免云台在机器人倾倒时继续输出力矩。
+  const bool chassis_posture_invalid = !chassis_control_output.posture_valid;
+  if (chassis_posture_invalid) {
+    gimbal_update_input.gimbal_enable = false;
+  }
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
@@ -740,9 +751,10 @@ void ControlLoop() {
   gimbal_update_input.dt_s = kControlLoopDtS;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
+  g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
 
   // 5. 云台启动归中闭环判稳；完成后把遥控器积分目标对齐到当前云台惯导角。
-  if (!gimbal_output.control.gimbal_enable) {
+  if (!gimbal_output.control.gimbal_enable || chassis_posture_invalid) {
     gimbal_startup_align_complete = false;
     gimbal_startup_align_was_active = false;
     gimbal_startup_align_stable_ticks = 0U;
@@ -769,7 +781,10 @@ void ControlLoop() {
   }
 
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
-  const bool chassis_output_enable = chassis_output.control.enable_dm && chassis_startup_ready;
+  // 姿态越界时绕过云台归中检查，直接使能底盘电机执行姿态恢复。
+  const bool chassis_output_enable = chassis_posture_invalid
+                                         ? chassis_output.control.enable_dm
+                                         : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
   chassis::Chassis::UpdateInput chassis_update_input{};
@@ -783,11 +798,17 @@ void ControlLoop() {
 
   const auto &current_state = chassis_control_output.current_state;
   const bool mode_changed = (chassis_output.mode != last_chassis_mode);
+  const bool last_was_spin = (last_chassis_mode == chassis::Fsm::State::kSpin);
+  const bool now_is_spin = (chassis_output.mode == chassis::Fsm::State::kSpin);
+  const bool cross_spin = (last_was_spin != now_is_spin);
   // 状态切换时重置速度斜坡、定点锁定和偏航跟随，避免继承上一模式的控制残留。
   if (mode_changed) {
     expected_s = current_state.s;
     filtered_s_dot = current_state.s_dot;
-    filtered_yaw_dot = 0.0f;
+    // 进出小陀螺时保留当前偏航角速度，通过斜坡平滑过渡（与旧代码 is_ramping 行为一致）。
+    if (!cross_spin) {
+      filtered_yaw_dot = 0.0f;
+    }
     yaw_follow_pid.Clear();
     lock_point_target = false;
     yaw_follow_target_initialized = false;
@@ -865,7 +886,14 @@ void ControlLoop() {
   }
 
   float target_s_dot = 0.0f;
+  float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
+    // 小陀螺平移：vx_cmd 按云台朝向投影到底盘一维 s 方向。
+    const float gimbal_heading = -input.dr16.gimbal_imu_yaw_rad;
+    const float vx_gimbal = forward_input_norm;
+    const bool has_vx_motion_cmd = std::fabs(vx_gimbal) > kVxInputDeadbandNorm;
+    const float s_dot_cmd = has_vx_motion_cmd ? (vx_gimbal * std::cos(gimbal_heading)) : 0.0f;
+    spin_target_s_dot = kSpinTranslationGain * s_dot_cmd;
     target_s_dot = 0.0f;
   } else if (!yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
@@ -878,23 +906,27 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
-  // 低速且无输入时进入定点锁定，将期望位移混合到锁定点以抑制慢漂。
+  // 无摇杆输入时进入定点锁定，将期望位移混合到锁定点以抑制慢漂。
+  // 在松杆瞬间立即捕获当前位置作为锁点参考，避免 dwell 期间滑移导致参考点偏移。
   const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                                            chassis_output.mode != chassis::Fsm::State::kSpin);
   if (!lockpoint_enabled) {
     lock_point_target = false;
+    was_requesting_lock = false;
   } else {
-    const float speed_abs = std::fabs(current_state.s_dot);
     const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
-    const bool request_lock =
-        (speed_abs < kLockPointEnterSpeedThresholdMps) && (input_abs < kLockPointEnterInputThreshold);
-    const bool request_unlock =
-        (speed_abs > kLockPointExitSpeedThresholdMps) || (input_abs > kLockPointExitInputThreshold);
+    const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
+    const bool request_unlock = (input_abs > kLockPointExitInputThreshold);
     const uint32_t elapsed = now_ms - lock_point_last_switch_tick;
+
+    // 松杆边沿立即捕获锁点位置，不等 dwell 期满
+    if (request_lock && !was_requesting_lock) {
+      lock_point_s_ref = current_state.s;
+    }
+    was_requesting_lock = request_lock;
 
     if (!lock_point_target && request_lock && elapsed >= kLockPointMinDwellTicks) {
       lock_point_target = true;
-      lock_point_s_ref = current_state.s;
       lock_point_last_switch_tick = now_ms;
     } else if (lock_point_target && request_unlock && elapsed >= kLockPointMinDwellTicks) {
       lock_point_target = false;
@@ -903,36 +935,44 @@ void ControlLoop() {
   }
 
   UpdateLockPointBlend(lock_point_target, lock_point_alpha);
-  if (lock_point_alpha < 0.02f) {
+  if (lock_point_alpha < 0.02f && !was_requesting_lock) {
     lock_point_s_ref = current_state.s;
   }
 
-  const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
-  RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
+  if (spin_control_enabled) {
+    filtered_s_dot = current_state.s_dot;
+  } else {
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
+    RampValueToTarget(target_s_dot, filtered_s_dot, ramp_params);
+  }
   // LQR 期望量：纵向速度来自斜坡，纵向位置在定点锁定时逐步切到锁定参考。
-  chassis_update_input.expected.s_dot = (1.0f - lock_point_alpha) * filtered_s_dot;
+  // 小陀螺不启用定点锁定，直接使用按云台朝向投影的目标速度。
+  chassis_update_input.expected.s_dot =
+      spin_control_enabled ? spin_target_s_dot : (1.0f - lock_point_alpha) * filtered_s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
   wl_fm_target_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
-  chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                               ? chassis_output.control.theta_leg_target_rad
-                                               : kExpectedThetaLlBiasRad;
-  chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                               ? chassis_output.control.theta_leg_target_rad
-                                               : kExpectedThetaLrBiasRad;
+  if (spin_control_enabled) {
+    chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = 0.0f;
+  } else {
+    chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                                 ? chassis_output.control.theta_leg_target_rad
+                                                 : kExpectedThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                                 ? chassis_output.control.theta_leg_target_rad
+                                                 : kExpectedThetaLrBiasRad;
+  }
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   // 底盘偏航期望跟随云台偏航电机，保持车体尽量对准云台中心方向。
   if (spin_control_enabled) {
-    const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
-    const float yaw_target_rad = rm::modules::Wrap(yaw_motor_rad + kSpinYawTargetOffsetRad, -kPi, kPi);
-    yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
-    const float target_yaw_dot = -yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, filtered_yaw_dot, kSpinYawRampStepRadS);
+    // 小陀螺固定角速度，不依赖 PID 输出（与旧代码一致）。
+    RampYawDotToTarget(kSpinTargetYawDotRadS, filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
     filtered_yaw_dot = 0.0f;

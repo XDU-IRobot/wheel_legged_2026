@@ -15,6 +15,7 @@
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
 #include "gimbal_to_chassis_rx_bridge.hpp"
+#include "utils/template_dyp_can.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -47,6 +48,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};                     ///< 右轮 M3508
   std::optional<rm::device::HipnucImu> chassis_imu{};                 ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};  ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<DypCanRxBridge> dyp_rx{};                             ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -113,6 +115,9 @@ struct SharedResources {
     }
     if (!gimbal_rx.has_value()) {
       gimbal_rx.emplace(*gimbal_can);
+    }
+    if (!dyp_rx.has_value()) {
+      dyp_rx.emplace(*joint_can);
     }
 
     if (!dm_lf.has_value()) {
@@ -244,6 +249,7 @@ extern volatile uint8_t wl_fm_yaw_motor_status;
 extern volatile uint8_t wl_fm_pitch_motor_status;
 extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
+extern volatile uint8_t wl_fm_posture_valid;
 }
 
 void ControlLoop();

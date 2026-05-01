@@ -58,10 +58,9 @@ class Gimbal {
   };
 
   /**
-   * @brief 初始化 PID 与电机使能锁存状态
+   * @brief 初始化 PID
    */
   void Init() {
-    motors_enabled_latched_ = false;
     last_use_yaw_motor_feedback_ = false;
     ConfigurePid();
     ClearPid();
@@ -69,13 +68,12 @@ class Gimbal {
   }
 
   /**
-   * @brief 执行一次云台控制更新并下发 DM MIT 命令
+   * @brief 执行一次云台控制更新，仅计算力矩，不操作电机
    */
   void Update(const UpdateInput &input) {
     output_ = {};
 
     if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
-      motors_enabled_latched_ = false;
       last_use_yaw_motor_feedback_ = false;
       ClearPid();
       return;
@@ -94,24 +92,11 @@ class Gimbal {
 
     if (!input.gimbal_enable) {
       controller_.Enable(false);
-      // 失能时仍发送零力矩 MIT 命令，保持 CAN 设备刷新。
-      input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-      input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-      DisableMotorsIfNeeded(input);
       ClearPid();
       last_use_yaw_motor_feedback_ = false;
       return;
     }
 
-    EnableMotorsIfNeeded(input);
-    if (!motors_enabled_latched_) {
-      // 仍在等待电机进入使能态，持续发送零力矩命令并清空 PID，避免积累误差。
-      controller_.Enable(false);
-      input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-      input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-      ClearPid();
-      return;
-    }
     if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
       ClearPid();
     }
@@ -131,12 +116,6 @@ class Gimbal {
     output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
                                              -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                                              wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-
-    // 仅使用 MIT 力矩通道，位置/速度前馈由外层控制器显式置零。
-    input.yaw_motor->SetMitCommand(0.0f, 0.0f, output_.yaw_cmd_torque_nm, 0.0f, 0.0f);
-    input.pitch_motor->SetMitCommand(0.0f, 0.0f, output_.pitch_cmd_torque_nm, 0.0f, 0.0f);
-    // input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    // input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
   }
 
   /** @brief 获取最近一次云台控制输出 */
@@ -183,60 +162,6 @@ class Gimbal {
     controller_.pid().pitch_speed.Clear();
   }
 
-  /** @brief 首次使能云台 DM 电机 */
-  void EnableMotorsIfNeeded(const UpdateInput &input) {
-    if (AreMotorsEnabled(input)) {
-      motors_enabled_latched_ = true;
-      return;
-    }
-
-    // 未使能成功就持续重发，提升上电使能可靠性。
-    motors_enabled_latched_ = false;
-    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
-    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
-    input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
-    input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
-    // input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
-    // input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
-  }
-
-  /** @brief 判断云台两轴 DM 是否均已进入使能态 */
-  bool AreMotorsEnabled(const UpdateInput &input) const {
-    // return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable) &&
-    //        IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kEnable);
-    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable);
-    // return false;
-  }
-
-  /** @brief 判断云台两轴 DM 是否均已进入失能态 */
-  bool AreMotorsDisabled(const UpdateInput &input) const {
-    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kDisable) &&
-           IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kDisable);
-  }
-
-  /** @brief 判断电机在线且状态匹配，避免未反馈时误判 */
-  static bool IsMotorInStatus(DmMitMotor &motor, rm::device::DmMotorStatus target_status) {
-    const bool motor_online = (motor.online_status() == rm::device::Device::kOk);
-    const auto status = static_cast<rm::device::DmMotorStatus>(motor.status());
-    return motor_online && status == target_status;
-  }
-
-  /** @brief 失能云台 DM 电机 */
-  void DisableMotorsIfNeeded(const UpdateInput &input) {
-    if (AreMotorsDisabled(input)) {
-      motors_enabled_latched_ = false;
-      return;
-    }
-
-    // 未失能成功就持续重发，直到反馈确认进入失能态。
-    input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
-    // input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
-    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
-    // input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
-    motors_enabled_latched_ = false;
-  }
-
-  bool motors_enabled_latched_{false};
   bool last_use_yaw_motor_feedback_{false};
 
   Gimbal2Dof controller_{};
