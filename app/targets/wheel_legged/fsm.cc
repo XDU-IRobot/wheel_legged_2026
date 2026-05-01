@@ -223,11 +223,20 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const wheel_legged::ModeRequest &request = input.request;
   requested_leg_profile_ = ResolveRequestedLegProfile(request);
 
+  // 同步图传上台阶计数：上升沿（0→非0）捕获新请求，下降沿取消
+  if (request.tc_stair_count > 0 && last_tc_stair_request_ == 0) {
+    tc_stair_remaining_ = request.tc_stair_count;
+  } else if (request.tc_stair_count == 0 && last_tc_stair_request_ > 0) {
+    tc_stair_remaining_ = 0;
+  }
+  last_tc_stair_request_ = request.tc_stair_count;
+
   // 输入失效或请求关闭时立即退回 Disabled，并由执行器层输出零力矩。
   if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     if (mode_ != State::kDisabled) {
       state_enter_tick_ms_ = request.tick_ms;
     }
+    tc_stair_remaining_ = 0;
     Transit(State::kDisabled);
     return output_;
   }
@@ -236,6 +245,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const State requested_normal_state = ResolveRequestedNormalState(requested_leg_profile_);
 
   State next_mode = mode_;
+  bool stair_sequence_just_done = false;
 
   // 状态机只处理模式时序；具体力矩由 Chassis 根据输出的 ControlOutput 计算。
   switch (mode_) {
@@ -333,7 +343,17 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
       } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
-        next_mode = State::kHighLeg;
+        if (tc_stair_remaining_ > 0) {
+          tc_stair_remaining_--;
+          if (tc_stair_remaining_ == 0) {
+            next_mode = State::kLowLeg;
+            stair_sequence_just_done = true;
+          } else {
+            next_mode = State::kHighLeg;
+          }
+        } else {
+          next_mode = State::kHighLeg;
+        }
       }
       break;
   }
@@ -343,6 +363,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   }
 
   Transit(next_mode);
+
+  output_.control.stair_sequence_done = stair_sequence_just_done;
 
   if (!IsJumpState(mode_) &&
       (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin)) {

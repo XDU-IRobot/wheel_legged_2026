@@ -15,7 +15,6 @@
  */
 
 namespace gimbal {
-
 /**
  * @brief 云台控制主类
  */
@@ -193,18 +192,19 @@ class Gimbal {
 
     // 未使能成功就持续重发，提升上电使能可靠性。
     motors_enabled_latched_ = false;
+    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     // input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
-    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
-    input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     // input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
   }
 
   /** @brief 判断云台两轴 DM 是否均已进入使能态 */
   bool AreMotorsEnabled(const UpdateInput &input) const {
-    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable) &&
-           IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kEnable);
+    // return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable) &&
+    //        IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kEnable);
+    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable);
   }
 
   /** @brief 判断云台两轴 DM 是否均已进入失能态 */
