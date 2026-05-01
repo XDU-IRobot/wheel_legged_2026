@@ -115,6 +115,8 @@ class Chassis {
   rm::f32 left_l0_dot_prev_{0.0f};
   rm::f32 right_l0_dot_prev_{0.0f};
 
+  rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
+
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
   rm::modules::PID left_l0_pid_jump_two_{};

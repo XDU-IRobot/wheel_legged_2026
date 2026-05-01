@@ -3,13 +3,13 @@
 
 /**
  * @file  targets/wheel_legged/fsm.cc
- * @brief 搴曠洏鐘舵€佹満瀹炵幇
+ * @brief 底盘状态机实现
  */
 
 namespace {
 
 /**
- * @brief 鍒ゆ柇褰撳墠妯″紡鏄惁灞炰簬璺宠穬娴佺▼
+ * @brief 判断当前模式是否属于跳跃流程
  */
 bool IsJumpState(const chassis::Fsm::State state) {
   return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
@@ -17,7 +17,7 @@ bool IsJumpState(const chassis::Fsm::State state) {
 }
 
 /**
- * @brief 灏嗚涔夎吙闀挎。浣嶈浆鎹负鐗╃悊鐩爣鑵块暱
+ * @brief 将语义腿长档位转换为物理目标腿长
  */
 float LegLengthForProfile(const wheel_legged::LegProfile profile) {
   switch (profile) {
@@ -32,7 +32,7 @@ float LegLengthForProfile(const wheel_legged::LegProfile profile) {
 }
 
 /**
- * @brief 瑙勮寖鍖栬姹備腑鐨勮吙闀挎。浣?
+ * @brief 规范化请求中的腿长档位
  */
 wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequest &request) {
   switch (request.leg_request) {
@@ -47,7 +47,7 @@ wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequ
 }
 
 /**
- * @brief 灏嗚吙闀挎。浣嶆槧灏勪负甯歌搴曠洏妯″紡
+ * @brief 将腿长档位映射为常规底盘模式
  */
 chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile profile) {
   switch (profile) {
@@ -62,7 +62,7 @@ chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile p
 }
 
 /**
- * @brief 鏍规嵁鐘舵€佹満鏋勯€犲簳鐩樻帶鍒跺姩浣?
+ * @brief 根据状态机构造底盘控制动作
  */
 chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State state,
                                                        const wheel_legged::LegProfile requested_leg_profile) {
@@ -168,6 +168,30 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
       control.jump_phase = 0U;
       break;
+
+    case chassis::Fsm::State::kStairClimb:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kHigh;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      control.theta_leg_target_rad = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
+      control.jump_phase = 0U;
+      break;
+
+    case chassis::Fsm::State::kStairClimbDone:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kHigh;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      control.theta_leg_target_rad = 0.0f;
+      control.jump_phase = 0U;
+      break;
   }
 
   return control;
@@ -199,7 +223,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const wheel_legged::ModeRequest &request = input.request;
   requested_leg_profile_ = ResolveRequestedLegProfile(request);
 
-  // 杈撳叆澶辨晥鎴栬姹傚叧闂椂绔嬪嵆閫€鍥?Disabled锛屽苟鐢辨墽琛屽櫒灞傝緭鍑洪浂鍔涚煩銆?
+  // 输入失效或请求关闭时立即退回 Disabled，并由执行器层输出零力矩。
   if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     if (mode_ != State::kDisabled) {
       state_enter_tick_ms_ = request.tick_ms;
@@ -213,8 +237,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   State next_mode = mode_;
 
-  // 鐘舵€佹満鍙鐞嗘ā寮忔椂搴忥紱鍏蜂綋鍔涚煩鐢?Chassis 鏍规嵁杈撳嚭鐨?ControlOutput
-  // 璁＄畻銆?
+  // 状态机只处理模式时序；具体力矩由 Chassis 根据输出的 ControlOutput 计算。
   switch (mode_) {
     case State::kDisabled:
       next_mode = requested_normal_state;
@@ -233,11 +256,23 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       break;
 
     case State::kMidLeg:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
+      } else {
+        next_mode = requested_normal_state;
+      }
+      break;
+
     case State::kHighLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.spin_hold) {
         next_mode = State::kSpin;
+      } else if (request.theta_ll_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad &&
+                 request.theta_lr_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad) {
+        next_mode = State::kStairClimb;
       } else {
         next_mode = requested_normal_state;
       }
@@ -283,6 +318,22 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kDisabled;
       } else if (request.upright_stable) {
         next_mode = State::kLowLeg;
+      }
+      break;
+
+    case State::kStairClimb:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
+        next_mode = State::kStairClimbDone;
+      }
+      break;
+
+    case State::kStairClimbDone:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
+        next_mode = State::kHighLeg;
       }
       break;
   }

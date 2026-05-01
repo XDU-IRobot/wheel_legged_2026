@@ -68,7 +68,7 @@ struct ChassisStateEstimatorInput {
   WheelFeedback wheel{};         ///< 左右轮反馈
   ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{wheel_legged::params::active::state_estimator::kDefaultDtS};  ///< 估计周期
+  rm::f32 dt_s{0.002f};                ///< 估计周期
   rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
   rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
   bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移

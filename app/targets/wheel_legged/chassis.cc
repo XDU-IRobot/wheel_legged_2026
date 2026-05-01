@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "include/wheel_legged_params.hpp"
-int n=0;
+
 /**
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
@@ -33,7 +33,7 @@ constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEt
 constexpr const auto &kCtrlP = wheel_legged::params::active::chassis::kCtrlP;
 
 /**
- * @brief 鏍规嵁鑵块暱鎻掑€间及绠楄吙閮ㄧ瓑鏁堣川蹇冪郴鏁?
+ * @brief 根据腿长插值估算腿部等效质心系数
  */
 rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   constexpr size_t kCount = kEtaLookupLegLengthM.size();
@@ -55,7 +55,7 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
 }
 
 /**
- * @brief 鏍规嵁鑵块暱浼扮畻鏈烘寮圭哀瀵瑰叧鑺傜殑绛夋晥琛ュ伩鍔涚煩
+ * @brief 根据腿长估算机械弹簧对关节的等效补偿力矩
  */
 rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
   static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
@@ -72,14 +72,14 @@ rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
 }
 
 /**
- * @brief 鏄惁澶勪簬寮哄埗瀹夊叏闆惰緭鍑烘ā寮?
+ * @brief 是否处于强制安全零输出模式
  */
 bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
 
 }  // namespace
 
 /**
- * @brief 鍒濆鍖?PID 鍙傛暟銆丩QR 绯绘暟涓庣姸鎬佷及璁″櫒
+ * @brief 初始化 PID 参数、LQR 系数与状态估计器
  */
 void chassis::Chassis::Init() {
   const auto init_pid = [](rm::modules::PID &pid, const rm::f32 kp, const rm::f32 ki, const rm::f32 kd,
@@ -123,10 +123,11 @@ void chassis::Chassis::Init() {
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
   SafeStop();
+  smoothed_leg_target_length_m_ = params_.leg_target_length_m;
 }
 
 /**
- * @brief 灏嗘墍鏈夋墽琛屽櫒杈撳嚭娓呴浂
+ * @brief 将所有执行器输出清零
  */
 void chassis::Chassis::SafeStop() {
   output_.lf_tau = 0.0f;
@@ -138,12 +139,11 @@ void chassis::Chassis::SafeStop() {
 }
 
 /**
- * @brief 搴曠洏鎺у埗鍗曟鏇存柊鍏ュ彛
- * @note
- * 鍖呭惈鐘舵€佷及璁℃洿鏂般€佽吙杩愬姩瀛﹀埛鏂般€佹敮鎾戝姏浼拌涓庡姏鐭╁悎鎴愩€?
+ * @brief 底盘控制单步更新入口
+ * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
  */
 void chassis::Chassis::Update(const UpdateInput &input) {
-  // 鍏堝埛鏂颁及璁″櫒锛屼繚璇佸嵆浣胯緭鍑哄叧闂篃鑳芥寔缁鍑轰紶鎰熷櫒涓庣姸鎬佽娴嬨€?
+  // 先刷新估计器，保证即使输出关闭也能持续导出传感器与状态观测。
   ChassisStateEstimatorInput estimator_input = input.estimator_input;
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
@@ -154,7 +154,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
 
   const CalibratedLegKinematicsInput &leg_input = state_output.calibrated_leg_input;
-  // 鎺у埗鍣ㄥ唴閮ㄥ鐢ㄤ及璁″櫒宸叉爣瀹氱殑鑵块儴瑙掑害锛岄伩鍏嶄簩娆″仛闆朵綅/绗﹀彿杞崲銆?
+  // 控制器内部复用估计器已标定的腿部角度，避免二次做零位/符号转换。
   left_leg_.SetPhi1(leg_input.left.phi1_rad);
   left_leg_.SetPhi4(leg_input.left.phi4_rad);
   left_leg_.SetWPhi1(leg_input.left.w_phi1_rad_s);
@@ -186,15 +186,20 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.left_support_force_n = left_support_force_est_n_;
   output_.right_support_force_n = right_support_force_est_n_;
 
+  // 状态估计与调试量已更新；不允许输出时在这里截断所有执行器命令。
   output_.posture_valid =
       (state_output.current.theta_b >= wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
        state_output.current.theta_b <= wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
        imu_roll_ >= wheel_legged::params::active::chassis::kPostureRollMinRad &&
        imu_roll_ <= wheel_legged::params::active::chassis::kPostureRollMaxRad &&
-       rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
-       rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
+       // rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       // rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
+       // rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       // rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
+       state_output.current.theta_ll >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       state_output.current.theta_ll <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
+       state_output.current.theta_lr >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       state_output.current.theta_lr <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
 
   if (!output_.posture_valid) {
   } else if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
@@ -202,12 +207,29 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  params_.leg_target_length_m = input.target_leg_length_m;
+  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
+                             input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
+  if (ramp_enabled) {
+    const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
+                             wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
+                            wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
+    const float max_step = ramp_rate * kControlDtS;
+    const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+    if (std::fabs(error) <= max_step) {
+      smoothed_leg_target_length_m_ = input.target_leg_length_m;
+    } else {
+      smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
+    }
+    params_.leg_target_length_m = smoothed_leg_target_length_m_;
+  } else {
+    smoothed_leg_target_length_m_ = input.target_leg_length_m;
+    params_.leg_target_length_m = input.target_leg_length_m;
+  }
   ComputeActuatorTorque(input, state_output);
 }
 
 /**
- * @brief 缁勫悎 LQR 涓庤ˉ鍋块」锛岃绠楀叚鐢垫満鏈€缁堝姏鐭?
+ * @brief 组合 LQR 与补偿项，计算六电机最终力矩
  */
 void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              const ChassisStateEstimatorOutput &state_output) {
@@ -249,12 +271,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
+  const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
-    // 璺宠穬闃舵鍒嗗埆浣跨敤鏀惰吙/韫几/鍥炴敹涓夊鑵块暱鎺у埗绛栫暐銆?
+    // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
       left_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
       right_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -271,7 +294,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else {
-      // 甯歌鏀拺鏃跺彔鍔犺吙闀?PID銆侀噸鍔涘墠棣堛€佹í婊氳ˉ鍋裤€佹儻鎬цˉ鍋垮拰寮圭哀琛ュ伩銆?
+      // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
                                        state_output.current.phi_dot * state_output.current.s_dot;
       const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -290,8 +313,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 绂诲湴鎴栬烦璺冨洖鏀舵椂鍏抽棴杞鍔涚煩锛岄伩鍏嶈疆绯诲湪澶卞幓鏀拺鏃剁Н鍒?绌鸿浆銆?
-    if (use_jump_retract2 || off_ground_in_mid_high_leg) {
+    // 离地、跳跃回收或上台阶时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
+    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {
@@ -309,15 +332,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
-
-    output_.lb_tau = 0;
-    output_.lf_tau = 0;
-    output_.rb_tau = 0;
-    output_.rf_tau = 0;
-    output_.lw_tau = 0;
-    output_.rw_tau = 0;
   } else {
-    n=1;
     if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
@@ -347,18 +362,19 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         constexpr rm::f32 kRangeLowMax = -3.5f;
         constexpr rm::f32 kRangeHighMin = -2.2f;
         constexpr rm::f32 kRangeHighMax = -1.8f;
+        const rm::f32 lw = state_output.current.theta_ll;
+        const rm::f32 rw = state_output.current.theta_lr;
+        // 以下代码可能有问题
         // const rm::f32 lw = rm::modules::Wrap(state_output.current.theta_ll, -kPi, kPi);
         // const rm::f32 rw = rm::modules::Wrap(state_output.current.theta_lr, -kPi, kPi);
-n=2;
-        // theta_b < min: 前倾 → 目标 [-4.0, -3.5], 方向 +kVel
-        // theta_b > max: 后倾 → 目标 [-2.2, -1.8], 方向 -kVel
+
         const bool is_front = (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad);
         const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
         const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
         const rm::f32 dir = is_front ? kVel : -kVel;
 
-        const bool l_in = (state_output.current.theta_ll >= tgt_min && state_output.current.theta_ll <= tgt_max);
-        const bool r_in = (state_output.current.theta_lr >= tgt_min && state_output.current.theta_lr <= tgt_max);
+        const bool l_in = (lw >= tgt_min && lw <= tgt_max);
+        const bool r_in = (rw >= tgt_min && rw <= tgt_max);
 
         if (l_in && r_in) {
           left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
@@ -368,7 +384,17 @@ n=2;
           const rm::f32 rv = r_in ? 0.0f : dir;
           left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
           right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
-
+          // 以下代码可能有问题
+          // if (l_in) {
+          //   left_leg_turn_pid_.Clear();
+          // } else {
+          //   left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
+          // }
+          // if (r_in) {
+          //   right_leg_turn_pid_.Clear();
+          // } else {
+          //   right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
+          // }
         }
         left_force_ = 0.0f;
         right_force_ = 0.0f;
@@ -390,7 +416,7 @@ n=2;
       {
           f32 left_leg_turn_pid_out = 0.0f;
           f32 right_leg_turn_pid_out = 0.0f;
-n=3;
+
           if (imu_roll_> wheel_legged::params::active::chassis::kPostureRollMaxRad) {
             right_leg_turn_pid_.Update(1.5*wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
                                          state_output.current.theta_lr_dot);
@@ -424,7 +450,7 @@ n=3;
 }
 
 /**
- * @brief 鏍规嵁瀹炴祴鍏宠妭鍔涚煩浼拌宸﹀彸鏀拺鍔?
+ * @brief 根据实测关节力矩估计左右支撑力
  */
 void chassis::Chassis::CalSupportForce() {
   static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;

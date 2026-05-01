@@ -4,6 +4,8 @@
 #include <optional>
 
 #include "fdcan.h"
+#include "stm32h7xx_it.h"
+#include "usart.h"
 
 #include <librm.hpp>
 
@@ -72,20 +74,40 @@ struct SharedResources {
    * @brief 初始化外设对象、状态机与控制器
    */
   void Init() {
+    const auto prepare_uart_rx_to_idle_dma = [](UART_HandleTypeDef &huart, const IRQn_Type uart_irqn,
+                                                const IRQn_Type dma_rx_irqn) {
+      // Clear stale UART/DMA state before librm starts ReceiveToIdle mode.
+      (void)HAL_UART_AbortReceive(&huart);
+      (void)HAL_UART_Abort(&huart);
+      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_PEF);
+      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_FEF);
+      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_NEF);
+      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_OREF);
+      __HAL_UART_SEND_REQ(&huart, UART_RXDATA_FLUSH_REQUEST);
+      huart.ErrorCode = HAL_UART_ERROR_NONE;
+      huart.RxState = HAL_UART_STATE_READY;
+      huart.gState = HAL_UART_STATE_READY;
+      HAL_NVIC_ClearPendingIRQ(uart_irqn);
+      HAL_NVIC_ClearPendingIRQ(dma_rx_irqn);
+    };
+
+    prepare_uart_rx_to_idle_dma(huart5, UART5_IRQn, DMA1_Stream0_IRQn);
+    prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
+
     dr16.Begin();
 
     if (!joint_can.has_value()) {
-      joint_can.emplace(hfdcan1, wheel_legged::params::active::globals::kJointCanTxLimitHz);
+      joint_can.emplace(wheel_legged::params::active::globals::kJointCanTxLimitHz, hfdcan1);
       joint_can->SetFilter(0, 0);
       joint_can->Begin();
     }
     if (!wheel_can.has_value()) {
-      wheel_can.emplace(hfdcan2, wheel_legged::params::active::globals::kWheelCanTxLimitHz);
+      wheel_can.emplace(wheel_legged::params::active::globals::kWheelCanTxLimitHz, hfdcan2);
       wheel_can->SetFilter(0, 0);
       wheel_can->Begin();
     }
     if (!gimbal_can.has_value()) {
-      gimbal_can.emplace(hfdcan3, wheel_legged::params::active::globals::kGimbalCanTxLimitHz);
+      gimbal_can.emplace(wheel_legged::params::active::globals::kGimbalCanTxLimitHz, hfdcan3);
       gimbal_can->SetFilter(0, 0);
       gimbal_can->Begin();
     }
@@ -217,6 +239,11 @@ extern volatile float wl_fm_yaw_motor_vel_rad_s;
 extern volatile float wl_fm_pitch_target_rad;
 extern volatile float wl_fm_pitch_motor_pos_rad;
 extern volatile float wl_fm_pitch_motor_vel_rad_s;
+extern volatile uint8_t wl_fm_yaw_motor_status;
+extern volatile uint8_t wl_fm_pitch_motor_status;
+extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
+extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
+extern volatile uint8_t wl_fm_posture_valid;
 }
 
 void ControlLoop();

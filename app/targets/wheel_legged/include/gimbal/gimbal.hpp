@@ -105,6 +105,14 @@ class Gimbal {
     }
 
     EnableMotorsIfNeeded(input);
+    if (!motors_enabled_latched_) {
+      // 仍在等待电机进入使能态，持续发送零力矩命令并清空 PID，避免积累误差。
+      controller_.Enable(false);
+      input.yaw_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+      input.pitch_motor->SetMitCommand(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+      ClearPid();
+      return;
+    }
     if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
       ClearPid();
     }
@@ -178,27 +186,52 @@ class Gimbal {
 
   /** @brief 首次使能云台 DM 电机 */
   void EnableMotorsIfNeeded(const UpdateInput &input) {
-    if (motors_enabled_latched_) {
+    if (AreMotorsEnabled(input)) {
+      motors_enabled_latched_ = true;
       return;
     }
 
+    // 未使能成功就持续重发，提升上电使能可靠性。
+    motors_enabled_latched_ = false;
     input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    // input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    // input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+  }
 
-    motors_enabled_latched_ = true;
-    ClearPid();
+  /** @brief 判断云台两轴 DM 是否均已进入使能态 */
+  bool AreMotorsEnabled(const UpdateInput &input) const {
+    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable) &&
+           IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kEnable);
+  }
+
+  /** @brief 判断云台两轴 DM 是否均已进入失能态 */
+  bool AreMotorsDisabled(const UpdateInput &input) const {
+    return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kDisable) &&
+           IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kDisable);
+  }
+
+  /** @brief 判断电机在线且状态匹配，避免未反馈时误判 */
+  static bool IsMotorInStatus(DmMitMotor &motor, rm::device::DmMotorStatus target_status) {
+    const bool motor_online = (motor.online_status() == rm::device::Device::kOk);
+    const auto status = static_cast<rm::device::DmMotorStatus>(motor.status());
+    return motor_online && status == target_status;
   }
 
   /** @brief 失能云台 DM 电机 */
   void DisableMotorsIfNeeded(const UpdateInput &input) {
-    if (!motors_enabled_latched_) {
+    if (AreMotorsDisabled(input)) {
+      motors_enabled_latched_ = false;
       return;
     }
 
+    // 未失能成功就持续重发，直到反馈确认进入失能态。
     input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    // input.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
     input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    // input.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
     motors_enabled_latched_ = false;
   }
 

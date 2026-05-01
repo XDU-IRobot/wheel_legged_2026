@@ -9,7 +9,6 @@
  * @file  targets/wheel_legged/control_loop.cc
  * @brief 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-
 extern "C" {
 volatile uint32_t wl_fm_tick_ms{0};
 volatile uint8_t wl_fm_chassis_mode{0};
@@ -87,6 +86,11 @@ volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
 volatile float wl_fm_pitch_target_rad{0.0f};
 volatile float wl_fm_pitch_motor_pos_rad{0.0f};
 volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
+volatile uint8_t wl_fm_yaw_motor_status{0};
+volatile uint8_t wl_fm_pitch_motor_status{0};
+volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
+volatile uint8_t wl_fm_pitch_motor_raw_status_byte{0};
+volatile uint8_t wl_fm_posture_valid{0};
 }
 
 namespace {
@@ -558,6 +562,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_pitch_target_rad = gimbal_control_output.pitch_target_rad;
   wl_fm_pitch_motor_pos_rad = gimbal_control_output.pitch_pos_rad;
   wl_fm_pitch_motor_vel_rad_s = gimbal_control_output.pitch_vel_rad_s;
+  wl_fm_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }
 
 }  // namespace
@@ -608,6 +613,8 @@ void ControlLoop() {
   // 1. 采集硬件反馈并将 DR16 原始输入折叠为整车语义请求。
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
+  input.mode_request.theta_ll_rad = chassis_control_output.current_state.theta_ll;
+  input.mode_request.theta_lr_rad = chassis_control_output.current_state.theta_lr;
   input.mode_request.tick_ms = now_ms;
 
   // 2. 状态机先消费同一份语义请求，输出本周期底盘/云台控制意图。
@@ -825,8 +832,12 @@ void ControlLoop() {
   wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
-  chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
-  chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
+  chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLlBiasRad;
+  chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLrBiasRad;
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
@@ -863,6 +874,10 @@ void ControlLoop() {
     wl_fm_gimbal_imu_pitch_rad = 0.0f;
     wl_fm_gimbal_imu_yaw_rad = 0.0f;
   }
+  wl_fm_yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
+  wl_fm_pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;
+  // wl_fm_yaw_motor_raw_status_byte = globals->yaw_motor.has_value() ? globals->yaw_motor->raw_status_byte() : 0;
+  // wl_fm_pitch_motor_raw_status_byte = globals->pitch_motor.has_value() ? globals->pitch_motor->raw_status_byte() : 0;
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }
