@@ -322,9 +322,9 @@ inline constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
 }  // namespace gimbal
 
 namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 450U;
+inline constexpr std::uint32_t kJumpPrepMs = 200U;
 inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;
-inline constexpr std::uint32_t kJumpRecoverMs = 450U;
+inline constexpr std::uint32_t kJumpRecoverMs = 250U;
 inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
@@ -332,9 +332,9 @@ inline constexpr float kLowLegLengthM = 0.15f;
 inline constexpr float kMidLegLengthM = 0.21f;
 inline constexpr float kHighLegLengthM = 0.3f;
 inline constexpr float kJumpPrepLegLengthM = 0.13f;
-inline constexpr float kJumpPushLegLengthM = 0.36f;
+inline constexpr float kJumpPushLegLengthM = 0.22f;
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;
-inline constexpr float kJumpPushReachedLegLengthM = 0.30f;
+inline constexpr float kJumpPushReachedLegLengthM = 0.21f;
 inline constexpr float kLegLengthRampTimeS = 0.5f;
 inline constexpr float kStairClimbThetaThresholdRad = 0.5f;
 inline constexpr float kStairClimbLegLengthM = 0.14f;
@@ -383,28 +383,28 @@ inline constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 inline constexpr std::array<float, 240> kCtrlP{
-    -6.0128,  -48.305,  38.868,   77.846,   -33.862,  -32.763,  -9.0003, -53.056,  50.927,   89.704,   -53.185,
-    -41.18,   -0.99299, 4.7086,   -1.8463,  -4.5627,  -0.58177, 3.0382,  -2.2512,  11.103,   -4.7032,  -10.213,
-    -2.0337,  7.8589,   -14.508,  -95.938,  21.734,   75.117,   14.754,  -31.119,  -0.96559, -9.5585,  4.2483,
-    -6.1377,  4.4326,   -5.7388,  -4.1596,  -5.342,   -3.1804,  35.899,  -35.937,  -0.27747, -0.40322, -3.3447,
-    -0.11188, 10.945,   -18.63,   1.9192,   -24.995,  32.793,   37.817,  1.2216,   -37.439,  -37.149,  -3.2433,
-    1.4604,   8.8814,   4.7363,   -8.5688,  -8.9656,  -6.0128,  38.868,  -48.305,  -32.763,  -33.862,  77.846,
-    -9.0003,  50.927,   -53.056,  -41.18,   -53.185,  89.704,   0.99299, 1.8463,   -4.7086,  -3.0382,  0.58177,
-    4.5627,   2.2512,   4.7032,   -11.103,  -7.8589,  2.0337,   10.213,  -4.1596,  -3.1804,  -5.342,   -0.27747,
-    -35.937,  35.899,   -0.40322, -0.11188, -3.3447,  1.9192,   -18.63,  10.945,   -14.508,  21.734,   -95.938,
-    -31.119,  14.754,   75.117,   -0.96559, 4.2483,   -9.5585,  -5.7388, 4.4326,   -6.1377,  -24.995,  37.817,
-    32.793,   -37.149,  -37.439,  1.2216,   -3.2433,  8.8814,   1.4604,  -8.9656,  -8.5688,  4.7363,   11.667,
-    -2.4385,  -22.794,  -58.326,  56.218,   18.382,   15.335,   -1.2355, -37.955,  -74.889,  83.513,   28.139,
-    -0.96835, -5.0729,  -1.5614,  8.8809,   -2.3716,  2.7678,   -2.1968, -12.237,  -3.2395,  21.132,   -6.0045,
-    5.8829,   48.815,   -68.739,  1.7833,   48.467,   49.42,    -14.068, 2.6662,   2.1889,   -2.5281,  -4.5829,
-    8.1506,   1.2624,   -2.3656,  -21.22,   0.012812, 13.633,   -37.421, 9.5099,   -0.15475, 0.89409,  4.0697,
-    -7.8194,  -0.48601, -3.1535,  -35.054,  -165.28,  50.608,   194.4,   33.357,   -70.653,  -1.332,   -15.893,
-    1.9576,   13.202,   10.51,    -4.469,   11.667,   -22.794,  -2.4385, 18.382,   56.218,   -58.326,  15.335,
-    -37.955,  -1.2355,  28.139,   83.513,   -74.889,  0.96835,  1.5614,  5.0729,   -2.7678,  2.3716,   -8.8809,
-    2.1968,   3.2395,   12.237,   -5.8829,  6.0045,   -21.132,  -2.3656, 0.012812, -21.22,   9.5099,   -37.421,
-    13.633,   -0.15475, 4.0697,   0.89409,  -3.1535,  -0.48601, -7.8194, 48.815,   1.7833,   -68.739,  -14.068,
-    49.42,    48.467,   2.6662,   -2.5281,  2.1889,   1.2624,   8.1506,  -4.5829,  -35.054,  50.608,   -165.28,
-    -70.653,  33.357,   194.4,    -1.332,   1.9576,   -15.893,  -4.469,  10.51,    13.202,
+    -3.2187,  -22.045,   18.056,   34.761,   -14.453, -15.335,   -6.9116,  -37.004,  35.875,   61.978,   -34.996,
+    -29.067,  -1.1098,   4.9805,   -1.5119,  -5.7848, 0.77796,   2.2795,   -2.5156,  11.695,   -3.9047,  -13.099,
+    1.3082,   6.0351,    -14.957,  -83.079,  17.021,  74.687,    2.7213,   -23.086,  -0.99541, -7.4702,  3.0698,
+    -4.6734,  3.0011,    -4.1065,  -4.4275,  3.3772,  -5.5277,   11.345,   -8.7948,  1.5301,   -0.37937, -1.9312,
+    -0.51423, 6.8302,    -12.036,  1.4525,   -26.444, 48.483,    31.544,   -22.04,   -34.34,   -30.749,  -3.0412,
+    2.8663,   7.0339,    2.0245,   -7.098,   -7.1277, -3.2187,   18.056,   -22.045,  -15.335,  -14.453,  34.761,
+    -6.9116,  35.875,    -37.004,  -29.067,  -34.996, 61.978,    1.1098,   1.5119,   -4.9805,  -2.2795,  -0.77796,
+    5.7848,   2.5156,    3.9047,   -11.695,  -6.0351, -1.3082,   13.099,   -4.4275,  -5.5277,  3.3772,   1.5301,
+    -8.7948,  11.345,    -0.37937, -0.51423, -1.9312, 1.4525,    -12.036,  6.8302,   -14.957,  17.021,   -83.079,
+    -23.086,  2.7213,    74.687,   -0.99541, 3.0698,  -7.4702,   -4.1065,  3.0011,   -4.6734,  -26.444,  31.544,
+    48.483,   -30.749,   -34.34,   -22.04,   -3.0412, 7.0339,    2.8663,   -7.1277,  -7.098,   2.0245,   4.7655,
+    -0.91334, -10.798,   -21.911,  23.797,   7.6393,  9.4337,    -1.9323,  -24.845,  -41.136,  51.813,   16.814,
+    -1.0328,  -4.4246,   -2.1463,  7.8633,   -1.6703, 3.2604,    -2.3379,  -10.65,   -4.7274,  18.674,   -4.3113,
+    7.1578,   40.29,     -66.345,  7.8917,   68.191,  35.78,     -19.792,  2.3746,   -1.3723,  -1.0573,  2.5841,
+    4.9583,   -0.099367, -3.1967,  -22.184,  -6.668,  26.476,    -26.351,  -0.68067, -0.26688, -0.32159, 2.8636,
+    -3.1258,  -0.15269,  -4.9894,  -43.644,  -158.25, 60.197,    199.66,   18.335,   -79.972,  -2.3161,  -14.489,
+    4.1801,   14.246,    6.5311,   -6.3466,  4.7655,  -10.798,   -0.91334, 7.6393,   23.797,   -21.911,  9.4337,
+    -24.845,  -1.9323,   16.814,   51.813,   -41.136, 1.0328,    2.1463,   4.4246,   -3.2604,  1.6703,   -7.8633,
+    2.3379,   4.7274,    10.65,    -7.1578,  4.3113,  -18.674,   -3.1967,  -6.668,   -22.184,  -0.68067, -26.351,
+    26.476,   -0.26688,  2.8636,   -0.32159, -4.9894, -0.15269,  -3.1258,  40.29,    7.8917,   -66.345,  -19.792,
+    35.78,    68.191,    2.3746,   -1.0573,  -1.3723, -0.099367, 4.9583,   2.5841,   -43.644,  60.197,   -158.25,
+    -79.972,  18.335,    199.66,   -2.3161,  4.1801,  -14.489,   -6.3466,  6.53 11,   14.246,
 };
 
 inline constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
@@ -463,7 +463,7 @@ struct SdotRampParams {
 };
 
 inline constexpr SdotRampParams kSdotRampLowLeg{0.005f, 0.005f};
-inline constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.006f};
+inline constexpr SdotRampParams kSdotRampMidLeg{0.004f, 0.004f};
 inline constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
 inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
@@ -562,7 +562,7 @@ namespace gimbal {
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 inline const DmMitSettings kPitchMotorSettings{0x05, 0x04,         kPi,       30.f,
-                                               10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 俯仰电机参数
+                                               10.f, {0.f, 500.f}, {0.f, 5.f}};                       ///< 俯仰电机参数
 inline const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 偏航电机参数
 
 inline constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认时间步长
@@ -578,9 +578,9 @@ inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       /
 }  // namespace gimbal
 
 namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 450U;                   ///< 跳跃预备阶段时长
+inline constexpr std::uint32_t kJumpPrepMs = 250U;                   ///< 跳跃预备阶段时长
 inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;               ///< 跳跃蹬伸最大时长
-inline constexpr std::uint32_t kJumpRecoverMs = 450U;                ///< 跳跃回收阶段时长
+inline constexpr std::uint32_t kJumpRecoverMs = 250U;                ///< 跳跃回收阶段时长
 inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;        ///< 倒地确认时长
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自恢复超时时长
 
@@ -588,14 +588,14 @@ inline constexpr float kLowLegLengthM = 0.15f;              ///< 低腿长目标
 inline constexpr float kMidLegLengthM = 0.20f;              ///< 中腿长目标
 inline constexpr float kHighLegLengthM = 0.35f;             ///< 高腿长目标
 inline constexpr float kJumpPrepLegLengthM = 0.13f;         ///< 跳跃预备腿长
-inline constexpr float kJumpPushLegLengthM = 0.36f;         ///< 跳跃蹬伸腿长
+inline constexpr float kJumpPushLegLengthM = 0.22f;         ///< 跳跃蹬伸腿长
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;      ///< 跳跃回收腿长
-inline constexpr float kJumpPushReachedLegLengthM = 0.30f;  ///< 蹬伸判定腿长阈值
+inline constexpr float kJumpPushReachedLegLengthM = 0.22f;  ///< 蹬伸判定腿长阈值
 inline constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间
 
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;  ///< 上台阶腿摆角检测阈值///
-inline constexpr float kStairClimbLegLengthM = 0.16f;        ///< 上台阶收腿目标///
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;  ///< 上台阶腿摆角目标///---------------上台阶参数
+inline constexpr float kStairClimbThetaThresholdRad = 0.5f;       ///< 上台阶腿摆角检测阈值///
+inline constexpr float kStairClimbLegLengthM = 0.16f;             ///< 上台阶收腿目标///
+inline constexpr float kStairClimbThetaTargetRad = 0.2f;          ///< 上台阶腿摆角目标///---------------上台阶参数
 inline constexpr std::uint32_t kStairClimbDurationMs = 250U;      ///< 上台阶收腿保持时长///
 inline constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;  ///< 上台阶 pitch 稳定等待时长///
 }  // namespace chassis_fsm
