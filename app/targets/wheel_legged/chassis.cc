@@ -192,10 +192,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg ||
-                             input.fsm_mode == Fsm::State::kMidLeg ||
-                             input.fsm_mode == Fsm::State::kHighLeg ||
-                             input.fsm_mode == Fsm::State::kSpin);
+  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
+                             input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
   if (ramp_enabled) {
     const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
                              wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
