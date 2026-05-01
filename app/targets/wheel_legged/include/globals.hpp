@@ -15,6 +15,7 @@
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
 #include "gimbal_can_feedback_rx_bridge.hpp"
+#include "utils/template_dyp_can.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -47,6 +48,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};                     ///< 右轮 M3508
   std::optional<rm::device::HipnucImu> chassis_imu{};                 ///< 底盘惯导
   std::optional<GimbalCanFeedbackRxBridge> gimbal_imu_feedback_rx{};  ///< 云台惯导 CAN 反馈
+  std::optional<DypCanRxBridge> dyp_rx{};                             ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -113,6 +115,9 @@ struct SharedResources {
     }
     if (!gimbal_imu_feedback_rx.has_value()) {
       gimbal_imu_feedback_rx.emplace(*gimbal_can);
+    }
+    if (!dyp_rx.has_value()) {
+      dyp_rx.emplace(*joint_can);
     }
 
     if (!dm_lf.has_value()) {
