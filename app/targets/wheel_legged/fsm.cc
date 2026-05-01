@@ -168,6 +168,30 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
       control.jump_phase = 0U;
       break;
+
+    case chassis::Fsm::State::kStairClimb:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kHigh;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      control.theta_leg_target_rad = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
+      control.jump_phase = 0U;
+      break;
+
+    case chassis::Fsm::State::kStairClimbDone:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = false;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kHigh;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      control.theta_leg_target_rad = 0.0f;
+      control.jump_phase = 0U;
+      break;
   }
 
   return control;
@@ -232,11 +256,23 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       break;
 
     case State::kMidLeg:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
+      } else {
+        next_mode = requested_normal_state;
+      }
+      break;
+
     case State::kHighLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.spin_hold) {
         next_mode = State::kSpin;
+      } else if (request.theta_ll_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad &&
+                 request.theta_lr_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad) {
+        next_mode = State::kStairClimb;
       } else {
         next_mode = requested_normal_state;
       }
@@ -282,6 +318,22 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kDisabled;
       } else if (request.upright_stable) {
         next_mode = State::kLowLeg;
+      }
+      break;
+
+    case State::kStairClimb:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
+        next_mode = State::kStairClimbDone;
+      }
+      break;
+
+    case State::kStairClimbDone:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
+        next_mode = State::kHighLeg;
       }
       break;
   }
