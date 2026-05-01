@@ -386,8 +386,8 @@ struct Dr16SemanticState {
 };
 
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};   ///< C 键中腿长边沿布防
-  bool mid_leg_hold{false};     ///< 中腿长保持
+  bool mid_leg_c_armed{true};  ///< C 键中腿长边沿布防
+  bool mid_leg_hold{false};    ///< 中腿长保持
 };
 
 wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
@@ -417,8 +417,8 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 /**
  * @brief 将 DR16 / 图传键鼠原始输入解析为语义控制请求
  */
-void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
-                        Dr16SemanticState &semantic_state, TcSemanticState &tc_state, InputSnapshot &input) {
+void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
+                           TcSemanticState &tc_state, InputSnapshot &input) {
   const bool tc_remote_active = tc_remote.valid;
   const bool has_any_input = dr16.online || tc_remote_active;
 
@@ -440,11 +440,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   wheel_legged::ModeRequest request{};
   request.input_valid = has_any_input;
-  request.domain_request =
-      dr16.online ? ResolveDomainRequest(dr16.switch_l) : wheel_legged::DomainRequest::kDisabled;
+  request.domain_request = dr16.online ? ResolveDomainRequest(dr16.switch_l) : wheel_legged::DomainRequest::kDisabled;
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalWithFire;
-  request.leg_request = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid
-                                              : ResolveLegProfile(dr16.switch_r);
+  request.leg_request = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid : ResolveLegProfile(dr16.switch_r);
 
   request.spin_hold = (dr16.online && dr16.dial >= kWheelSpinThreshold) ||
                       (tc_remote_active && (tc_remote.keyboard_value & kRcKeyShift) != 0U);
@@ -499,8 +497,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 /**
  * @brief 更新传感器快照与 DR16 语义输入
  */
-void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
-                                      Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
+void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input, Dr16SemanticState &semantic_state,
+                                       TcSemanticState &tc_state) {
   g_actuators.FillEstimatorInput(g, input.estimator_input);
 
   const bool gimbal_rx_ready = g.gimbal_rx.has_value();
