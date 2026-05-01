@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "include/wheel_legged_params.hpp"
-
+int n=0;
 /**
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
@@ -186,8 +186,18 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.left_support_force_n = left_support_force_est_n_;
   output_.right_support_force_n = right_support_force_est_n_;
 
-  // 鐘舵€佷及璁′笌璋冭瘯閲忓凡鏇存柊锛涗笉鍏佽杈撳嚭鏃跺湪杩欓噷鎴柇鎵€鏈夋墽琛屽櫒鍛戒护銆?
-  if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
+  output_.posture_valid =
+      (state_output.current.theta_b >= wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
+       state_output.current.theta_b <= wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
+       imu_roll_ >= wheel_legged::params::active::chassis::kPostureRollMinRad &&
+       imu_roll_ <= wheel_legged::params::active::chassis::kPostureRollMaxRad &&
+       rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
+       rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi, wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
+
+  if (!output_.posture_valid) {
+  } else if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
     SafeStop();
     return;
   }
@@ -236,21 +246,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
   r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0());
 
-  const rm::f32 left_theta = rm::modules::Wrap(state_output.current.theta_ll, -kPi, kPi);
-  const rm::f32 right_theta = rm::modules::Wrap(state_output.current.theta_lr, -kPi, kPi);
-  const rm::f32 theta_b = state_output.current.theta_b;
-  const bool posture_valid = (theta_b >= wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
-                              theta_b <= wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
-                              left_theta >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-                              left_theta <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
-                              right_theta >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-                              right_theta <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
-
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
 
-  if (posture_valid) {
+  if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
@@ -309,40 +309,117 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
+
+    output_.lb_tau = 0;
+    output_.lf_tau = 0;
+    output_.rb_tau = 0;
+    output_.rf_tau = 0;
+    output_.lw_tau = 0;
+    output_.rw_tau = 0;
   } else {
-    // 濮挎€佽秺鐣屾椂涓嶅啀鎵ц LQR
-    // 鏀拺锛岃浆涓鸿吙閮ㄦ憜瑙掓敹鍥烇紝杞淇濇寔闆跺姏鐭┿€?
-    left_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                              state_output.current.theta_ll_dot);
-    right_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                               state_output.current.theta_lr_dot);
+    n=1;
+    if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
+        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
+        imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
+        imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
 
-    left_force_ = 0.0f;
-    right_force_ = 0.0f;
+        left_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
+                                  state_output.current.theta_ll_dot);
+        right_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
+                                   state_output.current.theta_lr_dot);
 
-    output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_.out());
-    output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
-    output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_.out());
-    output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_.out());
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
 
-    output_.lf_tau = -output_.lf_tau;
-    output_.lb_tau = -output_.lb_tau;
+        output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_.out());
+        output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
+        output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_.out());
+        output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_.out());
 
-    const rm::f32 left_theta_recover = rm::modules::Wrap(state_output.current.theta_ll, -kPi, kPi);
-    const rm::f32 right_theta_recover = rm::modules::Wrap(state_output.current.theta_lr, -kPi, kPi);
+        output_.lf_tau = -output_.lf_tau;
+        output_.lb_tau = -output_.lb_tau;
 
-    if (left_theta_recover >= wheel_legged::params::active::chassis::kLegRecoverZeroTorqueMinRad &&
-        left_theta_recover <= wheel_legged::params::active::chassis::kLegRecoverZeroTorqueMaxRad) {
-      output_.lb_tau = 0.0f;
-      output_.lf_tau = 0.0f;
+        output_.lw_tau = 0.0f;
+        output_.rw_tau = 0.0f;
+      } else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad || state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
+        constexpr rm::f32 kVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
+        constexpr rm::f32 kRangeLowMin = -4.f;
+        constexpr rm::f32 kRangeLowMax = -3.5f;
+        constexpr rm::f32 kRangeHighMin = -2.2f;
+        constexpr rm::f32 kRangeHighMax = -1.8f;
+        // const rm::f32 lw = rm::modules::Wrap(state_output.current.theta_ll, -kPi, kPi);
+        // const rm::f32 rw = rm::modules::Wrap(state_output.current.theta_lr, -kPi, kPi);
+n=2;
+        // theta_b < min: 前倾 → 目标 [-4.0, -3.5], 方向 +kVel
+        // theta_b > max: 后倾 → 目标 [-2.2, -1.8], 方向 -kVel
+        const bool is_front = (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad);
+        const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
+        const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
+        const rm::f32 dir = is_front ? kVel : -kVel;
+
+        const bool l_in = (state_output.current.theta_ll >= tgt_min && state_output.current.theta_ll <= tgt_max);
+        const bool r_in = (state_output.current.theta_lr >= tgt_min && state_output.current.theta_lr <= tgt_max);
+
+        if (l_in && r_in) {
+          left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
+          right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
+        } else {
+          const rm::f32 lv = l_in ? 0.0f : dir;
+          const rm::f32 rv = r_in ? 0.0f : dir;
+          left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
+          right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
+
+        }
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
+
+        output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_.out());
+        output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
+        output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_.out());
+        output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_.out());
+
+        output_.lf_tau = -output_.lf_tau;
+        output_.lb_tau = -output_.lb_tau;
+
+        output_.lw_tau = 0.0f;
+        output_.rw_tau = 0.0f;
+    }else if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
+        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
+        (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad ||
+        imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMaxRad))
+      {
+          f32 left_leg_turn_pid_out = 0.0f;
+          f32 right_leg_turn_pid_out = 0.0f;
+n=3;
+          if (imu_roll_> wheel_legged::params::active::chassis::kPostureRollMaxRad) {
+            right_leg_turn_pid_.Update(1.5*wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
+                                         state_output.current.theta_lr_dot);
+            left_leg_turn_pid_out = 0;
+            right_leg_turn_pid_out = -right_leg_turn_pid_.out();
+          }else if (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad) {
+            left_leg_turn_pid_.Update(1.5*wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
+                            state_output.current.theta_ll_dot);
+            left_leg_turn_pid_out = -left_leg_turn_pid_.out();
+            right_leg_turn_pid_out = 0;
+          }
+
+          left_force_ = 0.0f;
+          right_force_ = 0.0f;
+
+          output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * left_leg_turn_pid_out;
+          output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * left_leg_turn_pid_out;
+          output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * right_leg_turn_pid_out;
+          output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * right_leg_turn_pid_out;
+
+          output_.lf_tau = -output_.lf_tau;
+          output_.lb_tau = -output_.lb_tau;
+
+          output_.lw_tau = 0.0f;
+          output_.rw_tau = 0.0f;
+
+    }else {
+        set_all_zero();
     }
-    if (right_theta_recover >= wheel_legged::params::active::chassis::kLegRecoverZeroTorqueMinRad &&
-        right_theta_recover <= wheel_legged::params::active::chassis::kLegRecoverZeroTorqueMaxRad) {
-      output_.rb_tau = 0.0f;
-      output_.rf_tau = 0.0f;
-    }
-    output_.lw_tau = 0.0f;
-    output_.rw_tau = 0.0f;
   }
 }
 

@@ -136,7 +136,7 @@ class Actuators {
     // g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     // g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     // g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-    //
+
     g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
     g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
     g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
