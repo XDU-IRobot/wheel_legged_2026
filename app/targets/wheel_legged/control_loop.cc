@@ -852,7 +852,8 @@ void ControlLoop() {
   }
   // LQR 期望量：纵向速度来自斜坡，纵向位置在定点锁定时逐步切到锁定参考。
   // 小陀螺不启用定点锁定，直接使用按云台朝向投影的目标速度。
-  chassis_update_input.expected.s_dot = spin_control_enabled ? spin_target_s_dot : (1.0f - lock_point_alpha) * filtered_s_dot;
+  chassis_update_input.expected.s_dot =
+      spin_control_enabled ? spin_target_s_dot : (1.0f - lock_point_alpha) * filtered_s_dot;
   expected_s = lock_point_alpha * lock_point_s_ref + (1.0f - lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = expected_s;
   wl_fm_target_s_dot_mps = chassis_update_input.expected.s_dot;

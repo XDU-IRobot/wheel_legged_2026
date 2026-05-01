@@ -22,10 +22,10 @@ bool IsStairClimbReadyToDone(const wheel_legged::ModeRequest &request) {
       std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
   const bool leg_length_near_target =
       leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
-  const bool left_theta_near_zero =
-      std::fabs(request.theta_ll_rad) <= wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-  const bool right_theta_near_zero =
-      std::fabs(request.theta_lr_rad) <= wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+  const bool left_theta_near_zero = std::fabs(request.theta_ll_rad) <=
+                                    wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+  const bool right_theta_near_zero = std::fabs(request.theta_lr_rad) <=
+                                     wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
   return leg_length_near_target && left_theta_near_zero && right_theta_near_zero;
 }
 
