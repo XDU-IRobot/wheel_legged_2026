@@ -65,8 +65,8 @@ struct ModeRequest {
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
   bool fire_request{false};          ///< 发射请求
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈
-  float theta_ll_rad{0.0f};         ///< 当前左腿摆角
-  float theta_lr_rad{0.0f};         ///< 当前右腿摆角
+  float theta_ll_rad{0.0f};          ///< 当前左腿摆角
+  float theta_lr_rad{0.0f};          ///< 当前右腿摆角
 
   TargetSource target_source{TargetSource::kRc};  ///< 当前目标来源偏好
   GimbalTarget rc_target{};                       ///< 遥控器积分得到的目标

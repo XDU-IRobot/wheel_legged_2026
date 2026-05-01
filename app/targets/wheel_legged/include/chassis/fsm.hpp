@@ -56,7 +56,7 @@ class Fsm {
       wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
       float target_leg_length_m{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 目标腿长
       float theta_leg_target_rad{0.0f};  ///< 目标腿摆角，非零时覆盖默认偏置
-      uint8_t jump_phase{0};  ///< 跳跃阶段编号，0 表示非跳跃
+      uint8_t jump_phase{0};             ///< 跳跃阶段编号，0 表示非跳跃
     };
 
     State mode{State::kDisabled};  ///< 当前模式

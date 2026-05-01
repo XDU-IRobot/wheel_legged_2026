@@ -818,12 +818,12 @@ void ControlLoop() {
   wl_fm_target_s_m = chassis_update_input.expected.s;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
-  chassis_update_input.expected.theta_ll =
-      (chassis_output.control.theta_leg_target_rad != 0.0f) ? chassis_output.control.theta_leg_target_rad
-                                                             : kExpectedThetaLlBiasRad;
-  chassis_update_input.expected.theta_lr =
-      (chassis_output.control.theta_leg_target_rad != 0.0f) ? chassis_output.control.theta_leg_target_rad
-                                                             : kExpectedThetaLrBiasRad;
+  chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLlBiasRad;
+  chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
+                                               ? chassis_output.control.theta_leg_target_rad
+                                               : kExpectedThetaLrBiasRad;
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
