@@ -1,5 +1,6 @@
 #include "include/chassis/fsm.hpp"
 #include "include/wheel_legged_params.hpp"
+#include <cmath>
 
 /**
  * @file  targets/wheel_legged/fsm.cc
@@ -14,6 +15,18 @@ namespace {
 bool IsJumpState(const chassis::Fsm::State state) {
   return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
          state == chassis::Fsm::State::kJumpRecover;
+}
+
+bool IsStairClimbReadyToDone(const wheel_legged::ModeRequest &request) {
+  const float leg_length_error =
+      std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
+  const bool leg_length_near_target =
+      leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
+  const bool left_theta_near_zero =
+      std::fabs(request.theta_ll_rad) <= wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+  const bool right_theta_near_zero =
+      std::fabs(request.theta_lr_rad) <= wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+  return leg_length_near_target && left_theta_near_zero && right_theta_near_zero;
 }
 
 /**
@@ -324,7 +337,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kStairClimb:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
-      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
+      } else if (IsStairClimbReadyToDone(request) ||
+                 elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
         next_mode = State::kStairClimbDone;
       }
       break;

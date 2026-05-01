@@ -70,14 +70,30 @@ class Actuators {
 
     // M3508 接收电流命令，底盘控制器输出的轮端力矩在此做比例换算。
     const float lw_current =
-        enable_dm ? output.lw_tau * wheel_legged::params::active::actuators::kWheelTorqueToCurrent : 0.0f;
+        enable_dm ? output.lw_tau * wheel_legged::params::active::actuators::kLeftWheelTorqueToCurrent : 0.0f;
     const float rw_current =
-        enable_dm ? output.rw_tau * wheel_legged::params::active::actuators::kWheelTorqueToCurrent : 0.0f;
+        enable_dm ? output.rw_tau * wheel_legged::params::active::actuators::kRightWheelTorqueToCurrent : 0.0f;
     SendWheelCurrent(g, lw_current, rw_current);
   }
 
+  /**
+   * @brief 根据云台控制输出下发 yaw/pitch DM MIT 命令与使能/失能
+   */
+  void ApplyGimbalOutput(SharedResources &g, const gimbal::Gimbal::UpdateOutput &output) {
+    if (output.gimbal_enabled) {
+      EnableGimbalMotorsIfNeeded(g);
+      SendGimbalMitCommand(g, output.yaw_cmd_torque_nm, output.pitch_cmd_torque_nm);
+    } else {
+      SendGimbalMitCommand(g, 0.0f, 0.0f);
+      DisableGimbalMotorsIfNeeded(g);
+    }
+  }
+
+  void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
+
  private:
-  bool dm_enabled_latched_{false};  ///< DM 使能锁存
+  bool dm_enabled_latched_{false};              ///< 底盘 DM 使能锁存
+  bool gimbal_motors_enabled_latched_{false};   ///< 云台 DM 使能锁存
 
   static bool IsReady(const SharedResources &g) {
     return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() && g.dm_lb.has_value() &&
@@ -129,6 +145,47 @@ class Actuators {
     g.dm_rb->SendInstruction(rm::device::DmMotorInstructions::kDisable);
 
     dm_enabled_latched_ = false;
+  }
+
+  void EnableGimbalMotorsIfNeeded(SharedResources &g) {
+    if (gimbal_motors_enabled_latched_) {
+      return;
+    }
+    if (!g.yaw_motor.has_value() || !g.pitch_motor.has_value()) {
+      return;
+    }
+
+    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+
+    gimbal_motors_enabled_latched_ = true;
+  }
+
+  void DisableGimbalMotorsIfNeeded(SharedResources &g) {
+    if (!gimbal_motors_enabled_latched_) {
+      return;
+    }
+
+    if (g.yaw_motor.has_value()) {
+      g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    }
+    if (g.pitch_motor.has_value()) {
+      g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    }
+    gimbal_motors_enabled_latched_ = false;
+  }
+
+  static void SendGimbalMitCommand(SharedResources &g, float yaw_tau, float pitch_tau) {
+    if (g.yaw_motor.has_value()) {
+      g.yaw_motor->SetMitCommand(0.0f, 0.0f, yaw_tau, 0.0f, 0.0f);
+      // g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    }
+    if (g.pitch_motor.has_value()) {
+      g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
+      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    }
   }
 
   static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
