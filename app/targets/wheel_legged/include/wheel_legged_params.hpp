@@ -562,7 +562,7 @@ namespace gimbal {
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 inline const DmMitSettings kPitchMotorSettings{0x05, 0x04,         kPi,       30.f,
-                                               10.f, {0.f, 500.f}, {0.f, 5.f}};                       ///< 俯仰电机参数
+                                               10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 俯仰电机参数
 inline const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 偏航电机参数
 
 inline constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认时间步长
@@ -593,9 +593,9 @@ inline constexpr float kJumpRecoverLegLengthM = 0.20f;      ///< 跳跃回收腿
 inline constexpr float kJumpPushReachedLegLengthM = 0.30f;  ///< 蹬伸判定腿长阈值
 inline constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间
 
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;       ///< 上台阶腿摆角检测阈值///
-inline constexpr float kStairClimbLegLengthM = 0.16f;             ///< 上台阶收腿目标///
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;          ///< 上台阶腿摆角目标///---------------上台阶参数
+inline constexpr float kStairClimbThetaThresholdRad = 0.5f;  ///< 上台阶腿摆角检测阈值///
+inline constexpr float kStairClimbLegLengthM = 0.16f;        ///< 上台阶收腿目标///
+inline constexpr float kStairClimbThetaTargetRad = 0.2f;  ///< 上台阶腿摆角目标///---------------上台阶参数
 inline constexpr std::uint32_t kStairClimbDurationMs = 250U;      ///< 上台阶收腿保持时长///
 inline constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;  ///< 上台阶 pitch 稳定等待时长///
 }  // namespace chassis_fsm
