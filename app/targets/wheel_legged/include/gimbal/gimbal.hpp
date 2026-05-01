@@ -205,6 +205,7 @@ class Gimbal {
     // return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable) &&
     //        IsMotorInStatus(*input.pitch_motor, rm::device::DmMotorStatus::kEnable);
     return IsMotorInStatus(*input.yaw_motor, rm::device::DmMotorStatus::kEnable);
+    // return false;
   }
 
   /** @brief 判断云台两轴 DM 是否均已进入失能态 */

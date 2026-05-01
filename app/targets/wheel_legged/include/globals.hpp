@@ -171,6 +171,7 @@ extern volatile int16_t wl_fm_dr16_dial;
 extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
+extern volatile uint8_t wl_fm_tc_mid_leg_hold;
 
 /** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;

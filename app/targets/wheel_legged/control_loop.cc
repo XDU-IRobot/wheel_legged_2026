@@ -24,6 +24,7 @@ volatile int16_t wl_fm_dr16_dial{0};
 volatile uint8_t wl_fm_dr16_enable_request{0};
 volatile uint8_t wl_fm_dr16_spin_request{0};
 volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
+volatile uint8_t wl_fm_tc_mid_leg_hold{0};
 
 volatile float wl_fm_chassis_leg_length_m{0.0f};
 volatile float wl_fm_left_leg_length_m{0.0f};
@@ -106,8 +107,6 @@ constexpr uint16_t kRcKeyA = 0x0004;
 constexpr uint16_t kRcKeyD = 0x0008;
 constexpr uint16_t kRcKeyShift = 0x0010;
 constexpr uint16_t kRcKeyC = 0x2000;
-constexpr uint16_t kRcKeyV = 0x4000;
-constexpr uint16_t kRcKeyB = 0x8000;
 constexpr float kTargetForwardSpeedMaxMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMaxMps;
 constexpr float kVxInputDeadbandNorm = wheel_legged::params::active::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = wheel_legged::params::active::control_loop::kVyInputDeadbandNorm;
@@ -384,11 +383,7 @@ struct Dr16SemanticState {
 
 struct TcSemanticState {
   bool mid_leg_c_armed{true};   ///< C 键中腿长边沿布防
-  bool stair_v_armed{true};     ///< V 键一级台阶边沿布防
-  bool stair_b_armed{true};     ///< B 键二级台阶边沿布防
   bool mid_leg_hold{false};     ///< 中腿长保持
-  bool post_stair_low{false};   ///< 台阶完成后强制低腿长
-  uint8_t stair_count{0};       ///< 当前上台阶次数请求：0=关, 1=一级, 2=二级
 };
 
 wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
@@ -423,34 +418,15 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   const bool tc_remote_active = tc_remote.valid;
   const bool has_any_input = dr16.online || tc_remote_active;
 
-  // 图传键鼠边沿切换：C=中腿长, V=上一级台阶, B=上二级台阶, 再按取消
+  // 图传键鼠边沿切换：C=中腿长, 再按取消
   if (tc_remote_active) {
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
-    const bool v_pressed = (tc_remote.keyboard_value & kRcKeyV) != 0U;
-    const bool b_pressed = (tc_remote.keyboard_value & kRcKeyB) != 0U;
 
     if (c_pressed && tc_state.mid_leg_c_armed) {
       tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
-      tc_state.post_stair_low = false;
       tc_state.mid_leg_c_armed = false;
     }
     if (!c_pressed) tc_state.mid_leg_c_armed = true;
-
-    if (v_pressed && tc_state.stair_v_armed) {
-      tc_state.stair_count = (tc_state.stair_count == 1) ? 0 : 1;
-      tc_state.post_stair_low = false;
-      tc_state.stair_v_armed = false;
-      if (tc_state.stair_count == 1) tc_state.mid_leg_hold = false;
-    }
-    if (!v_pressed) tc_state.stair_v_armed = true;
-
-    if (b_pressed && tc_state.stair_b_armed) {
-      tc_state.stair_count = (tc_state.stair_count == 2) ? 0 : 2;
-      tc_state.post_stair_low = false;
-      tc_state.stair_b_armed = false;
-      if (tc_state.stair_count == 2) tc_state.mid_leg_hold = false;
-    }
-    if (!b_pressed) tc_state.stair_b_armed = true;
   }
 
   input.input_valid = has_any_input;
@@ -460,13 +436,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   wheel_legged::ModeRequest request{};
   request.input_valid = has_any_input;
-  request.domain_request = ResolveDomainRequest(dr16.switch_l);
+  request.domain_request =
+      dr16.online ? ResolveDomainRequest(dr16.switch_l) : wheel_legged::DomainRequest::kDisabled;
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalWithFire;
-  request.leg_request = tc_state.stair_count > 0   ? wheel_legged::LegProfile::kHigh
-                        : tc_state.post_stair_low   ? wheel_legged::LegProfile::kLow
-                        : tc_state.mid_leg_hold     ? wheel_legged::LegProfile::kMid
-                                                    : ResolveLegProfile(dr16.switch_r);
-  request.tc_stair_count = tc_state.stair_count;
+  request.leg_request = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid
+                                              : ResolveLegProfile(dr16.switch_r);
 
   request.spin_hold = (dr16.online && dr16.dial >= kWheelSpinThreshold) ||
                       (tc_remote_active && (tc_remote.keyboard_value & kRcKeyShift) != 0U);
@@ -719,13 +693,12 @@ void ControlLoop() {
 
   // 图传离线时清除图传状态
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
-    tc_semantic_state.stair_count = 0;
     tc_semantic_state.mid_leg_hold = false;
-    tc_semantic_state.post_stair_low = false;
   }
 
   // 1. 采集硬件反馈并将 DR16 原始输入折叠为整车语义请求。
   UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state, tc_semantic_state);
+  wl_fm_tc_mid_leg_hold = tc_semantic_state.mid_leg_hold ? 1 : 0;
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
   input.mode_request.theta_ll_rad = chassis_control_output.current_state.theta_ll;
   input.mode_request.theta_lr_rad = chassis_control_output.current_state.theta_lr;
@@ -736,11 +709,6 @@ void ControlLoop() {
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // 台阶序列完成时清零请求，不再强制高腿长
-  if (chassis_output.control.stair_sequence_done) {
-    tc_semantic_state.stair_count = 0;
-    tc_semantic_state.post_stair_low = true;
-  }
-
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;

@@ -57,7 +57,6 @@ class Fsm {
       float target_leg_length_m{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 目标腿长
       float theta_leg_target_rad{0.0f};  ///< 目标腿摆角，非零时覆盖默认偏置
       uint8_t jump_phase{0};             ///< 跳跃阶段编号，0 表示非跳跃
-      bool stair_sequence_done{false};  ///< 图传上台阶序列刚完成
     };
 
     State mode{State::kDisabled};  ///< 当前模式
@@ -87,8 +86,6 @@ class Fsm {
   State mode_{State::kDisabled};
   wheel_legged::LegProfile requested_leg_profile_{wheel_legged::LegProfile::kLow};
   uint32_t state_enter_tick_ms_{0};
-  uint8_t tc_stair_remaining_{0};
-  uint8_t last_tc_stair_request_{0};
   Output output_{};
 };
 

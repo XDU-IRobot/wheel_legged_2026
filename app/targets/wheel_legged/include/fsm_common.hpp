@@ -63,7 +63,8 @@ struct ModeRequest {
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
-  uint8_t tc_stair_count{0};         ///< 图传键鼠上台阶次数：0=关, 1=C键一级, 2=V键二级
+
+
   bool fire_request{false};          ///< 发射请求
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角
