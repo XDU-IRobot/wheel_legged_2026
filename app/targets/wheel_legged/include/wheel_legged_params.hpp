@@ -188,6 +188,9 @@ inline constexpr float kLockPointAlphaFallStep = 0.018f;
 inline constexpr float kRcStickMax = 660.0f;
 inline constexpr float kRcYawRateMaxRadS = -2.5f;
 inline constexpr float kRcPitchRateMaxRadS = 1.5f;
+inline constexpr float kTcMouseMax = 200.0f;
+inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;
+inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;
 inline constexpr float kPitchTargetMinRad = -0.35f;
 inline constexpr float kPitchTargetMaxRad = 0.25f;
 inline constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -439,8 +442,11 @@ inline constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 inline constexpr float kLockPointAlphaRiseStep = 0.015f;
 inline constexpr float kLockPointAlphaFallStep = 0.018f;
 inline constexpr float kRcStickMax = 660.0f;
-inline constexpr float kRcYawRateMaxRadS = -2.5f;
 inline constexpr float kRcPitchRateMaxRadS = 1.5f;
+inline constexpr float kRcYawRateMaxRadS = -2.5f;
+inline constexpr float kTcMouseMax = 200.0f;
+inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;
+inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;
 inline constexpr float kPitchTargetMinRad = -0.35f;
 inline constexpr float kPitchTargetMaxRad = 0.25f;
 inline constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -645,26 +651,46 @@ inline constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 inline constexpr std::array<float, 240> kCtrlP{
-    -1.591,   -7.6413, 6.188,    11.268,   -2.5759,  -6.7423,  -3.2384,  -11.829, 12.233,  18.401,   -6.7737, -13.243,
-    -0.43397, 1.7776,  -0.44445, -2.7788,  1.2093,   0.4847,   -3.8951,  16.021,  -4.0117, -25.005,  10.941,  4.3729,
-    -6.5657,  -59.575, 15.056,   62.048,   -31.914,  -15.446,  -1.0388,  -4.5059, 1.5729,  0.39936,  -0.6459, -2.1145,
-    -4.2419,  15.785,  -13.869,  -26.983,  47.155,   11.76,    -0.33777, 0.54193, -1.2556, -0.52199, 0.17372, 0.65107,
-    -10.874,  21.193,  14.693,   -6.0893,  -22.795,  -13.562,  -1.7617,  2.7216,  3.3308,  0.30522,  -4.4868, -3.4385,
-    -1.591,   6.188,   -7.6413,  -6.7423,  -2.5759,  11.268,   -3.2384,  12.233,  -11.829, -13.243,  -6.7737, 18.401,
-    0.43397,  0.44445, -1.7776,  -0.4847,  -1.2093,  2.7788,   3.8951,   4.0117,  -16.021, -4.3729,  -10.941, 25.005,
-    -4.2419,  -13.869, 15.785,   11.76,    47.155,   -26.983,  -0.33777, -1.2556, 0.54193, 0.65107,  0.17372, -0.52199,
-    -6.5657,  15.056,  -59.575,  -15.446,  -31.914,  62.048,   -1.0388,  1.5729,  -4.5059, -2.1145,  -0.6459, 0.39936,
-    -10.874,  14.693,  21.193,   -13.562,  -22.795,  -6.0893,  -1.7617,  3.3308,  2.7216,  -3.4385,  -4.4868, 0.30522,
-    1.6628,   -1.5432, -2.972,   -3.4631,  8.0836,   -0.48456, 3.1242,   -3.629,  -6.0672, -4.7018,  15.613,  -0.31132,
-    -0.29402, -1.1382, -1.0861,  2.5531,   -0.85725, 1.4888,   -2.6374,  -10.326, -9.7952, 23.069,   -7.7657, 13.394,
-    13.319,   16.354,  16.102,   -29.276,  52.528,   -30.743,  2.1637,   -5.2879, 0.95415, 9.2789,   3.7343,  -2.437,
-    0.67876,  -31.519, -31.717,  55.723,   -33.89,   14.449,   -0.29282, -1.8755, 1.5848,  3.1069,   -1.8457, -6.5439,
-    -15.963,  -62.387, 30.972,   76.483,   0.3788,   -31.335,  -1.6996,  -9.227,  4.6037,  10.14,    1.3882,  -4.9127,
-    1.6628,   -2.972,  -1.5432,  -0.48456, 8.0836,   -3.4631,  3.1242,   -6.0672, -3.629,  -0.31132, 15.613,  -4.7018,
-    0.29402,  1.0861,  1.1382,   -1.4888,  0.85725,  -2.5531,  2.6374,   9.7952,  10.326,  -13.394,  7.7657,  -23.069,
-    0.67876,  -31.717, -31.519,  14.449,   -33.89,   55.723,   -0.29282, 1.5848,  -1.8755, -6.5439,  -1.8457, 3.1069,
-    13.319,   16.102,  16.354,   -30.743,  52.528,   -29.276,  2.1637,   0.95415, -5.2879, -2.437,   3.7343,  9.2789,
-    -15.963,  30.972,  -62.387,  -31.335,  0.3788,   76.483,   -1.6996,  4.6037,  -9.227,  -4.9127,  1.3882,  10.14,
+   -1.591,  -7.6413,  6.188,  11.268,  -2.5759,  -6.7423,
+     -3.2384,  -11.829,  12.233,  18.401,  -6.7737,  -13.243,
+     -0.43397,  1.7776,  -0.44445,  -2.7788,  1.2093,  0.4847,
+     -3.8951,  16.021,  -4.0117,  -25.005,  10.941,  4.3729,
+     -6.5657,  -59.575,  15.056,  62.048,  -31.914,  -15.446,
+     -1.0388,  -4.5059,  1.5729,  0.39936,  -0.6459,  -2.1145,
+     -4.2419,  15.785,  -13.869,  -26.983,  47.155,  11.76,
+     -0.33777,  0.54193,  -1.2556,  -0.52199,  0.17372,  0.65107,
+     -10.874,  21.193,  14.693,  -6.0893,  -22.795,  -13.562,
+     -1.7617,  2.7216,  3.3308,  0.30522,  -4.4868,  -3.4385,
+     -1.591,  6.188,  -7.6413,  -6.7423,  -2.5759,  11.268,
+     -3.2384,  12.233,  -11.829,  -13.243,  -6.7737,  18.401,
+     0.43397,  0.44445,  -1.7776,  -0.4847,  -1.2093,  2.7788,
+     3.8951,  4.0117,  -16.021,  -4.3729,  -10.941,  25.005,
+     -4.2419,  -13.869,  15.785,  11.76,  47.155,  -26.983,
+     -0.33777,  -1.2556,  0.54193,  0.65107,  0.17372,  -0.52199,
+     -6.5657,  15.056,  -59.575,  -15.446,  -31.914,  62.048,
+     -1.0388,  1.5729,  -4.5059,  -2.1145,  -0.6459,  0.39936,
+     -10.874,  14.693,  21.193,  -13.562,  -22.795,  -6.0893,
+     -1.7617,  3.3308,  2.7216,  -3.4385,  -4.4868,  0.30522,
+     1.6628,  -1.5432,  -2.972,  -3.4631,  8.0836,  -0.48456,
+     3.1242,  -3.629,  -6.0672,  -4.7018,  15.613,  -0.31132,
+     -0.29402,  -1.1382,  -1.0861,  2.5531,  -0.85725,  1.4888,
+     -2.6374,  -10.326,  -9.7952,  23.069,  -7.7657,  13.394,
+     13.319,  16.354,  16.102,  -29.276,  52.528,  -30.743,
+     2.1637,  -5.2879,  0.95415,  9.2789,  3.7343,  -2.437,
+     0.67876,  -31.519,  -31.717,  55.723,  -33.89,  14.449,
+     -0.29282,  -1.8755,  1.5848,  3.1069,  -1.8457,  -6.5439,
+     -15.963,  -62.387,  30.972,  76.483,  0.3788,  -31.335,
+     -1.6996,  -9.227,  4.6037,  10.14,  1.3882,  -4.9127,
+     1.6628,  -2.972,  -1.5432,  -0.48456,  8.0836,  -3.4631,
+     3.1242,  -6.0672,  -3.629,  -0.31132,  15.613,  -4.7018,
+     0.29402,  1.0861,  1.1382,  -1.4888,  0.85725,  -2.5531,
+     2.6374,  9.7952,  10.326,  -13.394,  7.7657,  -23.069,
+     0.67876,  -31.717,  -31.519,  14.449,  -33.89,  55.723,
+     -0.29282,  1.5848,  -1.8755,  -6.5439,  -1.8457,  3.1069,
+     13.319,  16.102,  16.354,  -30.743,  52.528,  -29.276,
+     2.1637,  0.95415,  -5.2879,  -2.437,  3.7343,  9.2789,
+     -15.963,  30.972,  -62.387,  -31.335,  0.3788,  76.483,
+     -1.6996,  4.6037,  -9.227,  -4.9127,  1.3882,  10.14,
 };
 
 inline constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};            ///< 左腿长控制 PID
@@ -690,23 +716,26 @@ inline constexpr float kVxInputDeadbandNorm = 0.1f;                      ///< �
 inline constexpr float kVyInputDeadbandNorm = 0.1f;                      ///< 侧向输入死区（归一化）
 inline constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;         ///< 进入定点锁定速度阈值
 inline constexpr float kLockPointExitSpeedThresholdMps = 0.55f;          ///< 退出定点锁定速度阈值
-inline constexpr float kLockPointCaptureSpeedThresholdMps = 0.02f;       ///< 捕获锁点参考位置的速度阈值
-inline constexpr float kLockPointEnterInputThreshold = 0.08f;            ///< 进入定点锁定输入阈值
+inline constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;       ///< 捕获锁点参考位置的速度阈值
+inline constexpr float kLockPointEnterInputThreshold = 0.1f;            ///< 进入定点锁定输入阈值
 inline constexpr float kLockPointExitInputThreshold = 0.12f;             ///< 退出定点锁定输入阈值
-inline constexpr std::uint32_t kLockPointMinDwellTicks = 100U;           ///< 定点锁定最小驻留周期数
+inline constexpr std::uint32_t kLockPointMinDwellTicks = 10U;           ///< 定点锁定最小驻留周期数
 inline constexpr float kLockPointAlphaRiseStep = 0.015f;                 ///< 定点锁定 alpha 上升步长
 inline constexpr float kLockPointAlphaFallStep = 0.018f;                 ///< 定点锁定 alpha 下降步长
 inline constexpr float kRcStickMax = 660.0f;                             ///< 遥控器摇杆最大值
 inline constexpr float kRcPitchRateMaxRadS = 1.5f;                       ///< 遥控器俯仰角速度上限
 inline constexpr float kRcYawRateMaxRadS = -2.5f;                        ///< 遥控器偏航角速度上限
-inline constexpr float kPitchTargetMinRad = -0.35f;                      ///< 俯仰目标下限
-inline constexpr float kPitchTargetMaxRad = 0.25f;                       ///< 俯仰目标上限
+inline constexpr float kTcMouseMax = 200.0f;                              ///< 图传鼠标最大值基准
+inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;                  ///< 图传鼠标俯仰角速度上限
+inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;                   ///< 图传鼠标偏航角速度上限
+inline constexpr float kPitchTargetMinRad = -0.35f;                      ///< 遥控器目标俯仰角下限
+inline constexpr float kPitchTargetMaxRad = 0.25f;                       ///< 遥控器目标俯仰角上限
 inline constexpr float kYawFollowRampStepRadS = 0.05f;                   ///< 偏航跟随斜坡步长
-inline constexpr float kSpinYawRampStepRadS = 0.005f;                    ///< 自旋偏航斜坡步长
+inline constexpr float kSpinYawRampStepRadS = 0.05f;                    ///< 自旋偏航斜坡步长
 inline constexpr float kSpinYawTargetOffsetRad = 0.55f;                  ///< 自旋偏航目标偏移
 inline constexpr float kSpinTargetYawDotRadS = 10.0f;                    ///< 自旋目标偏航角速度
 inline constexpr float kSpinTranslationGain = 1.2f;                      ///< 自旋平移增益
-inline constexpr float kSpinThetaLlBiasRad = 0.0f;                       ///< 自旋左腿摆角偏置
+inline constexpr float kSpinThetaLlBiasRad = 0.01f;                       ///< 自旋左腿摆角偏置
 inline constexpr float kYawFollowFixedTargetRad = 0.f;                   ///< 偏航跟随固定目标角
 inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;             ///< 偏航跟随侧向偏移
 inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 云台启动偏航对准误差阈值

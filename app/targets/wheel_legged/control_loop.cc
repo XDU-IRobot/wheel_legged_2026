@@ -139,8 +139,11 @@ constexpr float kLockPointAlphaFallStep = wheel_legged::params::active::control_
 constexpr float kLockPointCaptureSpeedThresholdMps =
     wheel_legged::params::active::control_loop::kLockPointCaptureSpeedThresholdMps;
 constexpr float kRcStickMax = wheel_legged::params::active::control_loop::kRcStickMax;
+constexpr float kTcMouseMax = wheel_legged::params::active::control_loop::kTcMouseMax;
 constexpr float kRcYawRateMaxRadS = wheel_legged::params::active::control_loop::kRcYawRateMaxRadS;
 constexpr float kRcPitchRateMaxRadS = wheel_legged::params::active::control_loop::kRcPitchRateMaxRadS;
+constexpr float kTcMouseYawRateMaxRadS = wheel_legged::params::active::control_loop::kTcMouseYawRateMaxRadS;
+constexpr float kTcMousePitchRateMaxRadS = wheel_legged::params::active::control_loop::kTcMousePitchRateMaxRadS;
 constexpr float kPi = wheel_legged::params::active::kPi;
 constexpr float kPitchTargetMinRad = wheel_legged::params::active::control_loop::kPitchTargetMinRad;
 constexpr float kPitchTargetMaxRad = wheel_legged::params::active::control_loop::kPitchTargetMaxRad;
@@ -489,12 +492,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     float yaw_delta = 0.0f;
     float pitch_delta = 0.0f;
     if (dr16.online) {
-      yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta = static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+      pitch_delta += static_cast<float>(dr16.left_y - 34) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
     }
     if (tc_remote_active) {
-      yaw_delta += static_cast<float>(tc_remote.mouse_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta += static_cast<float>(tc_remote.mouse_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      yaw_delta += static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
+      pitch_delta += static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
     }
     semantic_state.rc_target.yaw_rad = rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -kPi, kPi);
     semantic_state.rc_target.pitch_rad =
