@@ -69,7 +69,7 @@ inline constexpr float kPitchGravityCompensationNm = 1.3f;
 inline constexpr PidGains kYawPositionPid{24.0f, 0.0f, 0.0f, 1000.0f, 1.0f};
 inline constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};
 inline constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};
-inline constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 10.0f, 0.0f};
+inline constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 0.0f, 0.0f};
 }  // namespace gimbal
 
 namespace chassis_fsm {
@@ -79,13 +79,13 @@ inline constexpr std::uint32_t kJumpRecoverMs = 450U;
 inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-inline constexpr float kLowLegLengthM = 0.13f;
-inline constexpr float kMidLegLengthM = 0.2f;
-inline constexpr float kHighLegLengthM = 0.27f;
+inline constexpr float kLowLegLengthM = 0.15f;
+inline constexpr float kMidLegLengthM = 0.22f;
+inline constexpr float kHighLegLengthM = 0.34f;
 inline constexpr float kJumpPrepLegLengthM = 0.13f;
-inline constexpr float kJumpPushLegLengthM = 0.36f;
-inline constexpr float kJumpRecoverLegLengthM = 0.20f;
-inline constexpr float kJumpPushReachedLegLengthM = 0.30f;
+inline constexpr float kJumpPushLegLengthM = 0.4f;
+inline constexpr float kJumpRecoverLegLengthM = 0.16f;
+inline constexpr float kJumpPushReachedLegLengthM = 0.365f;
 inline constexpr float kLegLengthRampTimeS = 0.5f;
 inline constexpr float kStairClimbThetaThresholdRad = 0.5f;
 inline constexpr float kStairClimbLegLengthM = 0.16f;
@@ -134,34 +134,54 @@ inline constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 inline constexpr std::array<float, 240> kCtrlP{
-    -2.6445,  -12.6,   10.251,  17.766,  -7.4619, -7.4266, -5.567,   -16.821, 20.891,  29.849,  -24.519, -13.014,
-    -1.1474,  3.906,   -1.3866, -5.7547, 1.5533,  1.8049,  -5.1477,  17.774,  -6.5037, -25.904, 6.7679,  8.5849,
-    -14.685,  -80.684, 16.187,  97.32,   -12.948, -19.771, -0.79047, -4.8123, 2.1206,  -2.6328, 0.47748, -2.2372,
-    -6.2642,  23.242,  -18.645, -39.999, 29.701,  17.373,  -0.46091, 0.40931, -1.3627, 0.95392, -4.1794, 1.7985,
-    -23.123,  45.231,  28.673,  -18.674, -40.503, -23.06,  -2.6116,  3.5853,  5.4235,  0.48667, -7.047,  -4.761,
-    -2.6445,  10.251,  -12.6,   -7.4266, -7.4619, 17.766,  -5.567,   20.891,  -16.821, -13.014, -24.519, 29.849,
-    1.1474,   1.3866,  -3.906,  -1.8049, -1.5533, 5.7547,  5.1477,   6.5037,  -17.774, -8.5849, -6.7679, 25.904,
-    -6.2642,  -18.645, 23.242,  17.373,  29.701,  -39.999, -0.46091, -1.3627, 0.40931, 1.7985,  -4.1794, 0.95392,
-    -14.685,  16.187,  -80.684, -19.771, -12.948, 97.32,   -0.79047, 2.1206,  -4.8123, -2.2372, 0.47748, -2.6328,
-    -23.123,  28.673,  45.231,  -23.06,  -40.503, -18.674, -2.6116,  5.4235,  3.5853,  -4.761,  -7.047,  0.48667,
-    3.3863,   3.9763,  -12.618, -17.304, 22.588,  1.7443,  6.41,     4.4976,  -25.383, -28.464, 46.741,  5.2784,
-    -0.72971, -3.7267, -2.7337, 7.6209,  -2.8115, 3.8989,  -3.2797,  -17.031, -12.174, 34.489,  -12.733, 17.178,
-    45.535,   -85.851, 23.018,  108.45,  60.323,  -47.798, 2.0473,   -2.8389, 0.26134, 9.2948,  4.0662,  -2.7437,
-    -4.7976,  -35.096, -19.404, 70.847,  -38.918, -30.004, -0.33195, -2.0164, 2.093,   1.5668,  1.9951,  -11.945,
-    -39.57,   -155.35, 69.09,   190.95,  3.2277,  -70.566, -2.412,   -13.532, 5.0765,  13.273,  4.6463,  -5.8032,
-    3.3863,   -12.618, 3.9763,  1.7443,  22.588,  -17.304, 6.41,     -25.383, 4.4976,  5.2784,  46.741,  -28.464,
-    0.72971,  2.7337,  3.7267,  -3.8989, 2.8115,  -7.6209, 3.2797,   12.174,  17.031,  -17.178, 12.733,  -34.489,
-    -4.7976,  -19.404, -35.096, -30.004, -38.918, 70.847,  -0.33195, 2.093,   -2.0164, -11.945, 1.9951,  1.5668,
-    45.535,   23.018,  -85.851, -47.798, 60.323,  108.45,  2.0473,   0.26134, -2.8389, -2.7437, 4.0662,  9.2948,
-    -39.57,   69.09,   -155.35, -70.566, 3.2277,  190.95,  -2.412,   5.0765,  -13.532, -5.8032, 4.6463,  13.273,
+-0.83306,  -5.1702,  3.9639,  7.1986,  -2.8365,  -2.9774,
+     -3.2283,  -14.938,  14.569,  23.723,  -14.737,  -9.9482,
+     -0.81055,  2.863,  -1.089,  -3.4804,  0.83266,  1.399,
+     -2.5853,  9.3913,  -3.7934,  -11.082,  2.2507,  5.0455,
+     -12.3,  -78.693,  11.803,  89.993,  -2.4656,  -14.814,
+     -0.64798,  -4.0995,  1.5913,  -2.5703,  1.151,  -1.8874,
+     -4.4374,  10.82,  -10.556,  -11.228,  13.601,  4.6118,
+     -0.34716,  -0.16418,  -0.53572,  1.7816,  -4.0662,  0.49091,
+     -25.277,  37.872,  32.004,  -0.75349,  -37.943,  -27.074,
+     -2.4722,  2.7258,  5.0256,  1.1312,  -5.5857,  -4.5784,
+     -0.83306,  3.9639,  -5.1702,  -2.9774,  -2.8365,  7.1986,
+     -3.2283,  14.569,  -14.938,  -9.9482,  -14.737,  23.723,
+     0.81055,  1.089,  -2.863,  -1.399,  -0.83266,  3.4804,
+     2.5853,  3.7934,  -9.3913,  -5.0455,  -2.2507,  11.082,
+     -4.4374,  -10.556,  10.82,  4.6118,  13.601,  -11.228,
+     -0.34716,  -0.53572,  -0.16418,  0.49091,  -4.0662,  1.7816,
+     -12.3,  11.803,  -78.693,  -14.814,  -2.4656,  89.993,
+     -0.64798,  1.5913,  -4.0995,  -1.8874,  1.151,  -2.5703,
+     -25.277,  32.004,  37.872,  -27.074,  -37.943,  -0.75349,
+     -2.4722,  5.0256,  2.7258,  -4.5784,  -5.5857,  1.1312,
+     2.0588,  2.5769,  -7.0205,  -12.534,  11.718,  3.3683,
+     7.4556,  6.1892,  -26.658,  -40.376,  46.683,  12.73,
+     -0.72175,  -4.466,  -2.225,  8.0066,  -2.6818,  3.3191,
+     -2.3077,  -14.775,  -6.7921,  26.093,  -8.7142,  9.9612,
+     63.482,  -113.17,  15.872,  102.99,  47.489,  -33.411,
+     2.5342,  -1.9481,  -0.4535,  5.6629,  4.0161,  -1.2781,
+     -3.8787,  -37.776,  -12.034,  56.789,  -33.164,  -16.399,
+     -0.2925,  -1.3576,  2.4025,  -0.84556,  1.1223,  -8.8394,
+     -47.075,  -230.67,  78.522,  270.91,  30.395,  -95.402,
+     -2.3876,  -16.763,  5.0598,  15.783,  6.98,  -6.8333,
+     2.0588,  -7.0205,  2.5769,  3.3683,  11.718,  -12.534,
+     7.4556,  -26.658,  6.1892,  12.73,  46.683,  -40.376,
+     0.72175,  2.225,  4.466,  -3.3191,  2.6818,  -8.0066,
+     2.3077,  6.7921,  14.775,  -9.9612,  8.7142,  -26.093,
+     -3.8787,  -12.034,  -37.776,  -16.399,  -33.164,  56.789,
+     -0.2925,  2.4025,  -1.3576,  -8.8394,  1.1223,  -0.84556,
+     63.482,  15.872,  -113.17,  -33.411,  47.489,  102.99,
+     2.5342,  -0.4535,  -1.9481,  -1.2781,  4.0161,  5.6629,
+     -47.075,  78.522,  -230.67,  -95.402,  30.395,  270.91,
+     -2.3876,  5.0598,  -16.763,  -6.8333,  6.98,  15.783,
 };
 
 inline constexpr PidGains kLeftL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
 inline constexpr PidGains kRightL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+inline constexpr PidGains kLeftL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
+inline constexpr PidGains kRightL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
+inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
+inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
 inline constexpr PidGains kRollPid{600.0f, 0.0f, 200.0f, 180.0f, 0.0f};
 inline constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 inline constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
@@ -190,11 +210,11 @@ inline constexpr float kRcPitchRateMaxRadS = 1.5f;
 inline constexpr float kPitchTargetMinRad = -0.35f;
 inline constexpr float kPitchTargetMaxRad = 0.25f;
 inline constexpr float kYawFollowRampStepRadS = 0.05f;
-inline constexpr float kSpinYawRampStepRadS = 0.05f;
+inline constexpr float kSpinYawRampStepRadS = 0.005f;
 inline constexpr float kSpinTargetYawDotRadS = 6.0f;
 inline constexpr float kSpinTranslationGain = 1.0f;
-inline constexpr float kSpinThetaLlBiasRad = 0.01f;
-inline constexpr float kYawFollowFixedTargetRad = -1.72f;
+inline constexpr float kSpinThetaLlBiasRad = 0.0f;
+inline constexpr float kYawFollowFixedTargetRad = 1.216f;
 inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
 inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
@@ -215,7 +235,7 @@ inline constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
 inline constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
 inline constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
-inline constexpr PidGains kYawFollowPid{10.0f, 0.0f, 1.f, 4.0f, 0.0f};
+inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.f, 4.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {

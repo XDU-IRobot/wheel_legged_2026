@@ -24,6 +24,10 @@ volatile int16_t wl_fm_dr16_dial{0};
 volatile uint8_t wl_fm_dr16_enable_request{0};
 volatile uint8_t wl_fm_dr16_spin_request{0};
 volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
+volatile uint8_t wl_fm_dr16_left_x{0};
+volatile uint8_t wl_fm_dr16_left_y{0};
+volatile uint8_t wl_fm_dr16_right_x{0};
+volatile uint8_t wl_fm_dr16_right_y{0};
 
 volatile float wl_fm_chassis_leg_length_m{0.0f};
 volatile float wl_fm_left_leg_length_m{0.0f};
@@ -505,6 +509,11 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_dr16_enable_request = static_cast<uint8_t>(debug.dr16_enable_request);
   wl_fm_dr16_spin_request = static_cast<uint8_t>(debug.dr16_spin_request);
   wl_fm_dr16_jump_trigger_edge = static_cast<uint8_t>(debug.dr16_jump_trigger_edge);
+
+  wl_fm_dr16_left_x = input.dr16.left_x;
+  wl_fm_dr16_left_y = input.dr16.left_y;
+  wl_fm_dr16_right_x = input.dr16.right_x;
+  wl_fm_dr16_right_y = input.dr16.right_y;
 
   wl_fm_chassis_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
