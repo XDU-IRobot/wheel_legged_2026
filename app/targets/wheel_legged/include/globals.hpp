@@ -249,6 +249,13 @@ extern volatile uint8_t wl_fm_pitch_motor_status;
 extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_posture_valid;
+
+/** @brief DYP 测距调试变量 */
+extern volatile uint16_t wl_fm_dyp_left_distance_raw;
+extern volatile uint16_t wl_fm_dyp_right_distance_raw;
+extern volatile uint8_t wl_fm_dyp_left_result;
+extern volatile uint8_t wl_fm_dyp_right_result;
+extern volatile uint32_t wl_fm_dyp_frame_count;
 }
 
 void ControlLoop();

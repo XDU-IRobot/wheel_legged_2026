@@ -70,6 +70,11 @@ volatile float wl_fm_model_s_m{0.0f};
 volatile float wl_fm_model_s_dot_mps{0.0f};
 volatile float wl_fm_target_s_m{0.0f};
 volatile float wl_fm_target_s_dot_mps{0.0f};
+volatile uint8_t wl_fm_lock_point_captured{0U};
+volatile uint8_t wl_fm_lock_point_rising_edge{0U};
+volatile uint8_t wl_fm_lock_point_speed_below_threshold{0U};
+volatile uint8_t wl_fm_lock_point_enabled{0U};
+volatile uint8_t wl_fm_lock_point_request{0U};
 volatile float wl_fm_model_phi_rad{0.0f};
 volatile float wl_fm_model_phi_dot_rad_s{0.0f};
 volatile float wl_fm_model_theta_ll_rad{0.0f};
@@ -91,6 +96,11 @@ volatile uint8_t wl_fm_pitch_motor_status{0};
 volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
 volatile uint8_t wl_fm_pitch_motor_raw_status_byte{0};
 volatile uint8_t wl_fm_posture_valid{0};
+volatile uint16_t wl_fm_dyp_left_distance_raw{0};
+volatile uint16_t wl_fm_dyp_right_distance_raw{0};
+volatile uint8_t wl_fm_dyp_left_result{0};
+volatile uint8_t wl_fm_dyp_right_result{0};
+volatile uint32_t wl_fm_dyp_frame_count{0};
 }
 
 namespace {
@@ -114,6 +124,8 @@ constexpr float kLockPointExitInputThreshold = wheel_legged::params::active::con
 constexpr uint32_t kLockPointMinDwellTicks = wheel_legged::params::active::control_loop::kLockPointMinDwellTicks;
 constexpr float kLockPointAlphaRiseStep = wheel_legged::params::active::control_loop::kLockPointAlphaRiseStep;
 constexpr float kLockPointAlphaFallStep = wheel_legged::params::active::control_loop::kLockPointAlphaFallStep;
+constexpr float kLockPointCaptureSpeedThresholdMps =
+    wheel_legged::params::active::control_loop::kLockPointCaptureSpeedThresholdMps;
 constexpr float kRcStickMax = wheel_legged::params::active::control_loop::kRcStickMax;
 constexpr float kRcYawRateMaxRadS = wheel_legged::params::active::control_loop::kRcYawRateMaxRadS;
 constexpr float kRcPitchRateMaxRadS = wheel_legged::params::active::control_loop::kRcPitchRateMaxRadS;
@@ -815,6 +827,7 @@ void ControlLoop() {
   // 在松杆瞬间立即捕获当前位置作为锁点参考，避免 dwell 期间滑移导致参考点偏移。
   const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                                            chassis_output.mode != chassis::Fsm::State::kSpin);
+  wl_fm_lock_point_enabled = lockpoint_enabled ? 1U : 0U;
   if (!lockpoint_enabled) {
     lock_point_target = false;
     was_requesting_lock = false;
@@ -822,20 +835,31 @@ void ControlLoop() {
     const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
     const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
     const bool request_unlock = (input_abs > kLockPointExitInputThreshold);
+    wl_fm_lock_point_request = request_lock ? 1U : 0U;
     const uint32_t elapsed = now_ms - lock_point_last_switch_tick;
 
-    // 松杆边沿立即捕获锁点位置，不等 dwell 期满
-    if (request_lock && !was_requesting_lock) {
+    // 请求锁点时若车速足够低则捕获锁点位置，不等 dwell 期满；若车速尚高则等待降速后补捕获。
+    const bool speed_below_threshold = std::fabs(current_state.s_dot) < kLockPointCaptureSpeedThresholdMps;
+    wl_fm_lock_point_speed_below_threshold = speed_below_threshold ? 1U : 0U;
+    if (request_lock && speed_below_threshold && !wl_fm_lock_point_captured) {
       lock_point_s_ref = current_state.s;
+      wl_fm_lock_point_captured = 1U;
+    }
+    if (request_lock && !was_requesting_lock) {
+      wl_fm_lock_point_rising_edge = 1U;
     }
     was_requesting_lock = request_lock;
 
     if (!lock_point_target && request_lock && elapsed >= kLockPointMinDwellTicks) {
       lock_point_target = true;
       lock_point_last_switch_tick = now_ms;
+      wl_fm_lock_point_captured = 0U;
+      wl_fm_lock_point_rising_edge = 0U;
     } else if (lock_point_target && request_unlock && elapsed >= kLockPointMinDwellTicks) {
       lock_point_target = false;
       lock_point_last_switch_tick = now_ms;
+      wl_fm_lock_point_captured = 0U;
+      wl_fm_lock_point_rising_edge = 0U;
     }
   }
 
@@ -903,6 +927,13 @@ void ControlLoop() {
   } else {
     wl_fm_gimbal_imu_pitch_rad = 0.0f;
     wl_fm_gimbal_imu_yaw_rad = 0.0f;
+  }
+  if (globals->dyp_rx.has_value()) {
+    wl_fm_dyp_left_distance_raw = globals->dyp_rx->distance_raw_left();
+    wl_fm_dyp_right_distance_raw = globals->dyp_rx->distance_raw_right();
+    wl_fm_dyp_left_result = globals->dyp_rx->last_result_left();
+    wl_fm_dyp_right_result = globals->dyp_rx->last_result_right();
+    wl_fm_dyp_frame_count = globals->dyp_rx->frame_count();
   }
   wl_fm_yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
   wl_fm_pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;
