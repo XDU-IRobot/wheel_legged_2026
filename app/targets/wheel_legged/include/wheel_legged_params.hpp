@@ -225,11 +225,12 @@ inline constexpr float kRightWheelTorqueToCurrent = 2300.0f;
 inline constexpr float kWheelCurrentClampAbs = 16000.0f;
 }  // namespace actuators
 
-namespace gimbal_can_bridge {
-inline constexpr std::uint16_t kRxStdId = 0x119;
-inline constexpr std::size_t kPayloadSize = 4U;
-inline constexpr float kMilliScale = 0.001f;
-}  // namespace gimbal_can_bridge
+namespace remote_control_can_bridge {
+inline constexpr std::uint16_t kRxStdIdA = 0x110;
+inline constexpr std::uint16_t kRxStdIdB = 0x111;
+inline constexpr std::size_t kPayloadSizeA = 8U;
+inline constexpr std::size_t kPayloadSizeB = 8U;
+}  // namespace remote_control_can_bridge
 
 namespace state_estimator {
 inline constexpr float kDefaultDtS = 0.002f;
@@ -477,11 +478,12 @@ inline constexpr float kRightWheelTorqueToCurrent = 2300.0f;
 inline constexpr float kWheelCurrentClampAbs = 16000.0f;
 }  // namespace actuators
 
-namespace gimbal_can_bridge {
-inline constexpr std::uint16_t kRxStdId = 0x119;
-inline constexpr std::size_t kPayloadSize = 4U;
-inline constexpr float kMilliScale = 0.001f;
-}  // namespace gimbal_can_bridge
+namespace remote_control_can_bridge {
+inline constexpr std::uint16_t kRxStdIdA = 0x110;
+inline constexpr std::uint16_t kRxStdIdB = 0x111;
+inline constexpr std::size_t kPayloadSizeA = 8U;
+inline constexpr std::size_t kPayloadSizeB = 8U;
+}  // namespace remote_control_can_bridge
 
 namespace state_estimator {
 inline constexpr float kDefaultDtS = 0.002f;
@@ -548,7 +550,7 @@ inline constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 ID
 inline constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 ID
 
 inline constexpr std::size_t kDr16UartRxBufferSize = 18;  ///< DR16 遥控器串口接收缓冲大小
-inline constexpr std::size_t kImuUartRxBufferSize = 518;  ///< IMU 串口接收缓冲大小
+inline constexpr std::size_t kImuUartRxBufferSize = 518;
 
 inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId,   kPi,          45.0f,
                                          54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 左前腿 DM 电机参数
@@ -587,12 +589,12 @@ inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;        ///< 倒地
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自恢复超时时长
 
 inline constexpr float kLowLegLengthM = 0.15f;              ///< 低腿长目标
-inline constexpr float kMidLegLengthM = 0.20f;              ///< 中腿长目标
+inline constexpr float kMidLegLengthM = 0.22f;              ///< 中腿长目标
 inline constexpr float kHighLegLengthM = 0.35f;             ///< 高腿长目标
 inline constexpr float kJumpPrepLegLengthM = 0.13f;         ///< 跳跃预备腿长
-inline constexpr float kJumpPushLegLengthM = 0.22f;         ///< 跳跃蹬伸腿长
+inline constexpr float kJumpPushLegLengthM = 0.25f;         ///< 跳跃蹬伸腿长
 inline constexpr float kJumpRecoverLegLengthM = 0.20f;      ///< 跳跃回收腿长
-inline constexpr float kJumpPushReachedLegLengthM = 0.22f;  ///< 蹬伸判定腿长阈值
+inline constexpr float kJumpPushReachedLegLengthM = 0.25f;  ///< 蹬伸判定腿长阈值
 inline constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间
 
 inline constexpr float kStairClimbThetaThresholdRad = 0.5f;       ///< 上台阶腿摆角检测阈值///
@@ -606,7 +608,7 @@ namespace chassis {
 inline constexpr float kControlDtS = 0.002f;                      ///< 底盘控制时间步长
 inline constexpr float kLegL1M = 0.215f;                          ///< 五连杆上段长度
 inline constexpr float kLegL2M = 0.254f;                          ///< 五连杆下段长度
-inline constexpr float kSpringTorqueScale = 90.0f;                ///< 弹簧力矩缩放系数
+inline constexpr float kSpringTorqueScale = 80.0f;                ///< 弹簧力矩缩放系数
 inline constexpr float kSpringModelA = 1082.0f;                   ///< 弹簧模型参数 A
 inline constexpr float kSpringModelB = 1070.0f;                   ///< 弹簧模型参数 B
 inline constexpr float kSpringModelC = 404.0f;                    ///< 弹簧模型参数 C
@@ -638,32 +640,30 @@ inline constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 inline constexpr std::array<float, 240> kCtrlP{
-    -0.58029, -2.5528,  1.9518,   3.5789,   -0.46423, -2.3134,  -2.2005,  -8.3085,  7.3717,   11.92,    -2.4309,
-    -8.6938,  -0.36695, 1.3072,   -0.44543, -2.1009,  0.8663,   0.5222,   -4.9317,  17.609,   -6.0003,  -28.277,
-    11.705,   7.026,    -5.0754,  -53.86,   14.542,   55.914,   -29.793,  -15.026,  -0.80591, -3.8308,  1.3799,
-    0.41048,  -0.95335, -1.8342,  -3.8339,  15.723,   -17.188,  -28.613,  50.598,   12.348,   -0.32047, 0.69908,
-    -1.3299,  -1.1112,  1.37,     0.26423,  -9.88,    17.178,   14.247,   -1.7829,  -22.238,  -11.965,  -1.595,
-    2.3575,   2.933,    0.46058,  -4.1163,  -2.8264,  -0.58029, 1.9518,   -2.5528,  -2.3134,  -0.46423, 3.5789,
-    -2.2005,  7.3717,   -8.3085,  -8.6938,  -2.4309,  11.92,    0.36695,  0.44543,  -1.3072,  -0.5222,  -0.8663,
-    2.1009,   4.9317,   6.0003,   -17.609,  -7.026,   -11.705,  28.277,   -3.8339,  -17.188,  15.723,   12.348,
-    50.598,   -28.613,  -0.32047, -1.3299,  0.69908,  0.26423,  1.37,     -1.1112,  -5.0754,  14.542,   -53.86,
-    -15.026,  -29.793,  55.914,   -0.80591, 1.3799,   -3.8308,  -1.8342,  -0.95335, 0.41048,  -9.88,    14.247,
-    17.178,   -11.965,  -22.238,  -1.7829,  -1.595,   2.933,    2.3575,   -2.8264,  -4.1163,  0.46058,  0.73668,
-    -0.40249, -1.5474,  -1.5327,  3.5188,   -0.26472, 2.6764,   -1.9126,  -5.7685,  -4.6106,  12.91,    -0.65183,
-    -0.20696, -1.0711,  -0.92691, 2.5161,   -1.1594,  1.3171,   -2.7815,  -14.473,  -12.493,  33.929,   -15.668,
-    17.725,   12.309,   25.414,   17.122,   -44.23,   78.374,   -34.888,  2.0647,   -4.7777,  1.1318,   9.032,
-    5.1163,   -2.8717,  0.99522,  -35.057,  -33.63,   68.446,   -58.917,  12.468,   -0.3039,  -2.1717,  1.6912,
-    4.1545,   -3.3152,  -7.498,   -14.79,   -62.535,  30.308,   72.853,   -0.7513,  -26.157,  -1.6154,  -9.2102,
-    4.599,    9.6907,   1.0272,   -4.2425,  0.73668,  -1.5474,  -0.40249, -0.26472, 3.5188,   -1.5327,  2.6764,
-    -5.7685,  -1.9126,  -0.65183, 12.91,    -4.6106,  0.20696,  0.92691,  1.0711,   -1.3171,  1.1594,   -2.5161,
-    2.7815,   12.493,   14.473,   -17.725,  15.668,   -33.929,  0.99522,  -33.63,   -35.057,  12.468,   -58.917,
-    68.446,   -0.3039,  1.6912,   -2.1717,  -7.498,   -3.3152,  4.1545,   12.309,   17.122,   25.414,   -34.888,
-    78.374,   -44.23,   2.0647,   1.1318,   -4.7777,  -2.8717,  5.1163,   9.032,    -14.79,   30.308,   -62.535,
-    -26.157,  -0.7513,  72.853,   -1.6154,  4.599,    -9.2102,  -4.2425,  1.0272,   9.6907,
+    -1.591,   -7.6413, 6.188,    11.268,   -2.5759,  -6.7423,  -3.2384,  -11.829, 12.233,  18.401,   -6.7737, -13.243,
+    -0.43397, 1.7776,  -0.44445, -2.7788,  1.2093,   0.4847,   -3.8951,  16.021,  -4.0117, -25.005,  10.941,  4.3729,
+    -6.5657,  -59.575, 15.056,   62.048,   -31.914,  -15.446,  -1.0388,  -4.5059, 1.5729,  0.39936,  -0.6459, -2.1145,
+    -4.2419,  15.785,  -13.869,  -26.983,  47.155,   11.76,    -0.33777, 0.54193, -1.2556, -0.52199, 0.17372, 0.65107,
+    -10.874,  21.193,  14.693,   -6.0893,  -22.795,  -13.562,  -1.7617,  2.7216,  3.3308,  0.30522,  -4.4868, -3.4385,
+    -1.591,   6.188,   -7.6413,  -6.7423,  -2.5759,  11.268,   -3.2384,  12.233,  -11.829, -13.243,  -6.7737, 18.401,
+    0.43397,  0.44445, -1.7776,  -0.4847,  -1.2093,  2.7788,   3.8951,   4.0117,  -16.021, -4.3729,  -10.941, 25.005,
+    -4.2419,  -13.869, 15.785,   11.76,    47.155,   -26.983,  -0.33777, -1.2556, 0.54193, 0.65107,  0.17372, -0.52199,
+    -6.5657,  15.056,  -59.575,  -15.446,  -31.914,  62.048,   -1.0388,  1.5729,  -4.5059, -2.1145,  -0.6459, 0.39936,
+    -10.874,  14.693,  21.193,   -13.562,  -22.795,  -6.0893,  -1.7617,  3.3308,  2.7216,  -3.4385,  -4.4868, 0.30522,
+    1.6628,   -1.5432, -2.972,   -3.4631,  8.0836,   -0.48456, 3.1242,   -3.629,  -6.0672, -4.7018,  15.613,  -0.31132,
+    -0.29402, -1.1382, -1.0861,  2.5531,   -0.85725, 1.4888,   -2.6374,  -10.326, -9.7952, 23.069,   -7.7657, 13.394,
+    13.319,   16.354,  16.102,   -29.276,  52.528,   -30.743,  2.1637,   -5.2879, 0.95415, 9.2789,   3.7343,  -2.437,
+    0.67876,  -31.519, -31.717,  55.723,   -33.89,   14.449,   -0.29282, -1.8755, 1.5848,  3.1069,   -1.8457, -6.5439,
+    -15.963,  -62.387, 30.972,   76.483,   0.3788,   -31.335,  -1.6996,  -9.227,  4.6037,  10.14,    1.3882,  -4.9127,
+    1.6628,   -2.972,  -1.5432,  -0.48456, 8.0836,   -3.4631,  3.1242,   -6.0672, -3.629,  -0.31132, 15.613,  -4.7018,
+    0.29402,  1.0861,  1.1382,   -1.4888,  0.85725,  -2.5531,  2.6374,   9.7952,  10.326,  -13.394,  7.7657,  -23.069,
+    0.67876,  -31.717, -31.519,  14.449,   -33.89,   55.723,   -0.29282, 1.5848,  -1.8755, -6.5439,  -1.8457, 3.1069,
+    13.319,   16.102,  16.354,   -30.743,  52.528,   -29.276,  2.1637,   0.95415, -5.2879, -2.437,   3.7343,  9.2789,
+    -15.963,  30.972,  -62.387,  -31.335,  0.3788,   76.483,   -1.6996,  4.6037,  -9.227,  -4.9127,  1.3882,  10.14,
 };
 
-inline constexpr PidGains kLeftL0Pid{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};            ///< 左腿长控制 PID
-inline constexpr PidGains kRightL0Pid{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};           ///< 右腿长控制 PID
+inline constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};            ///< 左腿长控制 PID
+inline constexpr PidGains kRightL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};           ///< 右腿长控制 PID
 inline constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};       ///< 左腿跳跃蹬伸 PID
 inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};      ///< 右腿跳跃蹬伸 PID
 inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};   ///< 左腿跳跃回收 PID
@@ -732,6 +732,13 @@ inline constexpr std::uint16_t kRxStdId = 0x119;  ///< 云台 CAN 反馈接收�
 inline constexpr std::size_t kPayloadSize = 4U;   ///< 云台 CAN 反馈数据长度
 inline constexpr float kMilliScale = 0.001f;      ///< 云台 CAN 反馈毫单位缩放
 }  // namespace gimbal_can_bridge
+
+namespace remote_control_can_bridge {
+inline constexpr std::uint16_t kRxStdIdA = 0x110;
+inline constexpr std::uint16_t kRxStdIdB = 0x111;
+inline constexpr std::size_t kPayloadSizeA = 8U;
+inline constexpr std::size_t kPayloadSizeB = 8U;
+}  // namespace remote_control_can_bridge
 
 namespace state_estimator {
 inline constexpr float kDefaultDtS = 0.002f;                      ///< 状态估计默认时间步长

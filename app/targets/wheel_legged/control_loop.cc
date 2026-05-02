@@ -24,6 +24,7 @@ volatile int16_t wl_fm_dr16_dial{0};
 volatile uint8_t wl_fm_dr16_enable_request{0};
 volatile uint8_t wl_fm_dr16_spin_request{0};
 volatile uint8_t wl_fm_dr16_jump_trigger_edge{0};
+volatile uint8_t wl_fm_tc_mid_leg_hold{0};
 
 volatile float wl_fm_chassis_leg_length_m{0.0f};
 volatile float wl_fm_left_leg_length_m{0.0f};
@@ -111,6 +112,13 @@ constexpr int16_t kWheelCenterThreshold = wheel_legged::params::active::control_
 constexpr float kControlLoopDtS = wheel_legged::params::active::control_loop::kControlLoopDtS;
 constexpr int16_t kDr16AxisMaxAbs = wheel_legged::params::active::control_loop::kDr16AxisMaxAbs;
 constexpr float kTargetForwardSpeedMinMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMinMps;
+
+constexpr uint16_t kRcKeyW = 0x0001;
+constexpr uint16_t kRcKeyS = 0x0002;
+constexpr uint16_t kRcKeyA = 0x0004;
+constexpr uint16_t kRcKeyD = 0x0008;
+constexpr uint16_t kRcKeyShift = 0x0010;
+constexpr uint16_t kRcKeyC = 0x2000;
 constexpr float kTargetForwardSpeedMaxMps = wheel_legged::params::active::control_loop::kTargetForwardSpeedMaxMps;
 constexpr float kVxInputDeadbandNorm = wheel_legged::params::active::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = wheel_legged::params::active::control_loop::kVyInputDeadbandNorm;
@@ -184,25 +192,51 @@ struct Dr16RawInput {
 };
 
 /**
- * @brief 将 DR16 右摇杆映射为底盘前进速度目标
+ * @brief 裁判系统图传遥控输入（由云台 CAN 转发）
  */
-float MapDr16RightYToForwardSpeed(const int16_t right_y) {
-  const float normalized =
-      rm::modules::Clamp(static_cast<float>(right_y) / static_cast<float>(kDr16AxisMaxAbs), -1.0f, 1.0f);
-  return (normalized >= 0.0f) ? (normalized * kTargetForwardSpeedMaxMps) : (normalized * kTargetForwardSpeedMinMps);
-}
-
-float MapDr16RightXToSideSpeed(const int16_t right_x) {
-  const float normalized =
-      rm::modules::Clamp(static_cast<float>(right_x) / static_cast<float>(kDr16AxisMaxAbs), -1.0f, 1.0f);
-  return (normalized >= 0.0f) ? (normalized * kTargetForwardSpeedMaxMps) : (normalized * kTargetForwardSpeedMinMps);
-}
+struct TcRemoteInput {
+  bool valid{false};
+  int16_t mouse_x{0};
+  int16_t mouse_y{0};
+  int16_t mouse_z{0};
+  bool left_button{false};
+  bool right_button{false};
+  uint16_t keyboard_value{0};
+};
 
 /**
  * @brief 将 DR16 通道归一化到 [-1, 1]
  */
 float NormalizeDr16Axis(const int16_t axis) {
   return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(kDr16AxisMaxAbs), -1.0f, 1.0f);
+}
+
+struct DriveInputNorm {
+  float forward{0.0f};
+  float side{0.0f};
+};
+
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote) {
+  DriveInputNorm out{};
+  if (tc_remote.valid) {
+    const uint16_t keys = tc_remote.keyboard_value;
+    if ((keys & kRcKeyW) != 0U) {
+      out.forward = 1.0f;
+    } else if ((keys & kRcKeyS) != 0U) {
+      out.forward = -1.0f;
+    }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
+    }
+  }
+  // 键盘未按下时回退到 DR16 右摇杆
+  if (dr16.online) {
+    if (out.forward == 0.0f) out.forward = NormalizeDr16Axis(dr16.right_y);
+    if (out.side == 0.0f) out.side = NormalizeDr16Axis(dr16.right_x);
+  }
+  return out;
 }
 
 /**
@@ -335,6 +369,7 @@ struct InputSnapshot {
   bool input_valid{false};
 
   Dr16RawInput dr16{};
+  TcRemoteInput tc_remote{};
   chassis::ChassisStateEstimatorInput estimator_input{};
   wheel_legged::ModeRequest mode_request{};
 };
@@ -362,6 +397,11 @@ struct Dr16SemanticState {
   wheel_legged::GimbalTarget rc_target{};
 };
 
+struct TcSemanticState {
+  bool mid_leg_c_armed{true};  ///< C 键中腿长边沿布防
+  bool mid_leg_hold{false};    ///< 中腿长保持
+};
+
 wheel_legged::LegProfile ResolveLegProfile(const rm::device::DR16::SwitchPosition switch_r) {
   switch (switch_r) {
     case rm::device::DR16::SwitchPosition::kMid:
@@ -387,20 +427,37 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 }
 
 /**
- * @brief 将 DR16 原始输入转换为语义控制输入
+ * @brief 将 DR16 / 图传键鼠原始输入解析为语义控制请求
  */
-void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_state, InputSnapshot &input) {
-  input.input_valid = dr16.online;
+void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
+                           TcSemanticState &tc_state, InputSnapshot &input) {
+  const bool tc_remote_active = tc_remote.valid;
+  const bool has_any_input = dr16.online || tc_remote_active;
+
+  // 图传键鼠边沿切换：C=中腿长, 再按取消
+  if (tc_remote_active) {
+    const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
+
+    if (c_pressed && tc_state.mid_leg_c_armed) {
+      tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
+      tc_state.mid_leg_c_armed = false;
+    }
+    if (!c_pressed) tc_state.mid_leg_c_armed = true;
+  }
+
+  input.input_valid = has_any_input;
   input.dr16 = dr16;
+  input.tc_remote = tc_remote;
   const float yaw_motor_pos_rad = input.estimator_input.yaw_motor_rad;
 
   wheel_legged::ModeRequest request{};
-  request.input_valid = dr16.online;
-  request.domain_request = ResolveDomainRequest(dr16.switch_l);
+  request.input_valid = has_any_input;
+  request.domain_request = dr16.online ? ResolveDomainRequest(dr16.switch_l) : wheel_legged::DomainRequest::kDisabled;
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalWithFire;
-  request.leg_request = ResolveLegProfile(dr16.switch_r);
+  request.leg_request = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid : ResolveLegProfile(dr16.switch_r);
 
-  request.spin_hold = dr16.dial >= kWheelSpinThreshold;
+  request.spin_hold = (dr16.online && dr16.dial >= kWheelSpinThreshold) ||
+                      (tc_remote_active && (tc_remote.keyboard_value & kRcKeyShift) != 0U);
 
   // 拨轮回中后重新布防，负向越过阈值时只产生一次跳跃触发边沿。
   if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
@@ -410,12 +467,12 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
   if (wheel_action_trigger) {
     semantic_state.wheel_action_armed = false;
   }
-  request.jump_trigger = wheel_action_trigger;
+  request.jump_trigger = dr16.online && wheel_action_trigger;
 
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
   // 遥控器云台目标采用积分形式；输入失效或关闭时跟随当前电机角，避免下次使能突跳。
-  if (!dr16.online || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if ((!dr16.online && !tc_remote_active) || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
@@ -425,8 +482,16 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
       semantic_state.rc_target.pitch_rad = 0.0f;
       semantic_state.gimbal_target_initialized = true;
     }
-    const float yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-    const float pitch_delta = static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+    float yaw_delta = 0.0f;
+    float pitch_delta = 0.0f;
+    if (dr16.online) {
+      yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+      pitch_delta = static_cast<float>(dr16.left_y - 34) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+    }
+    if (tc_remote_active) {
+      yaw_delta += static_cast<float>(tc_remote.mouse_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+      pitch_delta += static_cast<float>(tc_remote.mouse_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+    }
     semantic_state.rc_target.yaw_rad = rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -kPi, kPi);
     semantic_state.rc_target.pitch_rad =
         std::clamp(semantic_state.rc_target.pitch_rad + pitch_delta, kPitchTargetMinRad, kPitchTargetMaxRad);
@@ -444,8 +509,12 @@ void ApplyDr16Semantics(const Dr16RawInput &dr16, Dr16SemanticState &semantic_st
 /**
  * @brief 更新传感器快照与 DR16 语义输入
  */
-void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input, Dr16SemanticState &semantic_state) {
+void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input, Dr16SemanticState &semantic_state,
+                                       TcSemanticState &tc_state) {
   g_actuators.FillEstimatorInput(g, input.estimator_input);
+
+  const bool gimbal_rx_ready = g.gimbal_rx.has_value();
+  const bool gimbal_rx_valid = gimbal_rx_ready && g.gimbal_rx->frame_count() > 0;
 
   Dr16RawInput dr16{
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
@@ -456,10 +525,21 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .left_x = g.dr16.left_x(),
       .left_y = g.dr16.left_y(),
       .dial = g.dr16.dial(),
-      .gimbal_imu_yaw_rad = g.gimbal_imu_feedback_rx.has_value() ? g.gimbal_imu_feedback_rx->yaw_rad() : 0.0f,
-      .gimbal_imu_pitch_rad = g.gimbal_imu_feedback_rx.has_value() ? g.gimbal_imu_feedback_rx->pitch_rad() : 0.0f,
+      .gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f,
+      .gimbal_imu_pitch_rad = gimbal_rx_valid ? g.gimbal_rx->pitch_rad() : 0.0f,
   };
-  ApplyDr16Semantics(dr16, semantic_state, input);
+  TcRemoteInput tc_remote{};
+  if (gimbal_rx_valid) {
+    tc_remote.valid = true;
+    tc_remote.mouse_x = g.gimbal_rx->mouse_x();
+    tc_remote.mouse_y = g.gimbal_rx->mouse_y();
+    tc_remote.mouse_z = g.gimbal_rx->mouse_z();
+    tc_remote.left_button = g.gimbal_rx->left_button();
+    tc_remote.right_button = g.gimbal_rx->right_button();
+    tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
+  }
+
+  ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
 }
 
 /**
@@ -594,6 +674,7 @@ void ControlLoop() {
 
   static InputSnapshot input{};
   static Dr16SemanticState dr16_semantic_state{};
+  static TcSemanticState tc_semantic_state{};
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
   static float filtered_s_dot = 0.0f;
@@ -626,8 +707,14 @@ void ControlLoop() {
     yaw_follow_pid_initialized = true;
   }
 
+  // 图传离线时清除图传状态
+  if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
+    tc_semantic_state.mid_leg_hold = false;
+  }
+
   // 1. 采集硬件反馈并将 DR16 原始输入折叠为整车语义请求。
-  UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state);
+  UpdateRawFeedbackAndInputSnapshot(*globals, input, dr16_semantic_state, tc_semantic_state);
+  wl_fm_tc_mid_leg_hold = tc_semantic_state.mid_leg_hold ? 1 : 0;
   input.mode_request.current_leg_length_m = chassis_control_output.mean_leg_length_m;
   input.mode_request.theta_ll_rad = chassis_control_output.current_state.theta_ll;
   input.mode_request.theta_lr_rad = chassis_control_output.current_state.theta_lr;
@@ -637,6 +724,7 @@ void ControlLoop() {
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
+  // 台阶序列完成时清零请求，不再强制高腿长
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
@@ -740,13 +828,18 @@ void ControlLoop() {
     last_chassis_mode = chassis_output.mode;
   }
 
-  const float forward_input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_y) : 0.0f;
-  const float side_input_norm = input.dr16.online ? NormalizeDr16Axis(input.dr16.right_x) : 0.0f;
+  const bool dr16_online = input.dr16.online;
+  const bool tc_remote_active = input.tc_remote.valid;
+  const bool has_drive_input = dr16_online || tc_remote_active;
+
+  const auto drive = ResolveDriveInput(input.dr16, input.tc_remote);
+  const float forward_input_norm = drive.forward;
+  const float side_input_norm = drive.side;
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
   const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
 
   YawFollowAlignMode requested_yaw_follow_align_mode = yaw_follow_align_mode;
-  if (!input.dr16.online || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if (!has_drive_input || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (forward_input_active) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
@@ -756,7 +849,7 @@ void ControlLoop() {
   }
 
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != yaw_follow_align_mode;
-  if (!input.dr16.online || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if (!has_drive_input || input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     yaw_follow_align_mode = YawFollowAlignMode::kForward;
     yaw_follow_target_initialized = false;
     yaw_follow_drive_ready = false;
@@ -815,9 +908,9 @@ void ControlLoop() {
   } else if (!yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
   } else if (forward_input_active) {
-    target_s_dot = input.dr16.online ? yaw_follow_drive_sign * MapDr16RightYToForwardSpeed(input.dr16.right_y) : 0.0f;
+    target_s_dot = yaw_follow_drive_sign * kTargetForwardSpeedMaxMps * forward_input_norm;
   } else if (side_input_active) {
-    target_s_dot = input.dr16.online ? yaw_follow_drive_sign * MapDr16RightXToSideSpeed(input.dr16.right_x) : 0.0f;
+    target_s_dot = yaw_follow_drive_sign * kTargetForwardSpeedMaxMps * side_input_norm;
   }
   if (!chassis_output_enable) {
     target_s_dot = 0.0f;
@@ -921,9 +1014,9 @@ void ControlLoop() {
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
   // 8. 导出关键内部量，供上位机/调试器观察本周期数据流。
-  if (globals->gimbal_imu_feedback_rx.has_value()) {
-    wl_fm_gimbal_imu_pitch_rad = globals->gimbal_imu_feedback_rx->pitch_rad();
-    wl_fm_gimbal_imu_yaw_rad = globals->gimbal_imu_feedback_rx->yaw_rad();
+  if (globals->gimbal_rx.has_value()) {
+    wl_fm_gimbal_imu_pitch_rad = globals->gimbal_rx->pitch_rad();
+    wl_fm_gimbal_imu_yaw_rad = globals->gimbal_rx->yaw_rad();
   } else {
     wl_fm_gimbal_imu_pitch_rad = 0.0f;
     wl_fm_gimbal_imu_yaw_rad = 0.0f;

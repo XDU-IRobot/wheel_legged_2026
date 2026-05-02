@@ -249,7 +249,6 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const State requested_normal_state = ResolveRequestedNormalState(requested_leg_profile_);
 
   State next_mode = mode_;
-
   // 状态机只处理模式时序；具体力矩由 Chassis 根据输出的 ControlOutput 计算。
   switch (mode_) {
     case State::kDisabled:

@@ -14,7 +14,7 @@
 
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
-#include "gimbal_can_feedback_rx_bridge.hpp"
+#include "gimbal_to_chassis_rx_bridge.hpp"
 #include "utils/template_dyp_can.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
@@ -37,18 +37,18 @@ struct SharedResources {
   rm::device::DR16 dr16{no_dtcm->rc_uart};  ///< 遥控器接收机
 
   // 保持值语义成员，实际构造延后到 Init()。
-  std::optional<rm::hal::ThrottledCan<>> joint_can{};                 ///< 腿部 DM 电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> wheel_can{};                 ///< 轮毂/偏航电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};                ///< 云台俯仰与云台惯导 CAN
-  std::optional<DmMitMotor> dm_lf{};                                  ///< 左前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_lb{};                                  ///< 左后腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rf{};                                  ///< 右前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rb{};                                  ///< 右后腿关节 DM 电机
-  std::optional<rm::device::M3508> left_wheel{};                      ///< 左轮 M3508
-  std::optional<rm::device::M3508> right_wheel{};                     ///< 右轮 M3508
-  std::optional<rm::device::HipnucImu> chassis_imu{};                 ///< 底盘惯导
-  std::optional<GimbalCanFeedbackRxBridge> gimbal_imu_feedback_rx{};  ///< 云台惯导 CAN 反馈
-  std::optional<DypCanRxBridge> dyp_rx{};                             ///< DYP 测距 CAN 接收
+  std::optional<rm::hal::ThrottledCan<>> joint_can{};   ///< 腿部 DM 电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> wheel_can{};   ///< 轮毂/偏航电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};  ///< 云台俯仰与云台惯导 CAN
+  std::optional<DmMitMotor> dm_lf{};                    ///< 左前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_lb{};                    ///< 左后腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rf{};                    ///< 右前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rb{};                    ///< 右后腿关节 DM 电机
+  std::optional<rm::device::M3508> left_wheel{};        ///< 左轮 M3508
+  std::optional<rm::device::M3508> right_wheel{};       ///< 右轮 M3508
+  std::optional<rm::device::HipnucImu> chassis_imu{};   ///< 底盘惯导
+  std::optional<GimbalToChassisRxBridge> gimbal_rx{};   ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<DypCanRxBridge> dyp_rx{};               ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -113,8 +113,8 @@ struct SharedResources {
       gimbal_can->SetFilter(0, 0);
       gimbal_can->Begin();
     }
-    if (!gimbal_imu_feedback_rx.has_value()) {
-      gimbal_imu_feedback_rx.emplace(*gimbal_can);
+    if (!gimbal_rx.has_value()) {
+      gimbal_rx.emplace(*gimbal_can);
     }
     if (!dyp_rx.has_value()) {
       dyp_rx.emplace(*joint_can);
@@ -176,6 +176,7 @@ extern volatile int16_t wl_fm_dr16_dial;
 extern volatile uint8_t wl_fm_dr16_enable_request;
 extern volatile uint8_t wl_fm_dr16_spin_request;
 extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
+extern volatile uint8_t wl_fm_tc_mid_leg_hold;
 
 /** @brief 底盘核心观测量 */
 extern volatile float wl_fm_chassis_leg_length_m;

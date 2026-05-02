@@ -15,7 +15,6 @@
  */
 
 namespace gimbal {
-
 /**
  * @brief 云台控制主类
  */
