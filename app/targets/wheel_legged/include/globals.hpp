@@ -37,18 +37,18 @@ struct SharedResources {
   rm::device::DR16 dr16{no_dtcm->rc_uart};  ///< 遥控器接收机
 
   // 保持值语义成员，实际构造延后到 Init()。
-  std::optional<rm::hal::ThrottledCan<>> joint_can{};                 ///< 腿部 DM 电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> wheel_can{};                 ///< 轮毂/偏航电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};                ///< 云台俯仰与云台惯导 CAN
-  std::optional<DmMitMotor> dm_lf{};                                  ///< 左前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_lb{};                                  ///< 左后腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rf{};                                  ///< 右前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rb{};                                  ///< 右后腿关节 DM 电机
-  std::optional<rm::device::M3508> left_wheel{};                      ///< 左轮 M3508
-  std::optional<rm::device::M3508> right_wheel{};                     ///< 右轮 M3508
-  std::optional<rm::device::HipnucImu> chassis_imu{};                 ///< 底盘惯导
-  std::optional<GimbalToChassisRxBridge> gimbal_rx{};  ///< 云台→底盘 CAN 桥（惯导+键鼠）
-  std::optional<DypCanRxBridge> dyp_rx{};                             ///< DYP 测距 CAN 接收
+  std::optional<rm::hal::ThrottledCan<>> joint_can{};   ///< 腿部 DM 电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> wheel_can{};   ///< 轮毂/偏航电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};  ///< 云台俯仰与云台惯导 CAN
+  std::optional<DmMitMotor> dm_lf{};                    ///< 左前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_lb{};                    ///< 左后腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rf{};                    ///< 右前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rb{};                    ///< 右后腿关节 DM 电机
+  std::optional<rm::device::M3508> left_wheel{};        ///< 左轮 M3508
+  std::optional<rm::device::M3508> right_wheel{};       ///< 右轮 M3508
+  std::optional<rm::device::HipnucImu> chassis_imu{};   ///< 底盘惯导
+  std::optional<GimbalToChassisRxBridge> gimbal_rx{};   ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<DypCanRxBridge> dyp_rx{};               ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -250,6 +250,13 @@ extern volatile uint8_t wl_fm_pitch_motor_status;
 extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
 extern volatile uint8_t wl_fm_posture_valid;
+
+/** @brief DYP 测距调试变量 */
+extern volatile uint16_t wl_fm_dyp_left_distance_raw;
+extern volatile uint16_t wl_fm_dyp_right_distance_raw;
+extern volatile uint8_t wl_fm_dyp_left_result;
+extern volatile uint8_t wl_fm_dyp_right_result;
+extern volatile uint32_t wl_fm_dyp_frame_count;
 }
 
 void ControlLoop();

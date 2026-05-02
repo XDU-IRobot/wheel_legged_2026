@@ -19,14 +19,10 @@
  */
 class GimbalToChassisRxBridge final : public rm::device::CanDevice {
  public:
-  static constexpr rm::u16 kRxStdIdA =
-      wheel_legged::params::active::remote_control_can_bridge::kRxStdIdA;
-  static constexpr rm::u16 kRxStdIdB =
-      wheel_legged::params::active::remote_control_can_bridge::kRxStdIdB;
-  static constexpr rm::usize kPayloadSizeA =
-      wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeA;
-  static constexpr rm::usize kPayloadSizeB =
-      wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeB;
+  static constexpr rm::u16 kRxStdIdA = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdA;
+  static constexpr rm::u16 kRxStdIdB = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdB;
+  static constexpr rm::usize kPayloadSizeA = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeA;
+  static constexpr rm::usize kPayloadSizeB = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeB;
 
   explicit GimbalToChassisRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdIdA, kRxStdIdB) {}
 
