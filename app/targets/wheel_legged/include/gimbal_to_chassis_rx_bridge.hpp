@@ -44,6 +44,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       right_button_ = (msg->data[3] != 0);
       keyboard_value_ = UnpackU16(&msg->data[4]);
       frame_count_++;
+      kbd_frame_count_++;
       ReportStatus(kOk);
     } else {
       ReportStatus(kFault);
@@ -59,6 +60,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] bool right_button() const { return right_button_; }
   [[nodiscard]] rm::u16 keyboard_value() const { return keyboard_value_; }
   [[nodiscard]] rm::u32 frame_count() const { return frame_count_; }
+  [[nodiscard]] rm::u32 keyboard_frame_count() const { return kbd_frame_count_; }
 
  private:
   static rm::i16 UnpackI16(const rm::u8 *in) {
@@ -81,4 +83,5 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   bool right_button_{false};
   rm::u16 keyboard_value_{0};
   rm::u32 frame_count_{0};
+  rm::u32 kbd_frame_count_{0};
 };

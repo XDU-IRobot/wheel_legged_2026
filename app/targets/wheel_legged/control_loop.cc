@@ -485,8 +485,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     float yaw_delta = 0.0f;
     float pitch_delta = 0.0f;
     if (dr16.online) {
-      yaw_delta = static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta = static_cast<float>(dr16.left_y - 34) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+      pitch_delta += static_cast<float>(dr16.left_y - 34) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
     }
     if (tc_remote_active) {
       yaw_delta += static_cast<float>(tc_remote.mouse_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
@@ -515,6 +515,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
 
   const bool gimbal_rx_ready = g.gimbal_rx.has_value();
   const bool gimbal_rx_valid = gimbal_rx_ready && g.gimbal_rx->frame_count() > 0;
+  const bool keyboard_rx_valid = gimbal_rx_ready && g.gimbal_rx->keyboard_frame_count() > 0;
 
   Dr16RawInput dr16{
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
@@ -529,7 +530,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .gimbal_imu_pitch_rad = gimbal_rx_valid ? g.gimbal_rx->pitch_rad() : 0.0f,
   };
   TcRemoteInput tc_remote{};
-  if (gimbal_rx_valid) {
+  if (keyboard_rx_valid) {
     tc_remote.valid = true;
     tc_remote.mouse_x = g.gimbal_rx->mouse_x();
     tc_remote.mouse_y = g.gimbal_rx->mouse_y();

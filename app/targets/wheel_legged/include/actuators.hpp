@@ -83,6 +83,7 @@ class Actuators {
     if (output.gimbal_enabled) {
       EnableGimbalMotorsIfNeeded(g);
       SendGimbalMitCommand(g, output.yaw_cmd_torque_nm, output.pitch_cmd_torque_nm);
+      // SendGimbalMitCommand(g, 0.0f, 0.0f);
     } else {
       SendGimbalMitCommand(g, 0.0f, 0.0f);
       DisableGimbalMotorsIfNeeded(g);
