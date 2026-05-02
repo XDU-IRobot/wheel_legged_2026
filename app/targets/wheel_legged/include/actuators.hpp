@@ -156,7 +156,6 @@ class Actuators {
       return;
     }
 
-
     g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
