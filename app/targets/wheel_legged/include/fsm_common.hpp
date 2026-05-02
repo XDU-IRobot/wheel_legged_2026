@@ -61,9 +61,8 @@ struct ModeRequest {
   ServiceProfile service_profile{ServiceProfile::kChassisAndGimbalWithFire};  ///< 维护域策略
   LegProfile leg_request{LegProfile::kLow};                                   ///< 腿长档位请求
 
-  bool spin_hold{false};     ///< 小陀螺保持请求
-  bool jump_trigger{false};  ///< 跳跃边沿触发请求
-
+  bool spin_hold{false};             ///< 小陀螺保持请求
+  bool jump_trigger{false};          ///< 跳跃边沿触发请求
   bool fire_request{false};          ///< 发射请求
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角
