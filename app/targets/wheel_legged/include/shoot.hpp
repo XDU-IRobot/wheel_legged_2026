@@ -15,7 +15,7 @@ class Shoot {
   void Init(SharedResources &g);
   void Enable();
   void Disable();
-  void Update(SharedResources &g, float dt, int16_t dr16_dial);
+  void Update(SharedResources &g, float dt, int16_t dr16_dial, bool mouse_left);
 
   bool enabled() const { return enabled_; }
 

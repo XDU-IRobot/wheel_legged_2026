@@ -680,6 +680,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
 /**
  * @brief 500Hz 主控制循环
  */
+bool button_left;
 void ControlLoop() {
   if (globals == nullptr) {
     return;
@@ -778,7 +779,7 @@ void ControlLoop() {
   gimbal_control_output = globals->gimbal.GetOutput();
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
 
-  // 发射机构控制：进入战斗域时启动摩擦轮，DR16 拨轮控制连发
+  // 发射机构控制：进入战斗域时启动摩擦轮，DR16 拨轮或图传鼠标左键控制连发
   {
     const bool in_combat = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     if (in_combat && !globals->shoot.enabled()) {
@@ -786,7 +787,7 @@ void ControlLoop() {
     } else if (!in_combat && globals->shoot.enabled()) {
       globals->shoot.Disable();
     }
-    globals->shoot.Update(*globals, kControlLoopDtS, input.dr16.dial);
+    globals->shoot.Update(*globals, kControlLoopDtS, input.dr16.dial, input.tc_remote.left_button);
   }
 
   // 5. 云台启动归中闭环判稳；完成后把遥控器积分目标对齐到当前云台惯导角。

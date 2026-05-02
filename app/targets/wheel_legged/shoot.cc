@@ -21,7 +21,7 @@ void Shoot::Enable() { enabled_ = true; }
 
 void Shoot::Disable() { enabled_ = false; }
 
-void Shoot::Update(SharedResources &g, float dt, int16_t dr16_dial) {
+void Shoot::Update(SharedResources &g, float dt, int16_t dr16_dial, bool mouse_left) {
   auto &sc = g.shoot_controller;
 
   if (enabled_) {
@@ -29,8 +29,8 @@ void Shoot::Update(SharedResources &g, float dt, int16_t dr16_dial) {
     sc.Arm(true);
     sc.SetArmSpeed(ns::kFricSpeedTargetRpm);
 
-    // DR16 拨轮控制拨盘连发
-    if (dr16_dial < ns::kDialFireThreshold) {
+    // DR16 拨轮或图传鼠标左键控制拨盘连发
+    if (dr16_dial < ns::kDialFireThreshold || mouse_left) {
       sc.SetMode(Shoot2Fric::kFullAuto);
       sc.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
