@@ -156,10 +156,11 @@ class Actuators {
       return;
     }
 
-    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
-    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+
     g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
 
     gimbal_motors_enabled_latched_ = true;
   }
