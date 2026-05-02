@@ -475,8 +475,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.wheel_action_armed = false;
   }
   // kCombat 模式下拨轮转为控制拨盘，不再触发跳跃
-  request.jump_trigger = dr16.online && wheel_action_trigger &&
-                         request.domain_request != wheel_legged::DomainRequest::kCombat;
+  request.jump_trigger =
+      dr16.online && wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
 
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
