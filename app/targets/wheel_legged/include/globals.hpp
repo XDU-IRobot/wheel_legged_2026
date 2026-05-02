@@ -19,6 +19,8 @@
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
+#include "common/controllers/shoot_2firc.hpp"
+#include "shoot.hpp"
 
 /**
  * @file  targets/wheel_legged/include/globals.hpp
@@ -52,6 +54,13 @@ struct SharedResources {
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
+
+  std::optional<rm::device::M3508> fric_left{};   ///< 左摩擦轮 (gimbal_can)
+  std::optional<rm::device::M3508> fric_right{};  ///< 右摩擦轮 (gimbal_can)
+  std::optional<rm::device::M3508> dial{};         ///< 拨盘 (wheel_can)
+
+  Shoot2Fric shoot_controller{8, 42.75f};  ///< 双摩擦轮发射控制器
+  Shoot shoot{};                            ///< 发射机构状态机
 
   chassis::Fsm chassis_fsm{};  ///< 底盘状态机
   chassis::Chassis chassis{};  ///< 底盘控制器
@@ -140,6 +149,12 @@ struct SharedResources {
       yaw_motor.emplace(*wheel_can, wheel_legged::params::active::gimbal::kYawMotorSettings);
     }
 
+    if (!fric_left.has_value()) {
+      fric_left.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricLeftId);
+      fric_right.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricRightId);
+      dial.emplace(*wheel_can, wheel_legged::params::active::globals::kDialId);
+    }
+
     if (!chassis_imu.has_value()) {
       chassis_imu.emplace(no_dtcm->imu_uart);
       chassis_imu->Begin();
@@ -149,6 +164,8 @@ struct SharedResources {
     chassis.Init();
     gimbal_fsm.Init();
     gimbal.Init();
+
+    shoot.Init(*this);
   }
 };
 

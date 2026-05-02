@@ -474,7 +474,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   if (wheel_action_trigger) {
     semantic_state.wheel_action_armed = false;
   }
-  request.jump_trigger = dr16.online && wheel_action_trigger;
+  // kCombat 模式下拨轮转为控制拨盘，不再触发跳跃
+  request.jump_trigger = dr16.online && wheel_action_trigger &&
+                         request.domain_request != wheel_legged::DomainRequest::kCombat;
 
   request.fire_request = false;
   request.target_source = wheel_legged::TargetSource::kRc;
@@ -775,6 +777,17 @@ void ControlLoop() {
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
+
+  // 发射机构控制：进入战斗域时启动摩擦轮，DR16 拨轮控制连发
+  {
+    const bool in_combat = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+    if (in_combat && !globals->shoot.enabled()) {
+      globals->shoot.Enable();
+    } else if (!in_combat && globals->shoot.enabled()) {
+      globals->shoot.Disable();
+    }
+    globals->shoot.Update(*globals, kControlLoopDtS, input.dr16.dial);
+  }
 
   // 5. 云台启动归中闭环判稳；完成后把遥控器积分目标对齐到当前云台惯导角。
   if (!gimbal_output.control.gimbal_enable || chassis_posture_invalid) {

@@ -299,6 +299,10 @@ inline constexpr std::uint16_t kDmRbSlaveId = 0x05;
 inline constexpr std::uint16_t kLeftWheelId = 0x06;
 inline constexpr std::uint16_t kRightWheelId = 0x05;
 
+inline constexpr std::uint16_t kFricLeftId = 0x01;   ///< 左摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kFricRightId = 0x02;  ///< 右摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kDialId = 0x03;       ///< 拨盘 M3508 (wheel_can)
+
 inline constexpr std::size_t kDr16UartRxBufferSize = 18;
 inline constexpr std::size_t kImuUartRxBufferSize = 518;
 
@@ -325,6 +329,15 @@ inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};
 inline constexpr PidGains kPitchPositionPid{13.0f, 0.0f, 0.05f, 10.0f, 0.4f};
 inline constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
 }  // namespace gimbal
+
+namespace shoot {
+inline constexpr float kFricSpeedTargetRpm = 6000.0f;
+inline constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
+inline constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};
+inline constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};
+inline constexpr int16_t kDialFireThreshold = -600;
+inline constexpr float kShootFrequencyHz = 24.0f;
+}  // namespace shoot
 
 namespace chassis_fsm {
 inline constexpr std::uint32_t kJumpPrepMs = 200U;
@@ -555,6 +568,10 @@ inline constexpr std::uint16_t kDmRbSlaveId = 0x07;   ///< 右后腿从电机 ID
 inline constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 ID
 inline constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 ID
 
+inline constexpr std::uint16_t kFricLeftId = 0x02;   ///< 左摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kFricRightId = 0x04;  ///< 右摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kDialId = 0x03;       ///< 拨盘 M3508 (wheel_can)
+
 inline constexpr std::size_t kDr16UartRxBufferSize = 18;  ///< DR16 遥控器串口接收缓冲大小
 inline constexpr std::size_t kImuUartRxBufferSize = 518;
 
@@ -586,6 +603,15 @@ inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          /
 inline constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
 }  // namespace gimbal
+
+namespace shoot {
+inline constexpr float kFricSpeedTargetRpm = 6000.0f;
+inline constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
+inline constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};
+inline constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};
+inline constexpr int16_t kDialFireThreshold = -600;
+inline constexpr float kShootFrequencyHz = 24.0f;
+}  // namespace shoot
 
 namespace chassis_fsm {
 inline constexpr std::uint32_t kJumpPrepMs = 250U;                   ///< 跳跃预备阶段时长
