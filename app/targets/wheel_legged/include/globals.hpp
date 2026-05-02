@@ -59,7 +59,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> fric_right{};  ///< 右摩擦轮 (gimbal_can)
   std::optional<rm::device::M3508> dial{};        ///< 拨盘 (wheel_can)
 
-  Shoot2Fric shoot_controller{8, 42.75f};  ///< 双摩擦轮发射控制器
+  Shoot2Fric shoot_controller{9, 42.75f};  ///< 双摩擦轮发射控制器
   Shoot shoot{};                           ///< 发射机构状态机
 
   chassis::Fsm chassis_fsm{};  ///< 底盘状态机

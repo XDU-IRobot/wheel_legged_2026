@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-using ns = wheel_legged::params::active::shoot;
+namespace ns = wheel_legged::params::active::shoot;
 
 void Shoot::Init(SharedResources &g) {
   auto &spid = g.shoot_controller.pid();
@@ -43,8 +43,8 @@ void Shoot::Update(SharedResources &g, float dt, int16_t dr16_dial) {
 
   const float fric_left_rpm = g.fric_left.has_value() ? static_cast<float>(g.fric_left->rpm()) : 0.0f;
   const float fric_right_rpm = g.fric_right.has_value() ? static_cast<float>(g.fric_right->rpm()) : 0.0f;
-  const float dial_encoder = g.dial.has_value() ? static_cast<float>(g.dial->encoder()) : 0.0f;
-  const float dial_rpm = g.dial.has_value() ? static_cast<float>(g.dial->rpm()) : 0.0f;
+  const float dial_encoder = g.dial.has_value() ? -static_cast<float>(g.dial->encoder()) : 0.0f;
+  const float dial_rpm = g.dial.has_value() ? -static_cast<float>(g.dial->rpm()) : 0.0f;
 
   sc.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, dt);
 
@@ -55,7 +55,7 @@ void Shoot::Update(SharedResources &g, float dt, int16_t dr16_dial) {
     g.fric_right->SetCurrent(static_cast<int16_t>(std::clamp(sc.output().fric_2, -16000.0f, 16000.0f)));
   }
   if (g.dial.has_value()) {
-    g.dial->SetCurrent(static_cast<int16_t>(std::clamp(sc.output().loader, -16000.0f, 16000.0f)));
+    g.dial->SetCurrent(static_cast<int16_t>(std::clamp(-sc.output().loader, -16000.0f, 16000.0f)));
   }
   if (g.gimbal_can.has_value()) {
     rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);

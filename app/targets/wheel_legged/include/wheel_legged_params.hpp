@@ -299,9 +299,9 @@ inline constexpr std::uint16_t kDmRbSlaveId = 0x05;
 inline constexpr std::uint16_t kLeftWheelId = 0x06;
 inline constexpr std::uint16_t kRightWheelId = 0x05;
 
-inline constexpr std::uint16_t kFricLeftId = 0x01;   ///< 左摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kFricRightId = 0x02;  ///< 右摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kDialId = 0x03;       ///< 拨盘 M3508 (wheel_can)
+inline constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kDialId = 0x01;       ///< 拨盘 M3508 (wheel_can)
 
 inline constexpr std::size_t kDr16UartRxBufferSize = 18;
 inline constexpr std::size_t kImuUartRxBufferSize = 518;
@@ -333,10 +333,10 @@ inline constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
 namespace shoot {
 inline constexpr float kFricSpeedTargetRpm = 6000.0f;
 inline constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
-inline constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};
-inline constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};
+inline constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.0f, 2000.0f, 0.0f};
+inline constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 0.0f};
 inline constexpr int16_t kDialFireThreshold = -600;
-inline constexpr float kShootFrequencyHz = 24.0f;
+inline constexpr float kShootFrequencyHz = 1.0f;
 }  // namespace shoot
 
 namespace chassis_fsm {
