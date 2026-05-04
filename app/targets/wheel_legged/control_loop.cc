@@ -495,7 +495,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     float pitch_delta = 0.0f;
     if (dr16.online) {
       yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta += static_cast<float>(dr16.left_y - 34) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
     }
     if (tc_remote_active) {
       yaw_delta += static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
