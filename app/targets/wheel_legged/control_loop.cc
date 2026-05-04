@@ -543,7 +543,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
     tc_remote.valid = true;
     tc_remote.mouse_x = g.gimbal_rx->mouse_x();
     tc_remote.mouse_y = g.gimbal_rx->mouse_y();
-//    tc_remote.mouse_z = g.gimbal_rx->mouse_z();
+    //    tc_remote.mouse_z = g.gimbal_rx->mouse_z();
     tc_remote.left_button = g.gimbal_rx->left_button();
     tc_remote.right_button = g.gimbal_rx->right_button();
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();

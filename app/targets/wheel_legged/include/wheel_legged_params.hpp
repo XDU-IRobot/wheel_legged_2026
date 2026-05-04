@@ -594,7 +594,7 @@ inline const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 
 
 inline constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认时间步长
 inline constexpr float kPitchMinRad = -0.3f;                ///< 俯仰角下限
-inline constexpr float kPitchMaxRad = 0.3f;                ///< 俯仰角上限
+inline constexpr float kPitchMaxRad = 0.3f;                 ///< 俯仰角上限
 inline constexpr float kDmTorqueLimitNm = 10.0f;            ///< DM 电机力矩限制
 inline constexpr float kPitchGravityCompensationNm = 1.3f;  ///< 俯仰重力补偿力矩
 
