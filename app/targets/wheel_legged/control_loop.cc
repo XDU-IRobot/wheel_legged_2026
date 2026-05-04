@@ -36,6 +36,9 @@ volatile float wl_fm_right_leg_length_m{0.0f};
 volatile float wl_fm_chassis_speed_mps{0.0f};
 volatile float wl_fm_left_support_force_n{0.0f};
 volatile float wl_fm_right_support_force_n{0.0f};
+volatile float wl_fm_left_leg_force_n{0.0f};
+volatile float wl_fm_right_leg_force_n{0.0f};
+volatile uint8_t wl_fm_mid_leg_off_ground_phase{0};
 volatile uint8_t wl_fm_off_ground_in_mid_high_leg{0};
 
 volatile float wl_fm_motor_lf_pos_rad{0.0f};
@@ -96,6 +99,10 @@ volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
 volatile float wl_fm_pitch_target_rad{0.0f};
 volatile float wl_fm_pitch_motor_pos_rad{0.0f};
 volatile float wl_fm_pitch_motor_vel_rad_s{0.0f};
+volatile float wl_fm_booster_pos_rad{0.0f};
+volatile float wl_fm_fw1_rpm{0.0f};
+volatile float wl_fm_fw2_rpm{0.0f};
+volatile float wl_fm_fw3_rpm{0.0f};
 volatile uint8_t wl_fm_yaw_motor_status{0};
 volatile uint8_t wl_fm_pitch_motor_status{0};
 volatile uint8_t wl_fm_yaw_motor_raw_status_byte{0};
@@ -527,7 +534,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
       .switch_r = g.dr16.switch_r(),
       .right_y = g.dr16.right_y(),
       .right_x = g.dr16.right_x(),
-      .left_x = g.dr16.left_x(),
+      .left_x = static_cast<int16_t>(g.dr16.left_x() + 3),
       .left_y = g.dr16.left_y(),
       .dial = g.dr16.dial(),
       .gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f,
@@ -612,6 +619,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_chassis_speed_mps = chassis_control_output.speed_mps;
   wl_fm_left_support_force_n = chassis_control_output.left_support_force_n;
   wl_fm_right_support_force_n = chassis_control_output.right_support_force_n;
+  wl_fm_left_leg_force_n = chassis_control_output.left_leg_force_n;
+  wl_fm_right_leg_force_n = chassis_control_output.right_leg_force_n;
+  wl_fm_mid_leg_off_ground_phase = chassis_control_output.mid_leg_off_ground_phase;
   wl_fm_off_ground_in_mid_high_leg = static_cast<uint8_t>(chassis_control_output.off_ground_in_mid_high_leg);
 
   const auto &motor = input.estimator_input;
@@ -730,6 +740,11 @@ void ControlLoop() {
   input.mode_request.theta_lr_rad = chassis_control_output.current_state.theta_lr;
   input.mode_request.tick_ms = now_ms;
 
+  // 射击模式时禁止跳跃
+  if (input.dr16.online && input.dr16.switch_l == rm::device::DR16::SwitchPosition::kUp) {
+    input.mode_request.jump_trigger = false;
+  }
+
   // 2. 状态机先消费同一份语义请求，输出本周期底盘/云台控制意图。
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
@@ -806,12 +821,28 @@ void ControlLoop() {
                                          ? chassis_output.control.enable_dm
                                          : chassis_output.control.enable_dm && chassis_startup_ready;
 
+  // 发射机构（hero 专用：拨盘使能 + 0 Nm 力矩）
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  {
+    const bool shooter_enter = input.dr16.online &&
+                           input.dr16.switch_l == rm::device::DR16::SwitchPosition::kUp;
+    const bool fire_trigger = input.dr16.dial < wheel_legged::params::active::gimbal::kFireDialThreshold;
+    globals->shoot_controller.Update(shooter_enter, fire_trigger);
+    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);  // 摩擦轮 CAN3
+    wl_fm_booster_pos_rad = globals->shoot_controller.booster_pos();
+    wl_fm_fw1_rpm = static_cast<float>(globals->fw_motor_1->rpm());
+    wl_fm_fw2_rpm = static_cast<float>(globals->fw_motor_2->rpm());
+    wl_fm_fw3_rpm = static_cast<float>(globals->fw_motor_3->rpm());
+  }
+#endif
+
   // 6. 将状态机输出和传感器快照转换为底盘控制器输入。
   chassis::Chassis::UpdateInput chassis_update_input{};
   chassis_update_input.fsm_mode = chassis_output.mode;
   chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
+  chassis_update_input.leg_profile = chassis_output.control.leg_profile;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;

@@ -25,6 +25,12 @@ constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravity
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
+constexpr rm::f32 kMidLegOffGroundRecoverLengthM =
+    wheel_legged::params::active::chassis::kMidLegOffGroundRecoverLengthM;
+constexpr auto kMidLegOffGroundRecoverTicks = static_cast<uint32_t>(
+    wheel_legged::params::active::chassis::kMidLegOffGroundRecoverMs / (kControlDtS * 1000.0f));
+constexpr auto kMidLegOffGroundConfirmTicks = static_cast<uint32_t>(
+    wheel_legged::params::active::chassis::kMidLegOffGroundConfirmMs / (kControlDtS * 1000.0f));
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -88,11 +94,24 @@ void chassis::Chassis::Init() {
     pid.Clear();
   };
 
-  const auto &left_l0_pid = wheel_legged::params::active::chassis::kLeftL0Pid;
-  init_pid(left_l0_pid_, left_l0_pid.kp, left_l0_pid.ki, left_l0_pid.kd, left_l0_pid.max_out, left_l0_pid.max_iout);
-  const auto &right_l0_pid = wheel_legged::params::active::chassis::kRightL0Pid;
-  init_pid(right_l0_pid_, right_l0_pid.kp, right_l0_pid.ki, right_l0_pid.kd, right_l0_pid.max_out,
-           right_l0_pid.max_iout);
+  const auto &left_l0_pid_low = wheel_legged::params::active::chassis::kLeftL0PidLow;
+  init_pid(left_l0_pid_low_, left_l0_pid_low.kp, left_l0_pid_low.ki, left_l0_pid_low.kd, left_l0_pid_low.max_out,
+           left_l0_pid_low.max_iout);
+  const auto &right_l0_pid_low = wheel_legged::params::active::chassis::kRightL0PidLow;
+  init_pid(right_l0_pid_low_, right_l0_pid_low.kp, right_l0_pid_low.ki, right_l0_pid_low.kd, right_l0_pid_low.max_out,
+           right_l0_pid_low.max_iout);
+  const auto &left_l0_pid_mid = wheel_legged::params::active::chassis::kLeftL0PidMid;
+  init_pid(left_l0_pid_mid_, left_l0_pid_mid.kp, left_l0_pid_mid.ki, left_l0_pid_mid.kd, left_l0_pid_mid.max_out,
+           left_l0_pid_mid.max_iout);
+  const auto &right_l0_pid_mid = wheel_legged::params::active::chassis::kRightL0PidMid;
+  init_pid(right_l0_pid_mid_, right_l0_pid_mid.kp, right_l0_pid_mid.ki, right_l0_pid_mid.kd, right_l0_pid_mid.max_out,
+           right_l0_pid_mid.max_iout);
+  const auto &left_l0_pid_high = wheel_legged::params::active::chassis::kLeftL0PidHigh;
+  init_pid(left_l0_pid_high_, left_l0_pid_high.kp, left_l0_pid_high.ki, left_l0_pid_high.kd, left_l0_pid_high.max_out,
+           left_l0_pid_high.max_iout);
+  const auto &right_l0_pid_high = wheel_legged::params::active::chassis::kRightL0PidHigh;
+  init_pid(right_l0_pid_high_, right_l0_pid_high.kp, right_l0_pid_high.ki, right_l0_pid_high.kd, right_l0_pid_high.max_out,
+           right_l0_pid_high.max_iout);
   const auto &left_l0_jump2 = wheel_legged::params::active::chassis::kLeftL0PidJumpTwo;
   init_pid(left_l0_pid_jump_two_, left_l0_jump2.kp, left_l0_jump2.ki, left_l0_jump2.kd, left_l0_jump2.max_out,
            left_l0_jump2.max_iout);
@@ -211,16 +230,53 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
+  // 中腿长离地恢复：离地连续确认 0.1s 后降腿长至 0.16m，保持 0.3s 后恢复
+  if (input.fsm_mode == Fsm::State::kMidLeg) {
+    const bool off_ground_now = left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                right_support_force_est_n_ < kOffGroundSupportForceThresholdN;
+
+    switch (mid_leg_off_ground_phase_) {
+      case MidLegOffGroundPhase::kNormal:
+        if (off_ground_now) {
+          mid_leg_off_ground_phase_ = MidLegOffGroundPhase::kConfirming;
+          mid_leg_off_ground_ticks_ = 0;
+        }
+        break;
+      case MidLegOffGroundPhase::kConfirming:
+        if (!off_ground_now) {
+          mid_leg_off_ground_phase_ = MidLegOffGroundPhase::kNormal;
+        } else {
+          ++mid_leg_off_ground_ticks_;
+          if (mid_leg_off_ground_ticks_ >= kMidLegOffGroundConfirmTicks) {
+            mid_leg_off_ground_phase_ = MidLegOffGroundPhase::kRecovering;
+            mid_leg_off_ground_ticks_ = 0;
+          }
+        }
+        break;
+      case MidLegOffGroundPhase::kRecovering:
+        ++mid_leg_off_ground_ticks_;
+        if (mid_leg_off_ground_ticks_ >= kMidLegOffGroundRecoverTicks) {
+          mid_leg_off_ground_phase_ = MidLegOffGroundPhase::kNormal;
+        }
+        break;
+    }
+  } else {
+    mid_leg_off_ground_phase_ = MidLegOffGroundPhase::kNormal;
+  }
+  output_.mid_leg_off_ground_phase = static_cast<uint8_t>(mid_leg_off_ground_phase_);
+
   const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
                              input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
   if (ramp_enabled) {
+    const bool in_recovery = (mid_leg_off_ground_phase_ == MidLegOffGroundPhase::kRecovering);
+    const float effective_target = in_recovery ? kMidLegOffGroundRecoverLengthM : input.target_leg_length_m;
     const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
                              wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
                             wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
     const float max_step = ramp_rate * kControlDtS;
-    const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+    const float error = effective_target - smoothed_leg_target_length_m_;
     if (std::fabs(error) <= max_step) {
-      smoothed_leg_target_length_m_ = input.target_leg_length_m;
+      smoothed_leg_target_length_m_ = effective_target;
     } else {
       smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
     }
@@ -265,9 +321,59 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-  right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-  const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
+
+  // 腿长 PID 档位管理：模式切换时立即切换到目标档位；同模式内通过滞回切换
+  {
+    constexpr float kLegLengthSwitchToleranceM = 0.02f;
+    const bool is_leg_length_mode = (input.fsm_mode == Fsm::State::kLowLeg ||
+                                      input.fsm_mode == Fsm::State::kMidLeg ||
+                                      input.fsm_mode == Fsm::State::kHighLeg ||
+                                      input.fsm_mode == Fsm::State::kSpin);
+    const bool mode_changed = (input.fsm_mode != last_fsm_mode_);
+
+    if (mode_changed && is_leg_length_mode) {
+      active_pid_leg_profile_ = input.leg_profile;
+      // 清除新激活的 PID 积分，防止模式跳变导致积分突变
+      if (active_pid_leg_profile_ == wheel_legged::LegProfile::kLow) {
+        left_l0_pid_low_.Clear();
+        right_l0_pid_low_.Clear();
+      } else if (active_pid_leg_profile_ == wheel_legged::LegProfile::kMid) {
+        left_l0_pid_mid_.Clear();
+        right_l0_pid_mid_.Clear();
+      } else {
+        left_l0_pid_high_.Clear();
+        right_l0_pid_high_.Clear();
+      }
+    } else if (!mode_changed && is_leg_length_mode && input.leg_profile != active_pid_leg_profile_) {
+      const float error = std::fabs(avg_leg_length_m - input.target_leg_length_m);
+      if (error <= kLegLengthSwitchToleranceM) {
+        active_pid_leg_profile_ = input.leg_profile;
+      }
+    }
+
+    last_fsm_mode_ = input.fsm_mode;
+  }
+
+  rm::modules::PID* active_left_pid = &left_l0_pid_mid_;
+  rm::modules::PID* active_right_pid = &right_l0_pid_mid_;
+  switch (active_pid_leg_profile_) {
+    case wheel_legged::LegProfile::kLow:
+      active_left_pid = &left_l0_pid_low_;
+      active_right_pid = &right_l0_pid_low_;
+      break;
+    case wheel_legged::LegProfile::kHigh:
+      active_left_pid = &left_l0_pid_high_;
+      active_right_pid = &right_l0_pid_high_;
+      break;
+    case wheel_legged::LegProfile::kMid:
+    default:
+      active_left_pid = &left_l0_pid_mid_;
+      active_right_pid = &right_l0_pid_mid_;
+      break;
+  }
+  active_left_pid->Update(params_.leg_target_length_m, avg_leg_length_m);
+  active_right_pid->Update(params_.leg_target_length_m, avg_leg_length_m);
+  const rm::f32 length_force_base = 0.5f * (active_left_pid->out() + active_right_pid->out());
 
   l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
   r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0());
@@ -495,6 +601,9 @@ void chassis::Chassis::CalSupportForce() {
 
   const rm::f32 gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassKg) * kGravityMps2;
   const rm::f32 gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassKg) * kGravityMps2;
+
+  output_.left_leg_force_n = l_f;
+  output_.right_leg_force_n = r_f;
 
   left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
   right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;

@@ -61,46 +61,69 @@ inline const DmMitSettings kPitchMotorSettings{0x13, 0x12, kPi, 30.f, 10.f, {0.f
 inline const DmMitSettings kYawMotorSettings{0x21, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
 inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kPitchMinRad = -0.2f;
-inline constexpr float kPitchMaxRad = 0.25f;
+inline constexpr float kPitchMinRad = -0.35f;
+inline constexpr float kPitchMaxRad = 0.7f;
 inline constexpr float kDmTorqueLimitNm = 10.0f;
 inline constexpr float kPitchGravityCompensationNm = 1.3f;
 
 inline constexpr PidGains kYawPositionPid{24.0f, 0.0f, 0.0f, 1000.0f, 1.0f};
 inline constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};
 inline constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};
-inline constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 0.0f, 0.0f};
+inline constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 10.0f, 0.0f};
+// ---------- 发射机构参数 (hero: 3 摩擦轮 + DM 拨盘) ----------
+inline constexpr float kBoosterZeroPointRad = 0.345f;
+inline constexpr float kSegmentAngleRad = kPi / 3.f;
+inline constexpr uint16_t kInitDelayTicks = 600;
+inline constexpr uint16_t kShootDelayTicks = 360;
+inline constexpr float kStallThresholdRad = kPi / 18.f;
+inline constexpr float kStallFallbackRad = kPi / 90.f;
+inline constexpr int16_t kFireDialThreshold = -100;
+inline constexpr float kFwReadySpeedThresholdRpm = 4000.0f;
+inline constexpr float kFwTargetSpeedRpm = 7000.0f;
+
+inline constexpr PidGains kBoosterPositionPid{60.f, 0.f, 560.f, 24.f, 0.f};
+inline constexpr PidGains kBoosterSpeedPid{0.3f, 0.f, 0.02f, 6.4f, 0.f};
+inline constexpr PidGains kFwSpeedPid{30.f, 0.01f, 0.f, 10000.f, 0.f};  // 摩擦轮 PID 占位
+
+inline constexpr std::uint16_t kDmBoosterMasterId = 0x10;
+inline constexpr std::uint16_t kDmBoosterSlaveId = 0x09;
+inline const DmMitSettings kBoosterDmSettings{kDmBoosterMasterId, kDmBoosterSlaveId, kPi, 30.f, 10.f,
+                                              {0.f, 500.f},       {0.f, 5.f}};
+
+inline constexpr std::uint16_t kFwMotor1Id = 0x01;
+inline constexpr std::uint16_t kFwMotor2Id = 0x02;
+inline constexpr std::uint16_t kFwMotor3Id = 0x03;
 }  // namespace gimbal
 
 namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 450U;
+inline constexpr std::uint32_t kJumpPrepMs = 300U;
 inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;
-inline constexpr std::uint32_t kJumpRecoverMs = 450U;
+inline constexpr std::uint32_t kJumpRecoverMs = 300U;
 inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-inline constexpr float kLowLegLengthM = 0.15f;
-inline constexpr float kMidLegLengthM = 0.22f;
+inline constexpr float kLowLegLengthM = 0.13f;
+inline constexpr float kMidLegLengthM = 0.19f;
 inline constexpr float kHighLegLengthM = 0.34f;
 inline constexpr float kJumpPrepLegLengthM = 0.13f;
-inline constexpr float kJumpPushLegLengthM = 0.4f;
-inline constexpr float kJumpRecoverLegLengthM = 0.16f;
-inline constexpr float kJumpPushReachedLegLengthM = 0.365f;
+inline constexpr float kJumpPushLegLengthM = 0.27f;
+inline constexpr float kJumpRecoverLegLengthM = 0.22f;
+inline constexpr float kJumpPushReachedLegLengthM = 0.25f;
 inline constexpr float kLegLengthRampTimeS = 0.5f;
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;
-inline constexpr float kStairClimbLegLengthM = 0.16f;
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;
-inline constexpr std::uint32_t kStairClimbDurationMs = 400U;
+inline constexpr float kStairClimbThetaThresholdRad = 0.4f;
+inline constexpr float kStairClimbLegLengthM = 0.14f;
+inline constexpr float kStairClimbThetaTargetRad = 0.35f;
+inline constexpr std::uint32_t kStairClimbDurationMs = 180U;
 inline constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.01f;
 inline constexpr float kStairClimbThetaNearZeroThresholdRad = 0.08f;
-inline constexpr std::uint32_t kStairClimbPitchStableMs = 300U;
+inline constexpr std::uint32_t kStairClimbPitchStableMs = 150U;
 }  // namespace chassis_fsm
 
 namespace chassis {
 inline constexpr float kControlDtS = 0.002f;
 inline constexpr float kLegL1M = 0.215f;
 inline constexpr float kLegL2M = 0.254f;
-inline constexpr float kSpringTorqueScale = 90.0f;
+inline constexpr float kSpringTorqueScale = 105.0f;
 inline constexpr float kSpringModelA = 1082.0f;
 inline constexpr float kSpringModelB = 1070.0f;
 inline constexpr float kSpringModelC = 404.0f;
@@ -111,6 +134,9 @@ inline constexpr float kLegMassKg = 2.3f;
 inline constexpr float kGravityMps2 = 9.81f;
 inline constexpr float kWheelRadiusM = 0.2025f;
 inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;
+inline constexpr float kMidLegOffGroundRecoverLengthM = 0.16f;
+inline constexpr uint32_t kMidLegOffGroundRecoverMs = 3000U;
+inline constexpr uint32_t kMidLegOffGroundConfirmMs = 150U;
 inline constexpr float kRollBalanceTargetRad = 0.052f;
 inline constexpr float kPostureThetaBMinRad = -0.8f;
 inline constexpr float kPostureThetaBMaxRad = 0.8f;
@@ -134,55 +160,59 @@ inline constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 inline constexpr std::array<float, 240> kCtrlP{
--0.83306,  -5.1702,  3.9639,  7.1986,  -2.8365,  -2.9774,
-     -3.2283,  -14.938,  14.569,  23.723,  -14.737,  -9.9482,
-     -0.81055,  2.863,  -1.089,  -3.4804,  0.83266,  1.399,
-     -2.5853,  9.3913,  -3.7934,  -11.082,  2.2507,  5.0455,
-     -12.3,  -78.693,  11.803,  89.993,  -2.4656,  -14.814,
-     -0.64798,  -4.0995,  1.5913,  -2.5703,  1.151,  -1.8874,
-     -4.4374,  10.82,  -10.556,  -11.228,  13.601,  4.6118,
-     -0.34716,  -0.16418,  -0.53572,  1.7816,  -4.0662,  0.49091,
-     -25.277,  37.872,  32.004,  -0.75349,  -37.943,  -27.074,
-     -2.4722,  2.7258,  5.0256,  1.1312,  -5.5857,  -4.5784,
-     -0.83306,  3.9639,  -5.1702,  -2.9774,  -2.8365,  7.1986,
-     -3.2283,  14.569,  -14.938,  -9.9482,  -14.737,  23.723,
-     0.81055,  1.089,  -2.863,  -1.399,  -0.83266,  3.4804,
-     2.5853,  3.7934,  -9.3913,  -5.0455,  -2.2507,  11.082,
-     -4.4374,  -10.556,  10.82,  4.6118,  13.601,  -11.228,
-     -0.34716,  -0.53572,  -0.16418,  0.49091,  -4.0662,  1.7816,
-     -12.3,  11.803,  -78.693,  -14.814,  -2.4656,  89.993,
-     -0.64798,  1.5913,  -4.0995,  -1.8874,  1.151,  -2.5703,
-     -25.277,  32.004,  37.872,  -27.074,  -37.943,  -0.75349,
-     -2.4722,  5.0256,  2.7258,  -4.5784,  -5.5857,  1.1312,
-     2.0588,  2.5769,  -7.0205,  -12.534,  11.718,  3.3683,
-     7.4556,  6.1892,  -26.658,  -40.376,  46.683,  12.73,
-     -0.72175,  -4.466,  -2.225,  8.0066,  -2.6818,  3.3191,
-     -2.3077,  -14.775,  -6.7921,  26.093,  -8.7142,  9.9612,
-     63.482,  -113.17,  15.872,  102.99,  47.489,  -33.411,
-     2.5342,  -1.9481,  -0.4535,  5.6629,  4.0161,  -1.2781,
-     -3.8787,  -37.776,  -12.034,  56.789,  -33.164,  -16.399,
-     -0.2925,  -1.3576,  2.4025,  -0.84556,  1.1223,  -8.8394,
-     -47.075,  -230.67,  78.522,  270.91,  30.395,  -95.402,
-     -2.3876,  -16.763,  5.0598,  15.783,  6.98,  -6.8333,
-     2.0588,  -7.0205,  2.5769,  3.3683,  11.718,  -12.534,
-     7.4556,  -26.658,  6.1892,  12.73,  46.683,  -40.376,
-     0.72175,  2.225,  4.466,  -3.3191,  2.6818,  -8.0066,
-     2.3077,  6.7921,  14.775,  -9.9612,  8.7142,  -26.093,
-     -3.8787,  -12.034,  -37.776,  -16.399,  -33.164,  56.789,
-     -0.2925,  2.4025,  -1.3576,  -8.8394,  1.1223,  -0.84556,
-     63.482,  15.872,  -113.17,  -33.411,  47.489,  102.99,
-     2.5342,  -0.4535,  -1.9481,  -1.2781,  4.0161,  5.6629,
-     -47.075,  78.522,  -230.67,  -95.402,  30.395,  270.91,
-     -2.3876,  5.0598,  -16.763,  -6.8333,  6.98,  15.783,
+   -2.0744,  -15.872,  12.419,  23.319,  -10.626,  -9.0848,
+     -5.2958,  -28.94,  28.028,  47.009,  -30.488,  -19.089,
+     -0.80318,  3.2138,  -1.501,  -2.8379,  -0.37973,  2.3178,
+     -1.6391,  7.0025,  -3.6099,  -5.638,  -1.7491,  5.7953,
+     -13.349,  -95.598,  13.858,  98.449,  7.4496,  -18.792,
+     -0.69431,  -6.0785,  2.4764,  -4.4164,  2.832,  -3.0349,
+     -4.2141,  2.8428,  -4.3357,  13.128,  -11.365,  -1.1388,
+     -0.3724,  -1.3469,  -0.21075,  5.3411,  -10.511,  1.4903,
+     -26.962,  28.95,  38.618,  17.634,  -40.732,  -35.204,
+     -2.7983,  1.768,  6.7936,  3.2396,  -6.8697,  -6.4179,
+     -2.0744,  12.419,  -15.872,  -9.0848,  -10.626,  23.319,
+     -5.2958,  28.028,  -28.94,  -19.089,  -30.488,  47.009,
+     0.80318,  1.501,  -3.2138,  -2.3178,  0.37973,  2.8379,
+     1.6391,  3.6099,  -7.0025,  -5.7953,  1.7491,  5.638,
+     -4.2141,  -4.3357,  2.8428,  -1.1388,  -11.365,  13.128,
+     -0.3724,  -0.21075,  -1.3469,  1.4903,  -10.511,  5.3411,
+     -13.349,  13.858,  -95.598,  -18.792,  7.4496,  98.449,
+     -0.69431,  2.4764,  -6.0785,  -3.0349,  2.832,  -4.4164,
+     -26.962,  38.618,  28.95,  -35.204,  -40.732,  17.634,
+     -2.7983,  6.7936,  1.768,  -6.4179,  -6.8697,  3.2396,
+     6.3786,  6.8882,  -18.229,  -43.613,  35.204,  11.892,
+     14.908,  11.872,  -48.017,  -91.444,  91.982,  29.176,
+     -0.80895,  -5.8749,  -1.6789,  9.542,  -2.873,  2.8602,
+     -1.6629,  -13.036,  -2.6525,  20.632,  -6.1423,  4.5563,
+     84.955,  -141.43,  9.1404,  91.774,  46.402,  -24.709,
+     3.0414,  2.7112,  -2.5478,  -3.6724,  6.3493,  0.79309,
+     -3.4259,  -35.76,  -2.9918,  32.449,  -28.035,  2.5695,
+     -0.16848,  0.64691,  3.6061,  -8.3491,  3.6693,  -6.8109,
+     -45.306,  -272.87,  79.921,  308.13,  54.783,  -111.15,
+     -1.478,  -19.268,  2.5845,  15.559,  12.597,  -5.8136,
+     6.3786,  -18.229,  6.8882,  11.892,  35.204,  -43.613,
+     14.908,  -48.017,  11.872,  29.176,  91.982,  -91.444,
+     0.80895,  1.6789,  5.8749,  -2.8602,  2.873,  -9.542,
+     1.6629,  2.6525,  13.036,  -4.5563,  6.1423,  -20.632,
+     -3.4259,  -2.9918,  -35.76,  2.5695,  -28.035,  32.449,
+     -0.16848,  3.6061,  0.64691,  -6.8109,  3.6693,  -8.3491,
+     84.955,  9.1404,  -141.43,  -24.709,  46.402,  91.774,
+     3.0414,  -2.5478,  2.7112,  0.79309,  6.3493,  -3.6724,
+     -45.306,  79.921,  -272.87,  -111.15,  54.783,  308.13,
+     -1.478,  2.5845,  -19.268,  -5.8136,  12.597,  15.559,
 };
 
-inline constexpr PidGains kLeftL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kRightL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
+inline constexpr PidGains kLeftL0PidLow{5500.0f, 1.5f, 700.0f, 170.0f, 30.0f};
+inline constexpr PidGains kRightL0PidLow{5500.0f, 1.5f, 700.0f, 170.0f, 30.0f};
+inline constexpr PidGains kLeftL0PidMid{5000.0f, 1.5f, 60000.0f, 170.0f, 30.0f};
+inline constexpr PidGains kRightL0PidMid{5000.0f, 1.5f, 60000.0f, 170.0f, 30.0f};
+inline constexpr PidGains kLeftL0PidHigh{4500.0f, 1.2f, 500.0f, 160.0f, 25.0f};
+inline constexpr PidGains kRightL0PidHigh{4500.0f, 1.2f, 500.0f, 160.0f, 25.0f};
 inline constexpr PidGains kLeftL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
 inline constexpr PidGains kRightL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
 inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
 inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
-inline constexpr PidGains kRollPid{600.0f, 0.0f, 200.0f, 180.0f, 0.0f};
+inline constexpr PidGains kRollPid{800.0f, 0.5f, 50.0f, 180.0f, 20.0f};
 inline constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 inline constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 }  // namespace chassis
@@ -193,8 +223,8 @@ inline constexpr std::int16_t kWheelActionThreshold = 320;
 inline constexpr std::int16_t kWheelCenterThreshold = 80;
 inline constexpr float kControlLoopDtS = 0.002f;
 inline constexpr std::int16_t kDr16AxisMaxAbs = 660;
-inline constexpr float kTargetForwardSpeedMinMps = 1.5f;
-inline constexpr float kTargetForwardSpeedMaxMps = 1.8f;
+inline constexpr float kTargetForwardSpeedMinMps = 2.3f;
+inline constexpr float kTargetForwardSpeedMaxMps = 2.3f;
 inline constexpr float kVxInputDeadbandNorm = 0.1f;
 inline constexpr float kVyInputDeadbandNorm = 0.1f;
 inline constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
@@ -209,15 +239,15 @@ inline constexpr float kRcStickMax = 660.0f;
 inline constexpr float kRcYawRateMaxRadS = -2.5f;
 inline constexpr float kRcPitchRateMaxRadS = 1.5f;
 inline constexpr float kPitchTargetMinRad = -0.35f;
-inline constexpr float kPitchTargetMaxRad = 0.25f;
+inline constexpr float kPitchTargetMaxRad = 0.7f;
 inline constexpr float kYawFollowRampStepRadS = 0.05f;
-inline constexpr float kSpinYawRampStepRadS = 0.005f;
-inline constexpr float kSpinTargetYawDotRadS = 6.0f;
+inline constexpr float kSpinYawRampStepRadS = 0.02f;
+inline constexpr float kSpinTargetYawDotRadS = 8.0f;
 inline constexpr float kSpinTranslationGain = 1.0f;
 inline constexpr float kSpinThetaLlBiasRad = 0.0f;
 inline constexpr float kYawFollowFixedTargetRad = 1.216f;
 inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
+inline constexpr float kGimbalStartupYawAlignErrorRad = 0.08f;
 inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
 inline constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 50U;
 inline constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
@@ -260,10 +290,10 @@ inline constexpr float kLegL2M = 0.254f;
 inline constexpr float kWheelRadiusM = 0.0575f;
 inline constexpr float kWheelReductionRatio = 17.0f / 268.0f;
 inline constexpr float kMaxValidSpeedMps = 8.0f;
-inline constexpr float kLeftPhi1OffsetRad = -0.05f + M_PI;
+inline constexpr float kLeftPhi1OffsetRad = -0.05f + kPi;
 inline constexpr float kLeftPhi4OffsetRad = -0.59 + 0.07f;
-inline constexpr float kRightPhi1OffsetRad = 3.04 + M_PI;
-inline constexpr float kRightPhi4OffsetRad = -2.17;
+inline constexpr float kRightPhi1OffsetRad = 2.7f + kPi;
+inline constexpr float kRightPhi4OffsetRad = -2.11;
 inline constexpr float kThetaDotFilterCutoffHz = 8.0f;
 inline constexpr float kImuAccelFilterSampleHz = 500.0f;
 inline constexpr float kImuAccelFilterCutoffHz = 10.0f;
@@ -351,7 +381,7 @@ inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
 inline constexpr float kLowLegLengthM = 0.15f;
-inline constexpr float kMidLegLengthM = 0.21f;
+inline constexpr float kMidLegLengthM = 0.18f;
 inline constexpr float kHighLegLengthM = 0.3f;
 inline constexpr float kJumpPrepLegLengthM = 0.13f;
 inline constexpr float kJumpPushLegLengthM = 0.22f;
@@ -382,6 +412,9 @@ inline constexpr float kLegMassKg = 2.3f;
 inline constexpr float kGravityMps2 = 9.81f;
 inline constexpr float kWheelRadiusM = 0.2025f;
 inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;
+inline constexpr float kMidLegOffGroundRecoverLengthM = 0.16f;
+inline constexpr uint32_t kMidLegOffGroundRecoverMs = 3000U;
+inline constexpr uint32_t kMidLegOffGroundConfirmMs = 200U;
 inline constexpr float kRollBalanceTargetRad = 0.003f;
 inline constexpr float kPostureThetaBMinRad = -0.7f;
 inline constexpr float kPostureThetaBMaxRad = 0.7f;
@@ -429,8 +462,12 @@ inline constexpr std::array<float, 240> kCtrlP{
     -46.071,  7.5488,   111.12,   -2.0412,   4.1377,   -10.549, -6.3437, 3.6102,  11.895,
 };
 
-inline constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
-inline constexpr PidGains kRightL0Pid{8500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
+inline constexpr PidGains kLeftL0PidLow{8000.0f, 0.05f, 100000.0f, 180.0f, 12.0f};
+inline constexpr PidGains kRightL0PidLow{9000.0f, 0.05f, 100000.0f, 180.0f, 12.0f};
+inline constexpr PidGains kLeftL0PidMid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
+inline constexpr PidGains kRightL0PidMid{8500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
+inline constexpr PidGains kLeftL0PidHigh{6800.0f, 0.03f, 80000.0f, 150.0f, 8.0f};
+inline constexpr PidGains kRightL0PidHigh{7800.0f, 0.03f, 80000.0f, 150.0f, 8.0f};
 inline constexpr PidGains kLeftL0PidJumpTwo{7000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
 inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
 inline constexpr PidGains kLeftL0PidJumpThree{7500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
@@ -586,7 +623,7 @@ namespace gimbal {
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 inline const DmMitSettings kPitchMotorSettings{0x05, 0x04,         kPi,       30.f,
-                                               10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 俯仰电机参数
+                                               10.f, {0.f, 500.f}, {0.f, 5.f}};                       ///< 俯仰电机参数
 inline const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 偏航电机参数
 
 inline constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认时间步长
@@ -617,11 +654,11 @@ inline constexpr float kJumpRecoverLegLengthM = 0.20f;      ///< 跳跃回收腿
 inline constexpr float kJumpPushReachedLegLengthM = 0.25f;  ///< 蹬伸判定腿长阈值
 inline constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间
 
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;  ///< 上台阶腿摆角检测阈值///
-inline constexpr float kStairClimbLegLengthM = 0.16f;        ///< 上台阶收腿目标///
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;  ///< 上台阶腿摆角目标///---------------上台阶参数
-inline constexpr std::uint32_t kStairClimbDurationMs = 250U;              ///< 上台阶收腿保持时长///
-inline constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;          ///< 上台阶 pitch 稳定等待时长///
+inline constexpr float kStairClimbThetaThresholdRad = 0.5f;       ///< 上台阶腿摆角检测阈值///
+inline constexpr float kStairClimbLegLengthM = 0.16f;             ///< 上台阶收腿目标///
+inline constexpr float kStairClimbThetaTargetRad = 0.2f;          ///< 上台阶腿摆角目标///---------------上台阶参数
+inline constexpr std::uint32_t kStairClimbDurationMs = 250U;      ///< 上台阶收腿保持时长///
+inline constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;  ///< 上台阶 pitch 稳定等待时长///
 inline constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;  ///< 上台阶收腿到位判定容差
 inline constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;       ///< 上台阶摆角归零判定阈值
 
@@ -642,6 +679,9 @@ inline constexpr float kLegMassKg = 2.3f;                         ///< 单腿质
 inline constexpr float kGravityMps2 = 9.81f;                      ///< 重力加速度
 inline constexpr float kWheelRadiusM = 0.2025f;                   ///< 轮毂半径
 inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;  ///< 离地支撑力判定阈值
+inline constexpr float kMidLegOffGroundRecoverLengthM = 0.16f;    ///< 中腿长离地恢复目标腿长
+inline constexpr uint32_t kMidLegOffGroundRecoverMs = 300U;       ///< 中腿长离地恢复保持时间
+inline constexpr uint32_t kMidLegOffGroundConfirmMs = 100U;      ///< 中腿长离地确认时间
 inline constexpr float kRollBalanceTargetRad = 0.003f;            ///< 横滚平衡目标角
 inline constexpr float kPostureThetaBMinRad = -0.7f;              ///< 姿态有效 body pitch 下限
 inline constexpr float kPostureThetaBMaxRad = 0.7f;               ///< 姿态有效 body pitch 上限
@@ -687,8 +727,12 @@ inline constexpr std::array<float, 240> kCtrlP{
     -15.963,  30.972,  -62.387,  -31.335,  0.3788,   76.483,   -1.6996,  4.6037,  -9.227,  -4.9127,  1.3882,  10.14,
 };
 
-inline constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};            ///< 左腿长控制 PID
-inline constexpr PidGains kRightL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};           ///< 右腿长控制 PID
+inline constexpr PidGains kLeftL0PidLow{6500.0f, 0.18f, 55000.0f, 180.0f, 35.0f};         ///< 低腿长 PID
+inline constexpr PidGains kRightL0PidLow{6500.0f, 0.18f, 55000.0f, 180.0f, 35.0f};        ///< 低腿长 PID
+inline constexpr PidGains kLeftL0PidMid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};         ///< 中腿长 PID
+inline constexpr PidGains kRightL0PidMid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};        ///< 中腿长 PID
+inline constexpr PidGains kLeftL0PidHigh{5300.0f, 0.12f, 45000.0f, 150.0f, 25.0f};        ///< 高腿长 PID
+inline constexpr PidGains kRightL0PidHigh{5300.0f, 0.12f, 45000.0f, 150.0f, 25.0f};       ///< 高腿长 PID
 inline constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};       ///< 左腿跳跃蹬伸 PID
 inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};      ///< 右腿跳跃蹬伸 PID
 inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};   ///< 左腿跳跃回收 PID
@@ -778,9 +822,9 @@ inline constexpr float kLegL2M = 0.254f;                          ///< 五连杆
 inline constexpr float kWheelRadiusM = 0.0575f;                   ///< 轮毂半径
 inline constexpr float kWheelReductionRatio = 17.0f / 268.0f;     ///< 轮毂减速比
 inline constexpr float kMaxValidSpeedMps = 8.0f;                  ///< 最大有效速度
-inline constexpr float kLeftPhi1OffsetRad = -1.50f + M_PI;        ///< 左腿 phi1 零位偏移
+inline constexpr float kLeftPhi1OffsetRad = -1.50f + kPi;         ///< 左腿 phi1 零位偏移
 inline constexpr float kLeftPhi4OffsetRad = -1.50f;               ///< 左腿 phi4 零位偏移
-inline constexpr float kRightPhi1OffsetRad = -1.42f + M_PI;       ///< 右腿 phi1 零位偏移
+inline constexpr float kRightPhi1OffsetRad = -1.42f + kPi;        ///< 右腿 phi1 零位偏移
 inline constexpr float kRightPhi4OffsetRad = -1.62f;              ///< 右腿 phi4 零位偏移
 inline constexpr float kThetaDotFilterCutoffHz = 8.0f;            ///< 腿摆角速度滤波器截止频率
 inline constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< IMU 加速度计滤波器采样率

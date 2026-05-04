@@ -27,6 +27,7 @@ class Chassis {
     bool enable_output{false};                     ///< 是否允许输出电机命令
     bool run_chassis_update{false};                ///< 是否执行底盘控制计算
     bool spin_enable{false};                       ///< 是否开启小陀螺
+    wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
     rm::f32 target_leg_length_m{wheel_legged::params::active::chassis_fsm::kMidLegLengthM};  ///< 目标腿长
   };
 
@@ -41,8 +42,11 @@ class Chassis {
     rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
     rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
-    rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
-    rm::f32 right_support_force_n{0.0f};  ///< 右腿支撑力估计
+    rm::f32 left_support_force_n{0.0f};         ///< 左腿支撑力估计
+    rm::f32 right_support_force_n{0.0f};        ///< 右腿支撑力估计
+    rm::f32 left_leg_force_n{0.0f};             ///< 左腿原始腿力（关节力矩反算）
+    rm::f32 right_leg_force_n{0.0f};            ///< 右腿原始腿力（关节力矩反算）
+    uint8_t mid_leg_off_ground_phase{0};        ///< 中腿长离地恢复阶段 0=正常 1=确认中 2=恢复中
     rm::f32 mean_leg_length_m{0.0f};      ///< 平均腿长
     rm::f32 speed_mps{0.0f};              ///< 融合车速
     rm::f32 wheel_speed_mps{0.0f};        ///< 轮系解算车速
@@ -117,8 +121,17 @@ class Chassis {
 
   rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
 
-  rm::modules::PID left_l0_pid_{};
-  rm::modules::PID right_l0_pid_{};
+  rm::modules::PID left_l0_pid_low_{};
+  rm::modules::PID right_l0_pid_low_{};
+  rm::modules::PID left_l0_pid_mid_{};
+  rm::modules::PID right_l0_pid_mid_{};
+  rm::modules::PID left_l0_pid_high_{};
+  rm::modules::PID right_l0_pid_high_{};
+  wheel_legged::LegProfile active_pid_leg_profile_{wheel_legged::LegProfile::kLow};
+  Fsm::State last_fsm_mode_{Fsm::State::kDisabled};
+  enum class MidLegOffGroundPhase : uint8_t { kNormal = 0, kConfirming = 1, kRecovering = 2 };
+  MidLegOffGroundPhase mid_leg_off_ground_phase_{MidLegOffGroundPhase::kNormal};
+  uint32_t mid_leg_off_ground_ticks_{0};
   rm::modules::PID left_l0_pid_jump_two_{};
   rm::modules::PID right_l0_pid_jump_two_{};
   rm::modules::PID left_l0_pid_jump_three_{};

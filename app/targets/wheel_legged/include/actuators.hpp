@@ -92,9 +92,28 @@ class Actuators {
 
   void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
 
+  // ---------- 发射机构使能/失能 ----------
+
+  void EnableBoosterMotor(SharedResources &g) {
+    if (booster_enabled_latched_) return;
+    if (!g.booster_motor.has_value()) return;
+    g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    booster_enabled_latched_ = true;
+  }
+
+  void DisableBoosterMotor(SharedResources &g) {
+    if (!booster_enabled_latched_) return;
+    if (g.booster_motor.has_value()) {
+      g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    }
+    booster_enabled_latched_ = false;
+  }
+
  private:
   bool dm_enabled_latched_{false};             ///< 底盘 DM 使能锁存
   bool gimbal_motors_enabled_latched_{false};  ///< 云台 DM 使能锁存
+  bool booster_enabled_latched_{false};        ///< DM 拨盘使能锁存
 
   static bool IsReady(const SharedResources &g) {
     return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() && g.dm_lb.has_value() &&
