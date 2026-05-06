@@ -87,12 +87,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
 
   // ── 云台反馈与电机 ──
   float    yaw_motor_raw_pos_rad;           // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
+  float    gimbal_yaw_pos_feedback_rad;     // 偏航角度反馈值（来源：云台 IMU yaw 或电机编码器）
   float    gimbal_yaw_vel_feedback_rad_s;   // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
   float    yaw_cmd_target_rad;              // 偏航目标角
+  float    yaw_cmd_torque_nm;               // 偏航输出力矩
   uint8_t  yaw_motor_status;                // 偏航 DM 状态
   float    gimbal_pitch_pos_feedback_rad;   // 俯仰角度反馈值（来源：-云台 IMU pitch）
   float    gimbal_pitch_vel_feedback_rad_s; // 俯仰角速度反馈值（来源：云台 IMU 陀螺 X）
   float    pitch_cmd_target_rad;            // 俯仰目标角
+  float    pitch_cmd_torque_nm;             // 俯仰输出力矩
   uint8_t  pitch_motor_status;              // 俯仰 DM 状态
 
   // ── 底盘模型状态向量 ──
@@ -143,7 +146,27 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float    fw_raw_rpm_2;              // 摩擦轮2 RPM (hero)
   float    fw_raw_rpm_3;              // 摩擦轮3 RPM (hero)
 
-  uint8_t  _reserved[31];            // 预留给未来扩展
+  // ── 裁判系统 ──
+  uint8_t  referee_online;             // 裁判系统是否在线（收到过有效包）
+  uint8_t  referee_robot_id;           // 裁判系统上报的机器人 ID
+  float    referee_bullet_speed_mps;   // 最近一发弹丸初速度 [m/s]
+
+  // ── 云台 IMU 欧拉角（Frame C: 0x112）──
+  float    gimbal_euler_yaw_rad;       // 云台 IMU 偏航角
+  float    gimbal_euler_pitch_rad;     // 云台 IMU 俯仰角
+  float    gimbal_euler_roll_rad;      // 云台 IMU 横滚角
+
+  // ── 自瞄通信 TX（发给 NUC）──
+  uint8_t  aimbot_tx_mode;            // 发送的模式 (0=Normal,1=AutoAimNoMove,2=AutoAimWithMove)
+  uint8_t  aimbot_tx_robot_id;        // 发送的机器人 ID
+
+  // ── 自瞄通信 RX（NUC 反馈）──
+  uint8_t  aimbot_rx_state;           // NUC 反馈的自瞄状态
+  uint8_t  aimbot_rx_target;          // NUC 反馈的目标信息
+  uint8_t  aimbot_rx_nuc_start_flag;  // NUC 启动标志
+  float    aimbot_rx_yaw_rad;         // NUC 下发的偏航目标
+  float    aimbot_rx_pitch_rad;       // NUC 下发的俯仰目标
+
 };
 static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 

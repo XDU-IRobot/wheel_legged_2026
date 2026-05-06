@@ -85,8 +85,8 @@ struct ModeRequest {
   CombatProfile combat_profile{CombatProfile::kNormal};  ///< 战斗域子模式
   TargetSource target_source{TargetSource::kRc};         ///< 当前目标来源偏好
   GimbalTarget rc_target{};                              ///< 遥控器积分得到的目标
-  GimbalTarget host_target{};                            ///< 上位机目标 (@todo 未接入，始终为零)
-  bool host_target_valid{false};                         ///< 上位机目标是否有效 (@todo 未接入，始终 false)
+  GimbalTarget host_target{};                            ///< 上位机目标 (NUC 自瞄 CAN 反馈)
+  bool host_target_valid{false};                         ///< 上位机目标是否有效 (NUC 启动且在线)
 
   bool fall_detected{false};          ///< 是否检测到倒地 (@todo 未接入 IMU 姿态判断，始终 false)
   uint32_t fall_detected_hold_ms{0};  ///< 倒地持续时间 (@todo 未接入)
@@ -165,8 +165,8 @@ struct GimbalFsmInput {
   CombatProfile combat_profile{CombatProfile::kNormal};                  ///< 战斗域子模式
   TargetSource target_source{TargetSource::kRc};                         ///< 当前目标来源偏好
   GimbalTarget rc_target{};                                              ///< 遥控器积分目标
-  GimbalTarget host_target{};                                            ///< 上位机目标
-  bool host_target_valid{false};                                         ///< 上位机目标是否有效
+  GimbalTarget host_target{};                                            ///< 上位机目标 (NUC 自瞄 CAN 反馈)
+  bool host_target_valid{false};                                         ///< 上位机目标是否有效 (NUC 启动且在线)
   bool chassis_recovery_active{false};                                   ///< 底盘是否处于恢复流程
   bool startup_align_complete{false};                                    ///< 启动偏航归中是否完成
 };

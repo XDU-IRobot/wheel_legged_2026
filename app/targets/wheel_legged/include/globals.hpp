@@ -16,6 +16,8 @@
 #include "chassis/fsm.hpp"
 #include "gimbal_to_chassis_rx_bridge.hpp"
 #include "utils/template_dyp_can.hpp"
+#include "utils/aimbot_comm_can.hpp"
+#include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -53,6 +55,8 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};       ///< 右轮 M3508
   std::optional<rm::device::HipnucImu> chassis_imu{};   ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};   ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kV170>> referee{};  ///< 裁判系统串口
   std::optional<DypCanRxBridge> dyp_rx{};               ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
@@ -113,6 +117,7 @@ struct SharedResources {
 
     prepare_uart_rx_to_idle_dma(huart5, UART5_IRQn, DMA1_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
+    prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
 
     dr16.Begin();
 
@@ -133,6 +138,18 @@ struct SharedResources {
     }
     if (!gimbal_rx.has_value()) {
       gimbal_rx.emplace(*gimbal_can);
+    }
+    if (!aimbot.has_value()) {
+      aimbot.emplace(*gimbal_can);
+    }
+    if (!referee.has_value()) {
+      referee.emplace();
+      no_dtcm->referee_uart.AttachRxCallback([this](etl::span<const rm::u8> data) {
+        for (const auto byte : data) {
+          *referee << byte;
+        }
+      });
+      no_dtcm->referee_uart.Start();
     }
     if (!dyp_rx.has_value()) {
       dyp_rx.emplace(*joint_can);

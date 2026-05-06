@@ -106,10 +106,13 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   // ── 云台反馈与电机 ──
   wl_debug.yaw_cmd_target_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.yaw_motor_raw_pos_rad = input.estimator_input.yaw_motor_rad;
+  wl_debug.gimbal_yaw_pos_feedback_rad = gimbal_control_output.yaw_pos_rad;
   wl_debug.gimbal_yaw_vel_feedback_rad_s = gimbal_control_output.yaw_vel_rad_s;
+  wl_debug.yaw_cmd_torque_nm = gimbal_control_output.yaw_cmd_torque_nm;
   wl_debug.pitch_cmd_target_rad = gimbal_control_output.pitch_target_rad;
   wl_debug.gimbal_pitch_pos_feedback_rad = gimbal_control_output.pitch_pos_rad;
   wl_debug.gimbal_pitch_vel_feedback_rad_s = gimbal_control_output.pitch_vel_rad_s;
+  wl_debug.pitch_cmd_torque_nm = gimbal_control_output.pitch_cmd_torque_nm;
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
