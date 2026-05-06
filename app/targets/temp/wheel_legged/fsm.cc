@@ -17,7 +17,7 @@ bool IsJumpState(const chassis::Fsm::State state) {
          state == chassis::Fsm::State::kJumpRecover;
 }
 
-bool IsStairClimbReadyToDone(const wheel_legged::ChassisFsmInput &request) {
+bool IsStairClimbReadyToDone(const wheel_legged::ModeRequest &request) {
   const float leg_length_error =
       std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
   const bool leg_length_near_target =
@@ -47,7 +47,7 @@ float LegLengthForProfile(const wheel_legged::LegProfile profile) {
 /**
  * @brief 规范化请求中的腿长档位
  */
-wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ChassisFsmInput &request) {
+wheel_legged::LegProfile ResolveRequestedLegProfile(const wheel_legged::ModeRequest &request) {
   switch (request.leg_request) {
     case wheel_legged::LegProfile::kMid:
       return wheel_legged::LegProfile::kMid;
@@ -233,7 +233,7 @@ void chassis::Fsm::Transit(const State new_mode) {
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 
-  const wheel_legged::ChassisFsmInput &request = input.request;
+  const wheel_legged::ModeRequest &request = input.request;
   requested_leg_profile_ = ResolveRequestedLegProfile(request);
 
   // 输入失效或请求关闭时立即退回 Disabled，并由执行器层输出零力矩。

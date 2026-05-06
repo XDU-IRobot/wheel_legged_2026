@@ -38,8 +38,6 @@ class Gimbal {
     float yaw_motor_rad{0.0f};             ///< 偏航电机编码器角度
     float gimbal_imu_yaw_rad{0.0f};        ///< 云台惯导偏航角
     float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
-    float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
-    float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
     float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
   };
 
@@ -83,9 +81,9 @@ class Gimbal {
     }
 
     output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
-    output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
+    output_.yaw_vel_rad_s = input.yaw_motor->vel();
     output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
-    output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
+    output_.pitch_vel_rad_s = input.pitch_motor->vel();
 
     const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
     output_.yaw_target_rad = desired_yaw;
@@ -115,7 +113,7 @@ class Gimbal {
         std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                    wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     const float pitch_gravity_ff =
-        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.gimbal_imu_pitch_rad);
+        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
     output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
                                              -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                                              wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
