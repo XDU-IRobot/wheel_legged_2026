@@ -171,17 +171,29 @@ class Gimbal {
     const auto &pitch_pos = wheel_legged::params::active::aimbot::kPitchPositionPid;
     const auto &pitch_spd = wheel_legged::params::active::aimbot::kPitchSpeedPid;
     controller_.pid()
-        .yaw_position.SetKp(yaw_pos.kp).SetKi(yaw_pos.ki).SetKd(yaw_pos.kd)
-        .SetMaxOut(yaw_pos.max_out).SetMaxIout(yaw_pos.max_iout);
+        .yaw_position.SetKp(yaw_pos.kp)
+        .SetKi(yaw_pos.ki)
+        .SetKd(yaw_pos.kd)
+        .SetMaxOut(yaw_pos.max_out)
+        .SetMaxIout(yaw_pos.max_iout);
     controller_.pid()
-        .yaw_speed.SetKp(yaw_spd.kp).SetKi(yaw_spd.ki).SetKd(yaw_spd.kd)
-        .SetMaxOut(yaw_spd.max_out).SetMaxIout(yaw_spd.max_iout);
+        .yaw_speed.SetKp(yaw_spd.kp)
+        .SetKi(yaw_spd.ki)
+        .SetKd(yaw_spd.kd)
+        .SetMaxOut(yaw_spd.max_out)
+        .SetMaxIout(yaw_spd.max_iout);
     controller_.pid()
-        .pitch_position.SetKp(pitch_pos.kp).SetKi(pitch_pos.ki).SetKd(pitch_pos.kd)
-        .SetMaxOut(pitch_pos.max_out).SetMaxIout(pitch_pos.max_iout);
+        .pitch_position.SetKp(pitch_pos.kp)
+        .SetKi(pitch_pos.ki)
+        .SetKd(pitch_pos.kd)
+        .SetMaxOut(pitch_pos.max_out)
+        .SetMaxIout(pitch_pos.max_iout);
     controller_.pid()
-        .pitch_speed.SetKp(pitch_spd.kp).SetKi(pitch_spd.ki).SetKd(pitch_spd.kd)
-        .SetMaxOut(pitch_spd.max_out).SetMaxIout(pitch_spd.max_iout);
+        .pitch_speed.SetKp(pitch_spd.kp)
+        .SetKi(pitch_spd.ki)
+        .SetKd(pitch_spd.kd)
+        .SetMaxOut(pitch_spd.max_out)
+        .SetMaxIout(pitch_spd.max_iout);
   }
 
   /** @brief 清空双环 PID 积分与历史状态 */

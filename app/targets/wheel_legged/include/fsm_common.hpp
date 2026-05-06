@@ -160,16 +160,16 @@ struct ChassisFsmInput {
  * - align_to_chassis_forward: true when kRecoveryAlign or kStartupAlign
  */
 struct GimbalFsmInput {
-  bool input_valid{false};                                               ///< 输入源是否在线且可信
-  DomainRequest domain_request{DomainRequest::kDisabled};                ///< 整车工作域
-  ServiceProfile service_profile{ServiceProfile::kChassisAndGimbalSafe}; ///< 维护域策略
-  CombatProfile combat_profile{CombatProfile::kNormal};                  ///< 战斗域子模式
-  TargetSource target_source{TargetSource::kRc};                         ///< 当前目标来源偏好
-  GimbalTarget rc_target{};                                              ///< 遥控器积分目标
-  GimbalTarget host_target{};                                            ///< 上位机目标 (NUC 自瞄 CAN 反馈)
-  bool host_target_valid{false};                                         ///< 上位机目标是否有效 (NUC 启动且在线)
-  bool chassis_recovery_active{false};                                   ///< 底盘是否处于恢复流程
-  bool startup_align_complete{false};                                    ///< 启动偏航归中是否完成
+  bool input_valid{false};                                                ///< 输入源是否在线且可信
+  DomainRequest domain_request{DomainRequest::kDisabled};                 ///< 整车工作域
+  ServiceProfile service_profile{ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略
+  CombatProfile combat_profile{CombatProfile::kNormal};                   ///< 战斗域子模式
+  TargetSource target_source{TargetSource::kRc};                          ///< 当前目标来源偏好
+  GimbalTarget rc_target{};                                               ///< 遥控器积分目标
+  GimbalTarget host_target{};                                             ///< 上位机目标 (NUC 自瞄 CAN 反馈)
+  bool host_target_valid{false};        ///< 上位机目标是否有效 (NUC 启动且在线)
+  bool chassis_recovery_active{false};  ///< 底盘是否处于恢复流程
+  bool startup_align_complete{false};   ///< 启动偏航归中是否完成
 };
 
 }  // namespace wheel_legged

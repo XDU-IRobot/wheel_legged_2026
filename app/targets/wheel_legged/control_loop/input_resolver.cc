@@ -162,7 +162,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   // ── 目标来源：自瞄模式优先上位机（host_target 已在调用前从 NUC CAN 填充）──
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
       combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
-    request.target_source = request.host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
+    request.target_source =
+        request.host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
   } else {
     request.target_source = wheel_legged::TargetSource::kRc;
   }

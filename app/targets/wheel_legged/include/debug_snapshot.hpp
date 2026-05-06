@@ -86,17 +86,17 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float gimbal_imu_gyro_z_rad_s;  // 云台 IMU 陀螺 Z（偏航轴角速度）
 
   // ── 云台反馈与电机 ──
-  float    yaw_motor_raw_pos_rad;           // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
-  float    gimbal_yaw_pos_feedback_rad;     // 偏航角度反馈值（来源：云台 IMU yaw 或电机编码器）
-  float    gimbal_yaw_vel_feedback_rad_s;   // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
-  float    yaw_cmd_target_rad;              // 偏航目标角
-  float    yaw_cmd_torque_nm;               // 偏航输出力矩
-  uint8_t  yaw_motor_status;                // 偏航 DM 状态
-  float    gimbal_pitch_pos_feedback_rad;   // 俯仰角度反馈值（来源：-云台 IMU pitch）
-  float    gimbal_pitch_vel_feedback_rad_s; // 俯仰角速度反馈值（来源：云台 IMU 陀螺 X）
-  float    pitch_cmd_target_rad;            // 俯仰目标角
-  float    pitch_cmd_torque_nm;             // 俯仰输出力矩
-  uint8_t  pitch_motor_status;              // 俯仰 DM 状态
+  float yaw_motor_raw_pos_rad;            // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
+  float gimbal_yaw_pos_feedback_rad;      // 偏航角度反馈值（来源：云台 IMU yaw 或电机编码器）
+  float gimbal_yaw_vel_feedback_rad_s;    // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
+  float yaw_cmd_target_rad;               // 偏航目标角
+  float yaw_cmd_torque_nm;                // 偏航输出力矩
+  uint8_t yaw_motor_status;               // 偏航 DM 状态
+  float gimbal_pitch_pos_feedback_rad;    // 俯仰角度反馈值（来源：-云台 IMU pitch）
+  float gimbal_pitch_vel_feedback_rad_s;  // 俯仰角速度反馈值（来源：云台 IMU 陀螺 X）
+  float pitch_cmd_target_rad;             // 俯仰目标角
+  float pitch_cmd_torque_nm;              // 俯仰输出力矩
+  uint8_t pitch_motor_status;             // 俯仰 DM 状态
 
   // ── 底盘模型状态向量 ──
   float state_s_m;                 // 纵向位置
@@ -115,16 +115,16 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float state_l_r_m;               // 右腿等效长度
 
   // ── 底盘状态 ──
-  float    chassis_mean_leg_length_m; // 平均腿长
-  float    chassis_left_leg_length_m; // 左腿长度
-  float    chassis_right_leg_length_m;// 右腿长度
-  float    chassis_speed_mps;         // 车体融合速度
-  float    chassis_left_force_n;          // 左腿竖直力
-  float    chassis_right_force_n;         // 右腿竖直力
-  float    chassis_left_support_force_n;  // 左腿支撑力
-  float    chassis_right_support_force_n; // 右腿支撑力
-  uint8_t  chassis_posture_valid;     // 姿态有效
-  uint8_t  chassis_off_ground;        // 离地
+  float chassis_mean_leg_length_m;      // 平均腿长
+  float chassis_left_leg_length_m;      // 左腿长度
+  float chassis_right_leg_length_m;     // 右腿长度
+  float chassis_speed_mps;              // 车体融合速度
+  float chassis_left_force_n;           // 左腿竖直力
+  float chassis_right_force_n;          // 右腿竖直力
+  float chassis_left_support_force_n;   // 左腿支撑力
+  float chassis_right_support_force_n;  // 右腿支撑力
+  uint8_t chassis_posture_valid;        // 姿态有效
+  uint8_t chassis_off_ground;           // 离地
 
   // ── 定点锁定 ──
   uint8_t lock_point_enabled;                // 定点锁定使能
@@ -149,26 +149,25 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float fw_raw_rpm_3;         // 摩擦轮3 RPM (hero)
 
   // ── 裁判系统 ──
-  uint8_t  referee_online;             // 裁判系统是否在线（收到过有效包）
-  uint8_t  referee_robot_id;           // 裁判系统上报的机器人 ID
-  float    referee_bullet_speed_mps;   // 最近一发弹丸初速度 [m/s]
+  uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）
+  uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
+  float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
 
   // ── 云台 IMU 欧拉角（Frame C: 0x112）──
-  float    gimbal_euler_yaw_rad;       // 云台 IMU 偏航角
-  float    gimbal_euler_pitch_rad;     // 云台 IMU 俯仰角
-  float    gimbal_euler_roll_rad;      // 云台 IMU 横滚角
+  float gimbal_euler_yaw_rad;    // 云台 IMU 偏航角
+  float gimbal_euler_pitch_rad;  // 云台 IMU 俯仰角
+  float gimbal_euler_roll_rad;   // 云台 IMU 横滚角
 
   // ── 自瞄通信 TX（发给 NUC）──
-  uint8_t  aimbot_tx_mode;            // 发送的模式 (0=Normal,1=AutoAimNoMove,2=AutoAimWithMove)
-  uint8_t  aimbot_tx_robot_id;        // 发送的机器人 ID
+  uint8_t aimbot_tx_mode;      // 发送的模式 (0=Normal,1=AutoAimNoMove,2=AutoAimWithMove)
+  uint8_t aimbot_tx_robot_id;  // 发送的机器人 ID
 
   // ── 自瞄通信 RX（NUC 反馈）──
-  uint8_t  aimbot_rx_state;           // NUC 反馈的自瞄状态
-  uint8_t  aimbot_rx_target;          // NUC 反馈的目标信息
-  uint8_t  aimbot_rx_nuc_start_flag;  // NUC 启动标志
-  float    aimbot_rx_yaw_rad;         // NUC 下发的偏航目标
-  float    aimbot_rx_pitch_rad;       // NUC 下发的俯仰目标
-
+  uint8_t aimbot_rx_state;           // NUC 反馈的自瞄状态
+  uint8_t aimbot_rx_target;          // NUC 反馈的目标信息
+  uint8_t aimbot_rx_nuc_start_flag;  // NUC 启动标志
+  float aimbot_rx_yaw_rad;           // NUC 下发的偏航目标
+  float aimbot_rx_pitch_rad;         // NUC 下发的俯仰目标
 };
 static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 

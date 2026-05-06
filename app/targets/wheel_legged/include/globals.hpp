@@ -44,20 +44,20 @@ struct SharedResources {
   rm::device::DR16 dr16{no_dtcm->rc_uart};  ///< 遥控器接收机
 
   // 保持值语义成员，实际构造延后到 Init()。
-  std::optional<rm::hal::ThrottledCan<>> joint_can{};   ///< 腿部 DM 电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> wheel_can{};   ///< 轮毂/偏航电机 CAN
-  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};  ///< 云台俯仰与云台惯导 CAN
-  std::optional<DmMitMotor> dm_lf{};                    ///< 左前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_lb{};                    ///< 左后腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rf{};                    ///< 右前腿关节 DM 电机
-  std::optional<DmMitMotor> dm_rb{};                    ///< 右后腿关节 DM 电机
-  std::optional<rm::device::M3508> left_wheel{};        ///< 左轮 M3508
-  std::optional<rm::device::M3508> right_wheel{};       ///< 右轮 M3508
-  std::optional<rm::device::HipnucImu> chassis_imu{};   ///< 底盘惯导
-  std::optional<GimbalToChassisRxBridge> gimbal_rx{};   ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<rm::hal::ThrottledCan<>> joint_can{};         ///< 腿部 DM 电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> wheel_can{};         ///< 轮毂/偏航电机 CAN
+  std::optional<rm::hal::ThrottledCan<>> gimbal_can{};        ///< 云台俯仰与云台惯导 CAN
+  std::optional<DmMitMotor> dm_lf{};                          ///< 左前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_lb{};                          ///< 左后腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rf{};                          ///< 右前腿关节 DM 电机
+  std::optional<DmMitMotor> dm_rb{};                          ///< 右后腿关节 DM 电机
+  std::optional<rm::device::M3508> left_wheel{};              ///< 左轮 M3508
+  std::optional<rm::device::M3508> right_wheel{};             ///< 右轮 M3508
+  std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
+  std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kV170>> referee{};  ///< 裁判系统串口
-  std::optional<DypCanRxBridge> dyp_rx{};               ///< DYP 测距 CAN 接收
+  std::optional<DypCanRxBridge> dyp_rx{};                                            ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机

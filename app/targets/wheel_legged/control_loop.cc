@@ -123,8 +123,7 @@ void ControlLoop() {
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
-  gimbal_update_input.aimbot_mode =
-      gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
   if (gimbal_startup_align_active) {
     // 归中阶段：强制对齐车头方向，覆盖 FSM 下发的目标
     gimbal_update_input.align_to_chassis_forward = false;
@@ -367,8 +366,7 @@ void ControlLoop() {
     ctx.was_requesting_lock = request_lock;
 
     // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零 + 消抖 dwell
-    if (!ctx.lock_point_target && request_lock && filtered_s_dot_at_zero &&
-        elapsed >= kLockPointMinDwellTicks) {
+    if (!ctx.lock_point_target && request_lock && filtered_s_dot_at_zero && elapsed >= kLockPointMinDwellTicks) {
       ctx.lock_point_target = true;
       ctx.lock_point_s_ref = current_state.s;
       ctx.lock_point_last_switch_tick = now_ms;
@@ -400,8 +398,7 @@ void ControlLoop() {
   chassis_update_input.expected.s_dot =
       chassis_control_output.off_ground_in_mid_high_leg
           ? current_state.s_dot
-          : (spin_control_enabled ? spin_target_s_dot
-                                  : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot);
+          : (spin_control_enabled ? spin_target_s_dot : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot);
   ctx.expected_s = ctx.lock_point_alpha * ctx.lock_point_s_ref + (1.0f - ctx.lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
@@ -468,14 +465,12 @@ void ControlLoop() {
 
     const bool referee_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
-    const uint8_t robot_id =
-        referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
+    const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
-    const float bullet_speed = (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed
-                                                                               : ns::aimbot::kBulletSpeedMps;
+    const float bullet_speed =
+        (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
-    globals->aimbot->UpdateControl(yaw_rad, pitch_rad, roll_rad, 0.0f, robot_id, aimbot_mode, imu_count,
-                                   bullet_speed);
+    globals->aimbot->UpdateControl(yaw_rad, pitch_rad, roll_rad, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;

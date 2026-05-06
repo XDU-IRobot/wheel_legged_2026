@@ -41,8 +41,8 @@ class Chassis {
     rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
     rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
-    rm::f32 left_force_n{0.0f};            ///< 左腿竖直力
-    rm::f32 right_force_n{0.0f};           ///< 右腿竖直力
+    rm::f32 left_force_n{0.0f};           ///< 左腿竖直力
+    rm::f32 right_force_n{0.0f};          ///< 右腿竖直力
     rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
     rm::f32 right_support_force_n{0.0f};  ///< 右腿支撑力估计
     rm::f32 mean_leg_length_m{0.0f};      ///< 平均腿长
