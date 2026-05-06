@@ -90,8 +90,8 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
   }
 }
 
-void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
-                           Dr16SemanticState &semantic_state, TcSemanticState &tc_state, InputSnapshot &input) {
+void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
+                           TcSemanticState &tc_state, InputSnapshot &input) {
   const bool tc_remote_active = tc_remote.valid;
   const bool has_any_input = dr16.online || tc_remote_active;
 
@@ -275,7 +275,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 }
 
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
-                                            const chassis::Chassis::UpdateOutput &chassis_output) {
+                                         const chassis::Chassis::UpdateOutput &chassis_output) {
   chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
   fsm_input.request = {

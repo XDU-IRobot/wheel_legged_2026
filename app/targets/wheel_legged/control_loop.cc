@@ -92,8 +92,7 @@ void ControlLoop() {
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
-  const gimbal::Fsm::Input gimbal_input =
-      BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
+  const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
 
@@ -172,9 +171,9 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
-    const auto shoot_output = globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm,
-                                                    kControlLoopDtS, input.dr16.dial, input.tc_remote.left_button,
-                                                    in_combat);
+    const auto shoot_output =
+        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, input.dr16.dial,
+                              input.tc_remote.left_button, in_combat);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif
@@ -211,11 +210,10 @@ void ControlLoop() {
   // ── 底盘输出使能条件 ──
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
   const bool auto_aim_no_move = chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove;
-  const bool chassis_output_enable = auto_aim_no_move
-                                         ? false
-                                         : (chassis_posture_invalid
-                                                ? chassis_output.control.enable_dm
-                                                : chassis_output.control.enable_dm && chassis_startup_ready);
+  const bool chassis_output_enable =
+      auto_aim_no_move ? false
+                       : (chassis_posture_invalid ? chassis_output.control.enable_dm
+                                                  : chassis_output.control.enable_dm && chassis_startup_ready);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 7：底盘控制

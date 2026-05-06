@@ -71,10 +71,11 @@ struct GimbalTarget {
  * @note  该结构是底盘 FSM 与云台 FSM 的共同输入，避免各模块直接解析遥控器原始量。
  */
 struct ModeRequest {
-  bool input_valid{false};                                                    ///< 输入源是否在线且可信
-  DomainRequest domain_request{DomainRequest::kDisabled};                     ///< 整车工作域
-  ServiceProfile service_profile{ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
-  LegProfile leg_request{LegProfile::kLow};                                   ///< 腿长档位请求
+  bool input_valid{false};                                 ///< 输入源是否在线且可信
+  DomainRequest domain_request{DomainRequest::kDisabled};  ///< 整车工作域
+  ServiceProfile service_profile{
+      ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
+  LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
@@ -122,19 +123,19 @@ struct ModeRequest {
  * - kStairClimbDone → kHighLeg: pitch 稳定 kStairClimbPitchStableMs
  */
 struct ChassisFsmInput {
-  bool input_valid{false};                                    ///< 输入源是否在线且可信
-  DomainRequest domain_request{DomainRequest::kDisabled};     ///< 整车工作域
-  LegProfile leg_request{LegProfile::kLow};                   ///< 腿长档位请求
-  CombatProfile combat_profile{CombatProfile::kNormal};       ///< 战斗域子模式
-  bool spin_hold{false};                                      ///< 小陀螺保持请求
-  bool jump_trigger{false};                                   ///< 跳跃边沿触发请求
-  float current_leg_length_m{0.0f};                           ///< 当前平均腿长反馈
-  float theta_ll_rad{0.0f};                                   ///< 当前左腿摆角
-  float theta_lr_rad{0.0f};                                   ///< 当前右腿摆角
-  bool fall_detected{false};                                  ///< 是否检测到倒地
-  uint32_t fall_detected_hold_ms{0};                          ///< 倒地持续时间
-  bool upright_stable{false};                                 ///< 是否已恢复稳定直立
-  uint32_t tick_ms{0};                                        ///< 当前系统时间戳
+  bool input_valid{false};                                 ///< 输入源是否在线且可信
+  DomainRequest domain_request{DomainRequest::kDisabled};  ///< 整车工作域
+  LegProfile leg_request{LegProfile::kLow};                ///< 腿长档位请求
+  CombatProfile combat_profile{CombatProfile::kNormal};    ///< 战斗域子模式
+  bool spin_hold{false};                                   ///< 小陀螺保持请求
+  bool jump_trigger{false};                                ///< 跳跃边沿触发请求
+  float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
+  float theta_ll_rad{0.0f};                                ///< 当前左腿摆角
+  float theta_lr_rad{0.0f};                                ///< 当前右腿摆角
+  bool fall_detected{false};                               ///< 是否检测到倒地
+  uint32_t fall_detected_hold_ms{0};                       ///< 倒地持续时间
+  bool upright_stable{false};                              ///< 是否已恢复稳定直立
+  uint32_t tick_ms{0};                                     ///< 当前系统时间戳
 };
 
 /**

@@ -121,8 +121,7 @@ bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad,
 
 bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
   const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
-  return yaw_err_rad <= kYawFollowDriveReadyErrorRad &&
-         std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
+  return yaw_err_rad <= kYawFollowDriveReadyErrorRad && std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
 }
 
 SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
