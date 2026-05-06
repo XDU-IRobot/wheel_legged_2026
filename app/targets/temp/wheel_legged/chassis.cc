@@ -27,10 +27,10 @@ constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
 constexpr rm::f32 kMidLegOffGroundRecoverLengthM =
     wheel_legged::params::active::chassis::kMidLegOffGroundRecoverLengthM;
-constexpr auto kMidLegOffGroundRecoverTicks = static_cast<uint32_t>(
-    wheel_legged::params::active::chassis::kMidLegOffGroundRecoverMs / (kControlDtS * 1000.0f));
-constexpr auto kMidLegOffGroundConfirmTicks = static_cast<uint32_t>(
-    wheel_legged::params::active::chassis::kMidLegOffGroundConfirmMs / (kControlDtS * 1000.0f));
+constexpr auto kMidLegOffGroundRecoverTicks =
+    static_cast<uint32_t>(wheel_legged::params::active::chassis::kMidLegOffGroundRecoverMs / (kControlDtS * 1000.0f));
+constexpr auto kMidLegOffGroundConfirmTicks =
+    static_cast<uint32_t>(wheel_legged::params::active::chassis::kMidLegOffGroundConfirmMs / (kControlDtS * 1000.0f));
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -110,8 +110,8 @@ void chassis::Chassis::Init() {
   init_pid(left_l0_pid_high_, left_l0_pid_high.kp, left_l0_pid_high.ki, left_l0_pid_high.kd, left_l0_pid_high.max_out,
            left_l0_pid_high.max_iout);
   const auto &right_l0_pid_high = wheel_legged::params::active::chassis::kRightL0PidHigh;
-  init_pid(right_l0_pid_high_, right_l0_pid_high.kp, right_l0_pid_high.ki, right_l0_pid_high.kd, right_l0_pid_high.max_out,
-           right_l0_pid_high.max_iout);
+  init_pid(right_l0_pid_high_, right_l0_pid_high.kp, right_l0_pid_high.ki, right_l0_pid_high.kd,
+           right_l0_pid_high.max_out, right_l0_pid_high.max_iout);
   const auto &left_l0_jump2 = wheel_legged::params::active::chassis::kLeftL0PidJumpTwo;
   init_pid(left_l0_pid_jump_two_, left_l0_jump2.kp, left_l0_jump2.ki, left_l0_jump2.kd, left_l0_jump2.max_out,
            left_l0_jump2.max_iout);
@@ -325,10 +325,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   // 腿长 PID 档位管理：模式切换时立即切换到目标档位；同模式内通过滞回切换
   {
     constexpr float kLegLengthSwitchToleranceM = 0.02f;
-    const bool is_leg_length_mode = (input.fsm_mode == Fsm::State::kLowLeg ||
-                                      input.fsm_mode == Fsm::State::kMidLeg ||
-                                      input.fsm_mode == Fsm::State::kHighLeg ||
-                                      input.fsm_mode == Fsm::State::kSpin);
+    const bool is_leg_length_mode = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
+                                     input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
     const bool mode_changed = (input.fsm_mode != last_fsm_mode_);
 
     if (mode_changed && is_leg_length_mode) {
@@ -354,8 +352,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     last_fsm_mode_ = input.fsm_mode;
   }
 
-  rm::modules::PID* active_left_pid = &left_l0_pid_mid_;
-  rm::modules::PID* active_right_pid = &right_l0_pid_mid_;
+  rm::modules::PID *active_left_pid = &left_l0_pid_mid_;
+  rm::modules::PID *active_right_pid = &right_l0_pid_mid_;
   switch (active_pid_leg_profile_) {
     case wheel_legged::LegProfile::kLow:
       active_left_pid = &left_l0_pid_low_;

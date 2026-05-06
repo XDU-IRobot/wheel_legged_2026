@@ -824,8 +824,7 @@ void ControlLoop() {
   // 发射机构（hero 专用：拨盘使能 + 0 Nm 力矩）
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   {
-    const bool shooter_enter = input.dr16.online &&
-                           input.dr16.switch_l == rm::device::DR16::SwitchPosition::kUp;
+    const bool shooter_enter = input.dr16.online && input.dr16.switch_l == rm::device::DR16::SwitchPosition::kUp;
     const bool fire_trigger = input.dr16.dial < wheel_legged::params::active::gimbal::kFireDialThreshold;
     globals->shoot_controller.Update(shooter_enter, fire_trigger);
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);  // 摩擦轮 CAN3

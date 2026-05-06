@@ -76,10 +76,10 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 }  // namespace chassis
 
 namespace control_loop {
-  struct SdotRampParams {
-    float accel_step;
-    float brake_step;
-  };
+struct SdotRampParams {
+  float accel_step;
+  float brake_step;
+};
 
 constexpr std::int16_t kWheelSpinThreshold = 220;
 constexpr std::int16_t kWheelActionThreshold = 320;
@@ -326,9 +326,15 @@ constexpr float kRightPhi1OffsetRad = 3.04 + M_PI;
 constexpr float kRightPhi4OffsetRad = -2.17;
 }  // namespace state_estimator
 
-namespace leg_kinematics { using namespace common::leg_kinematics; }
-namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
-namespace main { using namespace common::main; }
+namespace leg_kinematics {
+using namespace common::leg_kinematics;
+}
+namespace remote_control_can_bridge {
+using namespace common::remote_control_can_bridge;
+}
+namespace main {
+using namespace common::main;
+}
 
 }  // namespace hero
 
@@ -504,9 +510,15 @@ constexpr float kRightPhi1OffsetRad = kPi + 2.4f;
 constexpr float kRightPhi4OffsetRad = -1.87f;
 }  // namespace state_estimator
 
-namespace leg_kinematics { using namespace common::leg_kinematics; }
-namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
-namespace main { using namespace common::main; }
+namespace leg_kinematics {
+using namespace common::leg_kinematics;
+}
+namespace remote_control_can_bridge {
+using namespace common::remote_control_can_bridge;
+}
+namespace main {
+using namespace common::main;
+}
 
 }  // namespace infantry3
 
@@ -682,9 +694,15 @@ constexpr float kRightPhi1OffsetRad = -1.42f + M_PI;
 constexpr float kRightPhi4OffsetRad = -1.62f;
 }  // namespace state_estimator
 
-namespace leg_kinematics { using namespace common::leg_kinematics; }
-namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
-namespace main { using namespace common::main; }
+namespace leg_kinematics {
+using namespace common::leg_kinematics;
+}
+namespace remote_control_can_bridge {
+using namespace common::remote_control_can_bridge;
+}
+namespace main {
+using namespace common::main;
+}
 
 }  // namespace infantry4
 

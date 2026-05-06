@@ -57,10 +57,10 @@ struct SharedResources {
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
   // ---------- 发射机构（hero 专用: 3 摩擦轮 + DM 拨盘）----------
-  std::optional<rm::device::M3508> fw_motor_1{};     ///< 摩擦轮 1 (CAN3)
-  std::optional<rm::device::M3508> fw_motor_2{};     ///< 摩擦轮 2 (CAN3)
-  std::optional<rm::device::M3508> fw_motor_3{};     ///< 摩擦轮 3 (CAN3)
-  std::optional<DmMitMotor> booster_motor{};         ///< DM 拨盘电机 (CAN2)
+  std::optional<rm::device::M3508> fw_motor_1{};  ///< 摩擦轮 1 (CAN3)
+  std::optional<rm::device::M3508> fw_motor_2{};  ///< 摩擦轮 2 (CAN3)
+  std::optional<rm::device::M3508> fw_motor_3{};  ///< 摩擦轮 3 (CAN3)
+  std::optional<DmMitMotor> booster_motor{};      ///< DM 拨盘电机 (CAN2)
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   wheel_legged::ShootController shoot_controller{};  ///< 发射机构控制器
 #endif
@@ -161,15 +161,13 @@ struct SharedResources {
       // if (!fw_motor_3.has_value()) fw_motor_3.emplace(*gimbal_can, sp::kFwMotor3Id);
       // if (!booster_motor.has_value()) booster_motor.emplace(*wheel_can, sp::kBoosterDmSettings);
       fw_motor_1.emplace(*gimbal_can, sp::kFwMotor1Id);
-      fw_motor_2.emplace(*gimbal_can, sp::kFwMotor2Id,true);
-      fw_motor_3.emplace(*gimbal_can, sp::kFwMotor3Id,true);
-      booster_motor.emplace(*wheel_can, sp::kBoosterDmSettings,true);
+      fw_motor_2.emplace(*gimbal_can, sp::kFwMotor2Id, true);
+      fw_motor_3.emplace(*gimbal_can, sp::kFwMotor3Id, true);
+      booster_motor.emplace(*wheel_can, sp::kBoosterDmSettings, true);
 
       shoot_controller.Attach(
-          fw_motor_1.has_value() ? &*fw_motor_1 : nullptr,
-          fw_motor_2.has_value() ? &*fw_motor_2 : nullptr,
-          fw_motor_3.has_value() ? &*fw_motor_3 : nullptr,
-          booster_motor.has_value() ? &*booster_motor : nullptr);
+          fw_motor_1.has_value() ? &*fw_motor_1 : nullptr, fw_motor_2.has_value() ? &*fw_motor_2 : nullptr,
+          fw_motor_3.has_value() ? &*fw_motor_3 : nullptr, booster_motor.has_value() ? &*booster_motor : nullptr);
       shoot_controller.Init();
     }
 #endif

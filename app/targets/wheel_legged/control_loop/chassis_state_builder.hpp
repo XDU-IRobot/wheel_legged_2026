@@ -17,17 +17,17 @@ namespace wheel_legged::control_loop {
  * @brief 偏航跟随对齐模式
  */
 enum class YawFollowAlignMode : uint8_t {
-  kForward = 0,      ///< 前进/后退方向对齐
-  kSidePositive,     ///< 右侧方向对齐
-  kSideNegative,     ///< 左侧方向对齐
+  kForward = 0,   ///< 前进/后退方向对齐
+  kSidePositive,  ///< 右侧方向对齐
+  kSideNegative,  ///< 左侧方向对齐
 };
 
 /**
  * @brief 偏航跟随目标选择结果
  */
 struct YawFollowTargetSelection {
-  float target_rad{0.0f};   ///< 选择的偏航目标角 [rad]
-  float drive_sign{1.0f};   ///< 驱动方向符号（+1 或 -1）
+  float target_rad{0.0f};  ///< 选择的偏航目标角 [rad]
+  float drive_sign{1.0f};  ///< 驱动方向符号（+1 或 -1）
 };
 
 using SdotRampParams = wheel_legged::params::active::control_loop::SdotRampParams;
@@ -39,35 +39,35 @@ using SdotRampParams = wheel_legged::params::active::control_loop::SdotRampParam
  */
 struct ChassisStateContext {
   // ── 速率滤波 ──
-  float filtered_s_dot{0.0f};       ///< 滤波后的纵向速度
-  float filtered_yaw_dot{0.0f};     ///< 滤波后的偏航角速度
-  float expected_s{0.0f};           ///< 期望纵向位置（定点锁定 blend 输出）
+  float filtered_s_dot{0.0f};    ///< 滤波后的纵向速度
+  float filtered_yaw_dot{0.0f};  ///< 滤波后的偏航角速度
+  float expected_s{0.0f};        ///< 期望纵向位置（定点锁定 blend 输出）
 
   // ── 定点锁定 ──
-  bool lock_point_target{false};                 ///< 是否激活定点锁定
-  float lock_point_alpha{0.0f};                 ///< 锁定 blend 系数 [0, 1]
-  float lock_point_s_ref{0.0f};                 ///< 锁定的参考位置
-  uint32_t lock_point_last_switch_tick{0U};     ///< 上次锁定切换的 tick
-  bool was_requesting_lock{false};              ///< 上一周期是否请求锁定
-  uint32_t lock_point_zero_speed_ticks{0U};     ///< filtered_s_dot 维持在零的连续 tick 数
+  bool lock_point_target{false};             ///< 是否激活定点锁定
+  float lock_point_alpha{0.0f};              ///< 锁定 blend 系数 [0, 1]
+  float lock_point_s_ref{0.0f};              ///< 锁定的参考位置
+  uint32_t lock_point_last_switch_tick{0U};  ///< 上次锁定切换的 tick
+  bool was_requesting_lock{false};           ///< 上一周期是否请求锁定
+  uint32_t lock_point_zero_speed_ticks{0U};  ///< filtered_s_dot 维持在零的连续 tick 数
 
   // ── 偏航跟随 ──
-  rm::modules::PID yaw_follow_pid{};              ///< 偏航跟随 PID
-  bool yaw_follow_pid_initialized{false};         ///< 偏航跟随 PID 是否已初始化
+  rm::modules::PID yaw_follow_pid{};                                      ///< 偏航跟随 PID
+  bool yaw_follow_pid_initialized{false};                                 ///< 偏航跟随 PID 是否已初始化
   chassis::Fsm::State last_chassis_mode{chassis::Fsm::State::kDisabled};  ///< 上一周期底盘模式
 
   // ── 云台启动归中 ──
-  bool gimbal_startup_align_complete{false};     ///< 归中是否完成
-  bool gimbal_startup_align_was_active{false};   ///< 上一周期是否处于归中
-  uint32_t gimbal_startup_align_stable_ticks{0U}; ///< 归中判稳计数器
-  float gimbal_startup_align_target_rad{0.0f};    ///< 归中目标偏航角
+  bool gimbal_startup_align_complete{false};       ///< 归中是否完成
+  bool gimbal_startup_align_was_active{false};     ///< 上一周期是否处于归中
+  uint32_t gimbal_startup_align_stable_ticks{0U};  ///< 归中判稳计数器
+  float gimbal_startup_align_target_rad{0.0f};     ///< 归中目标偏航角
 
   // ── 偏航跟随目标 ──
   YawFollowAlignMode yaw_follow_align_mode{YawFollowAlignMode::kForward};  ///< 当前对齐模式
-  YawFollowTargetSelection yaw_follow_target{};        ///< 当前选定的偏航目标
-  bool yaw_follow_target_initialized{false};           ///< 偏航目标是否已初始化
-  bool yaw_follow_drive_ready{false};                  ///< 偏航是否已就绪（允许纵向驱动）
-  uint32_t yaw_follow_drive_ready_stable_ticks{0U};    ///< 偏航就绪判稳计数器
+  YawFollowTargetSelection yaw_follow_target{};                            ///< 当前选定的偏航目标
+  bool yaw_follow_target_initialized{false};                               ///< 偏航目标是否已初始化
+  bool yaw_follow_drive_ready{false};                ///< 偏航是否已就绪（允许纵向驱动）
+  uint32_t yaw_follow_drive_ready_stable_ticks{0U};  ///< 偏航就绪判稳计数器
 
   /**
    * @brief 在底盘模式切换时重置相关状态

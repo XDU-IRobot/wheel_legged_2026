@@ -27,7 +27,7 @@ namespace wheel_legged::control_loop {
  * @brief DR16 遥控器原始通道值（去语义化）
  */
 struct Dr16RawInput {
-  bool online{false};                                        ///< DR16 是否在线
+  bool online{false};                                                                     ///< DR16 是否在线
   rm::device::DR16::SwitchPosition switch_l{rm::device::DR16::SwitchPosition::kUnknown};  ///< 左拨杆
   rm::device::DR16::SwitchPosition switch_r{rm::device::DR16::SwitchPosition::kUnknown};  ///< 右拨杆
   int16_t right_y{0};  ///< 右摇杆 Y（前进/后退）
@@ -41,11 +41,11 @@ struct Dr16RawInput {
  * @brief 图传键鼠输入（通过云台 C 板 CAN 桥转发）
  */
 struct TcRemoteInput {
-  bool valid{false};          ///< 键鼠数据是否有效
-  int16_t mouse_x{0};         ///< 鼠标 X 增量
-  int16_t mouse_y{0};         ///< 鼠标 Y 增量
-  bool left_button{false};    ///< 鼠标左键
-  bool right_button{false};   ///< 鼠标右键（预留，当前未使用）
+  bool valid{false};           ///< 键鼠数据是否有效
+  int16_t mouse_x{0};          ///< 鼠标 X 增量
+  int16_t mouse_y{0};          ///< 鼠标 Y 增量
+  bool left_button{false};     ///< 鼠标左键
+  bool right_button{false};    ///< 鼠标右键（预留，当前未使用）
   uint16_t keyboard_value{0};  ///< 键盘按键位掩码
 };
 
@@ -63,32 +63,32 @@ struct DriveInputNorm {
  *        后续所有模块从此结构体消费数据，不直接访问硬件。
  */
 struct InputSnapshot {
-  bool input_valid{false};                                  ///< 是否有可信的输入源
-  Dr16RawInput dr16{};                                      ///< DR16 原始值
-  TcRemoteInput tc_remote{};                                ///< 图传键鼠数据
-  chassis::ChassisStateEstimatorInput estimator_input{};    ///< 底盘传感器反馈（估计器输入）
-  wheel_legged::ModeRequest mode_request{};                 ///< 整车语义请求
-  float gimbal_imu_yaw_rad{0.0f};                           ///< 云台惯导偏航角
-  float gimbal_imu_pitch_rad{0.0f};                         ///< 云台惯导俯仰角
-  float gimbal_imu_gyro_z_rad_s{0.0f};                      ///< 云台惯导 Z 轴角速度（偏航轴）
-  float gimbal_imu_gyro_x_rad_s{0.0f};                      ///< 云台惯导 X 轴角速度（俯仰轴）
+  bool input_valid{false};                                ///< 是否有可信的输入源
+  Dr16RawInput dr16{};                                    ///< DR16 原始值
+  TcRemoteInput tc_remote{};                              ///< 图传键鼠数据
+  chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
+  wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
+  float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
+  float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
+  float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）
+  float gimbal_imu_gyro_x_rad_s{0.0f};                    ///< 云台惯导 X 轴角速度（俯仰轴）
 };
 
 /**
  * @brief DR16 语义状态（跨周期保持）
  */
 struct Dr16SemanticState {
-  bool wheel_action_armed{true};               ///< 拨轮动作是否已就绪（防重复触发）
-  bool gimbal_target_initialized{false};       ///< 云台积分目标是否已初始化
-  wheel_legged::GimbalTarget rc_target{};      ///< RC 积分目标角
+  bool wheel_action_armed{true};           ///< 拨轮动作是否已就绪（防重复触发）
+  bool gimbal_target_initialized{false};   ///< 云台积分目标是否已初始化
+  wheel_legged::GimbalTarget rc_target{};  ///< RC 积分目标角
 };
 
 /**
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};   ///< C 键是否已就绪（上升沿检测）
-  bool mid_leg_hold{false};     ///< 是否保持中腿长
+  bool mid_leg_c_armed{true};  ///< C 键是否已就绪（上升沿检测）
+  bool mid_leg_hold{false};    ///< 是否保持中腿长
 };
 
 /**
@@ -132,8 +132,8 @@ wheel_legged::DomainRequest ResolveDomainRequest(rm::device::DR16::SwitchPositio
  * @note  本函数是遥控器原始值到整车语义的唯一切换点，
  *        后续模块不应直接解析 DR16 的 switch/dial/axis 原始量。
  */
-void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
-                           Dr16SemanticState &semantic_state, TcSemanticState &tc_state, InputSnapshot &input);
+void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
+                           TcSemanticState &tc_state, InputSnapshot &input);
 
 /**
  * @brief 采集硬件反馈并刷新输入快照
@@ -155,7 +155,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
  * @return 底盘 FSM 输入
  */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
-                                            const chassis::Chassis::UpdateOutput &chassis_output);
+                                         const chassis::Chassis::UpdateOutput &chassis_output);
 
 /**
  * @brief 从 InputSnapshot 和底盘 FSM 输出构建云台 FSM 输入

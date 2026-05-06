@@ -59,10 +59,10 @@ struct SharedResources {
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  std::optional<rm::device::M3508> fw_motor_1{};   ///< 摩擦轮1 (gimbal_can, hero)
-  std::optional<rm::device::M3508> fw_motor_2{};   ///< 摩擦轮2 (gimbal_can, hero)
-  std::optional<rm::device::M3508> fw_motor_3{};   ///< 摩擦轮3 (gimbal_can, hero)
-  std::optional<DmMitMotor> booster_motor{};       ///< DM 拨盘 (wheel_can, hero)
+  std::optional<rm::device::M3508> fw_motor_1{};  ///< 摩擦轮1 (gimbal_can, hero)
+  std::optional<rm::device::M3508> fw_motor_2{};  ///< 摩擦轮2 (gimbal_can, hero)
+  std::optional<rm::device::M3508> fw_motor_3{};  ///< 摩擦轮3 (gimbal_can, hero)
+  std::optional<DmMitMotor> booster_motor{};      ///< DM 拨盘 (wheel_can, hero)
   wheel_legged::ShootController shoot_controller{};
 #else
   std::optional<rm::device::M3508> fric_left{};   ///< 左摩擦轮 (gimbal_can)
