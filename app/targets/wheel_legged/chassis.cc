@@ -269,7 +269,13 @@ void chassis::Chassis::Update(const UpdateInput &input) {
                              input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
   if (ramp_enabled) {
     const bool in_recovery = (mid_leg_off_ground_phase_ == MidLegOffGroundPhase::kRecovering);
-    const float effective_target = in_recovery ? kMidLegOffGroundRecoverLengthM : input.target_leg_length_m;
+    float effective_target = input.target_leg_length_m;
+    if (in_recovery) {
+      effective_target = output_.mean_leg_length_m ;// + 0.02f;
+      if (effective_target <= kMidLegOffGroundRecoverLengthM) {
+        effective_target = kMidLegOffGroundRecoverLengthM;
+      }
+    }
     const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
                              wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
                             wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;

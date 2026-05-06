@@ -22,12 +22,10 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
  public:
   static constexpr rm::u16 kRxStdIdA = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdA;
   static constexpr rm::u16 kRxStdIdB = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdB;
-  static constexpr rm::u16 kRxStdIdC = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdC;
   static constexpr rm::usize kPayloadSizeA = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeA;
   static constexpr rm::usize kPayloadSizeB = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeB;
-  static constexpr rm::usize kPayloadSizeC = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeC;
 
-  explicit GimbalToChassisRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdIdA, kRxStdIdB, kRxStdIdC) {}
+  explicit GimbalToChassisRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdIdA, kRxStdIdB) {}
 
   void RxCallback(const rm::hal::CanFrame *msg) override {
     if (msg == nullptr) {
@@ -49,13 +47,6 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       keyboard_value_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       kbd_frame_count_++;
-      ReportStatus(kOk);
-    } else if (msg->rx_std_id == kRxStdIdC && msg->dlc >= kPayloadSizeC) {
-      quat_w_ = I16ToQuat(UnpackI16(&msg->data[0]));
-      quat_x_ = I16ToQuat(UnpackI16(&msg->data[2]));
-      quat_y_ = I16ToQuat(UnpackI16(&msg->data[4]));
-      quat_z_ = I16ToQuat(UnpackI16(&msg->data[6]));
-      frame_count_++;
       ReportStatus(kOk);
     } else {
       ReportStatus(kFault);
