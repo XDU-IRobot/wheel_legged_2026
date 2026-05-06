@@ -70,6 +70,8 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};                 ///< 整车语义请求
   float gimbal_imu_yaw_rad{0.0f};                           ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                         ///< 云台惯导俯仰角
+  float gimbal_imu_gyro_z_rad_s{0.0f};                      ///< 云台惯导 Z 轴角速度（偏航轴）
+  float gimbal_imu_gyro_x_rad_s{0.0f};                      ///< 云台惯导 X 轴角速度（俯仰轴）
 };
 
 /**

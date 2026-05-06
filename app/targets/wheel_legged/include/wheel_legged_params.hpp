@@ -32,9 +32,6 @@ constexpr double kJointCanTxLimitHz = 4000.0;
 constexpr double kWheelCanTxLimitHz = 4000.0;
 constexpr double kGimbalCanTxLimitHz = 4000.0;
 
-constexpr std::uint16_t kLeftWheelId = 0x06;
-constexpr std::uint16_t kRightWheelId = 0x05;
-
 constexpr std::size_t kDr16UartRxBufferSize = 18;
 constexpr std::size_t kImuUartRxBufferSize = 518;
 }  // namespace globals
@@ -156,6 +153,9 @@ using namespace common;
 namespace globals {
 using namespace common::globals;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+constexpr std::uint16_t kLeftWheelId = 0x06;
+constexpr std::uint16_t kRightWheelId = 0x05;
 
 constexpr std::uint16_t kDmLfMasterId = 0x04;
 constexpr std::uint16_t kDmLfSlaveId = 0x03;
@@ -285,10 +285,11 @@ using namespace common::control_loop;
 constexpr float kTargetForwardSpeedMaxMps = 1.8f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
 constexpr float kVyInputDeadbandNorm = 0.1f;
-constexpr float kLockPointCaptureSpeedThresholdMps = 0.02f;
 constexpr float kLockPointEnterInputThreshold = 0.08f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
+constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
+constexpr std::uint32_t kLockPointSpeedSettledTicks = 50U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -339,6 +340,9 @@ namespace globals {
 using namespace common::globals;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
+constexpr std::uint16_t kLeftWheelId = 0x02;
+constexpr std::uint16_t kRightWheelId = 0x03;
+
 constexpr std::uint16_t kDmLfMasterId = 0x17;
 constexpr std::uint16_t kDmLfSlaveId = 0x07;
 constexpr std::uint16_t kDmLbMasterId = 0x14;
@@ -348,8 +352,8 @@ constexpr std::uint16_t kDmRfSlaveId = 0x06;
 constexpr std::uint16_t kDmRbMasterId = 0x15;
 constexpr std::uint16_t kDmRbSlaveId = 0x05;
 
-constexpr std::uint16_t kFricLeftId = 0x07;
-constexpr std::uint16_t kFricRightId = 0x08;
+constexpr std::uint16_t kFricLeftId = 0x02;
+constexpr std::uint16_t kFricRightId = 0x04;
 constexpr std::uint16_t kDialId = 0x01;
 
 const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
@@ -362,16 +366,16 @@ namespace gimbal {
 using namespace common::gimbal;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kPitchMotorSettings{0x05, 0x04, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
 constexpr float kPitchMinRad = -0.2f;
 constexpr float kPitchMaxRad = 0.25f;
 
-constexpr PidGains kYawPositionPid{15.0f, 0.0f, 0.05f, 10.0f, 1.0f};
-constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};
-constexpr PidGains kPitchPositionPid{13.0f, 0.0f, 0.05f, 10.0f, 0.4f};
-constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
+inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
+inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
+inline constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
 }  // namespace gimbal
 
 namespace shoot {
@@ -459,10 +463,11 @@ using namespace common::control_loop;
 constexpr float kTargetForwardSpeedMaxMps = 2.1f;
 constexpr float kVxInputDeadbandNorm = 0.05f;
 constexpr float kVyInputDeadbandNorm = 0.05f;
-constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;
 constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
+constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
+constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -470,7 +475,7 @@ constexpr float kSpinYawRampStepRadS = 0.05f;
 constexpr float kSpinTargetYawDotRadS = 6.0f;
 constexpr float kSpinTranslationGain = 1.0f;
 constexpr float kSpinThetaLlBiasRad = 0.01f;
-constexpr float kYawFollowFixedTargetRad = -1.72f;
+constexpr float kYawFollowFixedTargetRad = 0.f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 constexpr float kExpectedThetaLlBiasRad = 0.13f;
 constexpr float kExpectedThetaLrBiasRad = 0.13f;
@@ -512,6 +517,9 @@ using namespace common;
 namespace globals {
 using namespace common::globals;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+constexpr std::uint16_t kLeftWheelId = 0x06;
+constexpr std::uint16_t kRightWheelId = 0x05;
 
 constexpr std::uint16_t kDmLfMasterId = 0x02;
 constexpr std::uint16_t kDmLfSlaveId = 0x01;
@@ -633,10 +641,11 @@ using namespace common::control_loop;
 constexpr float kTargetForwardSpeedMaxMps = 2.f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
 constexpr float kVyInputDeadbandNorm = 0.1f;
-constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;
 constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
+constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
+constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;

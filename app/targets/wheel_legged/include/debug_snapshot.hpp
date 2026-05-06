@@ -32,7 +32,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t  dr16_enable_request;       // 使能请求
   uint8_t  dr16_spin_request;         // 小陀螺请求
   uint8_t  dr16_jump_trigger_edge;    // 跳跃触发边沿
+  uint8_t  tc_remote_valid;           // 图传键鼠链路活跃（收到键盘帧）
   uint8_t  tc_mid_leg_hold;           // 图传C键中腿长锁定
+  uint16_t tc_keyboard_value;         // 图传键盘按键位掩码
+  int16_t  tc_mouse_x;                // 图传鼠标 X 增量
+  int16_t  tc_mouse_y;                // 图传鼠标 Y 增量
+  uint8_t  tc_left_button;            // 图传鼠标左键
+  uint8_t  tc_right_button;           // 图传鼠标右键
   float    gimbal_target_yaw_rad;     // 云台偏航目标
   float    gimbal_target_pitch_rad;   // 云台俯仰目标
 
@@ -76,16 +82,18 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   // ── 云台 IMU ──
   float    gimbal_imu_pitch_rad;      // 云台 IMU 俯仰
   float    gimbal_imu_yaw_rad;        // 云台 IMU 偏航
+  float    gimbal_imu_gyro_x_rad_s;   // 云台 IMU 陀螺 X（俯仰轴角速度）
+  float    gimbal_imu_gyro_z_rad_s;   // 云台 IMU 陀螺 Z（偏航轴角速度）
 
-  // ── 云台电机 ──
-  float    yaw_motor_raw_pos_rad;     // 偏航电机位置
-  float    yaw_motor_raw_vel_rad_s;   // 偏航电机速度
-  float    yaw_cmd_target_rad;        // 偏航目标角
-  uint8_t  yaw_motor_status;          // 偏航 DM 状态
-  float    pitch_motor_raw_pos_rad;   // 俯仰电机位置
-  float    pitch_motor_raw_vel_rad_s; // 俯仰电机速度
-  float    pitch_cmd_target_rad;      // 俯仰目标角
-  uint8_t  pitch_motor_status;        // 俯仰 DM 状态
+  // ── 云台反馈与电机 ──
+  float    yaw_motor_raw_pos_rad;           // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
+  float    gimbal_yaw_vel_feedback_rad_s;   // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
+  float    yaw_cmd_target_rad;              // 偏航目标角
+  uint8_t  yaw_motor_status;                // 偏航 DM 状态
+  float    gimbal_pitch_pos_feedback_rad;   // 俯仰角度反馈值（来源：-云台 IMU pitch）
+  float    gimbal_pitch_vel_feedback_rad_s; // 俯仰角速度反馈值（来源：云台 IMU 陀螺 X）
+  float    pitch_cmd_target_rad;            // 俯仰目标角
+  uint8_t  pitch_motor_status;              // 俯仰 DM 状态
 
   // ── 底盘模型状态向量 ──
   float    state_s_m;                 // 纵向位置
@@ -118,7 +126,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t  lock_point_request;        // 锁点请求
   uint8_t  lock_point_captured;       // 锁点已捕获
   uint8_t  lock_point_rising_edge;    // 锁点上升沿
-  uint8_t  lock_point_speed_below_threshold;  // 车速低于锁点捕获阈值
+  uint8_t  lock_point_speed_below_threshold;  // filtered_s_dot 已斜坡归零
 
   // ── DYP 超声波 ──
   uint16_t dyp_distance_raw_left;     // 左超声波读数
@@ -135,7 +143,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float    fw_raw_rpm_2;              // 摩擦轮2 RPM (hero)
   float    fw_raw_rpm_3;              // 摩擦轮3 RPM (hero)
 
-  uint8_t  _reserved[47];            // 预留给未来扩展
+  uint8_t  _reserved[31];            // 预留给未来扩展
 };
 static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 

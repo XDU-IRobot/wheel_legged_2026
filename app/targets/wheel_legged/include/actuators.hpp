@@ -95,11 +95,24 @@ class Actuators {
    * @brief 下发双摩擦轮发射机构电流
    */
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
-    if (g.fric_left.has_value()) g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-    if (g.fric_right.has_value()) g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
-    if (g.dial.has_value()) g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
-    if (g.gimbal_can.has_value()) rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
-    if (g.wheel_can.has_value()) rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
+    if (g.fric_left.has_value()) {
+      // g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
+      g.fric_left->SetCurrent(static_cast<int16_t>(0));
+    }
+    if (g.fric_right.has_value()) {
+      // g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_right_current));
+      g.fric_right->SetCurrent(static_cast<int16_t>(0));
+    }
+    if (g.dial.has_value()) {
+      // g.fric_left->SetCurrent(static_cast<int16_t>(output.dial_current));
+      g.dial->SetCurrent(static_cast<int16_t>(0));
+    }
+    // if (g.gimbal_can.has_value()) {
+    //   rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
+    // }
+    // if (g.wheel_can.has_value()) {
+    //   rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
+    // }
   }
 #endif
 

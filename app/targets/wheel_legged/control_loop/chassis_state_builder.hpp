@@ -49,6 +49,7 @@ struct ChassisStateContext {
   float lock_point_s_ref{0.0f};                 ///< 锁定的参考位置
   uint32_t lock_point_last_switch_tick{0U};     ///< 上次锁定切换的 tick
   bool was_requesting_lock{false};              ///< 上一周期是否请求锁定
+  uint32_t lock_point_zero_speed_ticks{0U};     ///< filtered_s_dot 维持在零的连续 tick 数
 
   // ── 偏航跟随 ──
   rm::modules::PID yaw_follow_pid{};              ///< 偏航跟随 PID

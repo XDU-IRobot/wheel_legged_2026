@@ -38,8 +38,9 @@ constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBias
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
 constexpr float kLockPointEnterInputThreshold = ns::control_loop::kLockPointEnterInputThreshold;
 constexpr float kLockPointExitInputThreshold = ns::control_loop::kLockPointExitInputThreshold;
-constexpr float kLockPointCaptureSpeedThresholdMps = ns::control_loop::kLockPointCaptureSpeedThresholdMps;
 constexpr uint32_t kLockPointMinDwellTicks = ns::control_loop::kLockPointMinDwellTicks;
+constexpr float kLockPointFilteredSdotZeroThreshold = ns::control_loop::kLockPointFilteredSdotZeroThreshold;
+constexpr uint32_t kLockPointSpeedSettledTicks = ns::control_loop::kLockPointSpeedSettledTicks;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -69,6 +70,8 @@ void ControlLoop() {
 
   // ── 一次性初始化 ──
   if (!ctx.yaw_follow_pid_initialized) {
+    const auto &pid = ns::control_loop::kYawFollowPid;
+    ctx.yaw_follow_pid.SetKp(pid.kp).SetKi(pid.ki).SetKd(pid.kd).SetMaxOut(pid.max_out).SetMaxIout(pid.max_iout);
     ctx.yaw_follow_pid.SetCircular(true).SetCircularCycle(2.0f * kPi);
     ctx.yaw_follow_pid_initialized = true;
   }
@@ -132,6 +135,8 @@ void ControlLoop() {
   gimbal_update_input.yaw_motor_rad = input.estimator_input.yaw_motor_rad;
   gimbal_update_input.gimbal_imu_yaw_rad = input.gimbal_imu_yaw_rad;
   gimbal_update_input.gimbal_imu_pitch_rad = input.gimbal_imu_pitch_rad;
+  gimbal_update_input.gimbal_imu_gyro_z_rad_s = input.gimbal_imu_gyro_z_rad_s;
+  gimbal_update_input.gimbal_imu_gyro_x_rad_s = -input.gimbal_imu_gyro_x_rad_s;
   gimbal_update_input.dt_s = kControlLoopDtS;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
@@ -337,12 +342,16 @@ void ControlLoop() {
   }
 
   // ── 7i. 定点锁定 ──
+  // 进入条件：摇杆归中 → 目标速度归零 → 斜坡令 filtered_s_dot 降至零 →
+  //           维持零速 N 周期（确认斜坡完成）→ 锁定，捕获当前位置为参考。
+  // 退出条件：摇杆超过退出阈值 + 消抖 dwell。
   const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                                            chassis_output.mode != chassis::Fsm::State::kSpin);
   wl_debug.lock_point_enabled = lockpoint_enabled ? 1U : 0U;
   if (!lockpoint_enabled) {
     ctx.lock_point_target = false;
     ctx.was_requesting_lock = false;
+    ctx.lock_point_zero_speed_ticks = 0U;
   } else {
     const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
     const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
@@ -350,23 +359,28 @@ void ControlLoop() {
     wl_debug.lock_point_request = request_lock ? 1U : 0U;
     const uint32_t elapsed = now_ms - ctx.lock_point_last_switch_tick;
 
-    // 车速低于捕获阈值时记录锁定参考位置
-    const bool speed_below_threshold = std::fabs(current_state.s_dot) < kLockPointCaptureSpeedThresholdMps;
-    wl_debug.lock_point_speed_below_threshold = speed_below_threshold ? 1U : 0U;
-    if (request_lock && speed_below_threshold && !wl_debug.lock_point_captured) {
-      ctx.lock_point_s_ref = current_state.s;
-      wl_debug.lock_point_captured = 1U;
+    // 跟踪 filtered_s_dot 维持在零的连续周期数（斜坡完成判据）
+    const bool filtered_s_dot_at_zero = std::fabs(ctx.filtered_s_dot) < kLockPointFilteredSdotZeroThreshold;
+    wl_debug.lock_point_speed_below_threshold = filtered_s_dot_at_zero ? 1U : 0U;
+    if (request_lock && filtered_s_dot_at_zero) {
+      ++ctx.lock_point_zero_speed_ticks;
+    } else {
+      ctx.lock_point_zero_speed_ticks = 0U;
     }
+
     if (request_lock && !ctx.was_requesting_lock) {
       wl_debug.lock_point_rising_edge = 1U;
     }
     ctx.was_requesting_lock = request_lock;
 
-    // 带滞回与最小时长的锁定/解锁逻辑
-    if (!ctx.lock_point_target && request_lock && elapsed >= kLockPointMinDwellTicks) {
+    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零并保持 N 周期 + 消抖 dwell
+    if (!ctx.lock_point_target && request_lock &&
+        ctx.lock_point_zero_speed_ticks >= kLockPointSpeedSettledTicks &&
+        elapsed >= kLockPointMinDwellTicks) {
       ctx.lock_point_target = true;
+      ctx.lock_point_s_ref = current_state.s;
       ctx.lock_point_last_switch_tick = now_ms;
-      wl_debug.lock_point_captured = 0U;
+      wl_debug.lock_point_captured = 1U;
       wl_debug.lock_point_rising_edge = 0U;
     } else if (ctx.lock_point_target && request_unlock && elapsed >= kLockPointMinDwellTicks) {
       ctx.lock_point_target = false;
@@ -440,9 +454,13 @@ void ControlLoop() {
   if (globals->gimbal_rx.has_value()) {
     wl_debug.gimbal_imu_pitch_rad = globals->gimbal_rx->pitch_rad();
     wl_debug.gimbal_imu_yaw_rad = globals->gimbal_rx->yaw_rad();
+    wl_debug.gimbal_imu_gyro_x_rad_s = globals->gimbal_rx->gyro_x_rad_s();
+    wl_debug.gimbal_imu_gyro_z_rad_s = globals->gimbal_rx->gyro_z_rad_s();
   } else {
     wl_debug.gimbal_imu_pitch_rad = 0.0f;
     wl_debug.gimbal_imu_yaw_rad = 0.0f;
+    wl_debug.gimbal_imu_gyro_x_rad_s = 0.0f;
+    wl_debug.gimbal_imu_gyro_z_rad_s = 0.0f;
   }
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();

@@ -46,8 +46,11 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
 DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote) {
   DriveInputNorm out{};
 
-  // 图传键盘优先：WASD 映射到 forward/side
-  if (tc_remote.valid) {
+  // DR16 摇杆优先；仅在 DR16 离线时降级为图传键盘 WASD
+  if (dr16.online) {
+    out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+    out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+  } else if (tc_remote.valid) {
     const uint16_t keys = tc_remote.keyboard_value;
     if ((keys & kRcKeyW) != 0U) {
       out.forward = 1.0f;
@@ -59,12 +62,6 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     } else if ((keys & kRcKeyA) != 0U) {
       out.side = -1.0f;
     }
-  }
-
-  // DR16 摇杆补位：键盘未给出的轴由 DR16 填充
-  if (dr16.online) {
-    if (out.forward == 0.0f) out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-    if (out.side == 0.0f) out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
   }
   return out;
 }
@@ -98,8 +95,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   const bool tc_remote_active = tc_remote.valid;
   const bool has_any_input = dr16.online || tc_remote_active;
 
-  // ── 图传 C 键：上升沿切换中腿长保持 ──
-  if (tc_remote_active) {
+  // ── 图传 C 键：上升沿切换中腿长保持（仅在 DR16 离线时生效）──
+  if (!dr16.online && tc_remote_active) {
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
     if (c_pressed && tc_state.mid_leg_c_armed) {
       tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
@@ -119,16 +116,17 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalSafe;
   // @todo: 目前仅使用 kChassisAndGimbalSafe 单一 Service 策略；未来如需区分 Service 子模式再接入 DR16 输入。
 
-  // 工作域：图传优先进入 Combat，DR16 按左拨杆
-  if (tc_remote_active) {
-    request.domain_request = wheel_legged::DomainRequest::kCombat;
-  } else if (dr16.online) {
+  // 工作域：DR16 左拨杆优先；仅 DR16 离线时由 TC 键鼠链路接管
+  if (dr16.online) {
     request.domain_request = ResolveDomainRequest(dr16.switch_l);
+  } else if (tc_remote_active) {
+    request.domain_request = wheel_legged::DomainRequest::kCombat;
   } else {
     request.domain_request = wheel_legged::DomainRequest::kDisabled;
   }
 
   // ── 战斗域子模式与腿长档位 ──
+  // DR16 在线时由右拨杆决定，C 键不参与；DR16 离线时 TC 键鼠接管，默认中腿。
   wheel_legged::CombatProfile combat_profile = wheel_legged::CombatProfile::kNormal;
   wheel_legged::LegProfile leg_request = wheel_legged::LegProfile::kLow;
 
@@ -150,12 +148,14 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         default:
           break;
       }
-    }
-    if (tc_state.mid_leg_hold) {
+    } else {
+      // TC 键鼠链路：战斗域固定 Normal + 中腿
+      combat_profile = wheel_legged::CombatProfile::kNormal;
       leg_request = wheel_legged::LegProfile::kMid;
     }
   } else {
-    leg_request = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid : ResolveLegProfile(dr16.switch_r);
+    // 非战斗域仅 DR16 在线可达（TC 强制 Combat），由右拨杆决定
+    leg_request = ResolveLegProfile(dr16.switch_r);
   }
   request.leg_request = leg_request;
 
@@ -172,9 +172,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
   request.combat_profile = combat_profile;
 
-  // ── 小陀螺触发：拨轮过阈值 或 Shift 键 ──
+  // ── 小陀螺触发：DR16 拨轮优先；仅 DR16 离线时由 Shift 键接管 ──
   request.spin_hold = (dr16.online && dr16.dial >= kWheelSpinThreshold) ||
-                      (tc_remote_active && (tc_remote.keyboard_value & kRcKeyShift) != 0U);
+                      (!dr16.online && tc_remote_active && (tc_remote.keyboard_value & kRcKeyShift) != 0U);
 
   // ── 跳跃触发：拨轮回中后快速负推（非 combat 域下）──
   if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
@@ -204,8 +204,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (dr16.online) {
       yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
       pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
-    }
-    if (tc_remote_active) {
+    } else if (tc_remote_active) {
+      // DR16 离线时降级为图传鼠标
       yaw_delta += static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
       pitch_delta += static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
     }
@@ -233,7 +233,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 2. 读取 DR16 原始值
   const bool gimbal_rx_ready = g.gimbal_rx.has_value();
   const bool gimbal_rx_valid = gimbal_rx_ready && g.gimbal_rx->frame_count() > 0;
-  const bool keyboard_rx_valid = gimbal_rx_ready && g.gimbal_rx->keyboard_frame_count() > 0;
+  const bool keyboard_rx_valid = gimbal_rx_ready && g.gimbal_rx->tc_link_activated();
 
   Dr16RawInput dr16{
       .online = (g.dr16.online_status() == rm::device::Device::kOk),
@@ -261,6 +261,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
   input.gimbal_imu_pitch_rad = gimbal_rx_valid ? g.gimbal_rx->pitch_rad() : 0.0f;
+  input.gimbal_imu_gyro_z_rad_s = gimbal_rx_valid ? g.gimbal_rx->gyro_z_rad_s() : 0.0f;
+  input.gimbal_imu_gyro_x_rad_s = gimbal_rx_valid ? g.gimbal_rx->gyro_x_rad_s() : 0.0f;
 }
 
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
