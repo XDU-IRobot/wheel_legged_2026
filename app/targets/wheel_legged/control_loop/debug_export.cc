@@ -44,6 +44,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   // ── 底盘状态 ──
   wl_debug.chassis_mean_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_debug.chassis_speed_mps = chassis_control_output.speed_mps;
+  wl_debug.chassis_left_force_n = chassis_control_output.left_force_n;
+  wl_debug.chassis_right_force_n = chassis_control_output.right_force_n;
   wl_debug.chassis_left_support_force_n = chassis_control_output.left_support_force_n;
   wl_debug.chassis_right_support_force_n = chassis_control_output.right_support_force_n;
   wl_debug.chassis_off_ground = static_cast<uint8_t>(chassis_control_output.off_ground_in_mid_high_leg);

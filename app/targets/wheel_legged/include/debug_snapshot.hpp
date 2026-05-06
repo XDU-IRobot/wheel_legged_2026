@@ -119,6 +119,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float    chassis_left_leg_length_m; // 左腿长度
   float    chassis_right_leg_length_m;// 右腿长度
   float    chassis_speed_mps;         // 车体融合速度
+  float    chassis_left_force_n;          // 左腿竖直力
+  float    chassis_right_force_n;         // 右腿竖直力
   float    chassis_left_support_force_n;  // 左腿支撑力
   float    chassis_right_support_force_n; // 右腿支撑力
   uint8_t  chassis_posture_valid;     // 姿态有效

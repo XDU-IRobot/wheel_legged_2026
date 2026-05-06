@@ -400,7 +400,10 @@ void ControlLoop() {
 
   // ── 7k. 期望状态填充（定点锁定 blend + 腿摆角偏置 + 偏航角速度）──
   chassis_update_input.expected.s_dot =
-      spin_control_enabled ? spin_target_s_dot : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot;
+      chassis_control_output.off_ground_in_mid_high_leg
+          ? current_state.s_dot
+          : (spin_control_enabled ? spin_target_s_dot
+                                  : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot);
   ctx.expected_s = ctx.lock_point_alpha * ctx.lock_point_s_ref + (1.0f - ctx.lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
