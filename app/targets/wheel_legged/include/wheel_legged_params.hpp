@@ -18,122 +18,234 @@ struct PidGains {
   float max_iout;
 };
 
-namespace hero {
+// ── 三变体完全相同的公共参数 ──
+namespace common {
 
 constexpr float kPi = 3.14159265358979323846f;
 
 namespace main {
 inline constexpr float kControlLoopFrequencyHz = 500.0f;
-}
+}  // namespace main
 
 namespace globals {
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+constexpr double kJointCanTxLimitHz = 4000.0;
+constexpr double kWheelCanTxLimitHz = 4000.0;
+constexpr double kGimbalCanTxLimitHz = 4000.0;
 
-inline constexpr double kJointCanTxLimitHz = 4000.0;
-inline constexpr double kWheelCanTxLimitHz = 4000.0;
-inline constexpr double kGimbalCanTxLimitHz = 4000.0;
+constexpr std::uint16_t kLeftWheelId = 0x06;
+constexpr std::uint16_t kRightWheelId = 0x05;
 
-inline constexpr std::uint16_t kDmLfMasterId = 0x04;
-inline constexpr std::uint16_t kDmLfSlaveId = 0x03;
-inline constexpr std::uint16_t kDmLbMasterId = 0x06;
-inline constexpr std::uint16_t kDmLbSlaveId = 0x05;
-inline constexpr std::uint16_t kDmRfMasterId = 0x02;
-inline constexpr std::uint16_t kDmRfSlaveId = 0x01;
-inline constexpr std::uint16_t kDmRbMasterId = 0x08;
-inline constexpr std::uint16_t kDmRbSlaveId = 0x07;
-
-inline constexpr std::uint16_t kLeftWheelId = 0x06;
-inline constexpr std::uint16_t kRightWheelId = 0x05;
-
-inline constexpr std::size_t kDr16UartRxBufferSize = 18;
-inline constexpr std::size_t kImuUartRxBufferSize = 518;
-
-inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+constexpr std::size_t kDr16UartRxBufferSize = 18;
+constexpr std::size_t kImuUartRxBufferSize = 518;
 }  // namespace globals
 
 namespace gimbal {
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
-
-inline const DmMitSettings kPitchMotorSettings{0x13, 0x12, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-inline const DmMitSettings kYawMotorSettings{0x21, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kPitchMinRad = -0.2f;
-inline constexpr float kPitchMaxRad = 0.25f;
-inline constexpr float kDmTorqueLimitNm = 10.0f;
-inline constexpr float kPitchGravityCompensationNm = 1.3f;
-
-inline constexpr PidGains kYawPositionPid{24.0f, 0.0f, 0.0f, 1000.0f, 1.0f};
-inline constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};
-inline constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};
-inline constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 0.0f, 0.0f};
+constexpr float kDefaultDtS = 0.002f;
+constexpr float kDmTorqueLimitNm = 10.0f;
+constexpr float kPitchGravityCompensationNm = 1.3f;
 }  // namespace gimbal
 
-namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 450U;
-inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;
-inline constexpr std::uint32_t kJumpRecoverMs = 450U;
-inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
-inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
-
-inline constexpr float kLowLegLengthM = 0.15f;
-inline constexpr float kMidLegLengthM = 0.22f;
-inline constexpr float kHighLegLengthM = 0.34f;
-inline constexpr float kJumpPrepLegLengthM = 0.13f;
-inline constexpr float kJumpPushLegLengthM = 0.4f;
-inline constexpr float kJumpRecoverLegLengthM = 0.16f;
-inline constexpr float kJumpPushReachedLegLengthM = 0.365f;
-inline constexpr float kLegLengthRampTimeS = 0.5f;
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;
-inline constexpr float kStairClimbLegLengthM = 0.16f;
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;
-inline constexpr std::uint32_t kStairClimbDurationMs = 400U;
-inline constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.01f;
-inline constexpr float kStairClimbThetaNearZeroThresholdRad = 0.08f;
-inline constexpr std::uint32_t kStairClimbPitchStableMs = 300U;
-}  // namespace chassis_fsm
-
 namespace chassis {
-inline constexpr float kControlDtS = 0.002f;
-inline constexpr float kLegL1M = 0.215f;
-inline constexpr float kLegL2M = 0.254f;
-inline constexpr float kSpringTorqueScale = 90.0f;
-inline constexpr float kSpringModelA = 1082.0f;
-inline constexpr float kSpringModelB = 1070.0f;
-inline constexpr float kSpringModelC = 404.0f;
-inline constexpr float kSpringModelD = 177.0f;
-inline constexpr float kSpringPhaseDivisor = 18.0f;
-inline constexpr float kBodyMassKg = 24.0f;
-inline constexpr float kLegMassKg = 2.3f;
-inline constexpr float kGravityMps2 = 9.81f;
-inline constexpr float kWheelRadiusM = 0.2025f;
-inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;
-inline constexpr float kRollBalanceTargetRad = 0.052f;
-inline constexpr float kPostureThetaBMinRad = -0.8f;
-inline constexpr float kPostureThetaBMaxRad = 0.8f;
-inline constexpr float kPostureRollMinRad = -0.5f;
-inline constexpr float kPostureRollMaxRad = 0.5f;
-inline constexpr float kPostureThetaLegMinRad = -0.8f;
-inline constexpr float kPostureThetaLegMaxRad = 1.4f;
-inline constexpr float kLegRecoverThetaDotTarget = -2.0f;
-inline constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;
-inline constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;
+constexpr float kControlDtS = 0.002f;
+constexpr float kLegL1M = 0.215f;
+constexpr float kLegL2M = 0.254f;
+constexpr float kSpringModelA = 1082.0f;
+constexpr float kSpringModelB = 1070.0f;
+constexpr float kSpringModelC = 404.0f;
+constexpr float kSpringModelD = 177.0f;
+constexpr float kSpringPhaseDivisor = 18.0f;
+constexpr float kLegMassKg = 2.3f;
+constexpr float kGravityMps2 = 9.81f;
+constexpr float kWheelRadiusM = 0.2025f;
+constexpr float kOffGroundSupportForceThresholdN = 10.0f;
+constexpr float kPostureRollMinRad = -0.5f;
+constexpr float kPostureRollMaxRad = 0.5f;
+constexpr float kPostureThetaLegMinRad = -0.8f;
+constexpr float kPostureThetaLegMaxRad = 1.4f;
+constexpr float kLegRecoverThetaDotTarget = -2.0f;
+constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;
+constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;
 
-inline constexpr std::array<float, 24> kEtaLookupLegLengthM{
+constexpr std::array<float, 24> kEtaLookupLegLengthM{
     0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
     0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
 };
 
-inline constexpr std::array<float, 24> kEtaLookupLwM{
+constexpr std::array<float, 24> kEtaLookupLwM{
     0.061990f, 0.067466f, 0.072986f, 0.078550f, 0.084158f, 0.089810f, 0.095506f, 0.101246f,
     0.107030f, 0.112858f, 0.118730f, 0.124646f, 0.130606f, 0.136610f, 0.142658f, 0.148750f,
     0.154886f, 0.161066f, 0.167290f, 0.173558f, 0.179870f, 0.186226f, 0.192626f, 0.199070f,
 };
+}  // namespace chassis
 
-inline constexpr std::array<float, 240> kCtrlP{
+namespace control_loop {
+  struct SdotRampParams {
+    float accel_step;
+    float brake_step;
+  };
+
+constexpr std::int16_t kWheelSpinThreshold = 220;
+constexpr std::int16_t kWheelActionThreshold = 320;
+constexpr std::int16_t kWheelCenterThreshold = 80;
+constexpr float kControlLoopDtS = 0.002f;
+constexpr std::int16_t kDr16AxisMaxAbs = 660;
+constexpr float kRcStickMax = 660.0f;
+constexpr float kTcMouseMax = 200.0f;
+constexpr float kRcYawRateMaxRadS = -2.5f;
+constexpr float kRcPitchRateMaxRadS = 1.5f;
+constexpr float kTcMouseYawRateMaxRadS = -2.0f;
+constexpr float kTcMousePitchRateMaxRadS = 1.0f;
+constexpr float kPitchTargetMinRad = -0.35f;
+constexpr float kPitchTargetMaxRad = 0.25f;
+constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
+constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
+constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 50U;
+constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
+constexpr float kYawFollowDriveReadyVelRadS = 0.25f;
+constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 50U;
+}  // namespace control_loop
+
+namespace actuators {
+constexpr float kWheelCurrentClampAbs = 16000.0f;
+}  // namespace actuators
+
+namespace remote_control_can_bridge {
+constexpr std::uint16_t kRxStdIdA = 0x110;
+constexpr std::uint16_t kRxStdIdB = 0x111;
+constexpr std::size_t kPayloadSizeA = 8U;
+constexpr std::size_t kPayloadSizeB = 8U;
+}  // namespace remote_control_can_bridge
+
+namespace state_estimator {
+constexpr float kDefaultDtS = 0.002f;
+constexpr float kDefaultExpectedSdotMps = 0.05f;
+constexpr float kLegL1M = 0.215f;
+constexpr float kLegL2M = 0.254f;
+constexpr float kWheelRadiusM = 0.0575f;
+constexpr float kWheelReductionRatio = 17.0f / 268.0f;
+constexpr float kMaxValidSpeedMps = 8.0f;
+constexpr float kThetaDotFilterCutoffHz = 8.0f;
+constexpr float kImuAccelFilterSampleHz = 500.0f;
+constexpr float kImuAccelFilterCutoffHz = 10.0f;
+constexpr std::uint32_t kAccelBiasInitSamples = 1500U;
+constexpr float kAccelZeroWheelSpeedThresholdMps = 0.02f;
+constexpr float kAccelZeroHighThresholdMps2 = 0.5f;
+constexpr float kAccelZeroLowThresholdMps2 = 0.2f;
+constexpr float kKalmanMinVariance = 1e-5f;
+constexpr float kThetaPiHalf = 1.57079632679489661923f;
+
+constexpr std::array<float, 4> kKalmanF{1.0f, kDefaultDtS, 0.0f, 1.0f};
+constexpr std::array<float, 4> kKalmanQ{0.0005f, 0.0f, 0.0f, 0.04f};
+constexpr std::array<float, 4> kKalmanR{0.5f, 0.0f, 0.0f, 2.0f};
+constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};
+constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};
+}  // namespace state_estimator
+
+namespace leg_kinematics {
+constexpr float kDefaultDtS = 0.002f;
+constexpr float kMinSin = 1e-5f;
+constexpr float kMinLen = 1e-5f;
+}  // namespace leg_kinematics
+
+}  // namespace common
+
+// ── Hero (variant 1) 特殊参数 ──
+namespace hero {
+using namespace common;
+
+namespace globals {
+using namespace common::globals;
+using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+constexpr std::uint16_t kDmLfMasterId = 0x04;
+constexpr std::uint16_t kDmLfSlaveId = 0x03;
+constexpr std::uint16_t kDmLbMasterId = 0x06;
+constexpr std::uint16_t kDmLbSlaveId = 0x05;
+constexpr std::uint16_t kDmRfMasterId = 0x02;
+constexpr std::uint16_t kDmRfSlaveId = 0x01;
+constexpr std::uint16_t kDmRbMasterId = 0x08;
+constexpr std::uint16_t kDmRbSlaveId = 0x07;
+
+const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+}  // namespace globals
+
+namespace gimbal {
+using namespace common::gimbal;
+using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+const DmMitSettings kPitchMotorSettings{0x13, 0x12, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x21, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+
+constexpr float kPitchMinRad = -0.2f;
+constexpr float kPitchMaxRad = 0.25f;
+
+constexpr PidGains kYawPositionPid{24.0f, 0.0f, 0.0f, 1000.0f, 1.0f};
+constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};
+constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};
+constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 0.0f, 0.0f};
+}  // namespace gimbal
+
+namespace shoot {
+using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+inline constexpr int kFrictionWheelCount = 3;
+inline constexpr float kBoosterZeroPointRad = 0.345f;
+inline constexpr float kSegmentAngleRad = kPi / 3.f;
+inline constexpr uint16_t kInitDelayTicks = 600;
+inline constexpr uint16_t kShootDelayTicks = 360;
+inline constexpr float kStallThresholdRad = kPi / 18.f;
+inline constexpr float kStallFallbackRad = kPi / 90.f;
+inline constexpr float kFwReadySpeedThresholdRpm = 4000.0f;
+inline constexpr float kFwTargetSpeedRpm = 7000.0f;
+inline constexpr int16_t kFireDialThreshold = -100;
+inline constexpr PidGains kBoosterPositionPid{60.f, 0.f, 560.f, 24.f, 0.f};
+inline constexpr PidGains kBoosterSpeedPid{0.3f, 0.f, 0.02f, 6.4f, 0.f};
+inline constexpr PidGains kFwSpeedPid{30.f, 0.01f, 0.f, 10000.f, 0.f};
+inline constexpr uint16_t kFwMotor1Id = 0x01;
+inline constexpr uint16_t kFwMotor2Id = 0x02;
+inline constexpr uint16_t kFwMotor3Id = 0x03;
+inline constexpr uint16_t kBoosterMasterId = 0x10;
+inline constexpr uint16_t kBoosterSlaveId = 0x09;
+inline const DmMitSettings kBoosterDmSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+}  // namespace shoot
+
+namespace chassis_fsm {
+constexpr std::uint32_t kJumpPrepMs = 450U;
+constexpr std::uint32_t kJumpPushMaxMs = 1000U;
+constexpr std::uint32_t kJumpRecoverMs = 450U;
+constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
+constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
+
+constexpr float kLowLegLengthM = 0.15f;
+constexpr float kMidLegLengthM = 0.22f;
+constexpr float kHighLegLengthM = 0.34f;
+constexpr float kJumpPrepLegLengthM = 0.13f;
+constexpr float kJumpPushLegLengthM = 0.4f;
+constexpr float kJumpRecoverLegLengthM = 0.16f;
+constexpr float kJumpPushReachedLegLengthM = 0.365f;
+constexpr float kLegLengthRampTimeS = 0.5f;
+constexpr float kStairClimbThetaThresholdRad = 0.5f;
+constexpr float kStairClimbLegLengthM = 0.16f;
+constexpr float kStairClimbThetaTargetRad = 0.2f;
+constexpr std::uint32_t kStairClimbDurationMs = 400U;
+constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.01f;
+constexpr float kStairClimbThetaNearZeroThresholdRad = 0.08f;
+constexpr std::uint32_t kStairClimbPitchStableMs = 300U;
+}  // namespace chassis_fsm
+
+namespace chassis {
+using namespace common::chassis;
+
+constexpr float kSpringTorqueScale = 90.0f;
+constexpr float kBodyMassKg = 24.0f;
+constexpr float kRollBalanceTargetRad = 0.052f;
+constexpr float kPostureThetaBMinRad = -0.8f;
+constexpr float kPostureThetaBMaxRad = 0.8f;
+
+constexpr std::array<float, 240> kCtrlP{
     -0.83306, -5.1702, 3.9639,  7.1986,   -2.8365,  -2.9774,  -3.2283,  -14.938,  14.569,   23.723,   -14.737, -9.9482,
     -0.81055, 2.863,   -1.089,  -3.4804,  0.83266,  1.399,    -2.5853,  9.3913,   -3.7934,  -11.082,  2.2507,  5.0455,
     -12.3,    -78.693, 11.803,  89.993,   -2.4656,  -14.814,  -0.64798, -4.0995,  1.5913,   -2.5703,  1.151,   -1.8874,
@@ -156,251 +268,156 @@ inline constexpr std::array<float, 240> kCtrlP{
     -47.075,  78.522,  -230.67, -95.402,  30.395,   270.91,   -2.3876,  5.0598,   -16.763,  -6.8333,  6.98,    15.783,
 };
 
-inline constexpr PidGains kLeftL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kRightL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kLeftL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kRightL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
-inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
-inline constexpr PidGains kRollPid{600.0f, 0.0f, 200.0f, 180.0f, 0.0f};
-inline constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
-inline constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
+constexpr PidGains kLeftL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
+constexpr PidGains kRightL0Pid{8000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
+constexpr PidGains kLeftL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
+constexpr PidGains kRightL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};
+constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
+constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};
+constexpr PidGains kRollPid{600.0f, 0.0f, 200.0f, 180.0f, 0.0f};
+constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
+constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 }  // namespace chassis
 
 namespace control_loop {
-inline constexpr std::int16_t kWheelSpinThreshold = 220;
-inline constexpr std::int16_t kWheelActionThreshold = 320;
-inline constexpr std::int16_t kWheelCenterThreshold = 80;
-inline constexpr float kControlLoopDtS = 0.002f;
-inline constexpr std::int16_t kDr16AxisMaxAbs = 660;
-inline constexpr float kTargetForwardSpeedMinMps = 1.5f;
-inline constexpr float kTargetForwardSpeedMaxMps = 1.8f;
-inline constexpr float kVxInputDeadbandNorm = 0.1f;
-inline constexpr float kVyInputDeadbandNorm = 0.1f;
-inline constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
-inline constexpr float kLockPointExitSpeedThresholdMps = 0.55f;
-inline constexpr float kLockPointCaptureSpeedThresholdMps = 0.02f;
-inline constexpr float kLockPointEnterInputThreshold = 0.08f;
-inline constexpr float kLockPointExitInputThreshold = 0.12f;
-inline constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
-inline constexpr float kLockPointAlphaRiseStep = 0.015f;
-inline constexpr float kLockPointAlphaFallStep = 0.018f;
-inline constexpr float kRcStickMax = 660.0f;
-inline constexpr float kRcYawRateMaxRadS = -2.5f;
-inline constexpr float kRcPitchRateMaxRadS = 1.5f;
-inline constexpr float kTcMouseMax = 200.0f;
-inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;
-inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;
-inline constexpr float kPitchTargetMinRad = -0.35f;
-inline constexpr float kPitchTargetMaxRad = 0.25f;
-inline constexpr float kYawFollowRampStepRadS = 0.05f;
-inline constexpr float kSpinYawRampStepRadS = 0.005f;
-inline constexpr float kSpinTargetYawDotRadS = 6.0f;
-inline constexpr float kSpinTranslationGain = 1.0f;
-inline constexpr float kSpinThetaLlBiasRad = 0.0f;
-inline constexpr float kYawFollowFixedTargetRad = 1.216f;
-inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
-inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
-inline constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 50U;
-inline constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
-inline constexpr float kYawFollowDriveReadyVelRadS = 0.25f;
-inline constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 50U;
-inline constexpr float kExpectedThetaLlBiasRad = -0.12f;
-inline constexpr float kExpectedThetaLrBiasRad = -0.12f;
-inline constexpr float kExpectedThetaBBiasRad = -0.123f;
+using namespace common::control_loop;
 
-struct SdotRampParams {
-  float accel_step;
-  float brake_step;
-};
+constexpr float kTargetForwardSpeedMaxMps = 1.8f;
+constexpr float kVxInputDeadbandNorm = 0.1f;
+constexpr float kVyInputDeadbandNorm = 0.1f;
+constexpr float kLockPointCaptureSpeedThresholdMps = 0.02f;
+constexpr float kLockPointEnterInputThreshold = 0.08f;
+constexpr float kLockPointExitInputThreshold = 0.12f;
+constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
+constexpr float kLockPointAlphaRiseStep = 0.015f;
+constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kSpinYawRampStepRadS = 0.005f;
+constexpr float kSpinTargetYawDotRadS = 6.0f;
+constexpr float kSpinTranslationGain = 1.0f;
+constexpr float kSpinThetaLlBiasRad = 0.0f;
+constexpr float kYawFollowFixedTargetRad = 1.216f;
+constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
+constexpr float kExpectedThetaLlBiasRad = -0.12f;
+constexpr float kExpectedThetaLrBiasRad = -0.12f;
+constexpr float kExpectedThetaBBiasRad = -0.123f;
 
-inline constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
-inline constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
-inline constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
+constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
+constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
-inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.f, 4.0f, 0.0f};
+constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.f, 4.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
-inline constexpr float kLeftWheelTorqueToCurrent = 2300.0f;
-inline constexpr float kRightWheelTorqueToCurrent = 2300.0f;
-inline constexpr float kWheelCurrentClampAbs = 16000.0f;
+using namespace common::actuators;
+
+constexpr float kLeftWheelTorqueToCurrent = 2300.0f;
+constexpr float kRightWheelTorqueToCurrent = 2300.0f;
 }  // namespace actuators
 
-namespace remote_control_can_bridge {
-inline constexpr std::uint16_t kRxStdIdA = 0x110;
-inline constexpr std::uint16_t kRxStdIdB = 0x111;
-inline constexpr std::size_t kPayloadSizeA = 8U;
-inline constexpr std::size_t kPayloadSizeB = 8U;
-}  // namespace remote_control_can_bridge
-
 namespace state_estimator {
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kDefaultExpectedSdotMps = 0.05f;
-inline constexpr float kLegL1M = 0.215f;
-inline constexpr float kLegL2M = 0.254f;
-inline constexpr float kWheelRadiusM = 0.0575f;
-inline constexpr float kWheelReductionRatio = 17.0f / 268.0f;
-inline constexpr float kMaxValidSpeedMps = 8.0f;
-inline constexpr float kLeftPhi1OffsetRad = -0.05f + M_PI;
-inline constexpr float kLeftPhi4OffsetRad = -0.59 + 0.07f;
-inline constexpr float kRightPhi1OffsetRad = 3.04 + M_PI;
-inline constexpr float kRightPhi4OffsetRad = -2.17;
-inline constexpr float kThetaDotFilterCutoffHz = 8.0f;
-inline constexpr float kImuAccelFilterSampleHz = 500.0f;
-inline constexpr float kImuAccelFilterCutoffHz = 10.0f;
-inline constexpr std::uint32_t kAccelBiasInitSamples = 1500U;
-inline constexpr float kAccelZeroWheelSpeedThresholdMps = 0.02f;
-inline constexpr float kAccelZeroHighThresholdMps2 = 0.5f;
-inline constexpr float kAccelZeroLowThresholdMps2 = 0.2f;
-inline constexpr float kKalmanMinVariance = 1e-5f;
-inline constexpr float kThetaPiHalf = 1.57079632679489661923f;
+using namespace common::state_estimator;
 
-inline constexpr std::array<float, 4> kKalmanF{1.0f, kDefaultDtS, 0.0f, 1.0f};
-inline constexpr std::array<float, 4> kKalmanQ{0.0005f, 0.0f, 0.0f, 0.04f};
-inline constexpr std::array<float, 4> kKalmanR{0.5f, 0.0f, 0.0f, 2.0f};
-inline constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};
-inline constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};
+constexpr float kLeftPhi1OffsetRad = -0.05f + M_PI;
+constexpr float kLeftPhi4OffsetRad = -0.59 + 0.07f;
+constexpr float kRightPhi1OffsetRad = 3.04 + M_PI;
+constexpr float kRightPhi4OffsetRad = -2.17;
 }  // namespace state_estimator
 
-namespace leg_kinematics {
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kMinSin = 1e-5f;
-inline constexpr float kMinLen = 1e-5f;
-}  // namespace leg_kinematics
+namespace leg_kinematics { using namespace common::leg_kinematics; }
+namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
+namespace main { using namespace common::main; }
 
 }  // namespace hero
 
+// ── Infantry3 (variant 2) 特殊参数 ──
 namespace infantry3 {
-
-constexpr float kPi = 3.14159265358979323846f;
-
-namespace main {
-inline constexpr float kControlLoopFrequencyHz = 500.0f;
-}
+using namespace common;
 
 namespace globals {
+using namespace common::globals;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline constexpr double kJointCanTxLimitHz = 4000.0;
-inline constexpr double kWheelCanTxLimitHz = 4000.0;
-inline constexpr double kGimbalCanTxLimitHz = 4000.0;
+constexpr std::uint16_t kDmLfMasterId = 0x17;
+constexpr std::uint16_t kDmLfSlaveId = 0x07;
+constexpr std::uint16_t kDmLbMasterId = 0x14;
+constexpr std::uint16_t kDmLbSlaveId = 0x04;
+constexpr std::uint16_t kDmRfMasterId = 0x16;
+constexpr std::uint16_t kDmRfSlaveId = 0x06;
+constexpr std::uint16_t kDmRbMasterId = 0x15;
+constexpr std::uint16_t kDmRbSlaveId = 0x05;
 
-inline constexpr std::uint16_t kDmLfMasterId = 0x17;
-inline constexpr std::uint16_t kDmLfSlaveId = 0x07;
-inline constexpr std::uint16_t kDmLbMasterId = 0x14;
-inline constexpr std::uint16_t kDmLbSlaveId = 0x04;
-inline constexpr std::uint16_t kDmRfMasterId = 0x16;
-inline constexpr std::uint16_t kDmRfSlaveId = 0x06;
-inline constexpr std::uint16_t kDmRbMasterId = 0x15;
-inline constexpr std::uint16_t kDmRbSlaveId = 0x05;
+constexpr std::uint16_t kFricLeftId = 0x07;
+constexpr std::uint16_t kFricRightId = 0x08;
+constexpr std::uint16_t kDialId = 0x01;
 
-inline constexpr std::uint16_t kLeftWheelId = 0x06;
-inline constexpr std::uint16_t kRightWheelId = 0x05;
-
-inline constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kDialId = 0x01;       ///< 拨盘 M3508 (wheel_can)
-
-inline constexpr std::size_t kDr16UartRxBufferSize = 18;
-inline constexpr std::size_t kImuUartRxBufferSize = 518;
-
-inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 }  // namespace globals
 
 namespace gimbal {
+using namespace common::gimbal;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-inline const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kPitchMinRad = -0.2f;
-inline constexpr float kPitchMaxRad = 0.25f;
-inline constexpr float kDmTorqueLimitNm = 10.0f;
-inline constexpr float kPitchGravityCompensationNm = 1.3f;
+constexpr float kPitchMinRad = -0.2f;
+constexpr float kPitchMaxRad = 0.25f;
 
-inline constexpr PidGains kYawPositionPid{15.0f, 0.0f, 0.05f, 10.0f, 1.0f};
-inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};
-inline constexpr PidGains kPitchPositionPid{13.0f, 0.0f, 0.05f, 10.0f, 0.4f};
-inline constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
+constexpr PidGains kYawPositionPid{15.0f, 0.0f, 0.05f, 10.0f, 1.0f};
+constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};
+constexpr PidGains kPitchPositionPid{13.0f, 0.0f, 0.05f, 10.0f, 0.4f};
+constexpr PidGains kPitchSpeedPid{0.85f, 0.0f, 0.0f, 8.0f, 0.0f};
 }  // namespace gimbal
 
 namespace shoot {
-inline constexpr float kFricSpeedTargetRpm = 6000.0f;
-inline constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
-inline constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.0f, 2000.0f, 0.0f};
-inline constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 0.0f};
-inline constexpr int16_t kDialFireThreshold = -600;
-inline constexpr float kShootFrequencyHz = 1.0f;
+inline constexpr int kFrictionWheelCount = 2;
+constexpr float kFricSpeedTargetRpm = 6000.0f;
+constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
+constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.0f, 2000.0f, 0.0f};
+constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 0.0f};
+constexpr int16_t kDialFireThreshold = -600;
+constexpr float kShootFrequencyHz = 1.0f;
 }  // namespace shoot
 
 namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 200U;
-inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;
-inline constexpr std::uint32_t kJumpRecoverMs = 250U;
-inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
-inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
+constexpr std::uint32_t kJumpPrepMs = 200U;
+constexpr std::uint32_t kJumpPushMaxMs = 1000U;
+constexpr std::uint32_t kJumpRecoverMs = 250U;
+constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
+constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-inline constexpr float kLowLegLengthM = 0.15f;
-inline constexpr float kMidLegLengthM = 0.21f;
-inline constexpr float kHighLegLengthM = 0.3f;
-inline constexpr float kJumpPrepLegLengthM = 0.13f;
-inline constexpr float kJumpPushLegLengthM = 0.22f;
-inline constexpr float kJumpRecoverLegLengthM = 0.20f;
-inline constexpr float kJumpPushReachedLegLengthM = 0.21f;
-inline constexpr float kLegLengthRampTimeS = 0.5f;
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;
-inline constexpr float kStairClimbLegLengthM = 0.14f;
-inline constexpr float kStairClimbThetaTargetRad = 0.2f;
-inline constexpr std::uint32_t kStairClimbDurationMs = 3000U;
-inline constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;
-inline constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;
-inline constexpr std::uint32_t kStairClimbPitchStableMs = 1000U;
+constexpr float kLowLegLengthM = 0.15f;
+constexpr float kMidLegLengthM = 0.21f;
+constexpr float kHighLegLengthM = 0.3f;
+constexpr float kJumpPrepLegLengthM = 0.13f;
+constexpr float kJumpPushLegLengthM = 0.22f;
+constexpr float kJumpRecoverLegLengthM = 0.20f;
+constexpr float kJumpPushReachedLegLengthM = 0.21f;
+constexpr float kLegLengthRampTimeS = 0.5f;
+constexpr float kStairClimbThetaThresholdRad = 0.5f;
+constexpr float kStairClimbLegLengthM = 0.14f;
+constexpr float kStairClimbThetaTargetRad = 0.2f;
+constexpr std::uint32_t kStairClimbDurationMs = 3000U;
+constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;
+constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;
+constexpr std::uint32_t kStairClimbPitchStableMs = 1000U;
 }  // namespace chassis_fsm
 
 namespace chassis {
-inline constexpr float kControlDtS = 0.002f;
-inline constexpr float kLegL1M = 0.215f;
-inline constexpr float kLegL2M = 0.254f;
-inline constexpr float kSpringTorqueScale = 90.0f;
-inline constexpr float kSpringModelA = 1082.0f;
-inline constexpr float kSpringModelB = 1070.0f;
-inline constexpr float kSpringModelC = 404.0f;
-inline constexpr float kSpringModelD = 177.0f;
-inline constexpr float kSpringPhaseDivisor = 18.0f;
-inline constexpr float kBodyMassKg = 22.0f;
-inline constexpr float kLegMassKg = 2.3f;
-inline constexpr float kGravityMps2 = 9.81f;
-inline constexpr float kWheelRadiusM = 0.2025f;
-inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;
-inline constexpr float kRollBalanceTargetRad = 0.003f;
-inline constexpr float kPostureThetaBMinRad = -0.7f;
-inline constexpr float kPostureThetaBMaxRad = 0.7f;
-inline constexpr float kPostureRollMinRad = -0.5f;
-inline constexpr float kPostureRollMaxRad = 0.5f;
-inline constexpr float kPostureThetaLegMinRad = -0.8f;
-inline constexpr float kPostureThetaLegMaxRad = 1.4f;
-inline constexpr float kLegRecoverThetaDotTarget = -2.0f;
-inline constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;
-inline constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;
+using namespace common::chassis;
 
-inline constexpr std::array<float, 24> kEtaLookupLegLengthM{
-    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
-    0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
-};
+constexpr float kSpringTorqueScale = 90.0f;
+constexpr float kBodyMassKg = 22.0f;
+constexpr float kRollBalanceTargetRad = 0.003f;
+constexpr float kPostureThetaBMinRad = -0.7f;
+constexpr float kPostureThetaBMaxRad = 0.7f;
 
-inline constexpr std::array<float, 24> kEtaLookupLwM{
-    0.061990f, 0.067466f, 0.072986f, 0.078550f, 0.084158f, 0.089810f, 0.095506f, 0.101246f,
-    0.107030f, 0.112858f, 0.118730f, 0.124646f, 0.130606f, 0.136610f, 0.142658f, 0.148750f,
-    0.154886f, 0.161066f, 0.167290f, 0.173558f, 0.179870f, 0.186226f, 0.192626f, 0.199070f,
-};
-
-inline constexpr std::array<float, 240> kCtrlP{
+constexpr std::array<float, 240> kCtrlP{
     -4.2448,  -27.943,  24.322,   48.081,    -22.811,  -20.812, -7.3808, -34.992, 38.389,   65.198,    -42.541,
     -31.147,  -0.67131, 3.8281,   -0.59644,  -4.5997,  0.61137, 1.0939,  -1.5435, 9.1817,   -1.783,    -10.673,
     1.1528,   3.2836,   -17.237,  -73.41,    11.51,    72.6,    -2.0572, -14.979, -1.0135,  -6.4992,   2.9845,
@@ -425,258 +442,156 @@ inline constexpr std::array<float, 240> kCtrlP{
     -46.071,  7.5488,   111.12,   -2.0412,   4.1377,   -10.549, -6.3437, 3.6102,  11.895,
 };
 
-inline constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
-inline constexpr PidGains kRightL0Pid{8500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
-inline constexpr PidGains kLeftL0PidJumpTwo{7000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
-inline constexpr PidGains kLeftL0PidJumpThree{7500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
-inline constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 180.0f, 0.0f};
-inline constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
-inline constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
+constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
+constexpr PidGains kRightL0Pid{8500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
+constexpr PidGains kLeftL0PidJumpTwo{7000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
+constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
+constexpr PidGains kLeftL0PidJumpThree{7500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 180.0f, 0.0f};
+constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
+constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 }  // namespace chassis
 
 namespace control_loop {
-inline constexpr std::int16_t kWheelSpinThreshold = 220;
-inline constexpr std::int16_t kWheelActionThreshold = 320;
-inline constexpr std::int16_t kWheelCenterThreshold = 80;
-inline constexpr float kControlLoopDtS = 0.002f;
-inline constexpr std::int16_t kDr16AxisMaxAbs = 660;
-inline constexpr float kTargetForwardSpeedMinMps = 2.1f;
-inline constexpr float kTargetForwardSpeedMaxMps = 2.1f;
-inline constexpr float kVxInputDeadbandNorm = 0.05f;
-inline constexpr float kVyInputDeadbandNorm = 0.05f;
-inline constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;
-inline constexpr float kLockPointExitSpeedThresholdMps = 0.55f;
-inline constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;
-inline constexpr float kLockPointEnterInputThreshold = 0.1f;
-inline constexpr float kLockPointExitInputThreshold = 0.12f;
-inline constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
-inline constexpr float kLockPointAlphaRiseStep = 0.015f;
-inline constexpr float kLockPointAlphaFallStep = 0.018f;
-inline constexpr float kRcStickMax = 660.0f;
-inline constexpr float kRcPitchRateMaxRadS = 1.5f;
-inline constexpr float kRcYawRateMaxRadS = -2.5f;
-inline constexpr float kTcMouseMax = 200.0f;
-inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;
-inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;
-inline constexpr float kPitchTargetMinRad = -0.35f;
-inline constexpr float kPitchTargetMaxRad = 0.25f;
-inline constexpr float kYawFollowRampStepRadS = 0.05f;
-inline constexpr float kSpinYawRampStepRadS = 0.05f;
-inline constexpr float kSpinTargetYawDotRadS = 6.0f;
-inline constexpr float kSpinTranslationGain = 1.0f;
-inline constexpr float kSpinThetaLlBiasRad = 0.01f;
-inline constexpr float kYawFollowFixedTargetRad = -1.72f;
-inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
-inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
-inline constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 50U;
-inline constexpr float kYawFollowDriveReadyErrorRad = 0.04f;
-inline constexpr float kYawFollowDriveReadyVelRadS = 0.25f;
-inline constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 50U;
-inline constexpr float kExpectedThetaLlBiasRad = 0.13f;
-inline constexpr float kExpectedThetaLrBiasRad = 0.13f;
-inline constexpr float kExpectedThetaBBiasRad = 0.0f;
+using namespace common::control_loop;
 
-struct SdotRampParams {
-  float accel_step;
-  float brake_step;
-};
+constexpr float kTargetForwardSpeedMaxMps = 2.1f;
+constexpr float kVxInputDeadbandNorm = 0.05f;
+constexpr float kVyInputDeadbandNorm = 0.05f;
+constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;
+constexpr float kLockPointEnterInputThreshold = 0.1f;
+constexpr float kLockPointExitInputThreshold = 0.12f;
+constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
+constexpr float kLockPointAlphaRiseStep = 0.015f;
+constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kSpinYawRampStepRadS = 0.05f;
+constexpr float kSpinTargetYawDotRadS = 6.0f;
+constexpr float kSpinTranslationGain = 1.0f;
+constexpr float kSpinThetaLlBiasRad = 0.01f;
+constexpr float kYawFollowFixedTargetRad = -1.72f;
+constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
+constexpr float kExpectedThetaLlBiasRad = 0.13f;
+constexpr float kExpectedThetaLrBiasRad = 0.13f;
+constexpr float kExpectedThetaBBiasRad = 0.0f;
 
-inline constexpr SdotRampParams kSdotRampLowLeg{0.005f, 0.005f};
-inline constexpr SdotRampParams kSdotRampMidLeg{0.004f, 0.004f};
-inline constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.005f, 0.005f};
+constexpr SdotRampParams kSdotRampMidLeg{0.004f, 0.004f};
+constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
-inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
+constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
-inline constexpr float kLeftWheelTorqueToCurrent = 2500.0f;
-inline constexpr float kRightWheelTorqueToCurrent = 2300.0f;
-inline constexpr float kWheelCurrentClampAbs = 16000.0f;
+using namespace common::actuators;
+
+constexpr float kLeftWheelTorqueToCurrent = 2500.0f;
+constexpr float kRightWheelTorqueToCurrent = 2300.0f;
 }  // namespace actuators
 
-namespace remote_control_can_bridge {
-inline constexpr std::uint16_t kRxStdIdA = 0x110;
-inline constexpr std::uint16_t kRxStdIdB = 0x111;
-inline constexpr std::size_t kPayloadSizeA = 8U;
-inline constexpr std::size_t kPayloadSizeB = 8U;
-}  // namespace remote_control_can_bridge
-
 namespace state_estimator {
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kDefaultExpectedSdotMps = 0.05f;
-inline constexpr float kLegL1M = 0.215f;
-inline constexpr float kLegL2M = 0.254f;
-inline constexpr float kWheelRadiusM = 0.0575f;
-inline constexpr float kWheelReductionRatio = 17.0f / 268.0f;
-inline constexpr float kMaxValidSpeedMps = 8.0f;
-inline constexpr float kLeftPhi1OffsetRad = kPi - 2.94f;
-inline constexpr float kLeftPhi4OffsetRad = 0.59f;
-inline constexpr float kRightPhi1OffsetRad = kPi + 2.4f;
-inline constexpr float kRightPhi4OffsetRad = -1.87f;
-inline constexpr float kThetaDotFilterCutoffHz = 8.0f;
-inline constexpr float kImuAccelFilterSampleHz = 500.0f;
-inline constexpr float kImuAccelFilterCutoffHz = 10.0f;
-inline constexpr std::uint32_t kAccelBiasInitSamples = 1500U;
-inline constexpr float kAccelZeroWheelSpeedThresholdMps = 0.02f;
-inline constexpr float kAccelZeroHighThresholdMps2 = 0.5f;
-inline constexpr float kAccelZeroLowThresholdMps2 = 0.2f;
-inline constexpr float kKalmanMinVariance = 1e-5f;
-inline constexpr float kThetaPiHalf = 1.57079632679489661923f;
+using namespace common::state_estimator;
 
-inline constexpr std::array<float, 4> kKalmanF{1.0f, kDefaultDtS, 0.0f, 1.0f};
-inline constexpr std::array<float, 4> kKalmanQ{0.0005f, 0.0f, 0.0f, 0.04f};
-inline constexpr std::array<float, 4> kKalmanR{0.5f, 0.0f, 0.0f, 2.0f};
-inline constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};
-inline constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};
+constexpr float kLeftPhi1OffsetRad = kPi - 2.94f;
+constexpr float kLeftPhi4OffsetRad = 0.59f;
+constexpr float kRightPhi1OffsetRad = kPi + 2.4f;
+constexpr float kRightPhi4OffsetRad = -1.87f;
 }  // namespace state_estimator
 
-namespace leg_kinematics {
-inline constexpr float kDefaultDtS = 0.002f;
-inline constexpr float kMinSin = 1e-5f;
-inline constexpr float kMinLen = 1e-5f;
-}  // namespace leg_kinematics
+namespace leg_kinematics { using namespace common::leg_kinematics; }
+namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
+namespace main { using namespace common::main; }
 
 }  // namespace infantry3
 
+// ── Infantry4 (variant 3) 特殊参数 ──
 namespace infantry4 {
-
-constexpr float kPi = 3.14159265358979323846f;
-
-namespace main {
-inline constexpr float kControlLoopFrequencyHz = 500.0f;
-}
+using namespace common;
 
 namespace globals {
+using namespace common::globals;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline constexpr double kJointCanTxLimitHz = 4000.0;   ///< 关节 CAN 发送频率上限
-inline constexpr double kWheelCanTxLimitHz = 4000.0;   ///< 轮毂 CAN 发送频率上限
-inline constexpr double kGimbalCanTxLimitHz = 4000.0;  ///< 云台 CAN 发送频率上限
+constexpr std::uint16_t kDmLfMasterId = 0x02;
+constexpr std::uint16_t kDmLfSlaveId = 0x01;
+constexpr std::uint16_t kDmLbMasterId = 0x04;
+constexpr std::uint16_t kDmLbSlaveId = 0x03;
+constexpr std::uint16_t kDmRfMasterId = 0x06;
+constexpr std::uint16_t kDmRfSlaveId = 0x05;
+constexpr std::uint16_t kDmRbMasterId = 0x08;
+constexpr std::uint16_t kDmRbSlaveId = 0x07;
 
-inline constexpr std::uint16_t kDmLfMasterId = 0x02;  ///< 左前腿主电机 ID
-inline constexpr std::uint16_t kDmLfSlaveId = 0x01;   ///< 左前腿从电机 ID
-inline constexpr std::uint16_t kDmLbMasterId = 0x04;  ///< 左后腿主电机 ID
-inline constexpr std::uint16_t kDmLbSlaveId = 0x03;   ///< 左后腿从电机 ID
-inline constexpr std::uint16_t kDmRfMasterId = 0x06;  ///< 右前腿主电机 ID
-inline constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前腿从电机 ID
-inline constexpr std::uint16_t kDmRbMasterId = 0x08;  ///< 右后腿主电机 ID
-inline constexpr std::uint16_t kDmRbSlaveId = 0x07;   ///< 右后腿从电机 ID
+constexpr std::uint16_t kFricLeftId = 0x07;
+constexpr std::uint16_t kFricRightId = 0x08;
+constexpr std::uint16_t kDialId = 0x07;
 
-inline constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 ID
-inline constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 ID
-
-inline constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮 M3508 (gimbal_can)
-inline constexpr std::uint16_t kDialId = 0x07;       ///< 拨盘 M3508 (wheel_can)
-
-inline constexpr std::size_t kDr16UartRxBufferSize = 18;  ///< DR16 遥控器串口接收缓冲大小
-inline constexpr std::size_t kImuUartRxBufferSize = 518;
-
-inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId,   kPi,          45.0f,
-                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 左前腿 DM 电机参数
-inline const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId,   kPi,          45.0f,
-                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 左后腿 DM 电机参数
-inline const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId,   kPi,          45.0f,
-                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 右前腿 DM 电机参数
-inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId,   kPi,          45.0f,
-                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 右后腿 DM 电机参数
+const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 }  // namespace globals
 
 namespace gimbal {
+using namespace common::gimbal;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline const DmMitSettings kPitchMotorSettings{0x12, 0x11,         kPi,       30.f,
-                                               10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 俯仰电机参数
-inline const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 偏航电机参数
+const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-inline constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认时间步长
-inline constexpr float kPitchMinRad = -0.3f;                ///< 俯仰角下限
-inline constexpr float kPitchMaxRad = 0.3f;                 ///< 俯仰角上限
-inline constexpr float kDmTorqueLimitNm = 10.0f;            ///< DM 电机力矩限制
-inline constexpr float kPitchGravityCompensationNm = 1.3f;  ///< 俯仰重力补偿力矩
+constexpr float kPitchMinRad = -0.3f;
+constexpr float kPitchMaxRad = 0.3f;
 
-inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
-inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
-inline constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};  ///< 俯仰位置 PID
-inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
+constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};
+constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};
+constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};
+constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};
 }  // namespace gimbal
 
 namespace shoot {
-inline constexpr float kFricSpeedTargetRpm = 6000.0f;
-inline constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
-inline constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};
-inline constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};
-inline constexpr int16_t kDialFireThreshold = -600;
-inline constexpr float kShootFrequencyHz = 24.0f;
+inline constexpr int kFrictionWheelCount = 2;
+constexpr float kFricSpeedTargetRpm = 6000.0f;
+constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
+constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};
+constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};
+constexpr int16_t kDialFireThreshold = -600;
+constexpr float kShootFrequencyHz = 24.0f;
 }  // namespace shoot
 
 namespace chassis_fsm {
-inline constexpr std::uint32_t kJumpPrepMs = 250U;                   ///< 跳跃预备阶段时长
-inline constexpr std::uint32_t kJumpPushMaxMs = 1000U;               ///< 跳跃蹬伸最大时长
-inline constexpr std::uint32_t kJumpRecoverMs = 250U;                ///< 跳跃回收阶段时长
-inline constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;        ///< 倒地确认时长
-inline constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自恢复超时时长
+constexpr std::uint32_t kJumpPrepMs = 250U;
+constexpr std::uint32_t kJumpPushMaxMs = 1000U;
+constexpr std::uint32_t kJumpRecoverMs = 250U;
+constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
+constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-inline constexpr float kLowLegLengthM = 0.15f;              ///< 低腿长目标
-inline constexpr float kMidLegLengthM = 0.22f;              ///< 中腿长目标
-inline constexpr float kHighLegLengthM = 0.35f;             ///< 高腿长目标
-inline constexpr float kJumpPrepLegLengthM = 0.13f;         ///< 跳跃预备腿长
-inline constexpr float kJumpPushLegLengthM = 0.25f;         ///< 跳跃蹬伸腿长
-inline constexpr float kJumpRecoverLegLengthM = 0.20f;      ///< 跳跃回收腿长
-inline constexpr float kJumpPushReachedLegLengthM = 0.25f;  ///< 蹬伸判定腿长阈值
-inline constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间
-
-inline constexpr float kStairClimbThetaThresholdRad = 0.5f;  ///< 上台阶腿摆角检测阈值///
-inline constexpr float kStairClimbLegLengthM = 0.16f;        ///< 上台阶收腿目标///
-inline constexpr float kStairClimbThetaTargetRad = 0.3f;  ///< 上台阶腿摆角目标///---------------上台阶参数
-inline constexpr std::uint32_t kStairClimbDurationMs = 250U;              ///< 上台阶收腿保持时长///
-inline constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;          ///< 上台阶 pitch 稳定等待时长///
-inline constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;  ///< 上台阶收腿到位判定容差
-inline constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;       ///< 上台阶摆角归零判定阈值
-
+constexpr float kLowLegLengthM = 0.15f;
+constexpr float kMidLegLengthM = 0.22f;
+constexpr float kHighLegLengthM = 0.35f;
+constexpr float kJumpPrepLegLengthM = 0.13f;
+constexpr float kJumpPushLegLengthM = 0.25f;
+constexpr float kJumpRecoverLegLengthM = 0.20f;
+constexpr float kJumpPushReachedLegLengthM = 0.25f;
+constexpr float kLegLengthRampTimeS = 0.5f;
+constexpr float kStairClimbThetaThresholdRad = 0.5f;
+constexpr float kStairClimbLegLengthM = 0.16f;
+constexpr float kStairClimbThetaTargetRad = 0.3f;
+constexpr std::uint32_t kStairClimbDurationMs = 250U;
+constexpr std::uint32_t kStairClimbPitchStableMs = 2000U;
+constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;
+constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;
 }  // namespace chassis_fsm
 
 namespace chassis {
-inline constexpr float kControlDtS = 0.002f;                      ///< 底盘控制时间步长
-inline constexpr float kLegL1M = 0.215f;                          ///< 五连杆上段长度
-inline constexpr float kLegL2M = 0.254f;                          ///< 五连杆下段长度
-inline constexpr float kSpringTorqueScale = 75.0f;                ///< 弹簧力矩缩放系数
-inline constexpr float kSpringModelA = 1082.0f;                   ///< 弹簧模型参数 A
-inline constexpr float kSpringModelB = 1070.0f;                   ///< 弹簧模型参数 B
-inline constexpr float kSpringModelC = 404.0f;                    ///< 弹簧模型参数 C
-inline constexpr float kSpringModelD = 177.0f;                    ///< 弹簧模型参数 D
-inline constexpr float kSpringPhaseDivisor = 18.0f;               ///< 弹簧模型相位除数
-inline constexpr float kBodyMassKg = 22.0f;                       ///< 车身质量
-inline constexpr float kLegMassKg = 2.3f;                         ///< 单腿质量
-inline constexpr float kGravityMps2 = 9.81f;                      ///< 重力加速度
-inline constexpr float kWheelRadiusM = 0.2025f;                   ///< 轮毂半径
-inline constexpr float kOffGroundSupportForceThresholdN = 10.0f;  ///< 离地支撑力判定阈值
-inline constexpr float kRollBalanceTargetRad = 0.003f;            ///< 横滚平衡目标角
-inline constexpr float kPostureThetaBMinRad = -0.7f;              ///< 姿态有效 body pitch 下限
-inline constexpr float kPostureThetaBMaxRad = 0.7f;               ///< 姿态有效 body pitch 上限
-inline constexpr float kPostureRollMinRad = -0.5f;                ///< 姿态有效 roll 下限
-inline constexpr float kPostureRollMaxRad = 0.5f;                 ///< 姿态有效 roll 上限
-inline constexpr float kPostureThetaLegMinRad = -0.8f;            ///< 姿态有效腿摆角下限
-inline constexpr float kPostureThetaLegMaxRad = 1.4f;             ///< 姿态有效腿摆角上限
-inline constexpr float kLegRecoverThetaDotTarget = -2.0f;         ///< 姿态恢复腿摆角速度目标
-inline constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;        ///< 姿态恢复零力矩区间下限
-inline constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 姿态恢复零力矩区间上限
+using namespace common::chassis;
 
-inline constexpr std::array<float, 24> kEtaLookupLegLengthM{
-    0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
-    0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
-};
+constexpr float kSpringTorqueScale = 75.0f;
+constexpr float kBodyMassKg = 22.0f;
+constexpr float kRollBalanceTargetRad = 0.003f;
+constexpr float kPostureThetaBMinRad = -0.7f;
+constexpr float kPostureThetaBMaxRad = 0.7f;
 
-inline constexpr std::array<float, 24> kEtaLookupLwM{
-    0.061990f, 0.067466f, 0.072986f, 0.078550f, 0.084158f, 0.089810f, 0.095506f, 0.101246f,
-    0.107030f, 0.112858f, 0.118730f, 0.124646f, 0.130606f, 0.136610f, 0.142658f, 0.148750f,
-    0.154886f, 0.161066f, 0.167290f, 0.173558f, 0.179870f, 0.186226f, 0.192626f, 0.199070f,
-};
-
-inline constexpr std::array<float, 240> kCtrlP{
+constexpr std::array<float, 240> kCtrlP{
     -2.5181,    -12.705,  10.428,   18.911,   -5.1252,  -10.765, -4.1698, -15.133,  16.533,     24.337,   -11.18,
     -16.725,    -0.43051, 1.7802,   -0.46132, -2.7242,  1.1215,  0.52638, -3.8637,  16.05,      -4.1793,  -24.513,
     10.14,      4.7772,   -7.9653,  -62.552,  16.875,   63.934,  -28.504, -18.326,  -1.0859,    -5.0116,  1.8802,
@@ -701,126 +616,66 @@ inline constexpr std::array<float, 240> kCtrlP{
     -34.333,    1.6665,   83.851,   -1.7264,  4.4675,   -9.6002, -4.9447, 2.0002,   10.328,
 };
 
-inline constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};            ///< 左腿长控制 PID
-inline constexpr PidGains kRightL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};           ///< 右腿长控制 PID
-inline constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};       ///< 左腿跳跃蹬伸 PID
-inline constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};      ///< 右腿跳跃蹬伸 PID
-inline constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};   ///< 左腿跳跃回收 PID
-inline constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};  ///< 右腿跳跃回收 PID
-inline constexpr PidGains kRollPid{500.0f, 0.0f, 80.0f, 80.0f, 0.0f};                     ///< 横滚平衡 PID
-inline constexpr PidGains kLeftLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};                ///< 左腿摆角恢复 PID
-inline constexpr PidGains kRightLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};               ///< 右腿摆角恢复 PID
+constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRightL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
+constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
+constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRollPid{500.0f, 0.0f, 80.0f, 80.0f, 0.0f};
+constexpr PidGains kLeftLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};
+constexpr PidGains kRightLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};
 }  // namespace chassis
 
 namespace control_loop {
-inline constexpr std::int16_t kWheelSpinThreshold = 220;                 ///< 拨轮自旋阈值
-inline constexpr std::int16_t kWheelActionThreshold = 320;               ///< 拨轮动作触发阈值
-inline constexpr std::int16_t kWheelCenterThreshold = 80;                ///< 拨轮归中判定阈值
-inline constexpr float kControlLoopDtS = 0.002f;                         ///< 主控制循环周期
-inline constexpr std::int16_t kDr16AxisMaxAbs = 660;                     ///< DR16 摇杆最大绝对值
-inline constexpr float kTargetForwardSpeedMinMps = 0.6f;                 ///< 最小前进目标速度
-inline constexpr float kTargetForwardSpeedMaxMps = 2.f;                  ///< 最大前进目标速度
-inline constexpr float kVxInputDeadbandNorm = 0.1f;                      ///< 前进输入死区（归一化）
-inline constexpr float kVyInputDeadbandNorm = 0.1f;                      ///< 侧向输入死区（归一化）
-inline constexpr float kLockPointEnterSpeedThresholdMps = 0.30f;         ///< 进入定点锁定速度阈值
-inline constexpr float kLockPointExitSpeedThresholdMps = 0.55f;          ///< 退出定点锁定速度阈值
-inline constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;         ///< 捕获锁点参考位置的速度阈值
-inline constexpr float kLockPointEnterInputThreshold = 0.1f;             ///< 进入定点锁定输入阈值
-inline constexpr float kLockPointExitInputThreshold = 0.12f;             ///< 退出定点锁定输入阈值
-inline constexpr std::uint32_t kLockPointMinDwellTicks = 10U;            ///< 定点锁定最小驻留周期数
-inline constexpr float kLockPointAlphaRiseStep = 0.015f;                 ///< 定点锁定 alpha 上升步长
-inline constexpr float kLockPointAlphaFallStep = 0.018f;                 ///< 定点锁定 alpha 下降步长
-inline constexpr float kRcStickMax = 660.0f;                             ///< 遥控器摇杆最大值
-inline constexpr float kRcPitchRateMaxRadS = 1.5f;                       ///< 遥控器俯仰角速度上限
-inline constexpr float kRcYawRateMaxRadS = -2.5f;                        ///< 遥控器偏航角速度上限
-inline constexpr float kTcMouseMax = 200.0f;                             ///< 图传鼠标最大值基准
-inline constexpr float kTcMousePitchRateMaxRadS = 1.0f;                  ///< 图传鼠标俯仰角速度上限
-inline constexpr float kTcMouseYawRateMaxRadS = -2.0f;                   ///< 图传鼠标偏航角速度上限
-inline constexpr float kPitchTargetMinRad = -0.35f;                      ///< 遥控器目标俯仰角下限
-inline constexpr float kPitchTargetMaxRad = 0.25f;                       ///< 遥控器目标俯仰角上限
-inline constexpr float kYawFollowRampStepRadS = 0.05f;                   ///< 偏航跟随斜坡步长
-inline constexpr float kSpinYawRampStepRadS = 0.05f;                     ///< 自旋偏航斜坡步长
-inline constexpr float kSpinYawTargetOffsetRad = 0.55f;                  ///< 自旋偏航目标偏移
-inline constexpr float kSpinTargetYawDotRadS = 7.0f;                     ///< 自旋目标偏航角速度
-inline constexpr float kSpinTranslationGain = 1.2f;                      ///< 自旋平移增益
-inline constexpr float kSpinThetaLlBiasRad = 0.01f;                      ///< 自旋左腿摆角偏置
-inline constexpr float kYawFollowFixedTargetRad = 0.f;                   ///< 偏航跟随固定目标角
-inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;             ///< 偏航跟随侧向偏移
-inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 云台启动偏航对准误差阈值
-inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;            ///< 云台启动偏航对准速度阈值
-inline constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 50U;  ///< 云台启动偏航对准稳定周期数
-inline constexpr float kYawFollowDriveReadyErrorRad = 0.04f;             ///< 偏航跟随就绪误差阈值
-inline constexpr float kYawFollowDriveReadyVelRadS = 0.25f;              ///< 偏航跟随就绪速度阈值
-inline constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 50U;    ///< 偏航跟随就绪稳定周期数
-inline constexpr float kExpectedThetaLlBiasRad = 0.105f;                 ///< 左腿摆角期望偏置
-inline constexpr float kExpectedThetaLrBiasRad = 0.105f;                 ///< 右腿摆角期望偏置
-inline constexpr float kExpectedThetaBBiasRad = 0.05f;                   ///< 车身俯仰期望偏置
+using namespace common::control_loop;
 
-struct SdotRampParams {
-  float accel_step;
-  float brake_step;
-};
+constexpr float kTargetForwardSpeedMaxMps = 2.f;
+constexpr float kVxInputDeadbandNorm = 0.1f;
+constexpr float kVyInputDeadbandNorm = 0.1f;
+constexpr float kLockPointCaptureSpeedThresholdMps = 1.f;
+constexpr float kLockPointEnterInputThreshold = 0.1f;
+constexpr float kLockPointExitInputThreshold = 0.12f;
+constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
+constexpr float kLockPointAlphaRiseStep = 0.015f;
+constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kYawFollowRampStepRadS = 0.05f;
+constexpr float kSpinYawRampStepRadS = 0.05f;
+constexpr float kSpinTargetYawDotRadS = 7.0f;
+constexpr float kSpinTranslationGain = 1.2f;
+constexpr float kSpinThetaLlBiasRad = 0.01f;
+constexpr float kYawFollowFixedTargetRad = 0.f;
+constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
+constexpr float kExpectedThetaLlBiasRad = 0.105f;
+constexpr float kExpectedThetaLrBiasRad = 0.105f;
+constexpr float kExpectedThetaBBiasRad = 0.05f;
 
-inline constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
-inline constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
-inline constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
+constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
+constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
-inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};  ///< 偏航跟随 PID
+constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
-inline constexpr float kLeftWheelTorqueToCurrent = 2436.5f;   ///< 左轮毂力矩-电流转换系数
-inline constexpr float kRightWheelTorqueToCurrent = 2436.5f;  ///< 右轮毂力矩-电流转换系数
-inline constexpr float kWheelCurrentClampAbs = 16000.0f;      ///< 轮毂电流限幅绝对值
+using namespace common::actuators;
+
+constexpr float kLeftWheelTorqueToCurrent = 2436.5f;
+constexpr float kRightWheelTorqueToCurrent = 2436.5f;
 }  // namespace actuators
 
-namespace gimbal_can_bridge {
-inline constexpr std::uint16_t kRxStdId = 0x119;  ///< 云台 CAN 反馈接收标准帧 ID
-inline constexpr std::size_t kPayloadSize = 4U;   ///< 云台 CAN 反馈数据长度
-inline constexpr float kMilliScale = 0.001f;      ///< 云台 CAN 反馈毫单位缩放
-}  // namespace gimbal_can_bridge
-
-namespace remote_control_can_bridge {
-inline constexpr std::uint16_t kRxStdIdA = 0x110;
-inline constexpr std::uint16_t kRxStdIdB = 0x111;
-inline constexpr std::size_t kPayloadSizeA = 8U;
-inline constexpr std::size_t kPayloadSizeB = 8U;
-}  // namespace remote_control_can_bridge
-
 namespace state_estimator {
-inline constexpr float kDefaultDtS = 0.002f;                      ///< 状态估计默认时间步长
-inline constexpr float kDefaultExpectedSdotMps = 0.05f;           ///< 默认期望速度
-inline constexpr float kLegL1M = 0.215f;                          ///< 五连杆上段长度
-inline constexpr float kLegL2M = 0.254f;                          ///< 五连杆下段长度
-inline constexpr float kWheelRadiusM = 0.0575f;                   ///< 轮毂半径
-inline constexpr float kWheelReductionRatio = 17.0f / 268.0f;     ///< 轮毂减速比
-inline constexpr float kMaxValidSpeedMps = 8.0f;                  ///< 最大有效速度
-inline constexpr float kLeftPhi1OffsetRad = -1.50f + M_PI;        ///< 左腿 phi1 零位偏移
-inline constexpr float kLeftPhi4OffsetRad = -1.50f;               ///< 左腿 phi4 零位偏移
-inline constexpr float kRightPhi1OffsetRad = -1.42f + M_PI;       ///< 右腿 phi1 零位偏移
-inline constexpr float kRightPhi4OffsetRad = -1.62f;              ///< 右腿 phi4 零位偏移
-inline constexpr float kThetaDotFilterCutoffHz = 8.0f;            ///< 腿摆角速度滤波器截止频率
-inline constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< IMU 加速度计滤波器采样率
-inline constexpr float kImuAccelFilterCutoffHz = 10.0f;           ///< IMU 加速度计滤波器截止频率
-inline constexpr std::uint32_t kAccelBiasInitSamples = 1500U;     ///< 加速度计零偏初始化采样数
-inline constexpr float kAccelZeroWheelSpeedThresholdMps = 0.02f;  ///< 加速度计零偏标定轮速阈值
-inline constexpr float kAccelZeroHighThresholdMps2 = 0.5f;        ///< 加速度计零偏标定高阈值
-inline constexpr float kAccelZeroLowThresholdMps2 = 0.2f;         ///< 加速度计零偏标定低阈值
-inline constexpr float kKalmanMinVariance = 1e-5f;                ///< 卡尔曼滤波器最小方差
-inline constexpr float kThetaPiHalf = 1.57079632679489661923f;    ///< pi/2 常量
+using namespace common::state_estimator;
 
-inline constexpr std::array<float, 4> kKalmanF{1.0f, kDefaultDtS, 0.0f, 1.0f};  ///< 卡尔曼状态转移矩阵
-inline constexpr std::array<float, 4> kKalmanQ{0.0005f, 0.0f, 0.0f, 0.04f};     ///< 卡尔曼过程噪声协方差
-inline constexpr std::array<float, 4> kKalmanR{0.5f, 0.0f, 0.0f, 2.0f};         ///< 卡尔曼观测噪声协方差
-inline constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};       ///< 卡尔曼初始误差协方差
-inline constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< 卡尔曼观测矩阵
+constexpr float kLeftPhi1OffsetRad = -1.50f + M_PI;
+constexpr float kLeftPhi4OffsetRad = -1.50f;
+constexpr float kRightPhi1OffsetRad = -1.42f + M_PI;
+constexpr float kRightPhi4OffsetRad = -1.62f;
 }  // namespace state_estimator
 
-namespace leg_kinematics {
-inline constexpr float kDefaultDtS = 0.002f;  ///< 腿运动学默认时间步长
-inline constexpr float kMinSin = 1e-5f;       ///< 最小正弦值（数值保护）
-inline constexpr float kMinLen = 1e-5f;       ///< 最小长度（数值保护）
-}  // namespace leg_kinematics
+namespace leg_kinematics { using namespace common::leg_kinematics; }
+namespace remote_control_can_bridge { using namespace common::remote_control_can_bridge; }
+namespace main { using namespace common::main; }
 
 }  // namespace infantry4
 

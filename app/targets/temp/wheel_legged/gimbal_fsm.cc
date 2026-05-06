@@ -10,7 +10,7 @@ namespace {
 /**
  * @brief 判断统一语义请求是否要求云台关闭
  */
-bool IsInputDisabled(const wheel_legged::GimbalFsmInput &request) {
+bool IsInputDisabled(const wheel_legged::ModeRequest &request) {
   return !request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled;
 }
 
@@ -18,12 +18,12 @@ bool IsInputDisabled(const wheel_legged::GimbalFsmInput &request) {
  * @brief 在输入有效时解析云台常规工作模式
  */
 gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
-  const wheel_legged::GimbalFsmInput &request = input.request;
+  const wheel_legged::ModeRequest &request = input.request;
 
   if (IsInputDisabled(request)) {
     return gimbal::Fsm::State::kDisabled;
   }
-  if (request.chassis_recovery_active) {
+  if (input.chassis_recovery_active) {
     return gimbal::Fsm::State::kRecoveryAlign;
   }
   if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
@@ -38,7 +38,7 @@ gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
  * @brief 解析含启动归中约束的云台目标模式
  */
 gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fsm::State current_mode) {
-  const wheel_legged::GimbalFsmInput &request = input.request;
+  const wheel_legged::ModeRequest &request = input.request;
   if (IsInputDisabled(request)) {
     return gimbal::Fsm::State::kDisabled;
   }
@@ -48,9 +48,9 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
     return gimbal::Fsm::State::kStartupAlign;
   }
   if (current_mode == gimbal::Fsm::State::kStartupAlign) {
-    return request.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
+    return input.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
   }
-  return request.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
+  return input.startup_align_complete ? normal_mode : gimbal::Fsm::State::kStartupAlign;
 }
 
 /**
@@ -58,7 +58,7 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
  */
 gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &input, const gimbal::Fsm::State mode) {
   gimbal::Fsm::Output::ControlOutput control{};
-  const wheel_legged::GimbalFsmInput &request = input.request;
+  const wheel_legged::ModeRequest &request = input.request;
 
   const bool use_host_target = request.target_source == wheel_legged::TargetSource::kHost && request.host_target_valid;
   control.active_target_source = use_host_target ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
@@ -67,31 +67,43 @@ gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &
   switch (mode) {
     case gimbal::Fsm::State::kDisabled:
       control.gimbal_enable = false;
+      control.fire_allowed = false;
+      control.shoot_request = false;
       control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kStartupAlign:
       control.gimbal_enable = true;
+      control.fire_allowed = false;
+      control.shoot_request = false;
       control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kServiceWithFire:
       control.gimbal_enable = true;
+      control.fire_allowed = true;
+      control.shoot_request = request.fire_request;
       control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kServiceSafe:
       control.gimbal_enable = true;
+      control.fire_allowed = false;
+      control.shoot_request = false;
       control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kCombat:
       control.gimbal_enable = true;
+      control.fire_allowed = true;
+      control.shoot_request = request.fire_request;
       control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kRecoveryAlign:
       control.gimbal_enable = true;
+      control.fire_allowed = false;
+      control.shoot_request = false;
       control.align_to_chassis_forward = true;
       break;
   }

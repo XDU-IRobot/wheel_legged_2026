@@ -19,8 +19,11 @@
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
-#include "common/controllers/shoot_2firc.hpp"
-#include "shoot.hpp"
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+#include "gimbal/shoot_controller.hpp"
+#else
+#include "gimbal/shoot.hpp"
+#endif
 
 /**
  * @file  targets/wheel_legged/include/globals.hpp
@@ -55,12 +58,18 @@ struct SharedResources {
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  std::optional<rm::device::M3508> fw_motor_1{};   ///< 摩擦轮1 (gimbal_can, hero)
+  std::optional<rm::device::M3508> fw_motor_2{};   ///< 摩擦轮2 (gimbal_can, hero)
+  std::optional<rm::device::M3508> fw_motor_3{};   ///< 摩擦轮3 (gimbal_can, hero)
+  std::optional<DmMitMotor> booster_motor{};       ///< DM 拨盘 (wheel_can, hero)
+  wheel_legged::ShootController shoot_controller{};
+#else
   std::optional<rm::device::M3508> fric_left{};   ///< 左摩擦轮 (gimbal_can)
   std::optional<rm::device::M3508> fric_right{};  ///< 右摩擦轮 (gimbal_can)
   std::optional<rm::device::M3508> dial{};        ///< 拨盘 (wheel_can)
-
-  Shoot2Fric shoot_controller{9, 42.75f};  ///< 双摩擦轮发射控制器
-  Shoot shoot{};                           ///< 发射机构状态机
+  Shoot shoot{};                                  ///< 发射机构状态机
+#endif
 
   chassis::Fsm chassis_fsm{};  ///< 底盘状态机
   chassis::Chassis chassis{};  ///< 底盘控制器
@@ -149,11 +158,22 @@ struct SharedResources {
       yaw_motor.emplace(*wheel_can, wheel_legged::params::active::gimbal::kYawMotorSettings);
     }
 
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    if (!fw_motor_1.has_value()) {
+      fw_motor_1.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor1Id);
+      fw_motor_2.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor2Id, true);
+      fw_motor_3.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor3Id, true);
+      booster_motor.emplace(*wheel_can, wheel_legged::params::active::shoot::kBoosterDmSettings, true);
+      shoot_controller.Attach(&*fw_motor_1, &*fw_motor_2, &*fw_motor_3, &*booster_motor);
+      shoot_controller.Init();
+    }
+#else
     if (!fric_left.has_value()) {
       fric_left.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricLeftId);
       fric_right.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricRightId);
       dial.emplace(*wheel_can, wheel_legged::params::active::globals::kDialId);
     }
+#endif
 
     if (!chassis_imu.has_value()) {
       chassis_imu.emplace(no_dtcm->imu_uart);
@@ -165,115 +185,16 @@ struct SharedResources {
     gimbal_fsm.Init();
     gimbal.Init();
 
-    shoot.Init(*this);
+#if WHEEL_LEGGED_ROBOT_VARIANT != 1
+    shoot.Init();
+#endif
   }
 };
 
 extern SharedResources *globals;
 
-extern "C" {
-/** @brief 调试导出变量，供上位机与调试器读取 */
-extern volatile uint32_t wl_fm_tick_ms;
+#include "debug_snapshot.hpp"
 
-/** @brief 底盘/云台状态机模式编号 */
-extern volatile uint8_t wl_fm_chassis_mode;
-extern volatile uint8_t wl_fm_gimbal_mode;
-
-/** @brief 底盘/云台状态机本周期是否发生状态变化 */
-extern volatile uint8_t wl_fm_chassis_state_changed;
-extern volatile uint8_t wl_fm_gimbal_state_changed;
-
-/** @brief 遥控器在线与档位信息 */
-extern volatile uint8_t wl_fm_dr16_online;
-extern volatile int32_t wl_fm_dr16_switch_l;
-extern volatile int32_t wl_fm_dr16_switch_r;
-extern volatile int16_t wl_fm_dr16_dial;
-
-/** @brief 遥控器语义化请求 */
-extern volatile uint8_t wl_fm_dr16_enable_request;
-extern volatile uint8_t wl_fm_dr16_spin_request;
-extern volatile uint8_t wl_fm_dr16_jump_trigger_edge;
-extern volatile uint8_t wl_fm_tc_mid_leg_hold;
-
-/** @brief 底盘核心观测量 */
-extern volatile float wl_fm_chassis_leg_length_m;
-extern volatile float wl_fm_left_leg_length_m;
-extern volatile float wl_fm_right_leg_length_m;
-extern volatile float wl_fm_chassis_speed_mps;
-extern volatile float wl_fm_left_support_force_n;
-extern volatile float wl_fm_right_support_force_n;
-extern volatile uint8_t wl_fm_off_ground_in_mid_high_leg;
-
-/** @brief 关节与轮毂原始反馈 */
-extern volatile float wl_fm_motor_lf_pos_rad;
-extern volatile float wl_fm_motor_lf_vel_rad_s;
-extern volatile float wl_fm_motor_lf_tau_nm;
-extern volatile float wl_fm_motor_lb_pos_rad;
-extern volatile float wl_fm_motor_lb_vel_rad_s;
-extern volatile float wl_fm_motor_lb_tau_nm;
-extern volatile float wl_fm_motor_rf_pos_rad;
-extern volatile float wl_fm_motor_rf_vel_rad_s;
-extern volatile float wl_fm_motor_rf_tau_nm;
-extern volatile float wl_fm_motor_rb_pos_rad;
-extern volatile float wl_fm_motor_rb_vel_rad_s;
-extern volatile float wl_fm_motor_rb_tau_nm;
-extern volatile float wl_fm_wheel_left_rad_s;
-extern volatile float wl_fm_wheel_right_rad_s;
-extern volatile float wl_fm_wheel_left_tau_nm;
-extern volatile float wl_fm_wheel_right_tau_nm;
-
-/** @brief 关节与轮毂控制输出力矩 */
-extern volatile float wl_fm_motor_lf_out_tau_nm;
-extern volatile float wl_fm_motor_lb_out_tau_nm;
-extern volatile float wl_fm_motor_rf_out_tau_nm;
-extern volatile float wl_fm_motor_rb_out_tau_nm;
-
-/** @brief 惯导原始反馈 */
-extern volatile float wl_fm_imu_roll_rad;
-extern volatile float wl_fm_imu_pitch_rad;
-extern volatile float wl_fm_imu_yaw_rad;
-extern volatile float wl_fm_imu_gyro_x_rad_s;
-extern volatile float wl_fm_imu_gyro_y_rad_s;
-extern volatile float wl_fm_imu_gyro_z_rad_s;
-extern volatile float wl_fm_imu_acc_x_mps2;
-extern volatile float wl_fm_imu_acc_y_mps2;
-extern volatile float wl_fm_imu_acc_z_mps2;
-extern volatile float wl_fm_gimbal_imu_pitch_rad;
-extern volatile float wl_fm_gimbal_imu_yaw_rad;
-
-/** @brief 模型状态向量导出 */
-extern volatile float wl_fm_model_s_m;
-extern volatile float wl_fm_model_s_dot_mps;
-extern volatile float wl_fm_target_s_m;
-extern volatile float wl_fm_target_s_dot_mps;
-extern volatile float wl_fm_model_phi_rad;
-extern volatile float wl_fm_model_phi_dot_rad_s;
-extern volatile float wl_fm_model_theta_ll_rad;
-extern volatile float wl_fm_model_theta_ll_dot_rad_s;
-extern volatile float wl_fm_model_theta_lr_rad;
-extern volatile float wl_fm_model_theta_lr_dot_rad_s;
-extern volatile float wl_fm_model_theta_b_rad;
-extern volatile float wl_fm_model_theta_b_dot_rad_s;
-extern volatile float wl_fm_model_l_l_m;
-extern volatile float wl_fm_model_l_r_m;
-extern volatile float wl_fm_yaw_target_rad;
-extern volatile float wl_fm_yaw_motor_pos_rad;
-extern volatile float wl_fm_yaw_motor_vel_rad_s;
-extern volatile float wl_fm_pitch_target_rad;
-extern volatile float wl_fm_pitch_motor_pos_rad;
-extern volatile float wl_fm_pitch_motor_vel_rad_s;
-extern volatile uint8_t wl_fm_yaw_motor_status;
-extern volatile uint8_t wl_fm_pitch_motor_status;
-extern volatile uint8_t wl_fm_yaw_motor_raw_status_byte;
-extern volatile uint8_t wl_fm_pitch_motor_raw_status_byte;
-extern volatile uint8_t wl_fm_posture_valid;
-
-/** @brief DYP 测距调试变量 */
-extern volatile uint16_t wl_fm_dyp_left_distance_raw;
-extern volatile uint16_t wl_fm_dyp_right_distance_raw;
-extern volatile uint8_t wl_fm_dyp_left_result;
-extern volatile uint8_t wl_fm_dyp_right_result;
-extern volatile uint32_t wl_fm_dyp_frame_count;
-}
+extern DebugSnapshot wl_debug;
 
 void ControlLoop();
