@@ -289,7 +289,6 @@ constexpr float kLockPointEnterInputThreshold = 0.08f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 50U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -369,7 +368,7 @@ using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode
 const DmMitSettings kPitchMotorSettings{0x05, 0x04, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-constexpr float kPitchMinRad = -0.2f;
+constexpr float kPitchMinRad = -0.3f;
 constexpr float kPitchMaxRad = 0.25f;
 
 inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
@@ -395,8 +394,8 @@ constexpr std::uint32_t kJumpRecoverMs = 250U;
 constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-constexpr float kLowLegLengthM = 0.15f;
-constexpr float kMidLegLengthM = 0.21f;
+constexpr float kLowLegLengthM = 0.127f;
+constexpr float kMidLegLengthM = 0.18f;
 constexpr float kHighLegLengthM = 0.3f;
 constexpr float kJumpPrepLegLengthM = 0.13f;
 constexpr float kJumpPushLegLengthM = 0.22f;
@@ -422,28 +421,46 @@ constexpr float kPostureThetaBMinRad = -0.7f;
 constexpr float kPostureThetaBMaxRad = 0.7f;
 
 constexpr std::array<float, 240> kCtrlP{
-    -4.2448,  -27.943,  24.322,   48.081,    -22.811,  -20.812, -7.3808, -34.992, 38.389,   65.198,    -42.541,
-    -31.147,  -0.67131, 3.8281,   -0.59644,  -4.5997,  0.61137, 1.0939,  -1.5435, 9.1817,   -1.783,    -10.673,
-    1.1528,   3.2836,   -17.237,  -73.41,    11.51,    72.6,    -2.0572, -14.979, -1.0135,  -6.4992,   2.9845,
-    -4.127,   1.7761,   -3.7835,  -3.4261,   4.7568,   -0.7934, 4.2219,  -9.0128, 1.6866,   -0.33564,  -1.736,
-    -0.23046, 6.6042,   -11.509,  2.0019,    -18.794,  43.53,   18.593,  -32.15,  -21.354,  -19.936,   -2.6642,
-    3.4226,   5.8749,   0.53733,  -6.3349,   -6.1988,  -4.2448, 24.322,  -27.943, -20.812,  -22.811,   48.081,
-    -7.3808,  38.389,   -34.992,  -31.147,   -42.541,  65.198,  0.67131, 0.59644, -3.8281,  -1.0939,   -0.61137,
-    4.5997,   1.5435,   1.783,    -9.1817,   -3.2836,  -1.1528, 10.673,  -3.4261, -0.7934,  4.7568,    1.6866,
-    -9.0128,  4.2219,   -0.33564, -0.23046,  -1.736,   2.0019,  -11.509, 6.6042,  -17.237,  11.51,     -73.41,
-    -14.979,  -2.0572,  72.6,     -1.0135,   2.9845,   -6.4992, -3.7835, 1.7761,  -4.127,   -18.794,   18.593,
-    43.53,    -19.936,  -21.354,  -32.15,    -2.6642,  5.8749,  3.4226,  -6.1988, -6.3349,  0.53733,   3.6792,
-    -10.117,  1.0467,   -7.9563,  18.399,    -3.2531,  5.6247,  -12.837, -3.7072, -13.93,   32,        -0.69807,
-    -0.71498, -1.9782,  -0.98018, 3.7112,    0.088883, 1.5526,  -1.626,  -5.0291, -2.3054,  9.3236,    -0.22558,
-    3.716,    29.6,     -63.851,  5.7607,    69.982,   15.007,  -12.607, 1.5174,  -2.1169,  -0.030715, 0.85042,
-    5.389,    -1.1938,  -2.6014,  -12.076,   -2.8847,  15.998,  -8.8749, 0.36243, -0.20479, -0.87095,  2.1866,
-    -0.5102,  -2.293,   -1.4209,  -27.372,   -82.372,  32.363,  111.12,  7.5488,  -46.071,  -2.0412,   -10.549,
-    4.1377,   11.895,   3.6102,   -6.3437,   3.6792,   1.0467,  -10.117, -3.2531, 18.399,   -7.9563,   5.6247,
-    -3.7072,  -12.837,  -0.69807, 32,        -13.93,   0.71498, 0.98018, 1.9782,  -1.5526,  -0.088883, -3.7112,
-    1.626,    2.3054,   5.0291,   -3.716,    0.22558,  -9.3236, -2.6014, -2.8847, -12.076,  0.36243,   -8.8749,
-    15.998,   -0.20479, 2.1866,   -0.87095,  -1.4209,  -2.293,  -0.5102, 29.6,    5.7607,   -63.851,   -12.607,
-    15.007,   69.982,   1.5174,   -0.030715, -2.1169,  -1.1938, 5.389,   0.85042, -27.372,  32.363,    -82.372,
-    -46.071,  7.5488,   111.12,   -2.0412,   4.1377,   -10.549, -6.3437, 3.6102,  11.895,
+-4.0707,  -29.901,  23.794,  45.707,  -20.066,  -18.463,
+     -6.6479,  -33.114,  33.971,  55.977,  -37.253,  -24.407,
+     -0.78416,  3.4089,  -1.2963,  -3.5645,  0.12963,  2.0062,
+     -2.0519,  9.2532,  -3.8023,  -9.2773,  -0.18545,  6.0201,
+     -12.993,  -82.612,  15.593,  79.255,  4.9359,  -20.83,
+     -0.81331,  -6.5628,  2.863,  -4.211,  2.6633,  -3.491,
+     -4.183,  4.8741,  -6.8913,  6.3452,  -9.5045,  6.1947,
+     -0.39254,  -1.444,  -0.41127,  5.8068,  -11.329,  2.0741,
+     -23.357,  34.851,  31.732,  -2.9591,  -35.087,  -29.588,
+     -2.8038,  2.2245,  6.8678,  2.6974,  -7.2189,  -6.6279,
+     -4.0707,  23.794,  -29.901,  -18.463,  -20.066,  45.707,
+     -6.6479,  33.971,  -33.114,  -24.407,  -37.253,  55.977,
+     0.78416,  1.2963,  -3.4089,  -2.0062,  -0.12963,  3.5645,
+     2.0519,  3.8023,  -9.2532,  -6.0201,  0.18545,  9.2773,
+     -4.183,  -6.8913,  4.8741,  6.1947,  -9.5045,  6.3452,
+     -0.39254,  -0.41127,  -1.444,  2.0741,  -11.329,  5.8068,
+     -12.993,  15.593,  -82.612,  -20.83,  4.9359,  79.255,
+     -0.81331,  2.863,  -6.5628,  -3.491,  2.6633,  -4.211,
+     -23.357,  31.732,  34.851,  -29.588,  -35.087,  -2.9591,
+     -2.8038,  6.8678,  2.2245,  -6.6279,  -7.2189,  2.6974,
+     8.7849,  2.1978,  -21.509,  -47.872,  47.3,  12.968,
+     12.654,  1.8899,  -37.392,  -62.982,  77.246,  21.489,
+     -0.75575,  -4.374,  -1.5982,  7.5572,  -1.8807,  2.4787,
+     -1.9787,  -12.071,  -3.9016,  20.572,  -5.3246,  6.0086,
+     52.351,  -85.303,  6.0749,  72.562,  40.389,  -19.528,
+     2.5814,  0.28354,  -1.8929,  -0.25412,  6.105,  0.23307,
+     -2.607,  -27.034,  -6.9889,  29.998,  -20.601,  -5.8395,
+     -0.13027,  -0.3263,  2.998,  -4.7426,  2.106,  -6.3616,
+     -37.295,  -179.59,  57.234,  214.12,  31.334,  -77.376,
+     -1.6232,  -15.994,  2.7483,  14.153,  9.6187,  -5.2849,
+     8.7849,  -21.509,  2.1978,  12.968,  47.3,  -47.872,
+     12.654,  -37.392,  1.8899,  21.489,  77.246,  -62.982,
+     0.75575,  1.5982,  4.374,  -2.4787,  1.8807,  -7.5572,
+     1.9787,  3.9016,  12.071,  -6.0086,  5.3246,  -20.572,
+     -2.607,  -6.9889,  -27.034,  -5.8395,  -20.601,  29.998,
+     -0.13027,  2.998,  -0.3263,  -6.3616,  2.106,  -4.7426,
+     52.351,  6.0749,  -85.303,  -19.528,  40.389,  72.562,
+     2.5814,  -1.8929,  0.28354,  0.23307,  6.105,  -0.25412,
+     -37.295,  57.234,  -179.59,  -77.376,  31.334,  214.12,
+     -1.6232,  2.7483,  -15.994,  -5.2849,  9.6187,  14.153,
 };
 
 constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
@@ -467,9 +484,8 @@ constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
-constexpr float kLockPointAlphaRiseStep = 0.015f;
-constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kLockPointAlphaRiseStep = 1.f;
+constexpr float kLockPointAlphaFallStep = 1.f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
 constexpr float kSpinYawRampStepRadS = 0.05f;
 constexpr float kSpinTargetYawDotRadS = 6.0f;
@@ -481,9 +497,9 @@ constexpr float kExpectedThetaLlBiasRad = 0.13f;
 constexpr float kExpectedThetaLrBiasRad = 0.13f;
 constexpr float kExpectedThetaBBiasRad = 0.0f;
 
-constexpr SdotRampParams kSdotRampLowLeg{0.005f, 0.005f};
-constexpr SdotRampParams kSdotRampMidLeg{0.004f, 0.004f};
-constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.01f};
+constexpr SdotRampParams kSdotRampMidLeg{0.007f, 0.007f};
+constexpr SdotRampParams kSdotRampHighLeg{0.005f, 0.005f};
 
 constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
 }  // namespace control_loop
@@ -645,7 +661,6 @@ constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;

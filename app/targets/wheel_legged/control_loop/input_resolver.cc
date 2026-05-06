@@ -143,7 +143,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
           break;
         case rm::device::DR16::SwitchPosition::kUp:
           combat_profile = wheel_legged::CombatProfile::kAutoAimWithMove;
-          leg_request = wheel_legged::LegProfile::kMid;
+          leg_request = wheel_legged::LegProfile::kLow;
           break;
         default:
           break;

@@ -40,7 +40,6 @@ constexpr float kLockPointEnterInputThreshold = ns::control_loop::kLockPointEnte
 constexpr float kLockPointExitInputThreshold = ns::control_loop::kLockPointExitInputThreshold;
 constexpr uint32_t kLockPointMinDwellTicks = ns::control_loop::kLockPointMinDwellTicks;
 constexpr float kLockPointFilteredSdotZeroThreshold = ns::control_loop::kLockPointFilteredSdotZeroThreshold;
-constexpr uint32_t kLockPointSpeedSettledTicks = ns::control_loop::kLockPointSpeedSettledTicks;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -351,7 +350,6 @@ void ControlLoop() {
   if (!lockpoint_enabled) {
     ctx.lock_point_target = false;
     ctx.was_requesting_lock = false;
-    ctx.lock_point_zero_speed_ticks = 0U;
   } else {
     const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
     const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
@@ -359,23 +357,17 @@ void ControlLoop() {
     wl_debug.lock_point_request = request_lock ? 1U : 0U;
     const uint32_t elapsed = now_ms - ctx.lock_point_last_switch_tick;
 
-    // 跟踪 filtered_s_dot 维持在零的连续周期数（斜坡完成判据）
+    // filtered_s_dot 已斜坡归零（无需保持 N 周期，到达即锁定）
     const bool filtered_s_dot_at_zero = std::fabs(ctx.filtered_s_dot) < kLockPointFilteredSdotZeroThreshold;
     wl_debug.lock_point_speed_below_threshold = filtered_s_dot_at_zero ? 1U : 0U;
-    if (request_lock && filtered_s_dot_at_zero) {
-      ++ctx.lock_point_zero_speed_ticks;
-    } else {
-      ctx.lock_point_zero_speed_ticks = 0U;
-    }
 
     if (request_lock && !ctx.was_requesting_lock) {
       wl_debug.lock_point_rising_edge = 1U;
     }
     ctx.was_requesting_lock = request_lock;
 
-    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零并保持 N 周期 + 消抖 dwell
-    if (!ctx.lock_point_target && request_lock &&
-        ctx.lock_point_zero_speed_ticks >= kLockPointSpeedSettledTicks &&
+    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零 + 消抖 dwell
+    if (!ctx.lock_point_target && request_lock && filtered_s_dot_at_zero &&
         elapsed >= kLockPointMinDwellTicks) {
       ctx.lock_point_target = true;
       ctx.lock_point_s_ref = current_state.s;
