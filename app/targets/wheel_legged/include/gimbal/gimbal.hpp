@@ -113,7 +113,7 @@ class Gimbal {
         std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                    wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     const float pitch_gravity_ff =
-        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.chassis_pitch_rad);
+        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.gimbal_imu_pitch_rad);
     output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
                                              -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                                              wheel_legged::params::active::gimbal::kDmTorqueLimitNm);

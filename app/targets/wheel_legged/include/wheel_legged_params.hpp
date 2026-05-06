@@ -33,25 +33,33 @@ inline constexpr double kJointCanTxLimitHz = 4000.0;
 inline constexpr double kWheelCanTxLimitHz = 4000.0;
 inline constexpr double kGimbalCanTxLimitHz = 4000.0;
 
-inline constexpr std::uint16_t kDmLfMasterId = 0x04;
-inline constexpr std::uint16_t kDmLfSlaveId = 0x03;
-inline constexpr std::uint16_t kDmLbMasterId = 0x06;
-inline constexpr std::uint16_t kDmLbSlaveId = 0x05;
-inline constexpr std::uint16_t kDmRfMasterId = 0x02;
-inline constexpr std::uint16_t kDmRfSlaveId = 0x01;
-inline constexpr std::uint16_t kDmRbMasterId = 0x08;
-inline constexpr std::uint16_t kDmRbSlaveId = 0x07;
+inline constexpr std::uint16_t kDmLfMasterId = 0x02;  ///< 左前腿主电机 ID
+inline constexpr std::uint16_t kDmLfSlaveId = 0x01;   ///< 左前腿从电机 ID
+inline constexpr std::uint16_t kDmLbMasterId = 0x04;  ///< 左后腿主电机 ID
+inline constexpr std::uint16_t kDmLbSlaveId = 0x03;   ///< 左后腿从电机 ID
+inline constexpr std::uint16_t kDmRfMasterId = 0x06;  ///< 右前腿主电机 ID
+inline constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前腿从电机 ID
+inline constexpr std::uint16_t kDmRbMasterId = 0x08;  ///< 右后腿主电机 ID
+inline constexpr std::uint16_t kDmRbSlaveId = 0x07;   ///< 右后腿从电机 ID
 
-inline constexpr std::uint16_t kLeftWheelId = 0x06;
-inline constexpr std::uint16_t kRightWheelId = 0x05;
+inline constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 ID
+inline constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 ID
 
-inline constexpr std::size_t kDr16UartRxBufferSize = 18;
+inline constexpr std::uint16_t kFricLeftId = 0x02;   ///< 左摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kFricRightId = 0x04;  ///< 右摩擦轮 M3508 (gimbal_can)
+inline constexpr std::uint16_t kDialId = 0x07;       ///< 拨盘 M3508 (wheel_can)
+
+inline constexpr std::size_t kDr16UartRxBufferSize = 18;  ///< DR16 遥控器串口接收缓冲大小
 inline constexpr std::size_t kImuUartRxBufferSize = 518;
 
-inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+inline const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId,   kPi,          45.0f,
+                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 左前腿 DM 电机参数
+inline const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId,   kPi,          45.0f,
+                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 左后腿 DM 电机参数
+inline const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId,   kPi,          45.0f,
+                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 右前腿 DM 电机参数
+inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId,   kPi,          45.0f,
+                                         54.0f,         {0.0f, 500.0f}, {0.0f, 10.0f}};  ///< 右后腿 DM 电机参数
 }  // namespace globals
 
 namespace gimbal {
@@ -296,8 +304,8 @@ inline constexpr std::uint16_t kDmRfSlaveId = 0x06;
 inline constexpr std::uint16_t kDmRbMasterId = 0x15;
 inline constexpr std::uint16_t kDmRbSlaveId = 0x05;
 
-inline constexpr std::uint16_t kLeftWheelId = 0x06;
-inline constexpr std::uint16_t kRightWheelId = 0x05;
+inline constexpr std::uint16_t kLeftWheelId = 0x02;
+inline constexpr std::uint16_t kRightWheelId = 0x03;
 
 inline constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮 M3508 (gimbal_can)
 inline constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮 M3508 (gimbal_can)
@@ -315,8 +323,9 @@ inline const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f
 namespace gimbal {
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-inline const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+inline const DmMitSettings kPitchMotorSettings{0x05, 0x04,         kPi,       30.f,
+                                               10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 俯仰电机参数
+inline const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};  ///< 偏航电机参数
 
 inline constexpr float kDefaultDtS = 0.002f;
 inline constexpr float kPitchMinRad = -0.2f;
@@ -467,7 +476,7 @@ inline constexpr float kSpinYawRampStepRadS = 0.05f;
 inline constexpr float kSpinTargetYawDotRadS = 6.0f;
 inline constexpr float kSpinTranslationGain = 1.0f;
 inline constexpr float kSpinThetaLlBiasRad = 0.01f;
-inline constexpr float kYawFollowFixedTargetRad = -1.72f;
+inline constexpr float kYawFollowFixedTargetRad = 0.f;
 inline constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
 inline constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;
 inline constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;
@@ -492,8 +501,8 @@ inline constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
-inline constexpr float kLeftWheelTorqueToCurrent = 2500.0f;
-inline constexpr float kRightWheelTorqueToCurrent = 2300.0f;
+inline constexpr float kLeftWheelTorqueToCurrent = 2436.0f;
+inline constexpr float kRightWheelTorqueToCurrent = 2436.0f;
 inline constexpr float kWheelCurrentClampAbs = 16000.0f;
 }  // namespace actuators
 
@@ -598,8 +607,8 @@ inline constexpr float kPitchMaxRad = 0.25f;                ///< 俯仰角上限
 inline constexpr float kDmTorqueLimitNm = 10.0f;            ///< DM 电机力矩限制
 inline constexpr float kPitchGravityCompensationNm = 1.3f;  ///< 俯仰重力补偿力矩
 
-inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
-inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
+inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 0.0f, 1.0f};    ///< 偏航位置 PID
+inline constexpr PidGains kYawSpeedPid{0.7f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
 inline constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
 }  // namespace gimbal

@@ -108,12 +108,12 @@ struct SharedResources {
     dr16.Begin();
 
     if (!joint_can.has_value()) {
-      joint_can.emplace(wheel_legged::params::active::globals::kJointCanTxLimitHz, hfdcan1);
+      joint_can.emplace(wheel_legged::params::active::globals::kJointCanTxLimitHz, hfdcan2);
       joint_can->SetFilter(0, 0);
       joint_can->Begin();
     }
     if (!wheel_can.has_value()) {
-      wheel_can.emplace(wheel_legged::params::active::globals::kWheelCanTxLimitHz, hfdcan2);
+      wheel_can.emplace(wheel_legged::params::active::globals::kWheelCanTxLimitHz, hfdcan1);
       wheel_can->SetFilter(0, 0);
       wheel_can->Begin();
     }
@@ -257,6 +257,7 @@ extern volatile float wl_fm_model_theta_b_dot_rad_s;
 extern volatile float wl_fm_model_l_l_m;
 extern volatile float wl_fm_model_l_r_m;
 extern volatile float wl_fm_yaw_target_rad;
+extern volatile float wl_fm_yaw_rad;
 extern volatile float wl_fm_yaw_motor_pos_rad;
 extern volatile float wl_fm_yaw_motor_vel_rad_s;
 extern volatile float wl_fm_pitch_target_rad;

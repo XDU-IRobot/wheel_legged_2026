@@ -91,6 +91,7 @@ volatile float wl_fm_model_theta_b_dot_rad_s{0.0f};
 volatile float wl_fm_model_l_l_m{0.0f};
 volatile float wl_fm_model_l_r_m{0.0f};
 volatile float wl_fm_yaw_target_rad{0.0f};
+volatile float wl_fm_yaw_rad{0.0f};
 volatile float wl_fm_yaw_motor_pos_rad{0.0f};
 volatile float wl_fm_yaw_motor_vel_rad_s{0.0f};
 volatile float wl_fm_pitch_target_rad{0.0f};
@@ -543,7 +544,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, InputSnapshot &input,
     tc_remote.valid = true;
     tc_remote.mouse_x = g.gimbal_rx->mouse_x();
     tc_remote.mouse_y = g.gimbal_rx->mouse_y();
-    tc_remote.mouse_z = g.gimbal_rx->mouse_z();
     tc_remote.left_button = g.gimbal_rx->left_button();
     tc_remote.right_button = g.gimbal_rx->right_button();
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
@@ -667,6 +667,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const InputSnapshot &input, con
   wl_fm_left_leg_length_m = x.l_l;
   wl_fm_right_leg_length_m = x.l_r;
   wl_fm_yaw_target_rad = gimbal_control_output.yaw_target_rad;
+  wl_fm_yaw_rad = gimbal_control_output.yaw_pos_rad;
   wl_fm_yaw_motor_pos_rad = input.estimator_input.yaw_motor_rad;
   wl_fm_yaw_motor_vel_rad_s = gimbal_control_output.yaw_vel_rad_s;
   wl_fm_pitch_target_rad = gimbal_control_output.pitch_target_rad;
