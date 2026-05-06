@@ -84,7 +84,12 @@ class Shoot2Fric {
     kSingleShot,
   };
 
-  void SetMode(Mode mode) { mode_ = mode; }
+  void SetMode(Mode mode) {
+    if (mode != mode_) {
+      pid_.loader_speed.Clear();
+    }
+    mode_ = mode;
+  }
 
   /// 设置射频（发/秒）
   void SetShootFrequency(float frequency) {

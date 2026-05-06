@@ -32,7 +32,9 @@ class Fsm {
    * @brief 状态机输入
    */
   struct Input {
-    wheel_legged::GimbalFsmInput request{};
+    wheel_legged::ModeRequest request{};  ///< 控制环生成的统一语义请求
+    bool chassis_recovery_active{false};  ///< 底盘是否处于恢复流程
+    bool startup_align_complete{false};   ///< 启动偏航归中是否完成
   };
 
   /**
@@ -45,6 +47,8 @@ class Fsm {
     struct ControlOutput {
       bool gimbal_enable{false};             ///< 是否使能云台电机
       bool align_to_chassis_forward{false};  ///< 是否忽略目标并对齐车体前方
+      bool fire_allowed{false};              ///< 当前模式是否允许发射
+      bool shoot_request{false};             ///< 发射请求输出
       wheel_legged::TargetSource active_target_source{wheel_legged::TargetSource::kRc};  ///< 实际采用的目标来源
       wheel_legged::GimbalTarget gimbal_target{};  ///< 实际下发给云台控制器的目标
     };

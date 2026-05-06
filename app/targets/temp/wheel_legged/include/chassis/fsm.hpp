@@ -37,7 +37,7 @@ class Fsm {
    * @note  由 control_loop 生成统一语义请求并传入。
    */
   struct Input {
-    wheel_legged::ChassisFsmInput request{};
+    wheel_legged::ModeRequest request{};
   };
 
   /**
@@ -48,15 +48,15 @@ class Fsm {
      * @brief 控制动作输出
      */
     struct ControlOutput {
-      bool enable_dm{false};            ///< DM 电机使能
-      bool run_chassis_update{false};   ///< 是否执行底盘控制更新
-      bool spin_enable{false};          ///< 速度估计是否使用轮速直通
-      bool recovery_enable{false};      ///< 是否使能恢复逻辑 (@todo 未接入 control_loop)
-      bool safe_output_required{true};  ///< 是否要求安全输出（全零）(@todo 未接入 control_loop)
+      bool enable_dm{false};                                                 ///< DM 电机使能
+      bool run_chassis_update{false};                                        ///< 是否执行底盘控制更新
+      bool spin_enable{false};                                               ///< 速度估计是否使用轮速直通
+      bool recovery_enable{false};                                           ///< 是否使能恢复逻辑
+      bool safe_output_required{true};                                       ///< 是否要求安全输出（全零）
       wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
       float target_leg_length_m{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 目标腿长
       float theta_leg_target_rad{0.0f};  ///< 目标腿摆角，非零时覆盖默认偏置
-      uint8_t jump_phase{0};             ///< 跳跃阶段编号，0=非跳跃 (@todo 未接入 control_loop)
+      uint8_t jump_phase{0};             ///< 跳跃阶段编号，0 表示非跳跃
     };
 
     State mode{State::kDisabled};  ///< 当前模式

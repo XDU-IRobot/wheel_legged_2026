@@ -90,32 +90,6 @@ class Actuators {
     }
   }
 
-#if WHEEL_LEGGED_ROBOT_VARIANT != 1
-  /**
-   * @brief 下发双摩擦轮发射机构电流
-   */
-  void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
-    if (g.fric_left.has_value()) {
-      // g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-      g.fric_left->SetCurrent(static_cast<int16_t>(0));
-    }
-    if (g.fric_right.has_value()) {
-      // g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_right_current));
-      g.fric_right->SetCurrent(static_cast<int16_t>(0));
-    }
-    if (g.dial.has_value()) {
-      // g.fric_left->SetCurrent(static_cast<int16_t>(output.dial_current));
-      g.dial->SetCurrent(static_cast<int16_t>(0));
-    }
-    // if (g.gimbal_can.has_value()) {
-    //   rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
-    // }
-    // if (g.wheel_can.has_value()) {
-    //   rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
-    // }
-  }
-#endif
-
   void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
 
   // ---------- 发射机构使能/失能 ----------
@@ -201,10 +175,10 @@ class Actuators {
       return;
     }
 
-    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
-    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
     g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     g.yaw_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.pitch_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
 
     gimbal_motors_enabled_latched_ = true;
   }
