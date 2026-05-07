@@ -251,6 +251,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   if (IsSafeStopMode(input.fsm_mode)) {
     set_all_zero();
+    output_.left_force_n = 0.0f;
+    output_.right_force_n = 0.0f;
     return;
   }
 
@@ -316,6 +318,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+
+    // 离地时限制竖直力幅值，防止腾空瞬间力尖峰导致腿异常蹬伸/收束
+    if (off_ground_in_mid_high_leg) {
+      left_force_ = std::clamp(left_force_, -40.0f, 40.0f);
+      right_force_ = std::clamp(right_force_, -40.0f, 40.0f);
+    }
 
     // 离地、跳跃回收或上台阶时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
     if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb) {
@@ -451,6 +459,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       set_all_zero();
     }
   }
+  output_.left_force_n = left_force_;
+  output_.right_force_n = right_force_;
 }
 
 /**

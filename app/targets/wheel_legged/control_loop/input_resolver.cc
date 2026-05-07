@@ -143,7 +143,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
           break;
         case rm::device::DR16::SwitchPosition::kUp:
           combat_profile = wheel_legged::CombatProfile::kAutoAimWithMove;
-          leg_request = wheel_legged::LegProfile::kMid;
+          leg_request = wheel_legged::LegProfile::kLow;
           break;
         default:
           break;
@@ -159,14 +159,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
   request.leg_request = leg_request;
 
-  // ── 目标来源：自瞄模式优先上位机，上位机无效时降级为 RC ──
-  // @todo: 上位机自瞄目标尚未接入，host_target_valid 始终为 false，host_target 始终为零。
-  // 接入后需从 CAN/串口读取上位机目标并填充 host_target / host_target_valid。
-  const bool host_target_valid = false;
-  request.host_target_valid = host_target_valid;
+  // ── 目标来源：自瞄模式优先上位机（host_target 已在调用前从 NUC CAN 填充）──
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
       combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
-    request.target_source = host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
+    request.target_source =
+        request.host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
   } else {
     request.target_source = wheel_legged::TargetSource::kRc;
   }
@@ -255,8 +252,21 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
   }
 
-  // 3. 语义折叠
+  // 3a. 语义折叠
   ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
+
+  // 3b. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
+  if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0) {
+    constexpr float kDegToRad = params::active::kPi / 180.0f;
+    input.mode_request.host_target.yaw_rad = -g.aimbot->yaw() * kDegToRad;
+    input.mode_request.host_target.pitch_rad = g.aimbot->pitch() * kDegToRad;
+    input.mode_request.host_target_valid = true;
+    // 修正 target_source：ResolveInputSemantics 计算时 host_target_valid 尚为 false，需重设
+    if (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
+        input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
+      input.mode_request.target_source = wheel_legged::TargetSource::kHost;
+    }
+  }
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;

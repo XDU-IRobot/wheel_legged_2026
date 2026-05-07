@@ -40,7 +40,6 @@ constexpr float kLockPointEnterInputThreshold = ns::control_loop::kLockPointEnte
 constexpr float kLockPointExitInputThreshold = ns::control_loop::kLockPointExitInputThreshold;
 constexpr uint32_t kLockPointMinDwellTicks = ns::control_loop::kLockPointMinDwellTicks;
 constexpr float kLockPointFilteredSdotZeroThreshold = ns::control_loop::kLockPointFilteredSdotZeroThreshold;
-constexpr uint32_t kLockPointSpeedSettledTicks = ns::control_loop::kLockPointSpeedSettledTicks;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -124,6 +123,7 @@ void ControlLoop() {
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
+  gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
   if (gimbal_startup_align_active) {
     // 归中阶段：强制对齐车头方向，覆盖 FSM 下发的目标
     gimbal_update_input.align_to_chassis_forward = false;
@@ -349,7 +349,6 @@ void ControlLoop() {
   if (!lockpoint_enabled) {
     ctx.lock_point_target = false;
     ctx.was_requesting_lock = false;
-    ctx.lock_point_zero_speed_ticks = 0U;
   } else {
     const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
     const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
@@ -357,23 +356,17 @@ void ControlLoop() {
     wl_debug.lock_point_request = request_lock ? 1U : 0U;
     const uint32_t elapsed = now_ms - ctx.lock_point_last_switch_tick;
 
-    // 跟踪 filtered_s_dot 维持在零的连续周期数（斜坡完成判据）
+    // filtered_s_dot 已斜坡归零（无需保持 N 周期，到达即锁定）
     const bool filtered_s_dot_at_zero = std::fabs(ctx.filtered_s_dot) < kLockPointFilteredSdotZeroThreshold;
     wl_debug.lock_point_speed_below_threshold = filtered_s_dot_at_zero ? 1U : 0U;
-    if (request_lock && filtered_s_dot_at_zero) {
-      ++ctx.lock_point_zero_speed_ticks;
-    } else {
-      ctx.lock_point_zero_speed_ticks = 0U;
-    }
 
     if (request_lock && !ctx.was_requesting_lock) {
       wl_debug.lock_point_rising_edge = 1U;
     }
     ctx.was_requesting_lock = request_lock;
 
-    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零并保持 N 周期 + 消抖 dwell
-    if (!ctx.lock_point_target && request_lock && ctx.lock_point_zero_speed_ticks >= kLockPointSpeedSettledTicks &&
-        elapsed >= kLockPointMinDwellTicks) {
+    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零 + 消抖 dwell
+    if (!ctx.lock_point_target && request_lock && filtered_s_dot_at_zero && elapsed >= kLockPointMinDwellTicks) {
       ctx.lock_point_target = true;
       ctx.lock_point_s_ref = current_state.s;
       ctx.lock_point_last_switch_tick = now_ms;
@@ -403,7 +396,9 @@ void ControlLoop() {
 
   // ── 7k. 期望状态填充（定点锁定 blend + 腿摆角偏置 + 偏航角速度）──
   chassis_update_input.expected.s_dot =
-      spin_control_enabled ? spin_target_s_dot : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot;
+      chassis_control_output.off_ground_in_mid_high_leg
+          ? current_state.s_dot
+          : (spin_control_enabled ? spin_target_s_dot : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot);
   ctx.expected_s = ctx.lock_point_alpha * ctx.lock_point_s_ref + (1.0f - ctx.lock_point_alpha) * current_state.s;
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
@@ -446,7 +441,47 @@ void ControlLoop() {
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
   // ═══════════════════════════════════════════════════════════════════════
-  // 阶段 8：调试快照导出
+  // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
+  // ═══════════════════════════════════════════════════════════════════════
+  if (globals->aimbot.has_value() && globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0) {
+    constexpr float kDegToRad = kPi / 180.0f;
+    const float yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
+    const float pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
+    const float roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
+
+    uint8_t aimbot_mode = 1;
+    switch (chassis_input.request.combat_profile) {
+      case wheel_legged::CombatProfile::kAutoAimNoMove:
+        aimbot_mode = 1;
+        break;
+      case wheel_legged::CombatProfile::kAutoAimWithMove:
+        aimbot_mode = 1;
+        break;
+      case wheel_legged::CombatProfile::kNormal:
+      default:
+        aimbot_mode = 1;
+        break;
+    }
+
+    const bool referee_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
+    const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
+    const float bullet_speed =
+        (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
+    const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
+    globals->aimbot->UpdateControl(yaw_rad, pitch_rad, roll_rad, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
+
+    // 自瞄 TX 调试
+    wl_debug.aimbot_tx_mode = aimbot_mode;
+    wl_debug.aimbot_tx_robot_id = robot_id;
+  } else {
+    wl_debug.aimbot_tx_mode = 0U;
+    wl_debug.aimbot_tx_robot_id = 0U;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 阶段 9：调试快照导出
   // ═══════════════════════════════════════════════════════════════════════
   if (globals->gimbal_rx.has_value()) {
     wl_debug.gimbal_imu_pitch_rad = globals->gimbal_rx->pitch_rad();
@@ -459,6 +494,17 @@ void ControlLoop() {
     wl_debug.gimbal_imu_gyro_x_rad_s = 0.0f;
     wl_debug.gimbal_imu_gyro_z_rad_s = 0.0f;
   }
+  // ── 云台 IMU 欧拉角（Frame C: 0x112，原始为度，转为弧度存储）──
+  if (globals->gimbal_rx.has_value()) {
+    constexpr float kDegToRad = kPi / 180.0f;
+    wl_debug.gimbal_euler_yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
+    wl_debug.gimbal_euler_pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
+    wl_debug.gimbal_euler_roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
+  } else {
+    wl_debug.gimbal_euler_yaw_rad = 0.0f;
+    wl_debug.gimbal_euler_pitch_rad = 0.0f;
+    wl_debug.gimbal_euler_roll_rad = 0.0f;
+  }
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();
     wl_debug.dyp_distance_raw_right = globals->dyp_rx->distance_raw_right();
@@ -468,6 +514,33 @@ void ControlLoop() {
   }
   wl_debug.yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
   wl_debug.pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;
+
+  // ── 裁判系统调试 ──
+  if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk) {
+    wl_debug.referee_online = 1U;
+    wl_debug.referee_robot_id = globals->referee->data().robot_status.robot_id;
+    wl_debug.referee_bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
+  } else {
+    wl_debug.referee_online = 0U;
+    wl_debug.referee_robot_id = 0U;
+    wl_debug.referee_bullet_speed_mps = 0.0f;
+  }
+
+  // ── 自瞄 RX 调试（NUC 反馈，原始为度，转为弧度存储）──
+  if (globals->aimbot.has_value()) {
+    constexpr float kDegToRad = kPi / 180.0f;
+    wl_debug.aimbot_rx_state = globals->aimbot->aimbot_state();
+    wl_debug.aimbot_rx_target = globals->aimbot->aimbot_target();
+    wl_debug.aimbot_rx_nuc_start_flag = globals->aimbot->nuc_start_flag();
+    wl_debug.aimbot_rx_yaw_rad = globals->aimbot->yaw() * kDegToRad;
+    wl_debug.aimbot_rx_pitch_rad = globals->aimbot->pitch() * kDegToRad;
+  } else {
+    wl_debug.aimbot_rx_state = 0U;
+    wl_debug.aimbot_rx_target = 0U;
+    wl_debug.aimbot_rx_nuc_start_flag = 0U;
+    wl_debug.aimbot_rx_yaw_rad = 0.0f;
+    wl_debug.aimbot_rx_pitch_rad = 0.0f;
+  }
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }

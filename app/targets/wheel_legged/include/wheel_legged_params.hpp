@@ -34,6 +34,7 @@ constexpr double kGimbalCanTxLimitHz = 4000.0;
 
 constexpr std::size_t kDr16UartRxBufferSize = 18;
 constexpr std::size_t kImuUartRxBufferSize = 518;
+constexpr std::size_t kRefereeUartRxBufferSize = 256;
 }  // namespace globals
 
 namespace gimbal {
@@ -109,8 +110,10 @@ constexpr float kWheelCurrentClampAbs = 16000.0f;
 namespace remote_control_can_bridge {
 constexpr std::uint16_t kRxStdIdA = 0x110;
 constexpr std::uint16_t kRxStdIdB = 0x111;
+constexpr std::uint16_t kRxStdIdC = 0x112;
 constexpr std::size_t kPayloadSizeA = 8U;
 constexpr std::size_t kPayloadSizeB = 8U;
+constexpr std::size_t kPayloadSizeC = 8U;
 }  // namespace remote_control_can_bridge
 
 namespace state_estimator {
@@ -289,7 +292,6 @@ constexpr float kLockPointEnterInputThreshold = 0.08f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 50U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -336,6 +338,15 @@ namespace main {
 using namespace common::main;
 }
 
+namespace aimbot {
+constexpr uint8_t kRobotId = 1U;
+constexpr float kBulletSpeedMps = 11.8f;
+constexpr PidGains kYawPositionPid{18.0f, 0.5f, 0.02f, 1000.0f, 2.0f};
+constexpr PidGains kYawSpeedPid{0.8f, 0.0f, 0.0f, 10.0f, 0.3f};
+constexpr PidGains kPitchPositionPid{20.0f, 0.5f, 0.02f, 1000.0f, 1.5f};
+constexpr PidGains kPitchSpeedPid{1.5f, 0.0f, 0.0f, 10.0f, 0.3f};
+}  // namespace aimbot
+
 }  // namespace hero
 
 // ── Infantry3 (variant 2) 特殊参数 ──
@@ -375,7 +386,7 @@ using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode
 const DmMitSettings kPitchMotorSettings{0x05, 0x04, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-constexpr float kPitchMinRad = -0.2f;
+constexpr float kPitchMinRad = -0.3f;
 constexpr float kPitchMaxRad = 0.25f;
 
 inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
@@ -401,8 +412,8 @@ constexpr std::uint32_t kJumpRecoverMs = 250U;
 constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;
 constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;
 
-constexpr float kLowLegLengthM = 0.15f;
-constexpr float kMidLegLengthM = 0.21f;
+constexpr float kLowLegLengthM = 0.127f;
+constexpr float kMidLegLengthM = 0.18f;
 constexpr float kHighLegLengthM = 0.3f;
 constexpr float kJumpPrepLegLengthM = 0.13f;
 constexpr float kJumpPushLegLengthM = 0.22f;
@@ -428,28 +439,26 @@ constexpr float kPostureThetaBMinRad = -0.7f;
 constexpr float kPostureThetaBMaxRad = 0.7f;
 
 constexpr std::array<float, 240> kCtrlP{
-    -4.2448,  -27.943,  24.322,   48.081,    -22.811,  -20.812, -7.3808, -34.992, 38.389,   65.198,    -42.541,
-    -31.147,  -0.67131, 3.8281,   -0.59644,  -4.5997,  0.61137, 1.0939,  -1.5435, 9.1817,   -1.783,    -10.673,
-    1.1528,   3.2836,   -17.237,  -73.41,    11.51,    72.6,    -2.0572, -14.979, -1.0135,  -6.4992,   2.9845,
-    -4.127,   1.7761,   -3.7835,  -3.4261,   4.7568,   -0.7934, 4.2219,  -9.0128, 1.6866,   -0.33564,  -1.736,
-    -0.23046, 6.6042,   -11.509,  2.0019,    -18.794,  43.53,   18.593,  -32.15,  -21.354,  -19.936,   -2.6642,
-    3.4226,   5.8749,   0.53733,  -6.3349,   -6.1988,  -4.2448, 24.322,  -27.943, -20.812,  -22.811,   48.081,
-    -7.3808,  38.389,   -34.992,  -31.147,   -42.541,  65.198,  0.67131, 0.59644, -3.8281,  -1.0939,   -0.61137,
-    4.5997,   1.5435,   1.783,    -9.1817,   -3.2836,  -1.1528, 10.673,  -3.4261, -0.7934,  4.7568,    1.6866,
-    -9.0128,  4.2219,   -0.33564, -0.23046,  -1.736,   2.0019,  -11.509, 6.6042,  -17.237,  11.51,     -73.41,
-    -14.979,  -2.0572,  72.6,     -1.0135,   2.9845,   -6.4992, -3.7835, 1.7761,  -4.127,   -18.794,   18.593,
-    43.53,    -19.936,  -21.354,  -32.15,    -2.6642,  5.8749,  3.4226,  -6.1988, -6.3349,  0.53733,   3.6792,
-    -10.117,  1.0467,   -7.9563,  18.399,    -3.2531,  5.6247,  -12.837, -3.7072, -13.93,   32,        -0.69807,
-    -0.71498, -1.9782,  -0.98018, 3.7112,    0.088883, 1.5526,  -1.626,  -5.0291, -2.3054,  9.3236,    -0.22558,
-    3.716,    29.6,     -63.851,  5.7607,    69.982,   15.007,  -12.607, 1.5174,  -2.1169,  -0.030715, 0.85042,
-    5.389,    -1.1938,  -2.6014,  -12.076,   -2.8847,  15.998,  -8.8749, 0.36243, -0.20479, -0.87095,  2.1866,
-    -0.5102,  -2.293,   -1.4209,  -27.372,   -82.372,  32.363,  111.12,  7.5488,  -46.071,  -2.0412,   -10.549,
-    4.1377,   11.895,   3.6102,   -6.3437,   3.6792,   1.0467,  -10.117, -3.2531, 18.399,   -7.9563,   5.6247,
-    -3.7072,  -12.837,  -0.69807, 32,        -13.93,   0.71498, 0.98018, 1.9782,  -1.5526,  -0.088883, -3.7112,
-    1.626,    2.3054,   5.0291,   -3.716,    0.22558,  -9.3236, -2.6014, -2.8847, -12.076,  0.36243,   -8.8749,
-    15.998,   -0.20479, 2.1866,   -0.87095,  -1.4209,  -2.293,  -0.5102, 29.6,    5.7607,   -63.851,   -12.607,
-    15.007,   69.982,   1.5174,   -0.030715, -2.1169,  -1.1938, 5.389,   0.85042, -27.372,  32.363,    -82.372,
-    -46.071,  7.5488,   111.12,   -2.0412,   4.1377,   -10.549, -6.3437, 3.6102,  11.895,
+    -4.2214,  -30.753, 25.129,  48.885,  -22.672,  -19.467, -6.8658,  -34.141,  35.801,   59.656,   -40.377,   -25.848,
+    -0.77615, 3.6689,  -1.1832, -3.9104, 0.22463,  1.9226,  -1.7685,  8.7367,   -3.1576,  -8.8793,  -0.013221, 5.2525,
+    -14.076,  -80.556, 14.541,  78.773,  2.93,     -19.276, -0.87164, -6.575,   2.9119,   -4.0666,  2.4181,    -3.5158,
+    -4.0014,  4.8923,  -4.8027, 5.8437,  -11.025,  6.1164,  -0.38154, -1.5261,  -0.30763, 6.1156,   -11.719,   2.3242,
+    -22.629,  39.279,  28.243,  -13.282, -31.035,  -27.651, -2.7919,  2.5673,   6.6843,   2.1642,   -7.0677,   -6.6044,
+    -4.2214,  25.129,  -30.753, -19.467, -22.672,  48.885,  -6.8658,  35.801,   -34.141,  -25.848,  -40.377,   59.656,
+    0.77615,  1.1832,  -3.6689, -1.9226, -0.22463, 3.9104,  1.7685,   3.1576,   -8.7367,  -5.2525,  0.013221,  8.8793,
+    -4.0014,  -4.8027, 4.8923,  6.1164,  -11.025,  5.8437,  -0.38154, -0.30763, -1.5261,  2.3242,   -11.719,   6.1156,
+    -14.076,  14.541,  -80.556, -19.276, 2.93,     78.773,  -0.87164, 2.9119,   -6.575,   -3.5158,  2.4181,    -4.0666,
+    -22.629,  28.243,  39.279,  -27.651, -31.035,  -13.282, -2.7919,  6.6843,   2.5673,   -6.6044,  -7.0677,   2.1642,
+    7.3911,   -3.3225, -13.797, -35.397, 39.628,   8.0106,  10.597,   -4.0079,  -26.725,  -47.716,  64.247,    15.487,
+    -0.78285, -3.8697, -1.4819, 6.7629,  -1.3144,  2.3561,  -1.7788,  -9.4618,  -3.1835,  16.329,   -3.5375,   5.0838,
+    45.613,   -82.113, 5.8946,  75.142,  31.651,   -17.194, 2.2927,   -0.68969, -1.3678,  -0.19986, 6.2515,    -0.10509,
+    -2.7041,  -22.429, -5.1453, 25.619,  -15.181,  -3.2146, -0.14859, -0.54937, 2.7018,   -3.3897,  0.49555,   -4.3112,
+    -35.777,  -152.5,  51.402,  190.06,  23.114,   -71.77,  -1.8202,  -14.733,  3.4294,   14.188,   7.779,     -6.029,
+    7.3911,   -13.797, -3.3225, 8.0106,  39.628,   -35.397, 10.597,   -26.725,  -4.0079,  15.487,   64.247,    -47.716,
+    0.78285,  1.4819,  3.8697,  -2.3561, 1.3144,   -6.7629, 1.7788,   3.1835,   9.4618,   -5.0838,  3.5375,    -16.329,
+    -2.7041,  -5.1453, -22.429, -3.2146, -15.181,  25.619,  -0.14859, 2.7018,   -0.54937, -4.3112,  0.49555,   -3.3897,
+    45.613,   5.8946,  -82.113, -17.194, 31.651,   75.142,  2.2927,   -1.3678,  -0.68969, -0.10509, 6.2515,    -0.19986,
+    -35.777,  51.402,  -152.5,  -71.77,  23.114,   190.06,  -1.8202,  3.4294,   -14.733,  -6.029,   7.779,     14.188,
 };
 
 constexpr PidGains kLeftL0Pid{7500.0f, 0.04f, 90000.0f, 170.0f, 10.0f};
@@ -473,9 +482,8 @@ constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
-constexpr float kLockPointAlphaRiseStep = 0.015f;
-constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kLockPointAlphaRiseStep = 1.f;
+constexpr float kLockPointAlphaFallStep = 1.f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
 constexpr float kSpinYawRampStepRadS = 0.05f;
 constexpr float kSpinTargetYawDotRadS = 6.0f;
@@ -487,11 +495,11 @@ constexpr float kExpectedThetaLlBiasRad = 0.13f;
 constexpr float kExpectedThetaLrBiasRad = 0.13f;
 constexpr float kExpectedThetaBBiasRad = 0.0f;
 
-constexpr SdotRampParams kSdotRampLowLeg{0.005f, 0.005f};
-constexpr SdotRampParams kSdotRampMidLeg{0.004f, 0.004f};
-constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.01f};
+constexpr SdotRampParams kSdotRampMidLeg{0.007f, 0.007f};
+constexpr SdotRampParams kSdotRampHighLeg{0.005f, 0.005f};
 
-constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
+constexpr PidGains kYawFollowPid{10.0f, 0.0f, 2.2f, 10.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
@@ -519,6 +527,15 @@ using namespace common::remote_control_can_bridge;
 namespace main {
 using namespace common::main;
 }
+
+namespace aimbot {
+constexpr uint8_t kRobotId = 3U;
+constexpr float kBulletSpeedMps = 23.0f;
+constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.05f, 10.0f, 2.0f};
+constexpr PidGains kYawSpeedPid{0.5f, 0.0f, 0.0f, 6.0f, 0.3f};
+constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.05f, 10.0f, 1.5f};
+constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 8.0f, 0.3f};
+}  // namespace aimbot
 
 }  // namespace infantry3
 
@@ -657,7 +674,6 @@ constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr std::uint32_t kLockPointSpeedSettledTicks = 30U;
 constexpr float kLockPointAlphaRiseStep = 0.015f;
 constexpr float kLockPointAlphaFallStep = 0.018f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
@@ -703,6 +719,15 @@ using namespace common::remote_control_can_bridge;
 namespace main {
 using namespace common::main;
 }
+
+namespace aimbot {
+constexpr uint8_t kRobotId = 4U;
+constexpr float kBulletSpeedMps = 23.0f;
+constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.05f, 10.0f, 2.0f};
+constexpr PidGains kYawSpeedPid{0.5f, 0.0f, 0.0f, 6.0f, 0.3f};
+constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.05f, 10.0f, 1.5f};
+constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 8.0f, 0.3f};
+}  // namespace aimbot
 
 }  // namespace infantry4
 
