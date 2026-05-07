@@ -386,18 +386,18 @@ constexpr float kPitchMaxRad = 0.25f;
 
 inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
 inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
-inline constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.05f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+inline constexpr PidGains kPitchPositionPid{23.0f, 0.0f, 0.15f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
 }  // namespace gimbal
 
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;
-constexpr float kFricSpeedTargetRpm = 6000.0f;
+constexpr float kFricSpeedTargetRpm = 6900.0f;
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};
-constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.0f, 2000.0f, 0.0f};
-constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 0.0f};
+constexpr PidGains kDialSpeedPid{15.0f, 0.f, 0.2f, 2000.0f, 0.0f};
+constexpr PidGains kDialPositionPid{8.0f, 0.f, 0.0f, 12000.0f, 0.0f};
 constexpr int16_t kDialFireThreshold = -600;
-constexpr float kShootFrequencyHz = 1.0f;
+constexpr float kShootFrequencyHz = 10.0f;
 }  // namespace shoot
 
 namespace chassis_fsm {

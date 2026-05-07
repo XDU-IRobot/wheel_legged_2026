@@ -2456,10 +2456,10 @@
 		</object>
 		<object name="ObjId0041" type="CPrjDoc_Hi509FileType"/>
 		<object name="ObjId0042" type="CObList">
-			<member name="item0" type="CObject_ptr">ObjId0043</member>
+			<member name="item0" type="CObject_ptr">ObjId0395</member>
 		</object>
-		<object name="ObjId0043" type="CPrjDoc_MapFileInfo">
-			<member name="file_name" type="string">D:\rm\2026_code\1\embedded-2026-h7\build\Debug-infantry3\app\wheel_legged.elf</member>
+		<object name="ObjId0395" type="CPrjDoc_MapFileInfo">
+			<member name="file_name" type="string">..\..\..\..\build\Debug-infantry3\app\wheel_legged.elf</member>
 			<member name="file_type" type="CObject_ptr">ObjId0040</member>
 		</object>
 		<object name="ObjId0044" type="CStringList"/>
