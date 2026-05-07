@@ -221,8 +221,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   // 起立完成判定：双腿 theta 均小于阈值后锁存
   constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-  if (!standup_complete_ &&
-      std::fabs(state_output.current.theta_ll) < kThetaThreshold &&
+  if (!standup_complete_ && std::fabs(state_output.current.theta_ll) < kThetaThreshold &&
       std::fabs(state_output.current.theta_lr) < kThetaThreshold) {
     standup_complete_ = true;
   }
