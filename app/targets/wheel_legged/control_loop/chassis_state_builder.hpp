@@ -43,13 +43,8 @@ struct ChassisStateContext {
   float filtered_yaw_dot{0.0f};  ///< 滤波后的偏航角速度
   float expected_s{0.0f};        ///< 期望纵向位置（定点锁定 blend 输出）
 
-  // ── 定点锁定 ──
-  bool lock_point_target{false};             ///< 是否激活定点锁定
-  float lock_point_alpha{0.0f};              ///< 锁定 blend 系数 [0, 1]
-  float lock_point_s_ref{0.0f};              ///< 锁定的参考位置
-  uint32_t lock_point_last_switch_tick{0U};  ///< 上次锁定切换的 tick
-  bool was_requesting_lock{false};           ///< 上一周期是否请求锁定
-  uint32_t lock_point_zero_speed_ticks{0U};  ///< filtered_s_dot 维持在零的连续 tick 数
+  // ── 位置保持（I 项）──
+  bool integrate_position{false};  ///< 是否对期望纵向位置进行积分（速度目标归零后冻结为锚点）
 
   // ── 偏航跟随 ──
   rm::modules::PID yaw_follow_pid{};                                      ///< 偏航跟随 PID
@@ -93,13 +88,6 @@ void RampValueToTarget(float target, float &value, const SdotRampParams &ramp_pa
  * @param ramp_step        每周期步长
  */
 void RampYawDotToTarget(float target_yaw_dot, float &filtered_yaw_dot, float ramp_step);
-
-/**
- * @brief 定点锁定 blend 系数更新
- * @param target_lock true 时 alpha 上升（锁定），false 时 alpha 下降（解锁）
- * @param alpha_lock  当前 blend 系数 [0, 1]（读写）
- */
-void UpdateLockPointBlend(bool target_lock, float &alpha_lock);
 
 /**
  * @brief 选择离当前偏航电机角最近的目标角（双候选：fixed 与 fixed+pi）
