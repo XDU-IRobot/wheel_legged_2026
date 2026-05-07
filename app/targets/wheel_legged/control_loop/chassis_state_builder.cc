@@ -21,9 +21,6 @@ constexpr float kGimbalStartupYawAlignErrorRad = params::active::control_loop::k
 constexpr float kGimbalStartupYawAlignVelRadS = params::active::control_loop::kGimbalStartupYawAlignVelRadS;
 constexpr float kYawFollowDriveReadyErrorRad = params::active::control_loop::kYawFollowDriveReadyErrorRad;
 constexpr float kYawFollowDriveReadyVelRadS = params::active::control_loop::kYawFollowDriveReadyVelRadS;
-constexpr float kLockPointAlphaRiseStep = params::active::control_loop::kLockPointAlphaRiseStep;
-constexpr float kLockPointAlphaFallStep = params::active::control_loop::kLockPointAlphaFallStep;
-
 constexpr SdotRampParams kSdotRampLowLeg = params::active::control_loop::kSdotRampLowLeg;
 constexpr SdotRampParams kSdotRampMidLeg = params::active::control_loop::kSdotRampMidLeg;
 constexpr SdotRampParams kSdotRampHighLeg = params::active::control_loop::kSdotRampHighLeg;
@@ -35,10 +32,8 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   filtered_s_dot = current_s_dot;
   filtered_yaw_dot = 0.0f;
   yaw_follow_pid.Clear();
-  lock_point_target = false;
+  integrate_position = false;
   yaw_follow_target_initialized = false;
-  lock_point_alpha = 0.0f;
-  lock_point_s_ref = expected_s;
 }
 
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {
@@ -63,14 +58,6 @@ void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot, con
   } else if (filtered_yaw_dot > target_yaw_dot) {
     filtered_yaw_dot -= ramp_step;
     if (filtered_yaw_dot < target_yaw_dot) filtered_yaw_dot = target_yaw_dot;
-  }
-}
-
-void UpdateLockPointBlend(const bool target_lock, float &alpha_lock) {
-  if (target_lock) {
-    alpha_lock = rm::modules::Clamp(alpha_lock + kLockPointAlphaRiseStep, 0.0f, 1.0f);
-  } else {
-    alpha_lock = rm::modules::Clamp(alpha_lock - kLockPointAlphaFallStep, 0.0f, 1.0f);
   }
 }
 
