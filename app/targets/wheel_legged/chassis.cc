@@ -251,8 +251,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   if (IsSafeStopMode(input.fsm_mode)) {
     set_all_zero();
-    output_.left_force_n = 0;
-    output_.right_force_n = 0;
+    output_.left_force_n = 0.0f;
+    output_.right_force_n = 0.0f;
     return;
   }
 

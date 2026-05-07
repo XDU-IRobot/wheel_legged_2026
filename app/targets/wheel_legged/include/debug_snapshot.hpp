@@ -102,7 +102,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float state_s_m;                 // 纵向位置
   float state_s_dot_mps;           // 纵向速度
   float expected_s_m;              // 期望纵向位置
-  float expected_s_dot_mps;        // 期望纵向速度
+  float expected_s_dot_mps;        // 期望纵向速度（= filtered_s_dot）
+  float filtered_s_dot_mps;        // 斜坡滤波后的纵向速度（连接减速斜坡与 I 项积分）
   float state_phi_rad;             // 偏航角
   float state_phi_dot_rad_s;       // 偏航角速度
   float state_theta_ll_rad;        // 左腿摆角
@@ -137,13 +138,6 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_right_support_force_n;  // 右腿支撑力
   uint8_t chassis_posture_valid;        // 姿态有效
   uint8_t chassis_off_ground;           // 离地
-
-  // ── 定点锁定 ──
-  uint8_t lock_point_enabled;                // 定点锁定使能
-  uint8_t lock_point_request;                // 锁点请求
-  uint8_t lock_point_captured;               // 锁点已捕获
-  uint8_t lock_point_rising_edge;            // 锁点上升沿
-  uint8_t lock_point_speed_below_threshold;  // filtered_s_dot 已斜坡归零
 
   // ── DYP 超声波 ──
   uint16_t dyp_distance_raw_left;   // 左超声波读数

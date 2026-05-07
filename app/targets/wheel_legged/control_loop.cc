@@ -29,6 +29,7 @@ constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpee
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
+constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFreezeSpeedThresholdMps;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
@@ -36,10 +37,6 @@ constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRad = ns::control_loop::kExpectedThetaLlBiasRad;
 constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
-constexpr float kLockPointEnterInputThreshold = ns::control_loop::kLockPointEnterInputThreshold;
-constexpr float kLockPointExitInputThreshold = ns::control_loop::kLockPointExitInputThreshold;
-constexpr uint32_t kLockPointMinDwellTicks = ns::control_loop::kLockPointMinDwellTicks;
-constexpr float kLockPointFilteredSdotZeroThreshold = ns::control_loop::kLockPointFilteredSdotZeroThreshold;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -240,10 +237,6 @@ void ControlLoop() {
       // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
     }
-    if (ctx.last_chassis_mode == chassis::Fsm::State::kDisabled) {
-      ctx.chassis_has_been_driven = false;
-    }
-    ctx.lock_point_last_switch_tick = now_ms;
     ctx.last_chassis_mode = chassis_output.mode;
   }
 
@@ -257,11 +250,6 @@ void ControlLoop() {
   const float side_input_norm = drive.side;
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
   const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
-
-  // 首次摇杆拨动后，启用定点锁定逻辑
-  if (forward_input_active || side_input_active) {
-    ctx.chassis_has_been_driven = true;
-  }
 
   // ── 7d. 偏航跟随模式选择 ──
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
@@ -347,57 +335,23 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
-  // ── 7i. 定点锁定 ──
-  // 进入条件：摇杆归中 → 目标速度归零 → 斜坡令 filtered_s_dot 降至零 →
-  //           维持零速 N 周期（确认斜坡完成）→ 锁定，捕获当前位置为参考。
-  // 退出条件：摇杆超过退出阈值 + 消抖 dwell。
-  const bool lockpoint_enabled = chassis_output_enable && (chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                                           chassis_output.mode != chassis::Fsm::State::kSpin);
-  wl_debug.lock_point_enabled = lockpoint_enabled ? 1U : 0U;
-  if (!lockpoint_enabled) {
-    ctx.lock_point_target = false;
-    ctx.was_requesting_lock = false;
-  } else {
-    const float input_abs = std::max(std::fabs(forward_input_norm), std::fabs(side_input_norm));
-    const bool request_lock = (input_abs < kLockPointEnterInputThreshold);
-    const bool request_unlock = (input_abs > kLockPointExitInputThreshold);
-    wl_debug.lock_point_request = request_lock ? 1U : 0U;
-    const uint32_t elapsed = now_ms - ctx.lock_point_last_switch_tick;
-
-    // filtered_s_dot 已斜坡归零（无需保持 N 周期，到达即锁定）
-    const bool filtered_s_dot_at_zero = std::fabs(ctx.filtered_s_dot) < kLockPointFilteredSdotZeroThreshold;
-    wl_debug.lock_point_speed_below_threshold = filtered_s_dot_at_zero ? 1U : 0U;
-
-    if (request_lock && !ctx.was_requesting_lock) {
-      wl_debug.lock_point_rising_edge = 1U;
-    }
-    ctx.was_requesting_lock = request_lock;
-
-    // 进入锁定：摇杆归中 + filtered_s_dot 已斜坡归零 + 消抖 dwell
-    if (!ctx.lock_point_target && request_lock && filtered_s_dot_at_zero && elapsed >= kLockPointMinDwellTicks) {
-      ctx.lock_point_target = true;
-      ctx.lock_point_s_ref = current_state.s;
-      ctx.lock_point_last_switch_tick = now_ms;
-      wl_debug.lock_point_captured = 1U;
-      wl_debug.lock_point_rising_edge = 0U;
-    } else if (ctx.lock_point_target && request_unlock && elapsed >= kLockPointMinDwellTicks) {
-      ctx.lock_point_target = false;
-      ctx.lock_point_last_switch_tick = now_ms;
-      wl_debug.lock_point_captured = 0U;
-      wl_debug.lock_point_rising_edge = 0U;
-    }
-  }
-
-  // 锁定 blend 系数更新；α 接近 0 时持续刷新参考位置（跟随当前 s）
-  UpdateLockPointBlend(ctx.lock_point_target, ctx.lock_point_alpha);
-  if (ctx.lock_point_alpha < 0.02f && !ctx.was_requesting_lock) {
-    ctx.lock_point_s_ref = current_state.s;
-  }
-
-  // 使能后首次摇杆驱动前，强制关闭定点锁定（纯速度控制，避免起立时 s 漂移导致误锁定）
-  if (!ctx.chassis_has_been_driven) {
-    ctx.lock_point_target = false;
-    ctx.lock_point_alpha = 0.0f;
+  // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
+  // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
+  // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
+  //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
+  const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                 chassis_output.mode != chassis::Fsm::State::kSpin;
+  const bool driver_command_active = forward_input_active || side_input_active;
+  if (!can_hold_position || driver_command_active) {
+    ctx.integrate_position = false;
+    ctx.expected_s = current_state.s;
+  } else if (ctx.filtered_s_dot != 0.0f) {
+    ctx.integrate_position = true;
+    ctx.expected_s += ctx.filtered_s_dot * kControlLoopDtS;
+  } else if (ctx.integrate_position && std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps) {
+    // 速度斜坡刚走完，snap 锚点到实际停住的位置，然后冻结
+    ctx.expected_s = current_state.s;
+    ctx.integrate_position = false;
   }
 
   // ── 7j. 纵向速度斜坡 ──
@@ -408,15 +362,14 @@ void ControlLoop() {
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
-  // ── 7k. 期望状态填充（定点锁定 blend + 腿摆角偏置 + 偏航角速度）──
-  chassis_update_input.expected.s_dot =
-      chassis_control_output.off_ground_in_mid_high_leg
-          ? current_state.s_dot
-          : (spin_control_enabled ? spin_target_s_dot : (1.0f - ctx.lock_point_alpha) * ctx.filtered_s_dot);
-  ctx.expected_s = ctx.lock_point_alpha * ctx.lock_point_s_ref + (1.0f - ctx.lock_point_alpha) * current_state.s;
+  // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
+  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
+                                            ? current_state.s_dot
+                                            : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
+  wl_debug.filtered_s_dot_mps = ctx.filtered_s_dot;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
   if (spin_control_enabled) {
@@ -453,22 +406,6 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
-
-  // ── LQR 误差项调试 ──
-  {
-    const auto &cur = chassis_control_output.current_state;
-    const auto &exp = chassis_update_input.expected;
-    wl_debug.lqr_err_s = cur.s - exp.s;
-    wl_debug.lqr_err_s_dot = cur.s_dot - exp.s_dot;
-    wl_debug.lqr_err_phi = rm::modules::Wrap(cur.phi - exp.phi, -kPi, kPi);
-    wl_debug.lqr_err_phi_dot = cur.phi_dot - exp.phi_dot;
-    wl_debug.lqr_err_theta_ll = cur.theta_ll - exp.theta_ll;
-    wl_debug.lqr_err_theta_ll_dot = cur.theta_ll_dot - exp.theta_ll_dot;
-    wl_debug.lqr_err_theta_lr = cur.theta_lr - exp.theta_lr;
-    wl_debug.lqr_err_theta_lr_dot = cur.theta_lr_dot - exp.theta_lr_dot;
-    wl_debug.lqr_err_theta_b = cur.theta_b - exp.theta_b;
-    wl_debug.lqr_err_theta_b_dot = cur.theta_b_dot - exp.theta_b_dot;
-  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
