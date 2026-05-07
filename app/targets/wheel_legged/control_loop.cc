@@ -339,9 +339,8 @@ void ControlLoop() {
   // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
   //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
-  const bool can_hold_position = chassis_output_enable &&
-                                  chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                  chassis_output.mode != chassis::Fsm::State::kSpin;
+  const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                 chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
   if (!can_hold_position || driver_command_active) {
     ctx.integrate_position = false;
@@ -364,10 +363,9 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
-  chassis_update_input.expected.s_dot =
-      chassis_control_output.off_ground_in_mid_high_leg
-          ? current_state.s_dot
-          : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
+  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
+                                            ? current_state.s_dot
+                                            : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
