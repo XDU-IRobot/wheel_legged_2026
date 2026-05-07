@@ -412,9 +412,9 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   if (globals->aimbot.has_value() && globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0) {
     constexpr float kRadToDeg = 180.f / kPi;
-    const float yaw_deg =  globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
+    const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    const float roll_deg = globals->gimbal_rx->euler_roll_rad()* kRadToDeg;
+    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
