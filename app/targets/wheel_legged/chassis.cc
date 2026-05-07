@@ -208,8 +208,26 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   if (!output_.posture_valid) {
   } else if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
     SafeStop();
+    prev_enable_output_ = false;
+    standup_complete_ = false;
     return;
   }
+
+  // 检测 enable_output 上升沿：关节先出力，轮端等待起立完成再输出
+  if (input.enable_output && !prev_enable_output_) {
+    standup_complete_ = false;
+  }
+  prev_enable_output_ = input.enable_output;
+
+  // 起立完成判定：双腿 theta 均小于阈值后锁存
+  constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+  if (!standup_complete_ &&
+      std::fabs(state_output.current.theta_ll) < kThetaThreshold &&
+      std::fabs(state_output.current.theta_lr) < kThetaThreshold) {
+    standup_complete_ = true;
+  }
+
+  output_.standup_complete = standup_complete_;
 
   const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
                              input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
@@ -325,8 +343,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       right_force_ = std::clamp(right_force_, -30.0f, 30.0f);
     }
 
-    // 离地、跳跃回收或上台阶时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
-    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb) {
+    // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
+    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb || !standup_complete_) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {

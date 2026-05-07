@@ -45,6 +45,7 @@ constexpr float kPitchGravityCompensationNm = 1.3f;
 
 namespace chassis {
 constexpr float kControlDtS = 0.002f;
+constexpr float kStandupThetaThresholdRad = 0.85f;  ///< 起立完成判定：双腿 theta 低于此值时允许轮端输出
 constexpr float kLegL1M = 0.215f;
 constexpr float kLegL2M = 0.254f;
 constexpr float kSpringModelA = 1082.0f;
@@ -614,62 +615,62 @@ constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;
 namespace chassis {
 using namespace common::chassis;
 
-constexpr float kSpringTorqueScale = 75.0f;
-constexpr float kBodyMassKg = 22.0f;
-constexpr float kRollBalanceTargetRad = 0.003f;
+constexpr float kSpringTorqueScale = 70.0f;
+constexpr float kBodyMassKg = 18.0f;
+constexpr float kRollBalanceTargetRad = 0.f;
 constexpr float kPostureThetaBMinRad = -0.7f;
 constexpr float kPostureThetaBMaxRad = 0.7f;
 
 constexpr std::array<float, 240> kCtrlP{
-   -3.5768,  -21.624,  18.53,  35.306,  -14.679,  -16.736,
-     -5.3436,  -22.463,  25.319,  40.086,  -24.274,  -22.224,
-     -0.42213,  2.1919,  -0.33498,  -2.917,  0.89947,  0.48124,
-     -1.914,  10.082,  -1.6283,  -13.323,  4.1105,  2.3783,
-     -10.635,  -67.429,  15.112,  69.643,  -15.477,  -17.761,
-     -1.2179,  -5.6315,  2.1609,  -0.5621,  0.84763,  -2.8349,
-     -3.9761,  10.28,  -6.9588,  -10.706,  12.103,  13.538,
-     -0.32598,  -0.46792,  -0.64265,  2.6924,  -5.43,  1.6464,
-     -12.561,  26.554,  15.288,  -14.08,  -20.373,  -15.588,
-     -2.0762,  2.8753,  4.4387,  0.42789,  -5.1475,  -4.7145,
-     -3.5768,  18.53,  -21.624,  -16.736,  -14.679,  35.306,
-     -5.3436,  25.319,  -22.463,  -22.224,  -24.274,  40.086,
-     0.42213,  0.33498,  -2.1919,  -0.48124,  -0.89947,  2.917,
-     1.914,  1.6283,  -10.082,  -2.3783,  -4.1105,  13.323,
-     -3.9761,  -6.9588,  10.28,  13.538,  12.103,  -10.706,
-     -0.32598,  -0.64265,  -0.46792,  1.6464,  -5.43,  2.6924,
-     -10.635,  15.112,  -67.429,  -17.761,  -15.477,  69.643,
-     -1.2179,  2.1609,  -5.6315,  -2.8349,  0.84763,  -0.5621,
-     -12.561,  15.288,  26.554,  -15.588,  -20.373,  -14.08,
-     -2.0762,  4.4387,  2.8753,  -4.7145,  -5.1475,  0.42789,
-     3.4379,  -6.7679,  -1.8279,  -8.6042,  17.348,  -1.7567,
-     4.4691,  -8.3113,  -5.1749,  -10.321,  25.017,  -0.20635,
-     -0.39953,  -1.2613,  -0.87232,  2.4238,  0.051759,  1.185,
-     -1.8007,  -5.9406,  -4.0092,  11.322,  0.14691,  5.4318,
-     20.243,  -17.94,  9.6357,  8.7585,  21.117,  -18.86,
-     2.1922,  -4.8919,  0.26581,  5.8907,  3.7356,  -1.4218,
-     -0.37255,  -22.225,  -18.716,  31.55,  -4.5528,  12.228,
-     -0.19634,  -1.2609,  1.6207,  0.83895,  -1.0839,  -3.2189,
-     -17.252,  -63.51,  26.778,  82.18,  6.2433,  -34.998,
-     -1.6554,  -9.4357,  3.9589,  10.583,  2.8401,  -5.5362,
-     3.4379,  -1.8279,  -6.7679,  -1.7567,  17.348,  -8.6042,
-     4.4691,  -5.1749,  -8.3113,  -0.20635,  25.017,  -10.321,
-     0.39953,  0.87232,  1.2613,  -1.185,  -0.051759,  -2.4238,
-     1.8007,  4.0092,  5.9406,  -5.4318,  -0.14691,  -11.322,
-     -0.37255,  -18.716,  -22.225,  12.228,  -4.5528,  31.55,
-     -0.19634,  1.6207,  -1.2609,  -3.2189,  -1.0839,  0.83895,
-     20.243,  9.6357,  -17.94,  -18.86,  21.117,  8.7585,
-     2.1922,  0.26581,  -4.8919,  -1.4218,  3.7356,  5.8907,
-     -17.252,  26.778,  -63.51,  -34.998,  6.2433,  82.18,
-     -1.6554,  3.9589,  -9.4357,  -5.5362,  2.8401,  10.583,
+   -5.9739,  -45.91,  38.502,  78.117,  -40.234,  -28.916,
+     -9.3012,  -49.076,  51.56,  90.193,  -63.065,  -36.523,
+     -0.47818,  2.6018,  -0.89571,  -2.423,  -0.53511,  1.6694,
+     -1.5338,  8.6937,  -3.2917,  -7.7185,  -2.2948,  6.1694,
+     -18.872,  -92.25,  16.559,  88.3,  7.4371,  -22.333,
+     -1.0696,  -8.5995,  3.9464,  -5.0045,  3.0863,  -4.6606,
+     -4.1492,  -0.31931,  0.82772,  23.107,  -32.251,  0.89166,
+     -0.41616,  -2.7839,  0.035074,  10.114,  -18.192,  3.2817,
+     -27.815,  53.336,  31.835,  -28.501,  -32.617,  -32.641,
+     -3.3044,  2.8387,  8.2635,  2.7798,  -8.5728,  -8.2573,
+     -5.9739,  38.502,  -45.91,  -28.916,  -40.234,  78.117,
+     -9.3012,  51.56,  -49.076,  -36.523,  -63.065,  90.193,
+     0.47818,  0.89571,  -2.6018,  -1.6694,  0.53511,  2.423,
+     1.5338,  3.2917,  -8.6937,  -6.1694,  2.2948,  7.7185,
+     -4.1492,  0.82772,  -0.31931,  0.89166,  -32.251,  23.107,
+     -0.41616,  0.035074,  -2.7839,  3.2817,  -18.192,  10.114,
+     -18.872,  16.559,  -92.25,  -22.333,  7.4371,  88.3,
+     -1.0696,  3.9464,  -8.5995,  -4.6606,  3.0863,  -5.0045,
+     -27.815,  31.835,  53.336,  -32.641,  -32.617,  -28.501,
+     -3.3044,  8.2635,  2.8387,  -8.2573,  -8.5728,  2.7798,
+     8.5972,  -14.199,  -6.2941,  -32.689,  46.288,  2.1471,
+     11.78,  -13.709,  -20.715,  -46.464,  71.286,  11.826,
+     -0.53043,  -2.2396,  -0.58831,  3.9821,  -0.90289,  1.2424,
+     -1.6985,  -7.6658,  -1.7343,  13.525,  -3.4107,  3.844,
+     48.892,  -103.3,  4.596,  95.161,  33.702,  -15.583,
+     2.2885,  -0.63372,  -1.4604,  -3.4679,  9.1403,  -0.22252,
+     -3.4647,  -18.032,  3.3037,  16.205,  -19.814,  3.1081,
+     -0.14795,  -0.31165,  3.291,  -4.2672,  -1.7654,  -1.3225,
+     -43.78,  -160.3,  55.04,  207.76,  22.649,  -81.528,
+     -2.0568,  -15.337,  3.7426,  15.224,  8.2198,  -6.9979,
+     8.5972,  -6.2941,  -14.199,  2.1471,  46.288,  -32.689,
+     11.78,  -20.715,  -13.709,  11.826,  71.286,  -46.464,
+     0.53043,  0.58831,  2.2396,  -1.2424,  0.90289,  -3.9821,
+     1.6985,  1.7343,  7.6658,  -3.844,  3.4107,  -13.525,
+     -3.4647,  3.3037,  -18.032,  3.1081,  -19.814,  16.205,
+     -0.14795,  3.291,  -0.31165,  -1.3225,  -1.7654,  -4.2672,
+     48.892,  4.596,  -103.3,  -15.583,  33.702,  95.161,
+     2.2885,  -1.4604,  -0.63372,  -0.22252,  9.1403,  -3.4679,
+     -43.78,  55.04,  -160.3,  -81.528,  22.649,  207.76,
+     -2.0568,  3.7426,  -15.337,  -6.9979,  8.2198,  15.224,
 };
 
-constexpr PidGains kLeftL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
-constexpr PidGains kRightL0Pid{6000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kLeftL0Pid{8000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
+constexpr PidGains kRightL0Pid{8000.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
 constexpr PidGains kLeftL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
 constexpr PidGains kRightL0PidJumpTwo{6000.0f, 0.0f, 40000.0f, 250.0f, 0.0f};
 constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
 constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f};
-constexpr PidGains kRollPid{500.0f, 0.0f, 80.0f, 80.0f, 0.0f};
+constexpr PidGains kRollPid{800.0f, 0.0f, 80.0f, 80.0f, 0.0f};
 constexpr PidGains kLeftLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};
 constexpr PidGains kRightLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};
 }  // namespace chassis
@@ -681,22 +682,22 @@ constexpr float kTargetForwardSpeedMaxMps = 2.f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
 constexpr float kVyInputDeadbandNorm = 0.1f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
-constexpr float kPositionFreezeSpeedThresholdMps = 0.3f;
+constexpr float kPositionFreezeSpeedThresholdMps = 0.4f;
 constexpr float kSpinYawRampStepRadS = 0.05f;
 constexpr float kSpinTargetYawDotRadS = 7.0f;
 constexpr float kSpinTranslationGain = 1.2f;
 constexpr float kSpinThetaLlBiasRad = 0.01f;
 constexpr float kYawFollowFixedTargetRad = -1.72f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-constexpr float kExpectedThetaLlBiasRad = 0.105f;
-constexpr float kExpectedThetaLrBiasRad = 0.105f;
-constexpr float kExpectedThetaBBiasRad = 0.05f;
+constexpr float kExpectedThetaLlBiasRad = 0.11f;
+constexpr float kExpectedThetaLrBiasRad = 0.11f;
+constexpr float kExpectedThetaBBiasRad = 0.f;
 
 constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
 constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
 constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
 
-constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.2f, 6.0f, 0.0f};
+constexpr PidGains kYawFollowPid{8.2f, 0.0f, 1.2f, 6.0f, 0.0f};
 }  // namespace control_loop
 
 namespace actuators {
