@@ -239,7 +239,7 @@ constexpr std::uint32_t kStairClimbPitchStableMs = 300U;
 namespace chassis {
 using namespace common::chassis;
 
-constexpr float kSpringTorqueScale = 90.0f;
+constexpr float kSpringTorqueScale = 100.0f;
 constexpr float kBodyMassKg = 24.0f;
 constexpr float kRollBalanceTargetRad = 0.052f;
 constexpr float kPostureThetaBMinRad = -0.8f;
@@ -297,10 +297,10 @@ constexpr float kSpinYawRampStepRadS = 0.005f;
 constexpr float kSpinTargetYawDotRadS = 6.0f;
 constexpr float kSpinTranslationGain = 1.0f;
 constexpr float kSpinThetaLlBiasRad = 0.0f;
-constexpr float kYawFollowFixedTargetRad = -1.72f;
+constexpr float kYawFollowFixedTargetRad = -1.81f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-constexpr float kExpectedThetaLlBiasRad = -0.12f;
-constexpr float kExpectedThetaLrBiasRad = -0.12f;
+constexpr float kExpectedThetaLlBiasRad = -0.01f;
+constexpr float kExpectedThetaLrBiasRad = -0.01f;
 constexpr float kExpectedThetaBBiasRad = -0.123f;
 
 constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
@@ -320,8 +320,8 @@ constexpr float kRightWheelTorqueToCurrent = 2436.0f;
 namespace state_estimator {
 using namespace common::state_estimator;
 
-inline constexpr float kLeftPhi1OffsetRad = -0.05f + kPi;
-inline constexpr float kLeftPhi4OffsetRad = -0.59 + 0.07f;
+inline constexpr float kLeftPhi1OffsetRad = -0.05f + kPi + 0.09f;
+inline constexpr float kLeftPhi4OffsetRad = -0.59 + 0.07f + 0.04f;
 inline constexpr float kRightPhi1OffsetRad = 2.7f + kPi;
 inline constexpr float kRightPhi4OffsetRad = -2.11;
 }  // namespace state_estimator
