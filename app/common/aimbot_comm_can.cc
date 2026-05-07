@@ -1,5 +1,4 @@
 #include "aimbot_comm_can.hpp"
-#include "common/aimbot_comm_can.hpp"
 
 namespace rm::device {
 

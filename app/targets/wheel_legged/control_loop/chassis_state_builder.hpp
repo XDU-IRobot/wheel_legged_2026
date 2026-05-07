@@ -68,6 +68,7 @@ struct ChassisStateContext {
   bool yaw_follow_target_initialized{false};                               ///< 偏航目标是否已初始化
   bool yaw_follow_drive_ready{false};                ///< 偏航是否已就绪（允许纵向驱动）
   uint32_t yaw_follow_drive_ready_stable_ticks{0U};  ///< 偏航就绪判稳计数器
+  bool chassis_has_been_driven{false};  ///< 使能后是否曾被摇杆驱动过（首次驱动前不启用定点锁定）
 
   /**
    * @brief 在底盘模式切换时重置相关状态

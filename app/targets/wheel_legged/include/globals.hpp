@@ -16,7 +16,7 @@
 #include "chassis/fsm.hpp"
 #include "gimbal_to_chassis_rx_bridge.hpp"
 #include "utils/template_dyp_can.hpp"
-#include "utils/aimbot_comm_can.hpp"
+#include "common/aimbot_comm_can.hpp"
 #include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"

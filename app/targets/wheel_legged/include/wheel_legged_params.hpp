@@ -35,6 +35,7 @@ constexpr double kGimbalCanTxLimitHz = 4000.0;
 constexpr std::size_t kDr16UartRxBufferSize = 18;
 constexpr std::size_t kImuUartRxBufferSize = 518;
 constexpr std::size_t kRefereeUartRxBufferSize = 256;
+constexpr std::size_t kDypUartRxBufferSize = 64;
 }  // namespace globals
 
 namespace gimbal {
@@ -251,46 +252,46 @@ constexpr float kPostureThetaBMinRad = -0.8f;
 constexpr float kPostureThetaBMaxRad = 0.8f;
 
 constexpr std::array<float, 240> kCtrlP{
--1.5468,  -11.315,  8.516,  16.038,  -5.9155,  -7.0138,
-     -4.3901,  -24.461,  22.215,  37.798,  -20.621,  -17.081,
-     -0.80964,  2.9629,  -1.3612,  -3.0213,  0.11841,  1.914,
-     -2.3141,  8.7524,  -4.2418,  -8.5673,  -0.18351,  6.1178,
-     -11.108,  -81.996,  14.445,  80.287,  6.676,  -19.485,
-     -0.62943,  -5.4369,  2.2088,  -4.0923,  2.5798,  -2.9228,
-     -4.2179,  4.083,  -7.9454,  8.756,  -2.8755,  -0.79268,
-     -0.35064,  -1.1103,  -0.39638,  4.2991,  -7.9864,  0.4727,
-     -26.374,  29.246,  37.512,  15.522,  -42.143,  -31.286,
-     -2.6892,  1.8861,  6.2337,  2.7652,  -6.3247,  -5.8048,
-     -1.5468,  8.516,  -11.315,  -7.0138,  -5.9155,  16.038,
-     -4.3901,  22.215,  -24.461,  -17.081,  -20.621,  37.798,
-     0.80964,  1.3612,  -2.9629,  -1.914,  -0.11841,  3.0213,
-     2.3141,  4.2418,  -8.7524,  -6.1178,  0.18351,  8.5673,
-     -4.2179,  -7.9454,  4.083,  -0.79268,  -2.8755,  8.756,
-     -0.35064,  -0.39638,  -1.1103,  0.4727,  -7.9864,  4.2991,
-     -11.108,  14.445,  -81.996,  -19.485,  6.676,  80.287,
-     -0.62943,  2.2088,  -5.4369,  -2.9228,  2.5798,  -4.0923,
-     -26.374,  37.512,  29.246,  -31.286,  -42.143,  15.522,
-     -2.6892,  6.2337,  1.8861,  -5.8048,  -6.3247,  2.7652,
-     4.9536,  6.5699,  -16.115,  -32.438,  26.075,  10.565,
-     13.03,  13.044,  -44.952,  -77.386,  75.931,  27.957,
-     -0.73814,  -5.5332,  -1.8992,  9.382,  -3.0584,  2.9834,
-     -2.1185,  -16.501,  -4.9552,  27.529,  -8.916,  7.6704,
-     69.068,  -100.17,  10.092,  66.171,  56.213,  -26.629,
-     2.8162,  2.2269,  -2.1044,  -0.45348,  4.9946,  0.56876,
-     -3.297,  -36.839,  -6.968,  38.624,  -41.763,  -1.7674,
-     -0.2272,  0.30682,  3.5131,  -6.5952,  2.6953,  -8.3803,
-     -47.602,  -261.38,  78.095,  287.32,  52.904,  -100.84,
-     -1.7002,  -18.423,  2.7777,  14.59,  11.293,  -5.037,
-     4.9536,  -16.115,  6.5699,  10.565,  26.075,  -32.438,
-     13.03,  -44.952,  13.044,  27.957,  75.931,  -77.386,
-     0.73814,  1.8992,  5.5332,  -2.9834,  3.0584,  -9.382,
-     2.1185,  4.9552,  16.501,  -7.6704,  8.916,  -27.529,
-     -3.297,  -6.968,  -36.839,  -1.7674,  -41.763,  38.624,
-     -0.2272,  3.5131,  0.30682,  -8.3803,  2.6953,  -6.5952,
-     69.068,  10.092,  -100.17,  -26.629,  56.213,  66.171,
-     2.8162,  -2.1044,  2.2269,  0.56876,  4.9946,  -0.45348,
-     -47.602,  78.095,  -261.38,  -100.84,  52.904,  287.32,
-     -1.7002,  2.7777,  -18.423,  -5.037,  11.293,  14.59,
+-3.7344,  -25.599,  20.513,  37.734,  -16.863,  -15.394,
+     -7.7782,  -36.326,  37.844,  61.013,  -42.345,  -25.748,
+     -0.91949,  3.6543,  -1.5962,  -3.6718,  -0.31338,  2.4176,
+     -2.6226,  10.876,  -5.084,  -10.383,  -1.8073,  7.9176,
+     -17.587,  -109.61,  16.184,  115.37,  8.3879,  -21.721,
+     -0.85663,  -7.5752,  3.1661,  -5.2473,  3.4437,  -3.7783,
+     -5.2747,  6.2597,  -6.388,  8.6573,  -10.248,  -2.3985,
+     -0.45942,  -1.6128,  -0.59194,  6.5918,  -13.313,  2.1918,
+     -30.329,  40.176,  41.492,  4.7426,  -46.016,  -36.91,
+     -3.2095,  2.3027,  7.9806,  3.2573,  -8.4136,  -7.4099,
+     -3.7344,  20.513,  -25.599,  -15.394,  -16.863,  37.734,
+     -7.7782,  37.844,  -36.326,  -25.748,  -42.345,  61.013,
+     0.91949,  1.5962,  -3.6543,  -2.4176,  0.31338,  3.6718,
+     2.6226,  5.084,  -10.876,  -7.9176,  1.8073,  10.383,
+     -5.2747,  -6.388,  6.2597,  -2.3985,  -10.248,  8.6573,
+     -0.45942,  -0.59194,  -1.6128,  2.1918,  -13.313,  6.5918,
+     -17.587,  16.184,  -109.61,  -21.721,  8.3879,  115.37,
+     -0.85663,  3.1661,  -7.5752,  -3.7783,  3.4437,  -5.2473,
+     -30.329,  41.492,  40.176,  -36.91,  -46.016,  4.7426,
+     -3.2095,  7.9806,  2.3027,  -7.4099,  -8.4136,  3.2573,
+     8.6679,  8.7536,  -25.299,  -54.474,  47.776,  13.893,
+     16.301,  12.082,  -54.265,  -92.254,  102.59,  28.129,
+     -0.89073,  -5.2546,  -1.8793,  8.8666,  -2.4343,  2.8686,
+     -2.5532,  -15.791,  -4.7774,  26.088,  -6.9712,  7.1224,
+     88.646,  -165.1,  10.674,  146.78,  46.851,  -27.374,
+     3.1159,  2.0937,  -2.6273,  -0.43519,  5.8184,  0.40653,
+     -4.6039,  -35.028,  -4.6013,  37.777,  -28.581,  -12.615,
+     -0.17956,  0.42219,  3.8772,  -8.0404,  5.4925,  -10.055,
+     -49.245,  -263.03,  82.02,  305.75,  43.799,  -106.01,
+     -1.6162,  -18.643,  2.1389,  15.004,  12.729,  -5.0611,
+     8.6679,  -25.299,  8.7536,  13.893,  47.776,  -54.474,
+     16.301,  -54.265,  12.082,  28.129,  102.59,  -92.254,
+     0.89073,  1.8793,  5.2546,  -2.8686,  2.4343,  -8.8666,
+     2.5532,  4.7774,  15.791,  -7.1224,  6.9712,  -26.088,
+     -4.6039,  -4.6013,  -35.028,  -12.615,  -28.581,  37.777,
+     -0.17956,  3.8772,  0.42219,  -10.055,  5.4925,  -8.0404,
+     88.646,  10.674,  -165.1,  -27.374,  46.851,  146.78,
+     3.1159,  -2.6273,  2.0937,  0.40653,  5.8184,  -0.43519,
+     -49.245,  82.02,  -263.03,  -106.01,  43.799,  305.75,
+     -1.6162,  2.1389,  -18.643,  -5.0611,  12.729,  15.004,
 };
 
 constexpr PidGains kLeftL0Pid{9000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};
@@ -307,29 +308,29 @@ constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};
 namespace control_loop {
 using namespace common::control_loop;
 
-constexpr float kTargetForwardSpeedMaxMps = 2.3f;
+constexpr float kTargetForwardSpeedMaxMps = 2.1f;
 constexpr float kVxInputDeadbandNorm = 0.1f;
 constexpr float kVyInputDeadbandNorm = 0.1f;
 constexpr float kLockPointEnterInputThreshold = 0.08f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 100U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr float kLockPointAlphaRiseStep = 0.015f;
-constexpr float kLockPointAlphaFallStep = 0.018f;
+constexpr float kLockPointAlphaRiseStep = 0.0f;
+constexpr float kLockPointAlphaFallStep = 0.03f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
 constexpr float kSpinYawRampStepRadS = 0.005f;
-constexpr float kSpinTargetYawDotRadS = 6.0f;
+constexpr float kSpinTargetYawDotRadS = 9.0f;
 constexpr float kSpinTranslationGain = 1.0f;
 constexpr float kSpinThetaLlBiasRad = 0.0f;
 constexpr float kYawFollowFixedTargetRad = -1.84f;
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;
-constexpr float kExpectedThetaLlBiasRad = -0.01f;
-constexpr float kExpectedThetaLrBiasRad = -0.01f;
+constexpr float kExpectedThetaLlBiasRad = 0.0f;
+constexpr float kExpectedThetaLrBiasRad = 0.0f;
 constexpr float kExpectedThetaBBiasRad = -0.123f;
 
-constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};
-constexpr SdotRampParams kSdotRampMidLeg{0.006f, 0.003f};
-constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};
+constexpr SdotRampParams kSdotRampLowLeg{0.015f, 0.012f};
+constexpr SdotRampParams kSdotRampMidLeg{0.010f, 0.008f};
+constexpr SdotRampParams kSdotRampHighLeg{0.006f, 0.006f};
 
 constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.f, 4.0f, 0.0f};
 }  // namespace control_loop
@@ -506,7 +507,7 @@ constexpr float kLockPointEnterInputThreshold = 0.1f;
 constexpr float kLockPointExitInputThreshold = 0.12f;
 constexpr std::uint32_t kLockPointMinDwellTicks = 10U;
 constexpr float kLockPointFilteredSdotZeroThreshold = 1e-5f;
-constexpr float kLockPointAlphaRiseStep = 1.f;
+constexpr float kLockPointAlphaRiseStep = 1.0f;
 constexpr float kLockPointAlphaFallStep = 1.f;
 constexpr float kYawFollowRampStepRadS = 0.05f;
 constexpr float kSpinYawRampStepRadS = 0.05f;

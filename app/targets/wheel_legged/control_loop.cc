@@ -240,6 +240,9 @@ void ControlLoop() {
       // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
     }
+    if (ctx.last_chassis_mode == chassis::Fsm::State::kDisabled) {
+      ctx.chassis_has_been_driven = false;
+    }
     ctx.lock_point_last_switch_tick = now_ms;
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -254,6 +257,11 @@ void ControlLoop() {
   const float side_input_norm = drive.side;
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
   const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
+
+  // 首次摇杆拨动后，启用定点锁定逻辑
+  if (forward_input_active || side_input_active) {
+    ctx.chassis_has_been_driven = true;
+  }
 
   // ── 7d. 偏航跟随模式选择 ──
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
@@ -386,6 +394,12 @@ void ControlLoop() {
     ctx.lock_point_s_ref = current_state.s;
   }
 
+  // 使能后首次摇杆驱动前，强制关闭定点锁定（纯速度控制，避免起立时 s 漂移导致误锁定）
+  if (!ctx.chassis_has_been_driven) {
+    ctx.lock_point_target = false;
+    ctx.lock_point_alpha = 0.0f;
+  }
+
   // ── 7j. 纵向速度斜坡 ──
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
@@ -439,6 +453,22 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
+
+  // ── LQR 误差项调试 ──
+  {
+    const auto &cur = chassis_control_output.current_state;
+    const auto &exp = chassis_update_input.expected;
+    wl_debug.lqr_err_s = cur.s - exp.s;
+    wl_debug.lqr_err_s_dot = cur.s_dot - exp.s_dot;
+    wl_debug.lqr_err_phi = rm::modules::Wrap(cur.phi - exp.phi, -kPi, kPi);
+    wl_debug.lqr_err_phi_dot = cur.phi_dot - exp.phi_dot;
+    wl_debug.lqr_err_theta_ll = cur.theta_ll - exp.theta_ll;
+    wl_debug.lqr_err_theta_ll_dot = cur.theta_ll_dot - exp.theta_ll_dot;
+    wl_debug.lqr_err_theta_lr = cur.theta_lr - exp.theta_lr;
+    wl_debug.lqr_err_theta_lr_dot = cur.theta_lr_dot - exp.theta_lr_dot;
+    wl_debug.lqr_err_theta_b = cur.theta_b - exp.theta_b;
+    wl_debug.lqr_err_theta_b_dot = cur.theta_b_dot - exp.theta_b_dot;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
