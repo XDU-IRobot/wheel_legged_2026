@@ -48,7 +48,7 @@ chassis_runtime::Actuators g_actuators{};
 /**
  * @brief 500Hz 主控制循环
  * @note  由 TimerTaskScheduler 绑定到 htim13，按固定周期调用。
- *        整个循环分为 8 个阶段，数据单向流动：采集 → 语义 → FSM → 控制 → 执行。
+ *        整个循环分为 9 个阶段，数据单向流动：采集 → 语义 → FSM → 控制 → 执行。
  *        状态机 (FSM) 决定"做什么"，控制器决定"怎么做"，执行器负责"下发"。
  */
 void ControlLoop() {

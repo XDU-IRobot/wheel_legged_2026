@@ -1,4 +1,4 @@
-# 轮腿机器人控制固件架构设计
+# 轮腿机器人控制软件架构设计
 
 ## 设计目标
 
@@ -19,7 +19,7 @@
 │  AppMain(): 构造 SharedResources, 启动 500Hz 定时任务      │
 ├──────────────────────────────────────────────────────────┤
 │                  编排层 (control_loop.cc)                  │
-│  ControlLoop(): 8 阶段流水线, 串联所有子系统                │
+│  ControlLoop(): 9 阶段流水线, 串联所有子系统                │
 ├──────────┬──────────┬──────────┬──────────┬──────────────┤
 │ 输入解析 │ 状态机层  │ 控制层   │ 执行器层  │ 调试层       │
 │ input_   │ chassis/ │ chassis/ │ actuators│ debug_       │
@@ -151,6 +151,32 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 
 ---
 
+### 决策 8：基于 LQR 状态反馈的类 PI 纵向控制
+
+**问题**: LQR 是全状态反馈调节器（本质为 PD 控制），没有积分项。单独使用 LQR 做速度控制时，摇杆归中后车体无法锚定位置，会随扰动漂移。传统方案是外加一个位置环 PID（I 项积分），但引入额外的调参和积分饱和问题。
+
+**方案**: 不引入显式积分器，而是通过管理 LQR 期望状态中的 `expected_s`（期望位移）实现位置锚定：
+
+- **正常行驶时**：`expected_s` 实时跟随 `current_s`，位移误差 `s - expected_s = 0`，LQR 仅调节速度。等效纯比例速度控制。
+- **摇杆归中后**：`target_s_dot` 设为零，速度经斜坡衰减。`expected_s` 沿速度衰减路径积分（`expected_s += filtered_s_dot × dt`）。当 `filtered_s_dot` 到达零且车速静止时，`expected_s` 冻结为位置锚点。此时 `s - expected_s` 非零，LQR 同时调节位移和速度——等效 PI 控制。
+- **重新推动摇杆**：`expected_s` 立刻重置为 `current_s`，位移误差归零，回到纯速度控制。
+
+```
+驾驶中:   expected_s = current_s    → 误差 = 0          → LQR = P（速度控制）
+归中后:   expected_s 沿斜坡积分      → 误差逐步建立       → LQR = PD 过渡
+停止后:   expected_s 冻结为锚点      → 误差持续 = 位置偏差 → LQR ≈ PI（位置锚定）
+```
+
+**收益**: 
+- 零参数的"积分"效果：不需要位置环 PID 的 kp/ki/kd 调参
+- 天然抗积分饱和：锚点在车实际停下的位置，不会累积
+- LQR 一次解算所有通道（位移、速度、腿摆角、俯仰角等 10 维状态）的耦合控制，比独立的位置 PID + 速度 PID 更协调
+- 自动适配不同腿长的制动特性（速度斜坡参数已按腿长分档）
+
+**实现位置**: `control_loop.cc:338-355`（7i 阶段），详见 `docs/DATA_FLOW.md` 阶段 7。
+
+---
+
 ## 状态机设计
 
 ### 底盘 12 状态层级
@@ -241,11 +267,10 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 
 | 功能 | 当前状态 | 接入位置 |
 |------|----------|----------|
-| 上位机自瞄目标 | host_target_valid = false | `input_resolver.cc` — 需从 CAN/UART 解析 |
+| 上位机自瞄目标 | 已部分接入（aimbot CAN 通信已工作） | `input_resolver.cc:259-268` |
 | 维护域策略细分 | 硬编码 kChassisAndGimbalSafe | `input_resolver.cc` — 需附加 DR16 通道 |
-| IMU 倒地检测 | fall_detected = false | `input_resolver.cc` — 需俯仰/横滚阈值判断 |
-| 底盘恢复控制 | recovery_enable 未消费 | `control_loop.cc` — 需接入恢复 PID |
-| 跳跃阶段控制 | jump_phase 未消费 | `control_loop.cc` — 需接入跳跃力矩规划 |
+| 倒地自起 | 执行端已接入，触发端未实现 | `chassis.cc` 自起立力矩已就位；`input_resolver.cc` 中 `fall_detected` 恒 false，需接入 IMU 俯仰/横滚阈值判断 |
+| 跳跃阶段控制 | 已接入 | `chassis.cc` — ComputeActuatorTorque() 三阶段跳跃力矩 |
 
 ---
 

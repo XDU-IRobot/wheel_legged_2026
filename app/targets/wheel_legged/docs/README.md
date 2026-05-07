@@ -42,7 +42,9 @@ app/targets/wheel_legged/
 │   ├── chassis/
 │   │   ├── fsm.hpp                  # 底盘状态机接口
 │   │   ├── chassis.hpp              # 底盘控制器接口（LQR 主类）
-│   │   └── chassis_state.hpp        # 状态估计器 + 期望/当前状态向量
+│   │   ├── chassis_state.hpp        # 状态估计器 + 期望/当前状态向量
+│   │   ├── leg_kinematics.hpp       # 五连杆腿部运动学解算
+│   │   └── lqr_controllers.hpp      # LQR 调节器（增益按腿长多项式插值）
 │   │
 │   ├── gimbal/
 │   │   ├── fsm.hpp                  # 云台状态机接口
@@ -51,7 +53,9 @@ app/targets/wheel_legged/
 │   │   └── shoot_controller.hpp     # ShootController 三摩擦轮状态机 (hero)
 │   │
 │   └── utils/
-│       └── template_dyp_can.hpp     # DYP 超声波 CAN 接收桥
+│       ├── template_dyp_can.hpp     # DYP 超声波 CAN 接收桥
+│       ├── kalman_filter.hpp/.cc    # 通用矩阵卡尔曼滤波器（CMSIS-DSP）
+│       └── aimbot_comm_can.hpp/.cc  # 自瞄 CAN 通信（TX:0x150, RX:0x170）
 │
 ├── gimbal/
 │   └── shoot.cc                     # Shoot 双摩擦轮控制实现
@@ -59,7 +63,10 @@ app/targets/wheel_legged/
 ├── docs/
 │   ├── README.md                    # 本文档：上手阅读指南
 │   ├── DATA_FLOW.md                 # 数据流详解
-│   └── REFACTOR_PLAN.md             # 架构设计说明
+│   ├── REFACTOR_PLAN.md             # 架构设计说明
+│   ├── CONTROL_LOOP_OPTIMIZATIONS.md # 控制器优化详解（位置锚定、斜坡、小陀螺）
+│   │
+├── 待办.md                          # 结构化待办列表（P0/P1/P2）
 │
 └── debug/
     ├── can.pmpx                     # CAN 总线调试配置
@@ -80,7 +87,7 @@ app/targets/wheel_legged/
 ### 第二步：理解数据流
 
 2. **`docs/DATA_FLOW.md`** — 完整的 9 阶段数据流图。对照 `control_loop.cc` 阅读。
-3. **`control_loop.cc`** — 核心编排文件（~400 行）。`ControlLoop()` 函数按 1-8 号注释分阶段执行，每个阶段调用一个子模块。
+3. **`control_loop.cc`** — 核心编排文件（~500 行）。`ControlLoop()` 函数按 9 个阶段分步执行，每个阶段调用一个子模块。
 
 ### 第三步：理解类型系统
 
