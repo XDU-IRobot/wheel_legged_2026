@@ -444,10 +444,10 @@ void ControlLoop() {
   // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
   // ═══════════════════════════════════════════════════════════════════════
   if (globals->aimbot.has_value() && globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0) {
-    constexpr float kDegToRad = kPi / 180.0f;
-    const float yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
-    const float pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
-    const float roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
+    constexpr float kRadToDeg = 180.f / kPi;
+    const float yaw_deg =  globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
+    const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
+    const float roll_deg = globals->gimbal_rx->euler_roll_rad()* kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -470,7 +470,7 @@ void ControlLoop() {
     const float bullet_speed =
         (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
-    globals->aimbot->UpdateControl(yaw_rad, pitch_rad, roll_rad, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
+    globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;
