@@ -140,6 +140,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_mean_leg_length_m;      // 平均腿长
   float chassis_left_leg_length_m;      // 左腿长度
   float chassis_right_leg_length_m;     // 右腿长度
+  float chassis_left_l0_pid_out;        // 左腿腿长 PID 输出
+  float chassis_right_l0_pid_out;       // 右腿腿长 PID 输出
   float chassis_speed_mps;              // 车体融合速度
   float chassis_left_force_n;           // 左腿竖直力
   float chassis_right_force_n;          // 右腿竖直力

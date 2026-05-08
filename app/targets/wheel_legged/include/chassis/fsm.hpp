@@ -85,6 +85,7 @@ class Fsm {
  private:
   State mode_{State::kDisabled};
   wheel_legged::LegProfile requested_leg_profile_{wheel_legged::LegProfile::kLow};
+  wheel_legged::LegProfile jump_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 触发跳跃时的腿长档位
   uint32_t state_enter_tick_ms_{0};
   Output output_{};
 };

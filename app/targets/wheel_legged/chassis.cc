@@ -286,6 +286,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
   right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  output_.left_l0_pid_out = left_l0_pid_.out();
+  output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
 
   l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
@@ -295,6 +297,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
+
+  const bool off_ground_in_mid_high_leg =
+        (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
+        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+  output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);

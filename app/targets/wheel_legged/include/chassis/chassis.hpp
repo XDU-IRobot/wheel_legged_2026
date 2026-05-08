@@ -41,6 +41,8 @@ class Chassis {
     rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
     rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
+    rm::f32 left_l0_pid_out{0.0f};        ///< 左腿腿长 PID 输出
+    rm::f32 right_l0_pid_out{0.0f};       ///< 右腿腿长 PID 输出
     rm::f32 left_force_n{0.0f};           ///< 左腿竖直力
     rm::f32 right_force_n{0.0f};          ///< 右腿竖直力
     rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
