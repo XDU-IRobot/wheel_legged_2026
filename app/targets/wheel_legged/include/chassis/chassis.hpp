@@ -54,8 +54,8 @@ class Chassis {
     rm::f32 raw_accel_speed_mps{0.0f};    ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};      ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
-    bool posture_valid{true};      ///< 底盘姿态是否在安全范围内
-    bool standup_complete{false};  ///< 起立完成：双腿 theta 均小于阈值后置 true
+    bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
+    bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
@@ -125,7 +125,7 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool standup_complete_{false};
-  uint8_t stair_climb_phase_{0};    ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
+  uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};  ///< 当前 Phase 条件连续满足的周期数
 
   rm::modules::PID left_l0_pid_{};
