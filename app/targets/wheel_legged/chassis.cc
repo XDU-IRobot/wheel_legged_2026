@@ -299,9 +299,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
 
   const bool off_ground_in_mid_high_leg =
-        (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+      (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
+      (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+       right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
   if (output_.posture_valid) {
