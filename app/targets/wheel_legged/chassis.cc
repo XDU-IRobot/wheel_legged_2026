@@ -120,6 +120,11 @@ void chassis::Chassis::Init() {
   init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
            stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
 
+  left_stair_climb_theta_pid_.SetCircular(true);
+  right_stair_climb_theta_pid_.SetCircular(true);
+  left_stair_climb_theta_pid_.SetCircularCycle(2.f*M_PI);
+  right_stair_climb_theta_pid_.SetCircularCycle(2.f*M_PI);
+
   std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
     std::copy(&kCtrlP[i * 6], &kCtrlP[i * 6 + 6], coeff_vec[i].begin());
@@ -371,7 +376,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     if (use_stair_climb) {
       constexpr float kThetaTarget = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
       constexpr float kThetaTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr float kLegLengthTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      constexpr float kPhase0LegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbPhase0LegLengthM;
+      constexpr float kRetractLegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
       constexpr float kLegLengthTol = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
       constexpr float kZeroThreshold = 0.4f;
       constexpr uint16_t kPhaseStableTicks = 250;  // 500ms @ 500Hz
@@ -380,11 +386,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       bool cond_met = false;
 
       if (stair_climb_phase_ == 0) {
-        params_.leg_target_length_m = avg_leg_length_m;  // 锁腿长
+        params_.leg_target_length_m = kPhase0LegTarget;  // 转腿时拉长腿长
         cond_met = (std::fabs(state_output.current.theta_ll - kThetaTarget) < kThetaTol &&
                     std::fabs(state_output.current.theta_lr - kThetaTarget) < kThetaTol);
       } else if (stair_climb_phase_ == 1) {
-        cond_met = (std::fabs(avg_leg_length_m - kLegLengthTarget) < kLegLengthTol);
+        cond_met = (std::fabs(avg_leg_length_m - kRetractLegTarget) < kLegLengthTol);
       } else {
         theta_target = 0.0f;  // 回摆到0
         cond_met = (std::fabs(state_output.current.theta_ll) < kZeroThreshold &&
