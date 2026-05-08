@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../fsm_common.hpp"
-#include "../wheel_legged_params.hpp"
+#include "../params.hpp"
 
 #include <cstdint>
 

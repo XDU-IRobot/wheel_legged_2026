@@ -7,7 +7,7 @@
 
 #include <librm.hpp>
 
-#include "wheel_legged_params.hpp"
+#include "params.hpp"
 #include "usart.h"
 
 /**

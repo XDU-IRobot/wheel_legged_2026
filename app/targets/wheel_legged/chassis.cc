@@ -4,7 +4,7 @@
 #include <array>
 #include <cmath>
 
-#include "include/wheel_legged_params.hpp"
+#include "include/params.hpp"
 
 /**
  * @file  targets/wheel_legged/chassis.cc

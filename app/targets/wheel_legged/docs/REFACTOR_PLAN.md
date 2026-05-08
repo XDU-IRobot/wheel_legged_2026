@@ -18,7 +18,7 @@
 │                    应用层 (main.cc)                       │
 │  AppMain(): 构造 SharedResources, 启动 500Hz 定时任务      │
 ├──────────────────────────────────────────────────────────┤
-│                  编排层 (control_loop.cc)                  │
+│                  编排层 (control.cc)                       │
 │  ControlLoop(): 9 阶段流水线, 串联所有子系统                │
 ├──────────┬──────────┬──────────┬──────────┬──────────────┤
 │ 输入解析 │ 状态机层  │ 控制层   │ 执行器层  │ 调试层       │
@@ -109,7 +109,7 @@ ShootOutput { fric_left_current, fric_right_current, dial_current }
 
 **问题**: 三款机器人参数不同，但控制代码相同。
 
-**方案**: 参数在 `wheel_legged_params.hpp` 中按 namespace 组织：
+**方案**: 参数在 `params.hpp` 中按 namespace 组织：
 ```
 params::common::control_loop::*  <- 共用参数
 params::hero::*                  <- Hero 专属
@@ -173,7 +173,7 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 - LQR 一次解算所有通道（位移、速度、腿摆角、俯仰角等 10 维状态）的耦合控制，比独立的位置 PID + 速度 PID 更协调
 - 自动适配不同腿长的制动特性（速度斜坡参数已按腿长分档）
 
-**实现位置**: `control_loop.cc:338-355`（7i 阶段），详见 `docs/DATA_FLOW.md` 阶段 7。
+**实现位置**: `control.cc:338-355`（7i 阶段），详见 `docs/DATA_FLOW.md` 阶段 7。
 
 ---
 

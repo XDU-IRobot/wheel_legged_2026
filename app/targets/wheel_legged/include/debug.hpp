@@ -2,6 +2,15 @@
 
 #include <cstdint>
 
+#include "chassis/chassis.hpp"
+#include "gimbal/gimbal.hpp"
+#include "input.hpp"
+
+/**
+ * @file  targets/wheel_legged/include/debug.hpp
+ * @brief 调试快照结构体（SRAM4）与填充函数声明
+ */
+
 /**
  * @brief 调试快照，放置于 SRAM4 供调试器/DMA 直接读取
  */
@@ -166,3 +175,17 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
 static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 
 extern DebugSnapshot wl_debug;
+
+/**
+ * @brief 填充 DebugSnapshot
+ * @param tick_ms                当前系统 tick
+ * @param input                  本周期输入快照
+ * @param chassis_output         底盘 FSM 输出
+ * @param gimbal_output          云台 FSM 输出
+ * @param chassis_control_output 底盘控制器输出
+ * @param gimbal_control_output  云台控制器输出
+ */
+void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
+                         const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
+                         const chassis::Chassis::UpdateOutput &chassis_control_output,
+                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output);

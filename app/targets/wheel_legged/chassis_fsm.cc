@@ -1,9 +1,9 @@
 #include "include/chassis/fsm.hpp"
-#include "include/wheel_legged_params.hpp"
+#include "include/params.hpp"
 #include <cmath>
 
 /**
- * @file  targets/wheel_legged/fsm.cc
+ * @file  targets/wheel_legged/chassis_fsm.cc
  * @brief 底盘状态机实现
  */
 

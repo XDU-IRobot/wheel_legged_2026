@@ -1,16 +1,16 @@
 /**
- * @file  targets/wheel_legged/control_loop/input_resolver.cc
+ * @file  targets/wheel_legged/input.cc
  * @brief 硬件输入采集与语义折叠实现
  */
 
-#include "input_resolver.hpp"
+#include "include/input.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-#include "../include/actuators.hpp"
-#include "../include/globals.hpp"
-#include "../include/wheel_legged_params.hpp"
+#include "include/actuators.hpp"
+#include "include/globals.hpp"
+#include "include/params.hpp"
 
 namespace wheel_legged::control_loop {
 

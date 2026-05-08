@@ -9,22 +9,22 @@
 
 #include <librm.hpp>
 
-#include "wheel_legged_params.hpp"
+#include "params.hpp"
 #include "globals_no_dtcm.hpp"
 
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
-#include "gimbal_to_chassis_rx_bridge.hpp"
-#include "utils/template_dyp_can.hpp"
-#include "utils/aimbot_comm_can.hpp"
+#include "gimbal_can_bridge.hpp"
+#include "utils/dyp_can.hpp"
+#include "utils/aimbot_can.hpp"
 #include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "librm/device/remote/dr16.hpp"
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-#include "gimbal/shoot_controller.hpp"
+#include "gimbal/shoot_3fric.hpp"
 #else
-#include "gimbal/shoot.hpp"
+#include "gimbal/shoot_2fric.hpp"
 #endif
 
 /**
@@ -210,8 +210,6 @@ struct SharedResources {
 
 extern SharedResources *globals;
 
-#include "debug_snapshot.hpp"
-
-extern DebugSnapshot wl_debug;
+#include "debug.hpp"
 
 void ControlLoop();

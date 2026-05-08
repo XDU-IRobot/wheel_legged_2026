@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "globals.hpp"
-#include "wheel_legged_params.hpp"
+#include "params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/actuators.hpp

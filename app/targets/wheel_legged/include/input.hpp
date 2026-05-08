@@ -4,11 +4,11 @@
 
 #include "librm/device/remote/dr16.hpp"
 
-#include "../include/chassis/chassis.hpp"
-#include "../include/chassis/chassis_state.hpp"
-#include "../include/chassis/fsm.hpp"
-#include "../include/fsm_common.hpp"
-#include "../include/gimbal/fsm.hpp"
+#include "chassis/chassis.hpp"
+#include "chassis/state.hpp"
+#include "chassis/fsm.hpp"
+#include "fsm_common.hpp"
+#include "gimbal/fsm.hpp"
 
 struct SharedResources;
 
@@ -17,7 +17,7 @@ class Actuators;
 }  // namespace chassis_runtime
 
 /**
- * @file  targets/wheel_legged/control_loop/input_resolver.hpp
+ * @file  targets/wheel_legged/include/input.hpp
  * @brief 硬件输入采集、DR16/图传语义折叠与 FSM 输入构建
  */
 

@@ -5,13 +5,13 @@
 
 #include <librm.hpp>
 
-#include "../wheel_legged_params.hpp"
-#include "leg_kinematics.hpp"
-#include "lqr_controllers.hpp"
-#include "../utils/kalman_filter.hpp"
+#include "../params.hpp"
+#include "leg.hpp"
+#include "lqr.hpp"
+#include "../utils/kalman.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
+ * @file  targets/wheel_legged/include/chassis/state.hpp
  * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
  */
 

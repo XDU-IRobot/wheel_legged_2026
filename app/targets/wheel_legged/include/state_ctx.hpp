@@ -2,12 +2,12 @@
 
 #include <cstdint>
 
-#include "../include/chassis/fsm.hpp"
-#include "../include/wheel_legged_params.hpp"
+#include "chassis/fsm.hpp"
+#include "params.hpp"
 #include "librm/modules/pid.hpp"
 
 /**
- * @file  targets/wheel_legged/control_loop/chassis_state_builder.hpp
+ * @file  targets/wheel_legged/include/state_ctx.hpp
  * @brief 底盘跨周期控制状态、偏航跟随、定点锁定与速率斜坡
  */
 

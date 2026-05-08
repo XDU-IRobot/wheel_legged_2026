@@ -7,7 +7,7 @@
 
 #include "common/controllers/gimbal_2dof.hpp"
 #include "../fsm_common.hpp"
-#include "../wheel_legged_params.hpp"
+#include "../params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp

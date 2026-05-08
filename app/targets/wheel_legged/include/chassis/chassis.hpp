@@ -1,9 +1,9 @@
 #pragma once
 
-#include "chassis_state.hpp"
+#include "state.hpp"
 #include "fsm.hpp"
-#include "lqr_controllers.hpp"
-#include "../wheel_legged_params.hpp"
+#include "lqr.hpp"
+#include "../params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/chassis.hpp

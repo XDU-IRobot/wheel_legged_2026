@@ -1,17 +1,16 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
-#include "include/debug_snapshot.hpp"
+#include "include/debug.hpp"
 
 #include "main.h"
 #include <algorithm>
 #include <cmath>
 
-#include "control_loop/input_resolver.hpp"
-#include "control_loop/chassis_state_builder.hpp"
-#include "control_loop/debug_export.hpp"
+#include "include/input.hpp"
+#include "include/state_ctx.hpp"
 
 /**
- * @file  targets/wheel_legged/control_loop.cc
+ * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
 

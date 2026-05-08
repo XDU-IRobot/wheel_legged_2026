@@ -4,10 +4,10 @@
 #include <cstdint>
 
 #include <librm.hpp>
-#include "wheel_legged_params.hpp"
+#include "params.hpp"
 
 /**
- * @file  targets/wheel_legged/include/gimbal_to_chassis_rx_bridge.hpp
+ * @file  targets/wheel_legged/include/gimbal_can_bridge.hpp
  * @brief 接收云台 GimbalToChassisTxBridge 转发的惯导 + VT03 键鼠 CAN 数据
  */
 

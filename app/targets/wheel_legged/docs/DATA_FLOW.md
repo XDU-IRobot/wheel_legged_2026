@@ -230,7 +230,7 @@ pitch_target_rad, pitch_pos_rad, pitch_vel_rad_s, pitch_cmd_torque_nm
 
 ### Hero (VARIANT == 1)：三摩擦轮 + DM 拨盘
 
-使用 `ShootController` 类 (`include/gimbal/shoot_controller.hpp`)，内置 5 状态机：
+使用 `ShootController` 类 (`include/gimbal/shoot_3fric.hpp`)，内置 5 状态机：
 
 ```
 kStop ── enter_shoot ──▶ kInitialize ── 初始化完成 ──▶ kReady
@@ -532,17 +532,17 @@ SRAM4 段可由调试器/DMA 直接读取，不占用主循环 CPU 时间。
 
 | 结构体 | 文件 | 定位 |
 |--------|------|------|
-| `DebugSnapshot` | `include/debug_snapshot.hpp` | 全局调试快照（SRAM4） |
+| `DebugSnapshot` | `include/debug.hpp` | 全局调试快照（SRAM4） |
 | `SharedResources` | `include/globals.hpp` | 所有外设/控制器/状态机实例 |
 | `ModeRequest` | `include/fsm_common.hpp` | 旧版统一语义请求 (@deprecated) |
 | `ChassisFsmInput` | `include/fsm_common.hpp` | 底盘 FSM 专用输入 |
 | `GimbalFsmInput` | `include/fsm_common.hpp` | 云台 FSM 专用输入 |
-| `InputSnapshot` | `control_loop/input_resolver.hpp` | 单周期硬件+语义快照 |
-| `ChassisStateContext` | `control_loop/chassis_state_builder.hpp` | 控制环跨周期状态 |
+| `InputSnapshot` | `include/input.hpp` | 单周期硬件+语义快照 |
+| `ChassisStateContext` | `include/state_ctx.hpp` | 控制环跨周期状态 |
 | `Chassis::UpdateInput` | `include/chassis/chassis.hpp` | 底盘控制器输入 |
 | `Chassis::UpdateOutput` | `include/chassis/chassis.hpp` | 底盘控制器输出 |
 | `Gimbal::UpdateInput` | `include/gimbal/gimbal.hpp` | 云台控制器输入 |
 | `Gimbal::UpdateOutput` | `include/gimbal/gimbal.hpp` | 云台控制器输出 |
-| `ShootOutput` | `include/gimbal/shoot.hpp` | 双摩擦轮发射输出 |
-| `ShootController` | `include/gimbal/shoot_controller.hpp` | 三摩擦轮发射状态机 |
-| `ChassisStateEstimatorInput` | `include/chassis/chassis_state.hpp` | 状态估计器传感器输入 |
+| `ShootOutput` | `include/gimbal/shoot_2fric.hpp` | 双摩擦轮发射输出 |
+| `ShootController` | `include/gimbal/shoot_3fric.hpp` | 三摩擦轮发射状态机 |
+| `ChassisStateEstimatorInput` | `include/chassis/state.hpp` | 状态估计器传感器输入 |
