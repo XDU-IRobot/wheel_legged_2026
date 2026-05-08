@@ -7,7 +7,7 @@
 #include "librm/modules/pid.hpp"
 #include "librm/modules/angle.hpp"
 
-#include "targets/wheel_legged/include/wheel_legged_params.hpp"
+#include "../params.hpp"
 
 namespace wheel_legged {
 

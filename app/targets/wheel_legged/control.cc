@@ -1,17 +1,16 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
-#include "include/debug_snapshot.hpp"
+#include "include/debug.hpp"
 
 #include "main.h"
 #include <algorithm>
 #include <cmath>
 
-#include "control_loop/input_resolver.hpp"
-#include "control_loop/chassis_state_builder.hpp"
-#include "control_loop/debug_export.hpp"
+#include "include/input.hpp"
+#include "include/state_ctx.hpp"
 
 /**
- * @file  targets/wheel_legged/control_loop.cc
+ * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
 
@@ -48,7 +47,7 @@ chassis_runtime::Actuators g_actuators{};
 /**
  * @brief 500Hz 主控制循环
  * @note  由 TimerTaskScheduler 绑定到 htim13，按固定周期调用。
- *        整个循环分为 8 个阶段，数据单向流动：采集 → 语义 → FSM → 控制 → 执行。
+ *        整个循环分为 9 个阶段，数据单向流动：采集 → 语义 → FSM → 控制 → 执行。
  *        状态机 (FSM) 决定"做什么"，控制器决定"怎么做"，执行器负责"下发"。
  */
 void ControlLoop() {
@@ -412,10 +411,10 @@ void ControlLoop() {
   // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
   // ═══════════════════════════════════════════════════════════════════════
   if (globals->aimbot.has_value() && globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0) {
-    constexpr float kDegToRad = kPi / 180.0f;
-    const float yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
-    const float pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
-    const float roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
+    constexpr float kRadToDeg = 180.f / kPi;
+    const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
+    const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
+    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -438,7 +437,7 @@ void ControlLoop() {
     const float bullet_speed =
         (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
-    globals->aimbot->UpdateControl(yaw_rad, pitch_rad, roll_rad, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
+    globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;

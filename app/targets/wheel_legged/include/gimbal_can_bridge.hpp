@@ -4,10 +4,10 @@
 #include <cstdint>
 
 #include <librm.hpp>
-#include "wheel_legged_params.hpp"
+#include "params.hpp"
 
 /**
- * @file  targets/wheel_legged/include/gimbal_to_chassis_rx_bridge.hpp
+ * @file  targets/wheel_legged/include/gimbal_can_bridge.hpp
  * @brief 接收云台 GimbalToChassisTxBridge 转发的惯导 + VT03 键鼠 CAN 数据
  */
 
@@ -16,7 +16,7 @@
  * @note  与云台端 GimbalToChassisTxBridge 协议一致：
  *        - 0x110: [0-1]pitch_millirad [2-3]yaw_millirad [4-5]gyro_z [6-7]gyro_x
  *        - 0x111: [0-1]mouse_x [2-3]mouse_y [4]left_button [5]right_button [6-7]keyboard_value
- *        - 0x112: [0-1]yaw_millirad [2-3]pitch_millirad [4-5]roll_millirad [6-7]reserved
+ *        - 0x112: [0-1]quat_w [2-3]quat_x [4-5]quat_y [6-7]quat_z  (int16, scale 32767)
  */
 class GimbalToChassisRxBridge final : public rm::device::CanDevice {
  public:
@@ -52,9 +52,17 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       kbd_frame_count_++;
       ReportStatus(kOk);
     } else if (msg->rx_std_id == kRxStdIdC && msg->dlc >= kPayloadSizeC) {
-      euler_yaw_rad_ = MilliI16ToRad(UnpackI16(&msg->data[0]));
-      euler_pitch_rad_ = MilliI16ToRad(UnpackI16(&msg->data[2]));
-      euler_roll_rad_ = MilliI16ToRad(UnpackI16(&msg->data[4]));
+      f32 q[4] = {
+          I16ToQuat(UnpackI16(&msg->data[0])),  // w
+          I16ToQuat(UnpackI16(&msg->data[2])),  // x
+          I16ToQuat(UnpackI16(&msg->data[4])),  // y
+          I16ToQuat(UnpackI16(&msg->data[6])),  // z
+      };
+      f32 euler[3];
+      rm::modules::QuatToEuler(q, euler);
+      euler_roll_rad_ = euler[1];
+      euler_pitch_rad_ = euler[0];
+      euler_yaw_rad_ = euler[2];
       frame_count_++;
       ReportStatus(kOk);
     } else {
@@ -89,6 +97,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   }
 
   static rm::f32 MilliI16ToRad(rm::i16 value) { return static_cast<rm::f32>(value) * 0.001f; }
+
+  static rm::f32 I16ToQuat(rm::i16 value) { return static_cast<rm::f32>(value) / 32767.0f; }
 
   rm::f32 pitch_rad_{0.0f};
   rm::f32 yaw_rad_{0.0f};

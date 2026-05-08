@@ -1,11 +1,9 @@
 /**
- * @file  targets/wheel_legged/control_loop/debug_export.cc
+ * @file  targets/wheel_legged/debug.cc
  * @brief DebugSnapshot 填充实现
  */
 
-#include "debug_export.hpp"
-
-#include "../include/debug_snapshot.hpp"
+#include "include/debug.hpp"
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,

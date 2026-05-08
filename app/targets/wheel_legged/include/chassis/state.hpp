@@ -5,13 +5,13 @@
 
 #include <librm.hpp>
 
-#include "../wheel_legged_params.hpp"
-#include "leg_kinematics.hpp"
-#include "lqr_controllers.hpp"
-#include "../utils/kalman_filter.hpp"
+#include "../params.hpp"
+#include "leg.hpp"
+#include "lqr.hpp"
+#include "../utils/kalman.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
+ * @file  targets/wheel_legged/include/chassis/state.hpp
  * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
  */
 
@@ -68,11 +68,11 @@ struct ChassisStateEstimatorInput {
   WheelFeedback wheel{};         ///< 左右轮反馈
   ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{0.002f};                ///< 估计周期
-  rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
-  rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
-  bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移
-  bool use_wheel_speed_direct{false};  ///< 是否跳过速度融合并直接使用轮速
+  rm::f32 dt_s{0.002f};               ///< 估计周期
+  rm::f32 yaw_motor_rad{0.0f};        ///< 云台偏航电机角度，供底盘跟随使用
+  rm::f32 s_ref_m{0.0f};              ///< 外部位移参考
+  bool use_external_s_ref{false};     ///< 是否用外部位移参考覆盖积分位移
+  bool use_wheel_speed_direct{true};  ///< 是否跳过速度融合并直接使用轮速
 };
 
 /**

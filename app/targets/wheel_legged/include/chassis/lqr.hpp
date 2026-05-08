@@ -3,10 +3,10 @@
 #include <array>
 
 #include <librm.hpp>
-#include "../wheel_legged_params.hpp"
+#include "../params.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/lqr_controllers.hpp
+ * @file  targets/wheel_legged/include/chassis/lqr.hpp
  * @brief 轮腿底盘线性二次调节器与状态向量定义
  */
 

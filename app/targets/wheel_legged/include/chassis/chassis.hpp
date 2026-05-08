@@ -1,9 +1,9 @@
 #pragma once
 
-#include "chassis_state.hpp"
+#include "state.hpp"
 #include "fsm.hpp"
-#include "lqr_controllers.hpp"
-#include "../wheel_legged_params.hpp"
+#include "lqr.hpp"
+#include "../params.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/chassis.hpp
@@ -52,7 +52,8 @@ class Chassis {
     rm::f32 raw_accel_speed_mps{0.0f};    ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};      ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
-    bool posture_valid{true};  ///< 底盘姿态是否在安全范围内
+    bool posture_valid{true};      ///< 底盘姿态是否在安全范围内
+    bool standup_complete{false};  ///< 起立完成：双腿 theta 均小于阈值后置 true
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
@@ -119,8 +120,8 @@ class Chassis {
 
   rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
 
-  bool mid_leg_landing_active_{false};
-  uint32_t mid_leg_landing_tick_{0U};
+  bool prev_enable_output_{false};
+  bool standup_complete_{false};
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};

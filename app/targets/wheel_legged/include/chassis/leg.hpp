@@ -5,10 +5,10 @@
 
 #include <librm.hpp>
 
-#include "../wheel_legged_params.hpp"
+#include "../params.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/leg_kinematics.hpp
+ * @file  targets/wheel_legged/include/chassis/leg.hpp
  * @brief 五连杆腿部运动学解算器
  */
 
