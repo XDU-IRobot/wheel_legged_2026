@@ -16,15 +16,15 @@ inline class Gimbal {
 
   bool DM_enable_flag_ = false;  // 4310电机使能标志
 
-  bool scan_yaw_flag_ = false;       // 扫描yaw轴方向标识位
-  bool scan_pitch_flag_ = false;     // 扫描pitch轴方向标识位
-  bool single_shoot_flag_ = false;   // 单发标志
+  bool scan_yaw_flag_ = false;      // 扫描yaw轴方向标识位
+  bool scan_pitch_flag_ = false;    // 扫描pitch轴方向标识位
+  bool single_shoot_flag_ = false;  // 单发标志
 
-  f32 ammo_speed_ = 7800.0f;         // 摩擦轮目标速度
-  f32 shoot_frequency_ = 0.0f;       // 射击频率（负值为正转）
+  f32 ammo_speed_ = 7800.0f;    // 摩擦轮目标速度
+  f32 shoot_frequency_ = 0.0f;  // 射击频率（负值为正转）
 
   const f32 sensitivity_ = 0.008f;         // 云台灵敏度 0.004f
-  const f32 highest_pitch_angle_ = 0.7f;  // 云台pitch轴最高 0.615f（弧度制）
+  const f32 highest_pitch_angle_ = 0.7f;   // 云台pitch轴最高 0.615f（弧度制）
   const f32 lowest_pitch_angle_ = -0.39f;  // 云台pitch轴最低 -0.675f（弧度制）
 
  public:
