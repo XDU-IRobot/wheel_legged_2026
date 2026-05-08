@@ -115,10 +115,10 @@ void chassis::Chassis::Init() {
            right_leg_turn_pid.max_out, right_leg_turn_pid.max_iout);
   // 上台阶腿摆角 PID（位置环），先转腿到目标摆角再收腿
   const auto &stair_climb_theta_pid = wheel_legged::params::active::chassis::kStairClimbThetaPid;
-  init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki,
-           stair_climb_theta_pid.kd, stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
-  init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki,
-           stair_climb_theta_pid.kd, stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+  init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
+           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+  init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
+           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
 
   std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
