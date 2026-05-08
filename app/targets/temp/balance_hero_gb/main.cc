@@ -71,7 +71,7 @@ void GlobalWarehouse::Init() {
   buzzer->Init();
   led->Init();
   hipnuc_imu->Begin();
-  device_rc << rc;              // 遥控器
+  device_rc << rc;             // 遥控器
   device_gimbal << yaw_motor;  // 云台电机
 
   led_controller.SetPattern<modules::led_pattern::GreenBreath>();
@@ -139,7 +139,6 @@ void GlobalWarehouse::RCStateUpdate() {
           break;
       }
       break;
-
 
     case rm::device::DR16::SwitchPosition::kDown:
       globals->StateMachine_ = kNoForce;
@@ -226,7 +225,7 @@ void GlobalWarehouse::CommunicateUpdate() {
 
   chassis_communicate->SendChassisCommand();
 }
-f32 p,y,r,y_vl,p_vl;
+f32 p, y, r, y_vl, p_vl;
 void GlobalWarehouse::SubLoop500Hz() {
   // imu 解算
   globals->imu->Update();
@@ -239,9 +238,9 @@ void GlobalWarehouse::SubLoop500Hz() {
   globals->CommunicateUpdate();
   shoot_controller->Task();
 
-  globals->yaw_motor->SetPosition(0, 0, gimbal_controller.output().yaw ,0, 0);
+  globals->yaw_motor->SetPosition(0, 0, gimbal_controller.output().yaw, 0, 0);
   // globals->yaw_motor->SetPosition(0, 0, 0, 0, 0);
-  globals->pitch_motor->SetPosition(0, 0, gimbal_controller.output().pitch + 1 *cos(hipnuc_imu->pitch()), 0, 0);
+  globals->pitch_motor->SetPosition(0, 0, gimbal_controller.output().pitch + 1 * cos(hipnuc_imu->pitch()), 0, 0);
   // globals->pitch_motor->SetPosition(0, 0, 0, 0, 0);
 
   Deubg();
