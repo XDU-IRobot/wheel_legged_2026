@@ -31,8 +31,8 @@ constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRad
 constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFreezeSpeedThresholdMps;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
-constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
+constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
 constexpr float kExpectedThetaLlBiasRad = ns::control_loop::kExpectedThetaLlBiasRad;
 constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
@@ -250,10 +250,12 @@ void ControlLoop() {
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
   const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
 
-  // ── 7d. 偏航跟随模式选择 ──
+  // ── 7d. 偏航跟随模式选择（非自旋模式专用，自旋期间侧向指令由 7h 全向投影独立处理）──
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
+  } else if (now_is_spin) {
+    // 自旋期间冻结 yaw follow 模式，不处理方向性输入
   } else if (forward_input_active) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (side_input_active) {
@@ -316,12 +318,8 @@ void ControlLoop() {
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
-    // 小陀螺：将云台系前进指令投影到车体系
-    const float gimbal_heading = -input.gimbal_imu_yaw_rad;
-    const float vx_gimbal = forward_input_norm;
-    const bool has_vx_motion_cmd = std::fabs(vx_gimbal) > kVxInputDeadbandNorm;
-    const float s_dot_cmd = has_vx_motion_cmd ? (vx_gimbal * std::cos(gimbal_heading)) : 0.0f;
-    spin_target_s_dot = kSpinTranslationGain * s_dot_cmd;
+    // 小陀螺模式：目标速度恒为 0，不进行全向平移。
+    spin_target_s_dot = 0.0f;
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
@@ -373,7 +371,7 @@ void ControlLoop() {
   chassis_update_input.expected.phi_dot = 0.0f;
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
-    chassis_update_input.expected.theta_lr = 0.0f;
+    chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
   } else {
     chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
                                                  ? chassis_output.control.theta_leg_target_rad

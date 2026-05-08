@@ -152,7 +152,7 @@ struct SharedResources {
       no_dtcm->referee_uart.Start();
     }
     if (!dyp_rx.has_value()) {
-      dyp_rx.emplace(*joint_can);
+      dyp_rx.emplace(*gimbal_can);
     }
 
     if (!dm_lf.has_value()) {
