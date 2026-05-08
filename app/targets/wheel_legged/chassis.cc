@@ -372,7 +372,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kThetaTarget = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
       constexpr float kThetaTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
       constexpr float kLegLengthTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
-      constexpr float kLegLengthTol = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
+      constexpr float kLegLengthTol =
+          wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
       constexpr float kZeroThreshold = 0.4f;
       constexpr uint16_t kPhaseStableTicks = 250;  // 500ms @ 500Hz
 
@@ -408,8 +409,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_bl_cmd = -left_stair_climb_theta_pid_.out();
       t_br_cmd = -right_stair_climb_theta_pid_.out();
 
-      output_.stair_climb_ready_for_done =
-          (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
+      output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
     } else {
       stair_climb_phase_ = 0;
       stair_climb_stable_ticks_ = 0;
