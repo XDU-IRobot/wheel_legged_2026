@@ -41,6 +41,8 @@ class Chassis {
     rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
     rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
+    rm::f32 left_l0_pid_out{0.0f};        ///< 左腿腿长 PID 输出
+    rm::f32 right_l0_pid_out{0.0f};       ///< 右腿腿长 PID 输出
     rm::f32 left_force_n{0.0f};           ///< 左腿竖直力
     rm::f32 right_force_n{0.0f};          ///< 右腿竖直力
     rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
@@ -122,6 +124,7 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool standup_complete_{false};
+  uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
@@ -132,6 +135,8 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_stair_climb_theta_pid_{};   ///< 上台阶左腿摆角 PID（位置环）
+  rm::modules::PID right_stair_climb_theta_pid_{};  ///< 上台阶右腿摆角 PID（位置环）
 
   UpdateOutput output_{};
 };

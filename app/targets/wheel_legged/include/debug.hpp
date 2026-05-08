@@ -124,10 +124,24 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float state_l_l_m;               // 左腿等效长度
   float state_l_r_m;               // 右腿等效长度
 
+  // ── LQR 状态误差 ──
+  float lqr_err_s;             // s 误差
+  float lqr_err_s_dot;         // s_dot 误差
+  float lqr_err_phi;           // phi 误差（已 wrap）
+  float lqr_err_phi_dot;       // phi_dot 误差
+  float lqr_err_theta_ll;      // theta_ll 误差
+  float lqr_err_theta_ll_dot;  // theta_ll_dot 误差
+  float lqr_err_theta_lr;      // theta_lr 误差
+  float lqr_err_theta_lr_dot;  // theta_lr_dot 误差
+  float lqr_err_theta_b;       // theta_b 误差
+  float lqr_err_theta_b_dot;   // theta_b_dot 误差
+
   // ── 底盘状态 ──
   float chassis_mean_leg_length_m;      // 平均腿长
   float chassis_left_leg_length_m;      // 左腿长度
   float chassis_right_leg_length_m;     // 右腿长度
+  float chassis_left_l0_pid_out;        // 左腿腿长 PID 输出
+  float chassis_right_l0_pid_out;       // 右腿腿长 PID 输出
   float chassis_speed_mps;              // 车体融合速度
   float chassis_left_force_n;           // 左腿竖直力
   float chassis_right_force_n;          // 右腿竖直力

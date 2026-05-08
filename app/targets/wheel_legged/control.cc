@@ -150,6 +150,7 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
+    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -373,12 +374,8 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
   } else {
-    chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                                 ? chassis_output.control.theta_leg_target_rad
-                                                 : kExpectedThetaLlBiasRad;
-    chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                                 ? chassis_output.control.theta_leg_target_rad
-                                                 : kExpectedThetaLrBiasRad;
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
   }
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 

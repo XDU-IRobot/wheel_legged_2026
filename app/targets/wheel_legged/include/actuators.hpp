@@ -114,9 +114,32 @@ class Actuators {
 
   void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
 
+  // ---------- 发射机构使能/失能 ----------
+
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  void EnableBoosterMotor(SharedResources &g) {
+    if (booster_enabled_latched_) return;
+    if (!g.booster_motor.has_value()) return;
+    g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kClearError);
+    g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kEnable);
+    booster_enabled_latched_ = true;
+  }
+
+  void DisableBoosterMotor(SharedResources &g) {
+    if (!booster_enabled_latched_) return;
+    if (g.booster_motor.has_value()) {
+      g.booster_motor->SendInstruction(rm::device::DmMotorInstructions::kDisable);
+    }
+    booster_enabled_latched_ = false;
+  }
+#endif
+
  private:
   bool dm_enabled_latched_{false};             ///< 底盘 DM 使能锁存
   bool gimbal_motors_enabled_latched_{false};  ///< 云台 DM 使能锁存
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  bool booster_enabled_latched_{false};  ///< DM 拨盘使能锁存
+#endif
 
   static bool IsReady(const SharedResources &g) {
     return g.joint_can.has_value() && g.wheel_can.has_value() && g.dm_lf.has_value() && g.dm_lb.has_value() &&
@@ -206,8 +229,8 @@ class Actuators {
       // g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
     if (g.pitch_motor.has_value()) {
-      g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
-      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
+      g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
   }
 
