@@ -376,12 +376,8 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = 0.0f;
   } else {
-    chassis_update_input.expected.theta_ll = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                                 ? chassis_output.control.theta_leg_target_rad
-                                                 : kExpectedThetaLlBiasRad;
-    chassis_update_input.expected.theta_lr = (chassis_output.control.theta_leg_target_rad != 0.0f)
-                                                 ? chassis_output.control.theta_leg_target_rad
-                                                 : kExpectedThetaLrBiasRad;
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
   }
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 

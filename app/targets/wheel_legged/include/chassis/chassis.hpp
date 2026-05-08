@@ -124,6 +124,7 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool standup_complete_{false};
+  uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
@@ -134,6 +135,8 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_stair_climb_theta_pid_{};   ///< 上台阶左腿摆角 PID（位置环）
+  rm::modules::PID right_stair_climb_theta_pid_{};  ///< 上台阶右腿摆角 PID（位置环）
 
   UpdateOutput output_{};
 };

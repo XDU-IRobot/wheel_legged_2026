@@ -141,29 +141,29 @@ inline const DmMitSettings kBoosterDmSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f,
 namespace chassis_fsm {
 
 // ==== 上台阶 ====
-constexpr float kStairClimbThetaThresholdRad = 0.5f;               ///< 双腿摆角均超过此值触发上台阶 [rad]
-constexpr float kStairClimbLegLengthM = 0.16f;                     ///< 上台阶目标腿长 [m]
-constexpr float kStairClimbThetaTargetRad = 0.9f;                  ///< 上台阶目标腿摆角（统一偏置） [rad]
-constexpr std::uint32_t kStairClimbDurationMs = 400U;              ///< 上台阶最长持续时间 [ms]
+constexpr float kStairClimbThetaThresholdRad = 0.3f;               ///< 双腿摆角均超过此值触发上台阶 [rad]
+constexpr float kStairClimbLegLengthM = 0.13f;                     ///< 上台阶目标腿长 [m]
+constexpr float kStairClimbThetaTargetRad = 0.7f;                  ///< 上台阶目标腿摆角（统一偏置） [rad]
+constexpr std::uint32_t kStairClimbDurationMs = 4000U;              ///< 上台阶最长持续时间 [ms]
 constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.01f;  ///< 腿长到位容差 [m]
-constexpr float kStairClimbThetaNearZeroThresholdRad = 0.08f;  ///< 摆角归零判定阈值（上台阶完成） [rad]
-constexpr std::uint32_t kStairClimbPitchStableMs = 300U;       ///< 上台阶完成后俯仰稳定等待时间 [ms]
+constexpr float kStairClimbThetaNearZeroThresholdRad = 0.1f;  ///< 摆角归零判定阈值（上台阶完成） [rad]
+constexpr std::uint32_t kStairClimbPitchStableMs = 250U;       ///< 上台阶完成后俯仰稳定等待时间 [ms]
 
-// ==== 倒地自启 ====
+// ==== 倒地自起 ====
 constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;  ///< 倒地确认时间（持续倒地超过此值进入自启） [ms]
 constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自启超时（超时后强制停机） [ms]
 
 // ==== 跳跃（低腿长）====
-constexpr std::uint32_t kJumpLowPrepMs = 450U;           ///< 跳跃预备阶段持续时间 [ms]
-constexpr std::uint32_t kJumpLowPushMaxMs = 1000U;       ///< 跳跃蹬伸阶段最长持续时间 [ms]
-constexpr std::uint32_t kJumpLowRecoverMs = 450U;        ///< 跳跃回收阶段持续时间 [ms]
+constexpr std::uint32_t kJumpLowPrepMs = 100U;           ///< 跳跃预备阶段持续时间 [ms]
+constexpr std::uint32_t kJumpLowPushMaxMs = 500U;       ///< 跳跃蹬伸阶段最长持续时间 [ms]
+constexpr std::uint32_t kJumpLowRecoverMs = 150U;        ///< 跳跃回收阶段持续时间 [ms]
 constexpr float kJumpLowPrepLegLengthM = 0.13f;          ///< 跳跃预备阶段目标腿长 [m]（蓄力收腿）
 constexpr float kJumpLowPushLegLengthM = 0.25f;           ///< 跳跃蹬伸阶段目标腿长 [m]（爆发推地）
-constexpr float kJumpLowRecoverLegLengthM = 0.15f;       ///< 跳跃回收阶段目标腿长 [m]（落地缓冲）
-constexpr float kJumpLowPushReachedLegLengthM = 0.23f;  ///< 蹬伸到位判定腿长 [m]（到达此值提前结束 push）
+constexpr float kJumpLowRecoverLegLengthM = 0.16f;       ///< 跳跃回收阶段目标腿长 [m]（落地缓冲）
+constexpr float kJumpLowPushReachedLegLengthM = 0.26f;  ///< 蹬伸到位判定腿长 [m]（到达此值提前结束 push）
 
 // ==== 跳跃（中腿长）====
-constexpr std::uint32_t kJumpMidPrepMs = 450U;           ///< 跳跃预备阶段持续时间 [ms]
+constexpr std::uint32_t kJumpMidPrepMs = 100U;           ///< 跳跃预备阶段持续时间 [ms]
 constexpr std::uint32_t kJumpMidPushMaxMs = 1000U;       ///< 跳跃蹬伸阶段最长持续时间 [ms]
 constexpr std::uint32_t kJumpMidRecoverMs = 450U;        ///< 跳跃回收阶段持续时间 [ms]
 constexpr float kJumpMidPrepLegLengthM = 0.13f;          ///< 跳跃预备阶段目标腿长 [m]
@@ -212,13 +212,13 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupThetaThresholdRad = 1.4f;  ///< 起立完成判定：双腿摆角绝对值低于此值后允许轮端输出 [rad]
+constexpr float kStandupThetaThresholdRad = 1.55f;  ///< 起立完成判定：双腿摆角绝对值低于此值后允许轮端输出 [rad]
 constexpr float kPostureRollMinRad = -0.5f;      ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.5f;       ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.8f;    ///< 机体俯仰角安全下限 [rad]
 constexpr float kPostureThetaBMaxRad = 0.8f;     ///< 机体俯仰角安全上限 [rad]
 constexpr float kPostureThetaLegMinRad = -0.8f;  ///< 腿摆角安全下限 [rad]
-constexpr float kPostureThetaLegMaxRad = 1.4f;   ///< 腿摆角安全上限 [rad]
+constexpr float kPostureThetaLegMaxRad = 1.55f;   ///< 腿摆角安全上限 [rad]
 constexpr float kLegRecoverThetaDotTarget = -2.0f;  ///< 倒地恢复时腿摆角速度目标 [rad/s]（负号表示前摆方向）
 constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;  ///< 倒地恢复零力矩区间下限 [rad]
 constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;  ///< 倒地恢复零力矩区间上限 [rad]
@@ -238,62 +238,65 @@ constexpr float kRollBalanceTargetRad = 0.025f;  ///< 横滚平衡目标角 [rad
 /// 共 40 行，对应 4×10 增益矩阵 K 的 40 个元素（按行主序展平）
 /// 每行 6 个系数：[p00, p10, p01, p20, p11, p02]
 constexpr std::array<float, 240> kCtrlP{
--3.7531,  -28.847,  22.042,  41.961,  -15.075,  -19.541,
-     -6.4996,  -36.119,  33.807,  56.42,  -31.166,  -28.204,
-     -0.45571,  1.7511,  -0.83657,  -1.7459,  -0.13117,  1.2169,
-     -2.8929,  11.256,  -5.4811,  -11.046,  -1.0768,  8.034,
-     -10.691,  -86.159,  18.259,  70.226,  14.236,  -25.886,
-     -0.70791,  -7.2387,  3.1098,  -5.3977,  3.7728,  -4.3193,
-     -3.9254,  -0.20065,  -9.6803,  19.582,  -14.302,  0.47121,
-     -0.37403,  -1.9926,  -0.46132,  6.7732,  -12.15,  0.68635,
-     -21.021,  19.11,  34.267,  17.028,  -36.701,  -29.474,
-     -2.7404,  1.1572,  7.2305,  3.9596,  -7.0971,  -6.919,
-     -3.7531,  22.042,  -28.847,  -19.541,  -15.075,  41.961,
-     -6.4996,  33.807,  -36.119,  -28.204,  -31.166,  56.42,
-     0.45571,  0.83657,  -1.7511,  -1.2169,  0.13117,  1.7459,
-     2.8929,  5.4811,  -11.256,  -8.034,  1.0768,  11.046,
-     -3.9254,  -9.6803,  -0.20065,  0.47121,  -14.302,  19.582,
-     -0.37403,  -0.46132,  -1.9926,  0.68635,  -12.15,  6.7732,
-     -10.691,  18.259,  -86.159,  -25.886,  14.236,  70.226,
-     -0.70791,  3.1098,  -7.2387,  -4.3193,  3.7728,  -5.3977,
-     -21.021,  34.267,  19.11,  -29.474,  -36.701,  17.028,
-     -2.7404,  7.2305,  1.1572,  -6.919,  -7.0971,  3.9596,
-     11.056,  13.915,  -33.652,  -70.993,  54.752,  23.043,
-     16.911,  17.494,  -55.995,  -100.22,  95.234,  35.355,
-     -0.39674,  -2.9168,  -0.83762,  5.0738,  -1.5582,  1.2693,
-     -2.5228,  -18.83,  -5.1162,  32.529,  -9.9901,  7.6999,
-     60.239,  -63.838,  0.75648,  33.906,  62.172,  -14.739,
-     2.9517,  4.4716,  -3.2068,  -2.8058,  5.6117,  1.7163,
-     -1.6002,  -27.966,  -7.8295,  21.954,  -47.089,  0.63405,
-     -0.14202,  1.4642,  4.2389,  -9.8917,  3.8799,  -8.7331,
-     -28.494,  -181.93,  43.943,  188.08,  46.79,  -54.064,
-     -0.71888,  -15.983,  -0.21576,  10.398,  12.879,  -1.5416,
-     11.056,  -33.652,  13.915,  23.043,  54.752,  -70.993,
-     16.911,  -55.995,  17.494,  35.355,  95.234,  -100.22,
-     0.39674,  0.83762,  2.9168,  -1.2693,  1.5582,  -5.0738,
-     2.5228,  5.1162,  18.83,  -7.6999,  9.9901,  -32.529,
-     -1.6002,  -7.8295,  -27.966,  0.63405,  -47.089,  21.954,
-     -0.14202,  4.2389,  1.4642,  -8.7331,  3.8799,  -9.8917,
-     60.239,  0.75648,  -63.838,  -14.739,  62.172,  33.906,
-     2.9517,  -3.2068,  4.4716,  1.7163,  5.6117,  -2.8058,
-     -28.494,  43.943,  -181.93,  -54.064,  46.79,  188.08,
-     -0.71888,  -0.21576,  -15.983,  -1.5416,  12.879,  10.398,
+-1.9402,  -15.495,  11.384,  22.072,  -7.0165,  -10.467,
+     -4.1924,  -25.735,  22.349,  38.759,  -18.259,  -19.566,
+     -0.81493,  3.0117,  -1.4038,  -3.0756,  0.18136,  1.9472,
+     -2.3306,  8.8271,  -4.2864,  -8.7386,  0.20353,  6.045,
+     -8.06,  -69.804,  15.334,  57,  9.2054,  -21.493,
+     -0.56472,  -5.3896,  2.295,  -4.2007,  2.7339,  -3.2817,
+     -3.3729,  0.9483,  -9.8559,  12.88,  -4.3214,  2.3679,
+     -0.30702,  -1.3717,  -0.35598,  4.6654,  -7.8988,  0.064015,
+     -19.794,  17.98,  30.942,  17.412,  -33.769,  -25.841,
+     -2.4039,  1.2428,  5.8829,  3.1708,  -5.7277,  -5.6283,
+     -1.9402,  11.384,  -15.495,  -10.467,  -7.0165,  22.072,
+     -4.1924,  22.349,  -25.735,  -19.566,  -18.259,  38.759,
+     0.81493,  1.4038,  -3.0117,  -1.9472,  -0.18136,  3.0756,
+     2.3306,  4.2864,  -8.8271,  -6.045,  -0.20353,  8.7386,
+     -3.3729,  -9.8559,  0.9483,  2.3679,  -4.3214,  12.88,
+     -0.30702,  -0.35598,  -1.3717,  0.064015,  -7.8988,  4.6654,
+     -8.06,  15.334,  -69.804,  -21.493,  9.2054,  57,
+     -0.56472,  2.295,  -5.3896,  -3.2817,  2.7339,  -4.2007,
+     -19.794,  30.942,  17.98,  -25.841,  -33.769,  17.412,
+     -2.4039,  5.8829,  1.2428,  -5.6283,  -5.7277,  3.1708,
+     6.8646,  8.7782,  -21.565,  -44.165,  33.503,  15.777,
+     13.484,  13.837,  -44.916,  -79.761,  72.893,  31.057,
+     -0.69815,  -5.8863,  -1.765,  10.199,  -3.3906,  2.7713,
+     -2.0007,  -17.428,  -4.7187,  29.837,  -10.038,  7.3458,
+     49.906,  -40.717,  2.459,  6.4186,  61.538,  -16.382,
+     2.5998,  3.5488,  -2.504,  -2.2296,  5.2062,  1.3714,
+     -1.2429,  -29.885,  -9.0078,  27.502,  -48.812,  3.7073,
+     -0.16138,  0.78265,  3.6273,  -7.328,  1.5367,  -7.2088,
+     -31.113,  -188.28,  47.44,  193.34,  49.216,  -60.582,
+     -1.0108,  -16.127,  1.0221,  11.336,  11.268,  -2.6117,
+     6.8646,  -21.565,  8.7782,  15.777,  33.503,  -44.165,
+     13.484,  -44.916,  13.837,  31.057,  72.893,  -79.761,
+     0.69815,  1.765,  5.8863,  -2.7713,  3.3906,  -10.199,
+     2.0007,  4.7187,  17.428,  -7.3458,  10.038,  -29.837,
+     -1.2429,  -9.0078,  -29.885,  3.7073,  -48.812,  27.502,
+     -0.16138,  3.6273,  0.78265,  -7.2088,  1.5367,  -7.328,
+     49.906,  2.459,  -40.717,  -16.382,  61.538,  6.4186,
+     2.5998,  -2.504,  3.5488,  1.3714,  5.2062,  -2.2296,
+     -31.113,  47.44,  -188.28,  -60.582,  49.216,  193.34,
+     -1.0108,  1.0221,  -16.127,  -2.6117,  11.268,  11.336,
 };
 
 // ==== 基本运动（PID 增益）====
-constexpr PidGains kLeftL0Pid{9000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};   ///< 左腿腿长 PID（常规）
-constexpr PidGains kRightL0Pid{9000.0f, 0.15f, 70000.0f, 170.0f, 30.0f};  ///< 右腿腿长 PID（常规）
+constexpr PidGains kLeftL0Pid{4000.0f, 0.15f, 70000.0f, 210.0f, 30.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0Pid{4000.0f, 0.15f, 70000.0f, 210.0f, 30.0f};  ///< 右腿腿长 PID（常规）
 constexpr PidGains kRollPid{600.0f, 0.0f, 200.0f, 180.0f, 0.0f};          ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
 constexpr PidGains kLeftL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};      ///< 左腿蹬伸 PID（JumpPush）
 constexpr PidGains kRightL0PidJumpTwo{8000.0f, 0.0f, 70000.0f, 250.0f, 0.0f};     ///< 右腿蹬伸 PID（JumpPush）
-constexpr PidGains kLeftL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};  ///< 左腿回收 PID（JumpRecover）
-constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 60000.0f, 190.0f, 30.0f};  ///< 右腿回收 PID（JumpRecover）
+constexpr PidGains kLeftL0PidJumpThree{12000.0f, 0.15f, 80000.0f, 190.0f, 30.0f};  ///< 左腿回收 PID（JumpRecover）
+constexpr PidGains kRightL0PidJumpThree{12000.0f, 0.15f, 80000.0f, 190.0f, 30.0f};  ///< 右腿回收 PID（JumpRecover）
 
 // ==== 倒地自启（腿摆速度 PID）====
 constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};   ///< 左腿摆角速度 PID（倒地恢复用）
 constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（倒地恢复用）
+
+// ==== 上台阶（腿摆角 PID）====
+constexpr PidGains kStairClimbThetaPid{15.0f, 0.0f, 10.0f, 20.0f, 0.0f};  ///< 上台阶腿摆角 PID（位置环，跟踪 kStairClimbThetaTargetRad）
 }  // namespace chassis
 
 // ── 控制环 ──
@@ -624,6 +627,9 @@ constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f}
 // ==== 倒地自启（腿摆速度 PID）====
 constexpr PidGains kLeftLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};   ///< 左腿摆角速度 PID
 constexpr PidGains kRightLegTurnPid{32.0f, 0.0f, 10.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID
+
+// ==== 上台阶（腿摆角 PID）====
+constexpr PidGains kStairClimbThetaPid{80.0f, 0.0f, 5.0f, 60.0f, 30.0f};  ///< 上台阶腿摆角 PID（位置环，跟踪 kStairClimbThetaTargetRad）
 }  // namespace chassis
 
 // ── 控制环 ──
@@ -954,6 +960,9 @@ constexpr PidGains kRightL0PidJumpThree{6500.0f, 0.15f, 50000.0f, 170.0f, 30.0f}
 // ==== 倒地自启（腿摆速度 PID）====
 constexpr PidGains kLeftLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};   ///< 左腿摆角速度 PID
 constexpr PidGains kRightLegTurnPid{20.0f, 0.0f, 0.0f, 15.0f, 0.0f};  ///< 右腿摆角速度 PID
+
+// ==== 上台阶（腿摆角 PID）====
+constexpr PidGains kStairClimbThetaPid{80.0f, 0.0f, 5.0f, 60.0f, 30.0f};  ///< 上台阶腿摆角 PID（位置环，跟踪 kStairClimbThetaTargetRad）
 }  // namespace chassis
 
 // ── 控制环 ──

@@ -17,16 +17,16 @@ bool IsJumpState(const chassis::Fsm::State state) {
          state == chassis::Fsm::State::kJumpRecover;
 }
 
+/**
+ * @brief 上台阶完成判定：只检查腿长是否到达目标。
+ *
+ * 摆角先到位再收腿的时序由 chassis 内部 stair_climb_phase_ 保证，
+ * 此处腿长到位意味着两个子阶段均已完成，无需再检查摆角。
+ */
 bool IsStairClimbReadyToDone(const wheel_legged::ChassisFsmInput &request) {
   const float leg_length_error =
       std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
-  const bool leg_length_near_target =
-      leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
-  const bool left_theta_near_zero = std::fabs(request.theta_ll_rad) <=
-                                    wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-  const bool right_theta_near_zero = std::fabs(request.theta_lr_rad) <=
-                                     wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-  return leg_length_near_target && left_theta_near_zero && right_theta_near_zero;
+  return leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
 }
 
 /**

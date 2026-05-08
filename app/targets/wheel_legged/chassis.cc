@@ -113,6 +113,12 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid = wheel_legged::params::active::chassis::kRightLegTurnPid;
   init_pid(right_leg_turn_pid_, right_leg_turn_pid.kp, right_leg_turn_pid.ki, right_leg_turn_pid.kd,
            right_leg_turn_pid.max_out, right_leg_turn_pid.max_iout);
+  // 上台阶腿摆角 PID（位置环），先转腿到目标摆角再收腿
+  const auto &stair_climb_theta_pid = wheel_legged::params::active::chassis::kStairClimbThetaPid;
+  init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki,
+           stair_climb_theta_pid.kd, stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+  init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki,
+           stair_climb_theta_pid.kd, stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
 
   std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
@@ -359,8 +365,31 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.rw_tau = base_torque_.t_wr;
     }
 
-    const rm::f32 t_bl_cmd = -base_torque_.t_bl;
-    const rm::f32 t_br_cmd = -base_torque_.t_br;
+    // 上台阶腿摆角力矩：先转腿到目标角度，再收腿压低车身，最后起立
+    // Phase 0 — 转腿：theta PID 驱动双腿前摆，腿长锁在当前值不缩
+    // Phase 1 — 收腿：theta PID 维持目标角度，腿长跟随 FSM 目标缩到 kStairClimbLegLengthM
+    rm::f32 t_bl_cmd;
+    rm::f32 t_br_cmd;
+    if (use_stair_climb) {
+      constexpr float kTarget = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
+      constexpr float kTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+      left_stair_climb_theta_pid_.Update(kTarget, state_output.current.theta_ll);
+      right_stair_climb_theta_pid_.Update(kTarget, state_output.current.theta_lr);
+      t_bl_cmd = -left_stair_climb_theta_pid_.out();
+      t_br_cmd = -right_stair_climb_theta_pid_.out();
+
+      if (stair_climb_phase_ == 0) {
+        params_.leg_target_length_m = avg_leg_length_m;  // 锁腿长，先完成转腿
+        if (std::fabs(state_output.current.theta_ll - kTarget) < kTol &&
+            std::fabs(state_output.current.theta_lr - kTarget) < kTol) {
+          stair_climb_phase_ = 1;  // 摆角到位，进入收腿阶段
+        }
+      }
+    } else {
+      stair_climb_phase_ = 0;  // 退出上台阶时重置子阶段
+      t_bl_cmd = -base_torque_.t_bl;
+      t_br_cmd = -base_torque_.t_br;
+    }
 
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
