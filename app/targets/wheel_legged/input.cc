@@ -292,6 +292,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .fall_detected = m.fall_detected,
       .fall_detected_hold_ms = m.fall_detected_hold_ms,
       .upright_stable = m.upright_stable,
+      .stair_climb_ready_for_done = chassis_output.stair_climb_ready_for_done,
       .tick_ms = tick_ms,
   };
   return fsm_input;
