@@ -315,9 +315,9 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
-  const float forward_max_speed =
-      (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetForwardSpeedMaxHighLegMps
-                                                              : kTargetForwardSpeedMaxMps;
+  const float forward_max_speed = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
+                                      ? kTargetForwardSpeedMaxHighLegMps
+                                      : kTargetForwardSpeedMaxMps;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {

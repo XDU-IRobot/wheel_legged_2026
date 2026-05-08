@@ -10,7 +10,7 @@
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
- uint8_t debug_stair_climb_phase_ = 0;
+uint8_t debug_stair_climb_phase_ = 0;
 
 namespace {
 
@@ -382,11 +382,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kLegLengthTol =
           wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
       constexpr float kZeroThreshold = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr uint16_t kPhaseStableTicks =90;  // 500ms @ 500Hz
+      constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
 
       float theta_target = kThetaTarget;
       bool cond_met = false;
-      debug_stair_climb_phase_ =stair_climb_phase_;
+      debug_stair_climb_phase_ = stair_climb_phase_;
       if (stair_climb_phase_ == 0) {
         params_.leg_target_length_m = kPhase0LegTarget;  // 转腿时拉长腿长
         cond_met = (std::fabs(state_output.current.theta_ll - kThetaTarget) < kThetaTol &&
@@ -411,8 +411,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         stair_climb_stable_ticks_ = 0;
       }
 
-      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,state_output.current.theta_ll_dot);
-      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,state_output.current.theta_lr_dot);
+      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
+                                                state_output.current.theta_ll_dot);
+      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
+                                                 state_output.current.theta_lr_dot);
       t_bl_cmd = -left_stair_climb_theta_pid_.out();
       t_br_cmd = -right_stair_climb_theta_pid_.out();
 
