@@ -20,6 +20,9 @@ constexpr int16_t kDr16AxisMaxAbs = params::active::control_loop::kDr16AxisMaxAb
 constexpr int16_t kWheelSpinThreshold = params::active::control_loop::kWheelSpinThreshold;
 constexpr int16_t kWheelActionThreshold = params::active::control_loop::kWheelActionThreshold;
 constexpr int16_t kWheelCenterThreshold = params::active::control_loop::kWheelCenterThreshold;
+constexpr uint16_t kAutoJumpDistanceThresholdMm = params::active::control_loop::kAutoJumpDistanceThresholdMm;
+constexpr float kAutoJumpHoldTimeS = params::active::control_loop::kAutoJumpHoldTimeS;
+constexpr float kAutoJumpDistanceHoldTimeS = params::active::control_loop::kAutoJumpDistanceHoldTimeS;
 constexpr float kControlLoopDtS = params::active::control_loop::kControlLoopDtS;
 constexpr float kRcStickMax = params::active::control_loop::kRcStickMax;
 constexpr float kTcMouseMax = params::active::control_loop::kTcMouseMax;
@@ -369,6 +372,45 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
 
   // 3c. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
+  // 3a2. 自动跳跃（暂时注释：先调原地跳跃，调完再启用）
+  // static bool s_auto_jump_enabled = false;
+  // static float s_dial_hold_timer = 0.0f;
+  // static bool s_dial_hold_fired = false;
+  //
+  // const bool in_low_leg = (input.mode_request.leg_request == wheel_legged::LegProfile::kLow);
+  // const bool dial_at_threshold = (dr16.dial <= -kWheelActionThreshold);
+  //
+  // if (dial_at_threshold && in_low_leg) {
+  //   if (!s_dial_hold_fired) {
+  //     s_dial_hold_timer += kControlLoopDtS;
+  //     if (s_dial_hold_timer >= kAutoJumpHoldTimeS) {
+  //       s_auto_jump_enabled = !s_auto_jump_enabled;
+  //       s_dial_hold_fired = true;
+  //     }
+  //   }
+  // } else {
+  //   s_dial_hold_timer = 0.0f;
+  //   s_dial_hold_fired = false;
+  // }
+  //
+  // static float s_distance_below_timer = 0.0f;
+  // const bool distance_below_threshold =
+  //     g.dyp_rx.has_value() && g.dyp_rx->distance_filtered_avg() <= kAutoJumpDistanceThresholdMm &&
+  //     g.dyp_rx->distance_filtered_avg() > 0U;
+  // if (s_auto_jump_enabled && in_low_leg && distance_below_threshold) {
+  //   s_distance_below_timer += kControlLoopDtS;
+  // } else {
+  //   s_distance_below_timer = 0.0f;
+  // }
+  // if (s_distance_below_timer >= kAutoJumpDistanceHoldTimeS) {
+  //   input.mode_request.jump_trigger = true;
+  //   input.mode_request.auto_jump_triggered = true;
+  //   s_auto_jump_enabled = false;
+  //   s_distance_below_timer = 0.0f;
+  // }
+  // input.auto_jump_enabled = s_auto_jump_enabled;
+
+  // 3b. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
   if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
     input.mode_request.host_target.yaw_rad = -g.aimbot->yaw() * kDegToRad;

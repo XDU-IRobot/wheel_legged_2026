@@ -266,10 +266,13 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kLowLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
-      } else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kLow) {
-        jump_leg_profile_ = wheel_legged::LegProfile::kLow;
-        next_mode = State::kJumpPrep;
-      } else if (request.spin_hold) {
+      }
+      // 暂时关闭低腿长跳跃
+      // else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kLow) {
+      //   jump_leg_profile_ = wheel_legged::LegProfile::kLow;
+      //   next_mode = State::kJumpPrep;
+      // }
+      else if (request.spin_hold) {
         next_mode = State::kSpin;
       } else {
         next_mode = requested_normal_state;
@@ -337,7 +340,13 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       const uint32_t recover_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                       ? wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMs
                                       : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverMs;
-      if (elapsed_ms >= recover_ms) {
+      const uint32_t recover_min_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
+                                          ? wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMinMs
+                                          : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverMinMs;
+      // 最低维持时间结束后，落地（非离地）时退出回收阶段，超时作为保底
+      if (elapsed_ms >= recover_min_ms && !request.off_ground) {
+        next_mode = State::kLowLeg;
+      } else if (elapsed_ms >= recover_ms) {
         next_mode = State::kLowLeg;
       }
       break;
