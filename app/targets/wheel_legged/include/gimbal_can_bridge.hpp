@@ -14,7 +14,7 @@
 /**
  * @brief 云台→底盘 CAN 接收桥
  * @note  与云台端 GimbalToChassisTxBridge 协议一致：
- *        - 0x110: [0-1]pitch_millirad [2-3]yaw_millirad [4-5]gyro_z [6-7]gyro_x
+ *        - 0x110: [0]vt03_online [1]reserved [2-3]gyro_z [4-5]gyro_x [6-7]reserved
  *        - 0x111: [0-1]mouse_x [2-3]mouse_y [4]left_button [5]right_button [6-7]keyboard_value
  *        - 0x112: [0-1]quat_w [2-3]quat_x [4-5]quat_y [6-7]quat_z  (int16, scale 32767)
  */
@@ -35,10 +35,9 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       return;
     }
     if (msg->rx_std_id == kRxStdIdA && msg->dlc >= kPayloadSizeA) {
-      pitch_rad_ = MilliI16ToRad(UnpackI16(&msg->data[0]));
-      yaw_rad_ = MilliI16ToRad(UnpackI16(&msg->data[2]));
-      gyro_z_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[4]));
-      gyro_x_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[6]));
+      vt03_online_ = (msg->data[0] != 0);
+      gyro_z_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[2]));
+      gyro_x_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[4]));
       frame_count_++;
       ReportStatus(kOk);
     } else if (msg->rx_std_id == kRxStdIdB && msg->dlc >= kPayloadSizeB) {
@@ -46,7 +45,6 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       mouse_y_ = UnpackI16(&msg->data[2]);
       left_button_ = (msg->data[4] != 0);
       right_button_ = (msg->data[5] != 0);
-      if (right_button_) tc_link_activated_ = true;
       keyboard_value_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       kbd_frame_count_++;
@@ -63,6 +61,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       euler_roll_rad_ = euler[1];
       euler_pitch_rad_ = euler[0];
       euler_yaw_rad_ = euler[2];
+      pitch_rad_ = euler_pitch_rad_;
+      yaw_rad_ = euler_yaw_rad_;
       frame_count_++;
       ReportStatus(kOk);
     } else {
@@ -70,6 +70,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
     }
   }
 
+  [[nodiscard]] bool vt03_online() const { return vt03_online_; }
   [[nodiscard]] rm::f32 pitch_rad() const { return pitch_rad_; }
   [[nodiscard]] rm::f32 yaw_rad() const { return yaw_rad_; }
   [[nodiscard]] rm::f32 gyro_z_rad_s() const { return gyro_z_rad_s_; }
@@ -84,7 +85,6 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] rm::u16 keyboard_value() const { return keyboard_value_; }
   [[nodiscard]] rm::u32 frame_count() const { return frame_count_; }
   [[nodiscard]] rm::u32 keyboard_frame_count() const { return kbd_frame_count_; }
-  [[nodiscard]] bool tc_link_activated() const { return tc_link_activated_; }
 
  private:
   static rm::i16 UnpackI16(const rm::u8 *in) {
@@ -100,6 +100,9 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
 
   static rm::f32 I16ToQuat(rm::i16 value) { return static_cast<rm::f32>(value) / 32767.0f; }
 
+  static constexpr rm::f32 kDegToRad = wheel_legged::params::active::kPi / 180.0f;
+
+  bool vt03_online_{false};
   rm::f32 pitch_rad_{0.0f};
   rm::f32 yaw_rad_{0.0f};
   rm::f32 gyro_z_rad_s_{0.0f};
@@ -114,5 +117,4 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   rm::u16 keyboard_value_{0};
   rm::u32 frame_count_{0};
   rm::u32 kbd_frame_count_{0};
-  bool tc_link_activated_{false};
 };

@@ -41,8 +41,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_enable_request;      // 使能请求
   uint8_t dr16_spin_request;        // 小陀螺请求
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
+  uint8_t auto_jump_triggered;      // 自动跳跃触发（DYP 测距）
+  uint8_t auto_jump_enabled;        // 自动跳跃当前开关状态
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
   uint8_t tc_mid_leg_hold;          // 图传C键中腿长锁定
+  uint8_t tc_high_leg_hold;         // 图传V键高腿长
+  uint8_t tc_stair_climb_done;      // 上台阶完成锁定中腿长
+  uint8_t reset_yaw_request;        // R键重置正方向请求
   uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
   int16_t tc_mouse_x;               // 图传鼠标 X 增量
   int16_t tc_mouse_y;               // 图传鼠标 Y 增量
@@ -151,11 +156,14 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_off_ground;           // 离地
 
   // ── DYP 超声波 ──
-  uint16_t dyp_distance_raw_left;   // 左超声波读数
-  uint16_t dyp_distance_raw_right;  // 右超声波读数
-  uint8_t dyp_result_left;          // 左测量状态
-  uint8_t dyp_result_right;         // 右测量状态
-  uint32_t dyp_frame_count;         // 接收帧计数
+  uint16_t dyp_distance_raw_left;        // 左超声波原始读数
+  uint16_t dyp_distance_raw_right;       // 右超声波原始读数
+  uint16_t dyp_distance_filtered_left;   // 左超声波滤波值（仅保留 status==1 时的值）
+  uint16_t dyp_distance_filtered_right;  // 右超声波滤波值（仅保留 status==1 时的值）
+  uint16_t dyp_distance_filtered_avg;    // 左右超声波滤波值均值
+  uint8_t dyp_result_left;               // 左测量状态
+  uint8_t dyp_result_right;              // 右测量状态
+  uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;  // 发射使能

@@ -31,9 +31,18 @@ constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
 constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFreezeSpeedThresholdMps;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
+constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
-constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
+constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
+constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
+constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
+constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
+constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
+constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
+constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
+constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
+constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaLlBiasRad = ns::control_loop::kExpectedThetaLlBiasRad;
 constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
@@ -81,13 +90,38 @@ void ControlLoop() {
   // 阶段 1：硬件反馈采集 + DR16 语义折叠
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
+
   wl_debug.tc_mid_leg_hold = tc_state.mid_leg_hold ? 1 : 0;
+  wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
+  wl_debug.tc_stair_climb_done = tc_state.stair_climb_done ? 1 : 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+
+  // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
+  {
+    static chassis::Fsm::State prev_chassis_mode_for_stair = chassis::Fsm::State::kDisabled;
+    const bool entered_high_leg = (chassis_output.mode == chassis::Fsm::State::kHighLeg);
+    const bool was_stair_climb = (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimb) ||
+                                 (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimbDone);
+    if (entered_high_leg && was_stair_climb) {
+      if (tc_state.b_double_mode && tc_state.b_attempt == 0) {
+        // B 模式第 1 次完成 → 等 FSM kStairClimbDone 稳定后自动再上一次
+        tc_state.b_attempt = 1;
+        tc_state.high_leg_hold = true;
+      } else {
+        // V 模式或 B 模式第 2 次完成 → 锁定低腿长
+        tc_state.stair_climb_done = true;
+        tc_state.high_leg_hold = false;
+        tc_state.b_double_mode = false;
+        tc_state.b_attempt = 0;
+      }
+    }
+    prev_chassis_mode_for_stair = chassis_output.mode;
+  }
 
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
@@ -237,6 +271,9 @@ void ControlLoop() {
     if (cross_spin) {
       // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+      if (!now_is_spin) {
+        ctx.spin_exit_recovery = true;  // 退出小陀螺，启用快速偏航斜坡
+      }
     }
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -252,10 +289,12 @@ void ControlLoop() {
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
   const bool side_input_active = std::fabs(side_input_norm) > kVyInputDeadbandNorm;
 
-  // ── 7d. 偏航跟随模式选择 ──
+  // ── 7d. 偏航跟随模式选择（非自旋模式专用，自旋期间侧向指令由 7h 全向投影独立处理）──
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
+  } else if (now_is_spin) {
+    // 自旋期间冻结 yaw follow 模式，不处理方向性输入
   } else if (forward_input_active) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (side_input_active) {
@@ -281,6 +320,18 @@ void ControlLoop() {
     ctx.yaw_follow_pid.Clear();
   }
 
+  // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
+  wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
+  if (input.mode_request.reset_yaw_request) {
+    ctx.yaw_follow_target = {kYawFollowFixedTargetRad, 1.0f};
+    ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+    ctx.yaw_follow_target_initialized = true;
+    ctx.yaw_follow_drive_ready = false;
+    ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+    ctx.filtered_yaw_dot = 0.0f;
+    ctx.yaw_follow_pid.Clear();
+  }
+
   if (!ctx.yaw_follow_target_initialized) {
     ctx.yaw_follow_target =
         SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
@@ -291,6 +342,10 @@ void ControlLoop() {
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
   const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
                                     chassis_output.control.run_chassis_update;
+  const bool jump_control_enabled =
+      (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
+       chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
+      chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
   const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
@@ -321,12 +376,8 @@ void ControlLoop() {
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
-    // 小陀螺：将云台系前进指令投影到车体系
-    const float gimbal_heading = -input.gimbal_imu_yaw_rad;
-    const float vx_gimbal = forward_input_norm;
-    const bool has_vx_motion_cmd = std::fabs(vx_gimbal) > kVxInputDeadbandNorm;
-    const float s_dot_cmd = has_vx_motion_cmd ? (vx_gimbal * std::cos(gimbal_heading)) : 0.0f;
-    spin_target_s_dot = kSpinTranslationGain * s_dot_cmd;
+    // 小陀螺模式：目标速度恒为 0，不进行全向平移。
+    spin_target_s_dot = 0.0f;
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
@@ -378,28 +429,55 @@ void ControlLoop() {
   chassis_update_input.expected.phi_dot = 0.0f;
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
+  } else if (jump_control_enabled) {
+    chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
     chassis_update_input.expected.theta_lr = 0.0f;
+  } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg) {
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
+  } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
   } else {
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
   // ── 7l. 偏航角速度控制 ──
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   if (spin_control_enabled) {
+    ctx.spin_exit_recovery = false;
     RampYawDotToTarget(kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
+    ctx.spin_exit_recovery = false;
     ctx.filtered_yaw_dot = 0.0f;
     ctx.yaw_follow_pid.Clear();
   } else {
     const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
     const float yaw_target_rad = ctx.yaw_follow_target.target_rad;
-    ctx.yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
+    // 当 error ≈ ±π 时，Wrap 总是返回 -π，PID 会走长路径。
+    // 通过 ±2π unwrap 强制走短路径。
+    const float raw_err = yaw_target_rad - yaw_motor_rad;
+    float adj_target = yaw_target_rad;
+    if (const float wrapped_err = rm::modules::Wrap(raw_err, -kPi, kPi);
+        std::fabs(std::fabs(wrapped_err) - kPi) < 0.5f) {
+      if (raw_err > 0.0f) {
+        adj_target += 2.0f * kPi;
+      }
+    }
+    ctx.yaw_follow_pid.Update(adj_target, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, kYawFollowRampStepRadS);
+    const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
+    RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
+    // 退出小陀螺快速恢复：车体角速度降到 1 rad/s 以下切回正常斜坡
+    if (ctx.spin_exit_recovery && std::fabs(ctx.filtered_yaw_dot) < 1.0f) {
+      ctx.spin_exit_recovery = false;
+    }
   }
 
   // ── 7m. 底盘控制器执行 ──
@@ -475,6 +553,9 @@ void ControlLoop() {
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();
     wl_debug.dyp_distance_raw_right = globals->dyp_rx->distance_raw_right();
+    wl_debug.dyp_distance_filtered_left = globals->dyp_rx->distance_filtered_left();
+    wl_debug.dyp_distance_filtered_right = globals->dyp_rx->distance_filtered_right();
+    wl_debug.dyp_distance_filtered_avg = globals->dyp_rx->distance_filtered_avg();
     wl_debug.dyp_result_left = globals->dyp_rx->last_result_left();
     wl_debug.dyp_result_right = globals->dyp_rx->last_result_right();
     wl_debug.dyp_frame_count = globals->dyp_rx->frame_count();

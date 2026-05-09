@@ -27,6 +27,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
       input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled);
   wl_debug.dr16_spin_request = static_cast<uint8_t>(input.mode_request.spin_hold);
   wl_debug.dr16_jump_trigger_edge = static_cast<uint8_t>(input.mode_request.jump_trigger);
+  wl_debug.auto_jump_triggered = static_cast<uint8_t>(input.mode_request.auto_jump_triggered);
+  wl_debug.auto_jump_enabled = static_cast<uint8_t>(input.auto_jump_enabled);
   wl_debug.tc_remote_valid = static_cast<uint8_t>(input.tc_remote.valid);
   wl_debug.tc_keyboard_value = input.tc_remote.keyboard_value;
   wl_debug.tc_mouse_x = input.tc_remote.mouse_x;

@@ -26,6 +26,7 @@ constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravity
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
+constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -296,10 +297,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
   if (input.fsm_mode == Fsm::State::kSpin) {
-    left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
-    right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
+    left_l0_pid_.Update(params_.leg_target_length_m , left_leg_.l0());
+    right_l0_pid_.Update(params_.leg_target_length_m , right_leg_.l0());
   } else {
     left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
     right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -315,9 +315,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
+  const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
   const bool off_ground_in_mid_high_leg =
-      (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
+      !is_jump_state && (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
       (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
        right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
@@ -328,11 +329,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
-      left_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
-      right_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
-      leg_length_force = 0.5f * (left_l0_pid_jump_two_.out() + right_l0_pid_jump_two_.out());
-      left_force_ = leg_length_force + roll_pid_.out();
-      right_force_ = leg_length_force - roll_pid_.out();
+      left_force_ = 250.0f + roll_pid_.out();
+      right_force_ = 250.0f - roll_pid_.out();
     } else if (use_jump_retract2) {
       left_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
       right_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -357,15 +355,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     }
 
     const bool off_ground_in_mid_high_leg =
-        (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
+        !is_jump_state && (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
         (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
          right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 离地时限制竖直力幅值，防止腾空瞬间力尖峰导致腿异常蹬伸/收束
+    // 离地时限制竖直力幅值，避免轮子空转时力控发散（跳跃期间不触发）
     if (off_ground_in_mid_high_leg) {
-      left_force_ = std::clamp(left_force_, -80.0f, 80.0f);
-      right_force_ = std::clamp(right_force_, -80.0f, 80.0f);
+      left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
@@ -602,6 +600,9 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassKg) * kGravityMps2;
   const rm::f32 gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassKg) * kGravityMps2;
 
-  left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+  // left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
+  // right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+
+  left_support_force_est_n_ = left_F_bh + gravity_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right;
 }
