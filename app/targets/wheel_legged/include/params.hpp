@@ -191,7 +191,7 @@ constexpr float kLegL2M = 0.254f;      ///< 五连杆从动杆长度 [m]
 constexpr float kSpringModelA = 1082.f;      ///< 弹簧模型系数 A
 constexpr float kSpringModelB = 1070.f;      ///< 弹簧模型系数 B
 constexpr float kSpringModelC = 411.f;       ///< 弹簧模型系数 C
-constexpr float kSpringModelD = 203.8f;       ///< 弹簧模型系数 D
+constexpr float kSpringModelD = 203.8f;      ///< 弹簧模型系数 D
 constexpr float kSpringPhaseDivisor = 18.f;  ///< 弹簧相位除数
 
 // -- 质量/惯量/重力 --
