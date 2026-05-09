@@ -188,11 +188,11 @@ constexpr float kLegL1M = 0.215f;      ///< 五连杆主动杆长度 [m]
 constexpr float kLegL2M = 0.254f;      ///< 五连杆从动杆长度 [m]
 
 // -- 弹簧模型参数（用于计算关节等效弹簧补偿力矩）--
-constexpr float kSpringModelA = 1082.0f;      ///< 弹簧模型系数 A
-constexpr float kSpringModelB = 1070.0f;      ///< 弹簧模型系数 B
-constexpr float kSpringModelC = 404.0f;       ///< 弹簧模型系数 C
-constexpr float kSpringModelD = 177.0f;       ///< 弹簧模型系数 D
-constexpr float kSpringPhaseDivisor = 18.0f;  ///< 弹簧相位除数
+constexpr float kSpringModelA = 1082.f;      ///< 弹簧模型系数 A
+constexpr float kSpringModelB = 1070.f;      ///< 弹簧模型系数 B
+constexpr float kSpringModelC = 411.f;       ///< 弹簧模型系数 C
+constexpr float kSpringModelD = 203.8f;       ///< 弹簧模型系数 D
+constexpr float kSpringPhaseDivisor = 18.f;  ///< 弹簧相位除数
 
 // -- 质量/惯量/重力 --
 constexpr float kLegMassKg = 2.3f;     ///< 单条腿质量 [kg]
