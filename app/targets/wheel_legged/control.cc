@@ -34,10 +34,10 @@ constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
-constexpr float kExpectedThetaLlBiasRadLowLeg  = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
-constexpr float kExpectedThetaLrBiasRadLowLeg  = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
-constexpr float kExpectedThetaLlBiasRadMidLeg  = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
-constexpr float kExpectedThetaLrBiasRadMidLeg  = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
+constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
+constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
+constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
+constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
 constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
 constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
 constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
@@ -463,7 +463,8 @@ void ControlLoop() {
     // 通过 ±2π unwrap 强制走短路径。
     const float raw_err = yaw_target_rad - yaw_motor_rad;
     float adj_target = yaw_target_rad;
-    if (const float wrapped_err = rm::modules::Wrap(raw_err, -kPi, kPi); std::fabs(std::fabs(wrapped_err) - kPi) < 0.5f) {
+    if (const float wrapped_err = rm::modules::Wrap(raw_err, -kPi, kPi);
+        std::fabs(std::fabs(wrapped_err) - kPi) < 0.5f) {
       if (raw_err > 0.0f) {
         adj_target += 2.0f * kPi;
       }
