@@ -335,15 +335,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     tc_remote.left_button = g.gimbal_rx->left_button();
     tc_remote.right_button = g.gimbal_rx->right_button();
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
-  } else if (g.referee.has_value() && g.referee->online_status() == rm::device::Device::kOk) {
-    // CAN 桥键鼠不可用时，从裁判系统图传链路（cmd 0x304）读取键鼠数据
-    const auto &rc = g.referee->data().remote_control;
-    tc_remote.valid = true;
-    tc_remote.mouse_x = rc.mouse_x;
-    tc_remote.mouse_y = rc.mouse_y;
-    tc_remote.left_button = (rc.left_button_down != 0);
-    tc_remote.right_button = (rc.right_button_down != 0);
-    tc_remote.keyboard_value = rc.keyboard_value;
   }
 
   // 3a. 使能边沿检测：从 kDisabled 进入使能域时，腿长状态全部归零（低腿长起立）
