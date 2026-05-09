@@ -26,8 +26,7 @@ constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravity
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
-constexpr rm::f32 kOffGroundSupportForceClampN =
-    wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
+constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -601,5 +600,4 @@ void chassis::Chassis::CalSupportForce() {
 
   left_support_force_est_n_ = left_F_bh + gravity_support_left;
   right_support_force_est_n_ = right_F_bh + gravity_support_right;
-
 }

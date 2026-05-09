@@ -38,9 +38,8 @@ class DypCanRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] rm::u16 distance_filtered_left() const { return distance_filtered_left_; }
   [[nodiscard]] rm::u16 distance_filtered_right() const { return distance_filtered_right_; }
   [[nodiscard]] rm::u16 distance_filtered_avg() const {
-    return static_cast<rm::u16>((static_cast<rm::u32>(distance_filtered_left_) +
-                                 static_cast<rm::u32>(distance_filtered_right_)) /
-                                2U);
+    return static_cast<rm::u16>(
+        (static_cast<rm::u32>(distance_filtered_left_) + static_cast<rm::u32>(distance_filtered_right_)) / 2U);
   }
   [[nodiscard]] rm::u8 last_result_left() const { return last_result_left_; }
   [[nodiscard]] rm::u8 last_result_right() const { return last_result_right_; }

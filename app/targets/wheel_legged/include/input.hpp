@@ -68,7 +68,7 @@ struct InputSnapshot {
   TcRemoteInput tc_remote{};                              ///< 图传键鼠数据
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
-  bool auto_jump_enabled{false};                           ///< 自动跳跃当前是否已开启
+  bool auto_jump_enabled{false};                          ///< 自动跳跃当前是否已开启
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
   float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）

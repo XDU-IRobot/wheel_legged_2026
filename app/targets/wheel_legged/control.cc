@@ -300,8 +300,7 @@ void ControlLoop() {
   const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
                                     chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
-      (chassis_output.mode == chassis::Fsm::State::kJumpPrep ||
-       chassis_output.mode == chassis::Fsm::State::kJumpPush ||
+      (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
        chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
       chassis_output_enable && chassis_output.control.run_chassis_update;
 
@@ -412,8 +411,7 @@ void ControlLoop() {
     const float yaw_target_rad = ctx.yaw_follow_target.target_rad;
     ctx.yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
-    const float ramp_step =
-        ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
+    const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
     // 退出小陀螺快速恢复：车体角速度降到 1 rad/s 以下切回正常斜坡
