@@ -388,6 +388,19 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
+  // ── 摩擦圆限速（转向优先）──
+  // 当目标偏航速率与目标速度的归一化矢量和超出单位圆时，限制速度以保证转向。
+  if (target_s_dot != 0.0f && chassis_output_enable) {
+    const float yaw_dot = spin_control_enabled ? kSpinTargetYawDotRadS : ctx.filtered_yaw_dot;
+    const float speed_norm = std::fabs(target_s_dot) / forward_max_speed;
+    const float yaw_norm = std::fabs(yaw_dot) / ns::control_loop::kMaxSafeYawRateRadS;
+    const float sum_sq = speed_norm * speed_norm + yaw_norm * yaw_norm;
+    if (sum_sq > 1.0f) {
+      const float max_speed = forward_max_speed * std::sqrt(1.0f - yaw_norm * yaw_norm);
+      target_s_dot = std::copysign(max_speed, target_s_dot);
+    }
+  }
+
   // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
   // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
