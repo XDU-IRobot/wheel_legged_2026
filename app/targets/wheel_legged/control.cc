@@ -25,6 +25,7 @@ using namespace wheel_legged::control_loop;
 constexpr float kControlLoopDtS = ns::control_loop::kControlLoopDtS;
 constexpr float kPi = ns::kPi;
 constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpeedMaxMps;
+constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
@@ -314,6 +315,9 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
+  const float forward_max_speed = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
+                                      ? kTargetForwardSpeedMaxHighLegMps
+                                      : kTargetForwardSpeedMaxMps;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -327,9 +331,9 @@ void ControlLoop() {
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
   } else if (forward_input_active) {
-    target_s_dot = yaw_follow_drive_sign * kTargetForwardSpeedMaxMps * forward_input_norm;
+    target_s_dot = yaw_follow_drive_sign * forward_max_speed * forward_input_norm;
   } else if (side_input_active) {
-    target_s_dot = yaw_follow_drive_sign * kTargetForwardSpeedMaxMps * side_input_norm;
+    target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
   if (!chassis_output_enable) {
     target_s_dot = 0.0f;

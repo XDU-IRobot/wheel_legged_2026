@@ -10,6 +10,7 @@
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
+uint8_t debug_stair_climb_phase_ = 0;
 
 namespace {
 
@@ -122,8 +123,8 @@ void chassis::Chassis::Init() {
 
   left_stair_climb_theta_pid_.SetCircular(true);
   right_stair_climb_theta_pid_.SetCircular(true);
-  left_stair_climb_theta_pid_.SetCircularCycle(2.f*M_PI);
-  right_stair_climb_theta_pid_.SetCircularCycle(2.f*M_PI);
+  left_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
+  right_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
 
   std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
@@ -295,8 +296,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-  right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
+  if (input.fsm_mode == Fsm::State::kSpin) {
+    left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
+    right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
+  } else {
+    left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  }
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
@@ -378,13 +385,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kThetaTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
       constexpr float kPhase0LegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbPhase0LegLengthM;
       constexpr float kRetractLegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
-      constexpr float kLegLengthTol = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
-      constexpr float kZeroThreshold = 0.4f;
-      constexpr uint16_t kPhaseStableTicks = 250;  // 500ms @ 500Hz
+      constexpr float kLegLengthTol =
+          wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
+      constexpr float kZeroThreshold = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+      constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
 
       float theta_target = kThetaTarget;
       bool cond_met = false;
-
+      debug_stair_climb_phase_ = stair_climb_phase_;
       if (stair_climb_phase_ == 0) {
         params_.leg_target_length_m = kPhase0LegTarget;  // 转腿时拉长腿长
         cond_met = (std::fabs(state_output.current.theta_ll - kThetaTarget) < kThetaTol &&
@@ -409,13 +417,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         stair_climb_stable_ticks_ = 0;
       }
 
-      left_stair_climb_theta_pid_.Update(theta_target, state_output.current.theta_ll);
-      right_stair_climb_theta_pid_.Update(theta_target, state_output.current.theta_lr);
+      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
+                                                state_output.current.theta_ll_dot);
+      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
+                                                 state_output.current.theta_lr_dot);
       t_bl_cmd = -left_stair_climb_theta_pid_.out();
       t_br_cmd = -right_stair_climb_theta_pid_.out();
 
-      output_.stair_climb_ready_for_done =
-          (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
+      output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
     } else {
       stair_climb_phase_ = 0;
       stair_climb_stable_ticks_ = 0;
