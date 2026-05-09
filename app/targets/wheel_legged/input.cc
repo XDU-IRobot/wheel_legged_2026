@@ -249,8 +249,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (wheel_action_trigger) {
       semantic_state.wheel_action_armed = false;
     }
-    request.jump_trigger =
-        wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
+    request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
 
   } else {
     // ═══ 无输入 ═══
@@ -343,13 +342,14 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     const bool tc_active = tc_remote.valid;
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
     if (tc_active) {
-      predicted_domain = (tc_state.domain_state == 1) ? wheel_legged::DomainRequest::kService
-                                                       : wheel_legged::DomainRequest::kDisabled;
+      predicted_domain =
+          (tc_state.domain_state == 1) ? wheel_legged::DomainRequest::kService : wheel_legged::DomainRequest::kDisabled;
     } else if (dr16.online) {
       predicted_domain = ResolveDomainRequest(dr16.switch_l);
     }
     static wheel_legged::DomainRequest prev_domain = wheel_legged::DomainRequest::kDisabled;
-    if (prev_domain == wheel_legged::DomainRequest::kDisabled && predicted_domain != wheel_legged::DomainRequest::kDisabled) {
+    if (prev_domain == wheel_legged::DomainRequest::kDisabled &&
+        predicted_domain != wheel_legged::DomainRequest::kDisabled) {
       tc_state.mid_leg_hold = false;
       tc_state.high_leg_hold = false;
       tc_state.stair_climb_done = false;
