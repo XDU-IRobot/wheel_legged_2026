@@ -137,6 +137,7 @@ struct ChassisFsmInput {
   uint32_t fall_detected_hold_ms{0};                       ///< 倒地持续时间
   bool upright_stable{false};                              ///< 是否已恢复稳定直立
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
+  bool stair_climb_ready_for_done{false};                  ///< 上台阶回摆到位，可以进入 kStairClimbDone
   uint32_t tick_ms{0};                                     ///< 当前系统时间戳
 };
 

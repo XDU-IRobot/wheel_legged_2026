@@ -26,7 +26,8 @@ bool IsJumpState(const chassis::Fsm::State state) {
 bool IsStairClimbReadyToDone(const wheel_legged::ChassisFsmInput &request) {
   const float leg_length_error =
       std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
-  return leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
+  return leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM &&
+         request.stair_climb_ready_for_done;
 }
 
 /**

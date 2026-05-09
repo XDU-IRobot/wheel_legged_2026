@@ -335,9 +335,6 @@ class ChassisStateEstimator {
   void UpdateLegState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
     static constexpr rm::f32 kPiHalf = wheel_legged::params::active::state_estimator::kThetaPiHalf;
 
-    const rm::f32 prev_theta_ll = output_.current.theta_ll;
-    const rm::f32 prev_theta_lr = output_.current.theta_lr;
-
     const CalibratedLegKinematicsInput leg_input = BuildCalibratedLegInput(input);
     output_.calibrated_leg_input = leg_input;
 
@@ -366,8 +363,8 @@ class ChassisStateEstimator {
     output_.current.theta_ll = theta_ll;
     output_.current.theta_lr = theta_lr;
 
-    const rm::f32 raw_theta_ll_dot = (theta_ll - prev_theta_ll) / dt_s;
-    const rm::f32 raw_theta_lr_dot = (theta_lr - prev_theta_lr) / dt_s;
+    const rm::f32 raw_theta_ll_dot = input.imu.gyro_y_rad_s + left_leg_.phi0_dot();
+    const rm::f32 raw_theta_lr_dot = input.imu.gyro_y_rad_s + right_leg_.phi0_dot();
     output_.current.theta_ll_dot = theta_ll_dot_filter_.apply(raw_theta_ll_dot);
     output_.current.theta_lr_dot = theta_lr_dot_filter_.apply(raw_theta_lr_dot);
   }
