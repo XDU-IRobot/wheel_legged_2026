@@ -355,8 +355,8 @@ constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向�
 constexpr PidGains kYawFollowPid{8.0f, 0.0f, 1.f, 4.0f, 0.0f};  ///< 偏航跟随 PID
 
 // ==== 期望状态偏置（腿摆角/机体俯仰）====
-constexpr float kExpectedThetaLlBiasRadLowLeg = -0.02f;   ///< 低腿长期望左腿摆角偏置 [rad]
-constexpr float kExpectedThetaLrBiasRadLowLeg = -0.02f;   ///< 低腿长期望右腿摆角偏置 [rad]
+constexpr float kExpectedThetaLlBiasRadLowLeg = -0.065f;   ///< 低腿长期望左腿摆角偏置 [rad]
+constexpr float kExpectedThetaLrBiasRadLowLeg = -0.065f;   ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaLlBiasRadMidLeg = -0.02f;   ///< 中腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadMidLeg = -0.02f;   ///< 中腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaLlBiasRadHighLeg = -0.02f;  ///< 高腿长期望左腿摆角偏置 [rad]
