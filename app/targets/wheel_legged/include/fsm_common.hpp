@@ -79,6 +79,7 @@ struct ModeRequest {
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
+  bool reset_yaw_request{false};     ///< R 键重置底盘正方向
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈 (回灌自上周期底盘输出)
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
   float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)

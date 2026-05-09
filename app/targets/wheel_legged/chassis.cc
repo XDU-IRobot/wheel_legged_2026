@@ -26,6 +26,8 @@ constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravity
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
+constexpr rm::f32 kOffGroundSpringTorqueScale =
+    wheel_legged::params::active::chassis::kOffGroundSpringTorqueScale;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -302,9 +304,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
 
-  l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
-  r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0());
-
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
@@ -315,6 +314,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
        right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+
+  // 离地时修改弹簧力矩缩放系数，防止腾空瞬间弹簧力导致腿异常蹬伸/收束
+  const rm::f32 eff_spring_scale = off_ground_in_mid_high_leg ? kOffGroundSpringTorqueScale : kSpringTorqueScale;
+  l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0()) * (eff_spring_scale / kSpringTorqueScale);
+  r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0()) * (eff_spring_scale / kSpringTorqueScale);
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
@@ -348,18 +352,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
       // left_force_ = l_spring_torque_;
       // right_force_ = r_spring_torque_;
-    }
-
-    const bool off_ground_in_mid_high_leg =
-        (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
-    output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
-
-    // 离地时限制竖直力幅值，防止腾空瞬间力尖峰导致腿异常蹬伸/收束
-    if (off_ground_in_mid_high_leg) {
-      left_force_ = std::clamp(left_force_, -80.0f, 80.0f);
-      right_force_ = std::clamp(right_force_, -80.0f, 80.0f);
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。

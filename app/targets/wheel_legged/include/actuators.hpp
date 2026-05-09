@@ -229,8 +229,8 @@ class Actuators {
       // g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
     if (g.pitch_motor.has_value()) {
-      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
-      g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+      g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
+      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
   }
 

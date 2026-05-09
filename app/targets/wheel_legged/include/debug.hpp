@@ -43,6 +43,9 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
   uint8_t tc_mid_leg_hold;          // 图传C键中腿长锁定
+  uint8_t tc_high_leg_hold;         // 图传V键高腿长
+  uint8_t tc_stair_climb_done;      // 上台阶完成锁定中腿长
+  uint8_t reset_yaw_request;        // R键重置正方向请求
   uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
   int16_t tc_mouse_x;               // 图传鼠标 X 增量
   int16_t tc_mouse_y;               // 图传鼠标 Y 增量

@@ -34,8 +34,12 @@ constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
-constexpr float kExpectedThetaLlBiasRad = ns::control_loop::kExpectedThetaLlBiasRad;
-constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBiasRad;
+constexpr float kExpectedThetaLlBiasRadLowLeg  = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
+constexpr float kExpectedThetaLrBiasRadLowLeg  = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
+constexpr float kExpectedThetaLlBiasRadMidLeg  = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
+constexpr float kExpectedThetaLrBiasRadMidLeg  = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
+constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
+constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
@@ -81,13 +85,38 @@ void ControlLoop() {
   // 阶段 1：硬件反馈采集 + DR16 语义折叠
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
+
   wl_debug.tc_mid_leg_hold = tc_state.mid_leg_hold ? 1 : 0;
+  wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
+  wl_debug.tc_stair_climb_done = tc_state.stair_climb_done ? 1 : 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
   const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+
+  // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
+  {
+    static chassis::Fsm::State prev_chassis_mode_for_stair = chassis::Fsm::State::kDisabled;
+    const bool entered_high_leg = (chassis_output.mode == chassis::Fsm::State::kHighLeg);
+    const bool was_stair_climb = (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimb) ||
+                                 (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimbDone);
+    if (entered_high_leg && was_stair_climb) {
+      if (tc_state.b_double_mode && tc_state.b_attempt == 0) {
+        // B 模式第 1 次完成 → 等 FSM kStairClimbDone 稳定后自动再上一次
+        tc_state.b_attempt = 1;
+        tc_state.high_leg_hold = true;
+      } else {
+        // V 模式或 B 模式第 2 次完成 → 锁定低腿长
+        tc_state.stair_climb_done = true;
+        tc_state.high_leg_hold = false;
+        tc_state.b_double_mode = false;
+        tc_state.b_attempt = 0;
+      }
+    }
+    prev_chassis_mode_for_stair = chassis_output.mode;
+  }
 
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
@@ -281,6 +310,18 @@ void ControlLoop() {
     ctx.yaw_follow_pid.Clear();
   }
 
+  // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
+  wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
+  if (input.mode_request.reset_yaw_request) {
+    ctx.yaw_follow_target = {kYawFollowFixedTargetRad, 1.0f};
+    ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+    ctx.yaw_follow_target_initialized = true;
+    ctx.yaw_follow_drive_ready = false;
+    ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+    ctx.filtered_yaw_dot = 0.0f;
+    ctx.yaw_follow_pid.Clear();
+  }
+
   if (!ctx.yaw_follow_target_initialized) {
     ctx.yaw_follow_target =
         SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
@@ -379,9 +420,15 @@ void ControlLoop() {
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = 0.0f;
+  } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg) {
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
+  } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
   } else {
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
+    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
+    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
   chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
 
@@ -396,7 +443,16 @@ void ControlLoop() {
   } else {
     const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
     const float yaw_target_rad = ctx.yaw_follow_target.target_rad;
-    ctx.yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
+    // 当 error ≈ ±π 时，Wrap 总是返回 -π，PID 会走长路径。
+    // 通过 ±2π unwrap 强制走短路径。
+    const float raw_err = yaw_target_rad - yaw_motor_rad;
+    float adj_target = yaw_target_rad;
+    if (const float wrapped_err = rm::modules::Wrap(raw_err, -kPi, kPi); std::fabs(std::fabs(wrapped_err) - kPi) < 0.5f) {
+      if (raw_err > 0.0f) {
+        adj_target += 2.0f * kPi;
+      }
+    }
+    ctx.yaw_follow_pid.Update(adj_target, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, kYawFollowRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
