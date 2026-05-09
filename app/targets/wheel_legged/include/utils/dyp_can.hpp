@@ -22,12 +22,26 @@ class DypCanRxBridge final : public rm::device::CanDevice {
     last_result_left_ = msg->data[4];
     last_result_right_ = msg->data[5];
 
+    if (last_result_left_ == 1U) {
+      distance_filtered_left_ = distance_raw_left_;
+    }
+    if (last_result_right_ == 1U) {
+      distance_filtered_right_ = distance_raw_right_;
+    }
+
     frame_count_++;
     ReportStatus(kOk);
   }
 
   [[nodiscard]] rm::u16 distance_raw_left() const { return distance_raw_left_; }
   [[nodiscard]] rm::u16 distance_raw_right() const { return distance_raw_right_; }
+  [[nodiscard]] rm::u16 distance_filtered_left() const { return distance_filtered_left_; }
+  [[nodiscard]] rm::u16 distance_filtered_right() const { return distance_filtered_right_; }
+  [[nodiscard]] rm::u16 distance_filtered_avg() const {
+    return static_cast<rm::u16>((static_cast<rm::u32>(distance_filtered_left_) +
+                                 static_cast<rm::u32>(distance_filtered_right_)) /
+                                2U);
+  }
   [[nodiscard]] rm::u8 last_result_left() const { return last_result_left_; }
   [[nodiscard]] rm::u8 last_result_right() const { return last_result_right_; }
   [[nodiscard]] rm::u32 frame_count() const { return frame_count_; }
@@ -40,6 +54,8 @@ class DypCanRxBridge final : public rm::device::CanDevice {
   std::array<rm::u8, kPayloadSize> rx_payload_{};
   rm::u16 distance_raw_left_{0U};
   rm::u16 distance_raw_right_{0U};
+  rm::u16 distance_filtered_left_{0U};
+  rm::u16 distance_filtered_right_{0U};
   rm::u8 last_result_left_{0U};
   rm::u8 last_result_right_{0U};
   rm::u32 frame_count_{0U};

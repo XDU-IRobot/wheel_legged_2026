@@ -30,9 +30,12 @@ constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
 constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFreezeSpeedThresholdMps;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
+constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
+constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
+constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaLlBiasRad = ns::control_loop::kExpectedThetaLlBiasRad;
 constexpr float kExpectedThetaLrBiasRad = ns::control_loop::kExpectedThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
@@ -236,6 +239,9 @@ void ControlLoop() {
     if (cross_spin) {
       // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+      if (!now_is_spin) {
+        ctx.spin_exit_recovery = true;  // 退出小陀螺，启用快速偏航斜坡
+      }
     }
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -292,6 +298,11 @@ void ControlLoop() {
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
   const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
                                     chassis_output.control.run_chassis_update;
+  const bool jump_control_enabled =
+      (chassis_output.mode == chassis::Fsm::State::kJumpPrep ||
+       chassis_output.mode == chassis::Fsm::State::kJumpPush ||
+       chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
+      chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
   const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
@@ -373,6 +384,9 @@ void ControlLoop() {
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
+  } else if (jump_control_enabled) {
+    chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
+    chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRad;
@@ -382,9 +396,11 @@ void ControlLoop() {
   // ── 7l. 偏航角速度控制 ──
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   if (spin_control_enabled) {
+    ctx.spin_exit_recovery = false;
     RampYawDotToTarget(kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
+    ctx.spin_exit_recovery = false;
     ctx.filtered_yaw_dot = 0.0f;
     ctx.yaw_follow_pid.Clear();
   } else {
@@ -392,8 +408,14 @@ void ControlLoop() {
     const float yaw_target_rad = ctx.yaw_follow_target.target_rad;
     ctx.yaw_follow_pid.Update(yaw_target_rad, yaw_motor_rad, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
-    RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, kYawFollowRampStepRadS);
+    const float ramp_step =
+        ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
+    RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
+    // 退出小陀螺快速恢复：车体角速度降到 1 rad/s 以下切回正常斜坡
+    if (ctx.spin_exit_recovery && std::fabs(ctx.filtered_yaw_dot) < 1.0f) {
+      ctx.spin_exit_recovery = false;
+    }
   }
 
   // ── 7m. 底盘控制器执行 ──
@@ -469,6 +491,9 @@ void ControlLoop() {
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();
     wl_debug.dyp_distance_raw_right = globals->dyp_rx->distance_raw_right();
+    wl_debug.dyp_distance_filtered_left = globals->dyp_rx->distance_filtered_left();
+    wl_debug.dyp_distance_filtered_right = globals->dyp_rx->distance_filtered_right();
+    wl_debug.dyp_distance_filtered_avg = globals->dyp_rx->distance_filtered_avg();
     wl_debug.dyp_result_left = globals->dyp_rx->last_result_left();
     wl_debug.dyp_result_right = globals->dyp_rx->last_result_right();
     wl_debug.dyp_frame_count = globals->dyp_rx->frame_count();

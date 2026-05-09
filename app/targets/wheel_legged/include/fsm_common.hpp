@@ -79,6 +79,7 @@ struct ModeRequest {
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
+  bool auto_jump_triggered{false};   ///< 自动跳跃触发（DYP 测距）
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈 (回灌自上周期底盘输出)
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
   float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)
@@ -135,6 +136,7 @@ struct ChassisFsmInput {
   bool fall_detected{false};                               ///< 是否检测到倒地
   uint32_t fall_detected_hold_ms{0};                       ///< 倒地持续时间
   bool upright_stable{false};                              ///< 是否已恢复稳定直立
+  bool off_ground{false};                                  ///< 是否离地（支撑力过低）
   uint32_t tick_ms{0};                                     ///< 当前系统时间戳
 };
 
