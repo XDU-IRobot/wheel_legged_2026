@@ -282,7 +282,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kMidLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
-      } else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kMid) {
+      } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
       } else if (request.spin_hold) {
