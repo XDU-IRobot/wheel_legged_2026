@@ -2,6 +2,15 @@
 
 #include <cstdint>
 
+#include "chassis/chassis.hpp"
+#include "gimbal/gimbal.hpp"
+#include "input.hpp"
+
+/**
+ * @file  targets/wheel_legged/include/debug.hpp
+ * @brief 调试快照结构体（SRAM4）与填充函数声明
+ */
+
 /**
  * @brief 调试快照，放置于 SRAM4 供调试器/DMA 直接读取
  */
@@ -32,8 +41,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_enable_request;      // 使能请求
   uint8_t dr16_spin_request;        // 小陀螺请求
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
+  uint8_t auto_jump_triggered;      // 自动跳跃触发（DYP 测距）
+  uint8_t auto_jump_enabled;        // 自动跳跃当前开关状态
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
   uint8_t tc_mid_leg_hold;          // 图传C键中腿长锁定
+  uint8_t tc_high_leg_hold;         // 图传V键高腿长
+  uint8_t tc_stair_climb_done;      // 上台阶完成锁定中腿长
+  uint8_t reset_yaw_request;        // R键重置正方向请求
   uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
   int16_t tc_mouse_x;               // 图传鼠标 X 增量
   int16_t tc_mouse_y;               // 图传鼠标 Y 增量
@@ -102,7 +116,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float state_s_m;                 // 纵向位置
   float state_s_dot_mps;           // 纵向速度
   float expected_s_m;              // 期望纵向位置
-  float expected_s_dot_mps;        // 期望纵向速度
+  float expected_s_dot_mps;        // 期望纵向速度（= filtered_s_dot）
+  float filtered_s_dot_mps;        // 斜坡滤波后的纵向速度（连接减速斜坡与 I 项积分）
   float state_phi_rad;             // 偏航角
   float state_phi_dot_rad_s;       // 偏航角速度
   float state_theta_ll_rad;        // 左腿摆角
@@ -114,10 +129,24 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float state_l_l_m;               // 左腿等效长度
   float state_l_r_m;               // 右腿等效长度
 
+  // ── LQR 状态误差 ──
+  float lqr_err_s;             // s 误差
+  float lqr_err_s_dot;         // s_dot 误差
+  float lqr_err_phi;           // phi 误差（已 wrap）
+  float lqr_err_phi_dot;       // phi_dot 误差
+  float lqr_err_theta_ll;      // theta_ll 误差
+  float lqr_err_theta_ll_dot;  // theta_ll_dot 误差
+  float lqr_err_theta_lr;      // theta_lr 误差
+  float lqr_err_theta_lr_dot;  // theta_lr_dot 误差
+  float lqr_err_theta_b;       // theta_b 误差
+  float lqr_err_theta_b_dot;   // theta_b_dot 误差
+
   // ── 底盘状态 ──
   float chassis_mean_leg_length_m;      // 平均腿长
   float chassis_left_leg_length_m;      // 左腿长度
   float chassis_right_leg_length_m;     // 右腿长度
+  float chassis_left_l0_pid_out;        // 左腿腿长 PID 输出
+  float chassis_right_l0_pid_out;       // 右腿腿长 PID 输出
   float chassis_speed_mps;              // 车体融合速度
   float chassis_left_force_n;           // 左腿竖直力
   float chassis_right_force_n;          // 右腿竖直力
@@ -126,19 +155,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_posture_valid;        // 姿态有效
   uint8_t chassis_off_ground;           // 离地
 
-  // ── 定点锁定 ──
-  uint8_t lock_point_enabled;                // 定点锁定使能
-  uint8_t lock_point_request;                // 锁点请求
-  uint8_t lock_point_captured;               // 锁点已捕获
-  uint8_t lock_point_rising_edge;            // 锁点上升沿
-  uint8_t lock_point_speed_below_threshold;  // filtered_s_dot 已斜坡归零
-
   // ── DYP 超声波 ──
-  uint16_t dyp_distance_raw_left;   // 左超声波读数
-  uint16_t dyp_distance_raw_right;  // 右超声波读数
-  uint8_t dyp_result_left;          // 左测量状态
-  uint8_t dyp_result_right;         // 右测量状态
-  uint32_t dyp_frame_count;         // 接收帧计数
+  uint16_t dyp_distance_raw_left;        // 左超声波原始读数
+  uint16_t dyp_distance_raw_right;       // 右超声波原始读数
+  uint16_t dyp_distance_filtered_left;   // 左超声波滤波值（仅保留 status==1 时的值）
+  uint16_t dyp_distance_filtered_right;  // 右超声波滤波值（仅保留 status==1 时的值）
+  uint16_t dyp_distance_filtered_avg;    // 左右超声波滤波值均值
+  uint8_t dyp_result_left;               // 左测量状态
+  uint8_t dyp_result_right;              // 右测量状态
+  uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;  // 发射使能
@@ -172,3 +197,17 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
 static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 
 extern DebugSnapshot wl_debug;
+
+/**
+ * @brief 填充 DebugSnapshot
+ * @param tick_ms                当前系统 tick
+ * @param input                  本周期输入快照
+ * @param chassis_output         底盘 FSM 输出
+ * @param gimbal_output          云台 FSM 输出
+ * @param chassis_control_output 底盘控制器输出
+ * @param gimbal_control_output  云台控制器输出
+ */
+void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
+                         const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
+                         const chassis::Chassis::UpdateOutput &chassis_control_output,
+                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output);

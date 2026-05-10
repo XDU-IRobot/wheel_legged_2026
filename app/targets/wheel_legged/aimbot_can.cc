@@ -1,4 +1,4 @@
-#include "aimbot_comm_can.hpp"
+#include "include/utils/aimbot_can.hpp"
 
 namespace rm::device {
 
@@ -25,14 +25,14 @@ void AimbotCanCommunicator::RxCallback(const hal::CanFrame *msg) {
   }
 }
 
-void AimbotCanCommunicator::UpdateControl(f32 yaw, f32 pitch, f32 roll, f32 z, u8 robot_id, u8 mode, u16 imu_count,
+void AimbotCanCommunicator::UpdateControl(f32 w, f32 x, f32 y, f32 z, u8 robot_id, u8 mode, u16 imu_count,
                                           f32 bullet_speed) {
-  tx_buf_[0] = modules::F32ToF16(yaw) >> 8;
-  tx_buf_[1] = modules::F32ToF16(yaw);
-  tx_buf_[2] = modules::F32ToF16(pitch) >> 8;
-  tx_buf_[3] = modules::F32ToF16(pitch);
-  tx_buf_[4] = modules::F32ToF16(roll) >> 8;
-  tx_buf_[5] = modules::F32ToF16(roll);
+  tx_buf_[0] = modules::F32ToF16(w) >> 8;
+  tx_buf_[1] = modules::F32ToF16(w);
+  tx_buf_[2] = modules::F32ToF16(x) >> 8;
+  tx_buf_[3] = modules::F32ToF16(x);
+  tx_buf_[4] = modules::F32ToF16(y) >> 8;
+  tx_buf_[5] = modules::F32ToF16(y);
   const u8 z_sign = (z >= 0.f) ? 1 : 0;
   const u8 id_bit = (robot_id > 100) ? 1 : 0;
   const u8 mode_bits = mode & 0x3;                       // 最低 2 位

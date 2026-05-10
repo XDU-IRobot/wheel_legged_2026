@@ -48,7 +48,7 @@ inline struct GlobalWarehouse {
 
   // 云台
   rm::device::BMI088 *imu{nullptr};                                                 ///< IMU
-  rm::device::HipnucImu *hipnuc_imu{nullptr};                                    ///< IMU
+  rm::device::HipnucImu *hipnuc_imu{nullptr};                                       ///< IMU
   rm::device::DR16 *rc{nullptr};                                                    ///< 遥控器
   rm::device::DmMotor<rm::device::DmMotorControlMode::kMit> *yaw_motor{nullptr};    ///< 云台 Yaw 电机
   rm::device::DmMotor<rm::device::DmMotorControlMode::kMit> *pitch_motor{nullptr};  ///< 云台 Pitch 电机

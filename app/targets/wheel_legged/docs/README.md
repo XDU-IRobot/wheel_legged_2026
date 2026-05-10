@@ -19,47 +19,54 @@
 ```
 app/targets/wheel_legged/
 ├── main.cc                          # 应用入口，启动 500Hz 调度
-├── control_loop.cc                  # 500Hz 主控制循环（核心编排）
-├── fsm.cc                           # 底盘状态机实现（12 状态）
+├── control.cc                       # 500Hz 主控制循环（核心编排）
+├── chassis_fsm.cc                   # 底盘状态机实现（12 状态）
 ├── gimbal_fsm.cc                    # 云台状态机实现（6 状态）
 ├── chassis.cc                       # 底盘控制与估计器实现 (LQR + 运动学)
-│
-├── control_loop/                    # 控制循环子模块
-│   ├── input_resolver.hpp/.cc       # 硬件输入采集 + DR16 语义折叠
-│   ├── chassis_state_builder.hpp/.cc # 驾驶输入、偏航跟随、定点锁定
-│   └── debug_export.hpp/.cc         # 调试快照填充
+├── input.cc                         # 硬件输入采集 + DR16 语义折叠
+├── state_ctx.cc                     # 驾驶输入、偏航跟随、定点锁定
+├── debug.cc                         # 调试快照填充
+├── shoot_2fric.cc                   # 双摩擦轮发射机构 (infantry3/4)
+├── kalman.cc                        # 通用矩阵卡尔曼滤波器（CMSIS-DSP）
+├── aimbot_can.cc                    # 自瞄 CAN 通信（TX:0x150, RX:0x170）
 │
 ├── include/
 │   ├── globals.hpp                  # SharedResources（所有外设/控制器实例）
 │   ├── globals_no_dtcm.hpp          # 非 DTCM 外设（UART DMA 缓冲）
 │   ├── fsm_common.hpp               # 共享枚举 + ModeRequest + FSM 输入结构体
 │   ├── actuators.hpp                # Actuators 执行器适配层（反馈+下发）
-│   ├── debug_snapshot.hpp           # DebugSnapshot 结构体定义（SRAM4，512B）
-│   ├── wheel_legged_params.hpp      # 全部参数（按变体分 namespace）
-│   ├── gimbal_to_chassis_rx_bridge.hpp  # 云台→底盘 CAN 桥接收
-│   ├── referee_rx_bridge.hpp        # 裁判系统串口桥
+│   ├── debug.hpp                    # DebugSnapshot 结构体定义（SRAM4，512B）+ 填充函数
+│   ├── params.hpp                   # 全部参数（按变体分 namespace）
+│   ├── input.hpp                    # 硬件输入采集、DR16/图传语义折叠与 FSM 输入构建
+│   ├── state_ctx.hpp                # 底盘跨周期控制状态、偏航跟随、定点锁定与速率斜坡
+│   ├── gimbal_can_bridge.hpp        # 云台→底盘 CAN 桥接收
+│   ├── referee_rx.hpp               # 裁判系统串口桥
 │   │
 │   ├── chassis/
 │   │   ├── fsm.hpp                  # 底盘状态机接口
 │   │   ├── chassis.hpp              # 底盘控制器接口（LQR 主类）
-│   │   └── chassis_state.hpp        # 状态估计器 + 期望/当前状态向量
+│   │   ├── state.hpp                # 状态估计器 + 期望/当前状态向量
+│   │   ├── leg.hpp                  # 五连杆腿部运动学解算
+│   │   └── lqr.hpp                  # LQR 调节器（增益按腿长多项式插值）
 │   │
 │   ├── gimbal/
 │   │   ├── fsm.hpp                  # 云台状态机接口
 │   │   ├── gimbal.hpp               # 云台双轴 PID 控制器
-│   │   ├── shoot.hpp                # Shoot 双摩擦轮控制器 (infantry)
-│   │   └── shoot_controller.hpp     # ShootController 三摩擦轮状态机 (hero)
+│   │   ├── shoot_2fric.hpp          # Shoot 双摩擦轮控制器 (infantry)
+│   │   └── shoot_3fric.hpp          # ShootController 三摩擦轮状态机 (hero)
 │   │
 │   └── utils/
-│       └── template_dyp_can.hpp     # DYP 超声波 CAN 接收桥
-│
-├── gimbal/
-│   └── shoot.cc                     # Shoot 双摩擦轮控制实现
+│       ├── dyp_can.hpp              # DYP 超声波 CAN 接收桥
+│       ├── kalman.hpp               # 通用矩阵卡尔曼滤波器（CMSIS-DSP）
+│       └── aimbot_can.hpp           # 自瞄 CAN 通信（TX:0x150, RX:0x170）
 │
 ├── docs/
 │   ├── README.md                    # 本文档：上手阅读指南
 │   ├── DATA_FLOW.md                 # 数据流详解
-│   └── REFACTOR_PLAN.md             # 架构设计说明
+│   ├── REFACTOR_PLAN.md             # 架构设计说明
+│   ├── CONTROL_LOOP_OPTIMIZATIONS.md # 控制器优化详解（位置锚定、斜坡、小陀螺）
+│
+├── 待办.md                          # 结构化待办列表（P0/P1/P2）
 │
 └── debug/
     ├── can.pmpx                     # CAN 总线调试配置
@@ -79,8 +86,8 @@ app/targets/wheel_legged/
 
 ### 第二步：理解数据流
 
-2. **`docs/DATA_FLOW.md`** — 完整的 9 阶段数据流图。对照 `control_loop.cc` 阅读。
-3. **`control_loop.cc`** — 核心编排文件（~400 行）。`ControlLoop()` 函数按 1-8 号注释分阶段执行，每个阶段调用一个子模块。
+2. **`docs/DATA_FLOW.md`** — 完整的 9 阶段数据流图。对照 `control.cc` 阅读。
+3. **`control.cc`** — 核心编排文件（~500 行）。`ControlLoop()` 函数按 9 个阶段分步执行，每个阶段调用一个子模块。
 
 ### 第三步：理解类型系统
 
@@ -102,12 +109,12 @@ app/targets/wheel_legged/
 | 底盘控制 | `include/chassis/chassis.hpp` + `chassis.cc` | LQR + 运动学 + 支撑力 |
 | 云台状态机 | `include/gimbal/fsm.hpp` + `gimbal_fsm.cc` | 6 状态，启动归中 |
 | 云台控制 | `include/gimbal/gimbal.hpp` | 双环 PID * 2 轴 |
-| 发射机构 (hero) | `include/gimbal/shoot_controller.hpp` | 5 状态拨盘 + 3 路 PID |
-| 发射机构 (infantry) | `include/gimbal/shoot.hpp` + `gimbal/shoot.cc` | Shoot2Fric 控制器 |
-| 输入解析 | `control_loop/input_resolver.hpp/.cc` | DR16 + 图传语义折叠 |
-| 跨周期状态 | `control_loop/chassis_state_builder.hpp/.cc` | 偏航跟随 + 定点锁定 |
-| 调试导出 | `control_loop/debug_export.hpp/.cc` + `include/debug_snapshot.hpp` | SRAM4 512B 快照 |
-| 参数系统 | `include/wheel_legged_params.hpp` | `params::active` 变体切换 |
+| 发射机构 (hero) | `include/gimbal/shoot_3fric.hpp` | 5 状态拨盘 + 3 路 PID |
+| 发射机构 (infantry) | `include/gimbal/shoot_2fric.hpp` + `shoot_2fric.cc` | Shoot2Fric 控制器 |
+| 输入解析 | `include/input.hpp` + `input.cc` | DR16 + 图传语义折叠 |
+| 跨周期状态 | `include/state_ctx.hpp` + `state_ctx.cc` | 偏航跟随 + 定点锁定 |
+| 调试导出 | `include/debug.hpp` + `debug.cc` | SRAM4 512B 快照 |
+| 参数系统 | `include/params.hpp` | `params::active` 变体切换 |
 
 ---
 
@@ -127,7 +134,7 @@ app/targets/wheel_legged/
 
 ### 4. 变体隔离
 
-- 共用逻辑写一次（`control_loop.cc` 主函数、FSM、底盘/云台控制器）
+- 共用逻辑写一次（`control.cc` 主函数、FSM、底盘/云台控制器）
 - 差异部分用 `#if WHEEL_LEGGED_ROBOT_VARIANT` 守卫
 - 参数按变体分 namespace：`params::hero` / `params::infantry3` / `params::infantry4`
 - `params::active` 根据编译宏自动 alias 到当前变体

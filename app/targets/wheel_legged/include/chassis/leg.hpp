@@ -5,10 +5,10 @@
 
 #include <librm.hpp>
 
-#include "../wheel_legged_params.hpp"
+#include "../params.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/leg_kinematics.hpp
+ * @file  targets/wheel_legged/include/chassis/leg.hpp
  * @brief 五连杆腿部运动学解算器
  */
 
@@ -31,6 +31,7 @@ class LegKinematics {
   [[nodiscard]] rm::f32 l0() const { return l0_; }
   [[nodiscard]] rm::f32 l0_dot() const { return l0_dot_; }
   [[nodiscard]] rm::f32 phi0() const { return phi0_; }
+  [[nodiscard]] rm::f32 phi0_dot() const { return phi0_dot_; }
   [[nodiscard]] rm::f32 beta() const { return beta_; }
   [[nodiscard]] rm::f32 beta_dot() const { return beta_dot_; }
 
@@ -106,6 +107,7 @@ class LegKinematics {
       jacobi_01_ = 0.0f;
       jacobi_10_ = 0.0f;
       jacobi_11_ = 0.0f;
+      phi0_dot_ = 0.0f;
       l0_dot_ = (l0_ - prev_l0) / dt;
       return;
     }
@@ -119,6 +121,7 @@ class LegKinematics {
     jacobi_11_ = l1_ * cos_p02 * sin_p34 / (l0_ * sin_p32);
 
     l0_dot_ = (l0_ - prev_l0) / dt;
+    phi0_dot_ = (xc_ * yc_dot_ - yc_ * xc_dot_) / (l0_ * l0_);
   }
 
  private:
@@ -134,6 +137,7 @@ class LegKinematics {
   rm::f32 phi0_{0.0f};
   rm::f32 l0_{0.0f};
   rm::f32 l0_dot_{0.0f};
+  rm::f32 phi0_dot_{0.0f};
 
   // 弹簧相关角状态
   rm::f32 beta_{0.0f};

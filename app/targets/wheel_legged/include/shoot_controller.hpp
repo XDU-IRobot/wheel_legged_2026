@@ -105,8 +105,8 @@ class ShootController {
           }
           // 摩擦轮转速不足时等待加速
           // if (static_cast<float>(fw_[0]->rpm()) >= kFwReadyRpm) {
-            booster_enable_ = true;
-            state_ = State::kReady;
+          booster_enable_ = true;
+          state_ = State::kReady;
           // } else {
           //   init_time_ = kInitTicks;  // 重新延时等待
           // }

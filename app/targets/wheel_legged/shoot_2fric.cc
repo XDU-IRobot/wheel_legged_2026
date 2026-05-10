@@ -1,11 +1,11 @@
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
 
-#include "../include/gimbal/shoot.hpp"
+#include "include/gimbal/shoot_2fric.hpp"
 
 #include <algorithm>
 
 #include "common/controllers/shoot_2firc.hpp"
-#include "../include/wheel_legged_params.hpp"
+#include "include/params.hpp"
 
 namespace ns = wheel_legged::params::active::shoot;
 

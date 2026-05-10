@@ -1,11 +1,9 @@
 /**
- * @file  targets/wheel_legged/control_loop/debug_export.cc
+ * @file  targets/wheel_legged/debug.cc
  * @brief DebugSnapshot 填充实现
  */
 
-#include "debug_export.hpp"
-
-#include "../include/debug_snapshot.hpp"
+#include "include/debug.hpp"
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
@@ -29,6 +27,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
       input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled);
   wl_debug.dr16_spin_request = static_cast<uint8_t>(input.mode_request.spin_hold);
   wl_debug.dr16_jump_trigger_edge = static_cast<uint8_t>(input.mode_request.jump_trigger);
+  wl_debug.auto_jump_triggered = static_cast<uint8_t>(input.mode_request.auto_jump_triggered);
+  wl_debug.auto_jump_enabled = static_cast<uint8_t>(input.auto_jump_enabled);
   wl_debug.tc_remote_valid = static_cast<uint8_t>(input.tc_remote.valid);
   wl_debug.tc_keyboard_value = input.tc_remote.keyboard_value;
   wl_debug.tc_mouse_x = input.tc_remote.mouse_x;
@@ -104,6 +104,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.state_l_r_m = x.l_r;
   wl_debug.chassis_left_leg_length_m = x.l_l;
   wl_debug.chassis_right_leg_length_m = x.l_r;
+  wl_debug.chassis_left_l0_pid_out = chassis_control_output.left_l0_pid_out;
+  wl_debug.chassis_right_l0_pid_out = chassis_control_output.right_l0_pid_out;
 
   // ── 云台反馈与电机 ──
   wl_debug.yaw_cmd_target_rad = gimbal_control_output.yaw_target_rad;

@@ -46,8 +46,8 @@ void Gimbal::GimbalRCTargetUpdate() {
                                                    globals->rc_max_value_, -gimbal->sensitivity_, gimbal->sensitivity_);
   gimbal->gimbal_yaw_target_ =
       rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);  // yaw轴周期限位
-  gimbal->gimbal_pitch_target_ =
-      rm::modules::Clamp(gimbal->gimbal_pitch_target_, gimbal->lowest_pitch_angle_, gimbal->highest_pitch_angle_); // pitch轴限位
+  gimbal->gimbal_pitch_target_ = rm::modules::Clamp(gimbal->gimbal_pitch_target_, gimbal->lowest_pitch_angle_,
+                                                    gimbal->highest_pitch_angle_);  // pitch轴限位
 }
 
 void Gimbal::GimbalAimbotTargetUpdate() {
@@ -57,8 +57,7 @@ void Gimbal::GimbalAimbotTargetUpdate() {
   } else {
     gimbal->GimbalRCTargetUpdate();
   }
-  gimbal->gimbal_yaw_target_ =
-      rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
+  gimbal->gimbal_yaw_target_ = rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
   gimbal->gimbal_pitch_target_ =
       rm::modules::Clamp(gimbal->gimbal_pitch_target_, gimbal->lowest_pitch_angle_, gimbal->highest_pitch_angle_);
 }
@@ -85,15 +84,13 @@ void Gimbal::GimbalScanTargetUpdate() {
   } else {
     gimbal->gimbal_pitch_target_ += 0.003f;
   }
-  gimbal->gimbal_yaw_target_ =
-      rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
+  gimbal->gimbal_yaw_target_ = rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
   gimbal->gimbal_pitch_target_ =
       rm::modules::Clamp(gimbal->gimbal_pitch_target_, gimbal->lowest_pitch_angle_, gimbal->highest_pitch_angle_);
 }
 
 void Gimbal::GimbalDownYawFollow() {
-  gimbal->gimbal_yaw_target_ =
-      rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
+  gimbal->gimbal_yaw_target_ = rm::modules::Wrap(gimbal->gimbal_yaw_target_, -static_cast<f32>(M_PI), M_PI);
 }
 
 void Gimbal::GimbalMatchUpdate() {
@@ -116,8 +113,8 @@ void Gimbal::GimbalMovePIDUpdate() {
     globals->gimbal_controller.SetTarget(gimbal->gimbal_yaw_target_, gimbal->gimbal_pitch_target_,
                                          globals->yaw_speed_feedforward->GetYawSpeedFeedforward());
   }
-  globals->gimbal_controller.Update(globals->hipnuc_imu->yaw(), globals->yaw_motor->vel(),
-                                    globals->hipnuc_imu->pitch(), globals->pitch_motor->vel());
+  globals->gimbal_controller.Update(globals->hipnuc_imu->yaw(), globals->yaw_motor->vel(), globals->hipnuc_imu->pitch(),
+                                    globals->pitch_motor->vel());
 }
 
 void Gimbal::GimbalEnableUpdate() {

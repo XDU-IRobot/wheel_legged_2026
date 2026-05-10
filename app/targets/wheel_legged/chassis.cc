@@ -4,12 +4,13 @@
 #include <array>
 #include <cmath>
 
-#include "include/wheel_legged_params.hpp"
+#include "include/params.hpp"
 
 /**
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
+uint8_t debug_stair_climb_phase_ = 0;
 
 namespace {
 
@@ -25,6 +26,7 @@ constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravity
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
+constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -113,6 +115,17 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid = wheel_legged::params::active::chassis::kRightLegTurnPid;
   init_pid(right_leg_turn_pid_, right_leg_turn_pid.kp, right_leg_turn_pid.ki, right_leg_turn_pid.kd,
            right_leg_turn_pid.max_out, right_leg_turn_pid.max_iout);
+  // 上台阶腿摆角 PID（位置环），先转腿到目标摆角再收腿
+  const auto &stair_climb_theta_pid = wheel_legged::params::active::chassis::kStairClimbThetaPid;
+  init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
+           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+  init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
+           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+
+  left_stair_climb_theta_pid_.SetCircular(true);
+  right_stair_climb_theta_pid_.SetCircular(true);
+  left_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
+  right_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
 
   std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
   for (int i = 0; i < 40; ++i) {
@@ -208,8 +221,25 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   if (!output_.posture_valid) {
   } else if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
     SafeStop();
+    prev_enable_output_ = false;
+    standup_complete_ = false;
     return;
   }
+
+  // 检测 enable_output 上升沿：关节先出力，轮端等待起立完成再输出
+  if (input.enable_output && !prev_enable_output_) {
+    standup_complete_ = false;
+  }
+  prev_enable_output_ = input.enable_output;
+
+  // 起立完成判定：双腿 theta 均小于阈值后锁存
+  constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+  if (!standup_complete_ && std::fabs(state_output.current.theta_ll) < kThetaThreshold &&
+      std::fabs(state_output.current.theta_lr) < kThetaThreshold) {
+    standup_complete_ = true;
+  }
+
+  output_.standup_complete = standup_complete_;
 
   const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
                              input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
@@ -228,6 +258,15 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   } else {
     smoothed_leg_target_length_m_ = input.target_leg_length_m;
     params_.leg_target_length_m = input.target_leg_length_m;
+  }
+  if (force_low_leg_) {
+    constexpr uint16_t kLowLegHoldTicks = 2000;  // 0.3s @ 500Hz
+    params_.leg_target_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
+    force_low_leg_ticks_++;
+    if (force_low_leg_ticks_ >= kLowLegHoldTicks) {
+      force_low_leg_ = false;
+      force_low_leg_ticks_ = 0;
+    }
   }
   ComputeActuatorTorque(input, state_output);
 }
@@ -251,8 +290,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   if (IsSafeStopMode(input.fsm_mode)) {
     set_all_zero();
-    output_.left_force_n = 0;
-    output_.right_force_n = 0;
+    output_.left_force_n = 0.0f;
+    output_.right_force_n = 0.0f;
     return;
   }
 
@@ -267,8 +306,16 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-  right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  if (input.fsm_mode == Fsm::State::kSpin) {
+    constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
+    left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
+    right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
+  } else {
+    left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  }
+  output_.left_l0_pid_out = left_l0_pid_.out();
+  output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
 
   l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
@@ -278,6 +325,30 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
+  const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
+
+  const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                          (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                           right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+  output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+
+  // 离地时检测腿长：先确认曾高于 0.3m（中/高腿长），再检测回缩至 0.25m 以下才触发
+  // 防止机器人原本就在低腿长时误触发
+  if (off_ground_in_mid_high_leg) {
+    if (!force_low_leg_) {
+      const float avg_leg = 0.5f * (left_leg_.l0() + right_leg_.l0());
+      if (avg_leg > 0.3f) {
+        leg_was_high_ = true;
+      }
+      if (leg_was_high_ && avg_leg < 0.25f) {
+        force_low_leg_ = true;
+        force_low_leg_ticks_ = 0;
+        leg_was_high_ = false;
+      }
+    }
+  } else {
+    leg_was_high_ = false;
+  }
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
@@ -285,11 +356,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
-      left_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
-      right_l0_pid_jump_two_.Update(params_.leg_target_length_m, avg_leg_length_m);
-      leg_length_force = 0.5f * (left_l0_pid_jump_two_.out() + right_l0_pid_jump_two_.out());
-      left_force_ = leg_length_force + roll_pid_.out();
-      right_force_ = leg_length_force - roll_pid_.out();
+      left_force_ = 250.0f + roll_pid_.out();
+      right_force_ = 250.0f - roll_pid_.out();
     } else if (use_jump_retract2) {
       left_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
       right_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
@@ -313,20 +381,24 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // right_force_ = r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg =
-        (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                            (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                             right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 离地时限制竖直力幅值，防止腾空瞬间力尖峰导致腿异常蹬伸/收束
+    // 离地时限制竖直力幅值，并将气弹簧补偿衰减，避免轮子空转时力控发散
+    // 已触发强制低腿长时恢复正常弹簧补偿
     if (off_ground_in_mid_high_leg) {
-      left_force_ = std::clamp(left_force_, -80.0f, 80.0f);
-      right_force_ = std::clamp(right_force_, -80.0f, 80.0f);
+      if (!force_low_leg_) {
+        left_force_ -= l_spring_torque_ * 0.7f;
+        right_force_ -= r_spring_torque_ * 0.7f;
+        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      }
     }
 
-    // 离地、跳跃回收或上台阶时关闭轮端力矩，避免轮系在失去支撑时积分/空转。
-    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb) {
+    // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
+    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb || !standup_complete_) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {
@@ -334,8 +406,61 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.rw_tau = base_torque_.t_wr;
     }
 
-    const rm::f32 t_bl_cmd = -base_torque_.t_bl;
-    const rm::f32 t_br_cmd = -base_torque_.t_br;
+    // 上台阶：Phase 0=转腿到目标, Phase 1=收腿, Phase 2=回摆到0
+    rm::f32 t_bl_cmd;
+    rm::f32 t_br_cmd;
+    if (use_stair_climb) {
+      constexpr float kThetaTarget = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
+      constexpr float kThetaTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+      constexpr float kPhase0LegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbPhase0LegLengthM;
+      constexpr float kRetractLegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
+      constexpr float kLegLengthTol =
+          wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
+      constexpr float kZeroThreshold = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+      constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
+
+      float theta_target = kThetaTarget;
+      bool cond_met = false;
+      debug_stair_climb_phase_ = stair_climb_phase_;
+      if (stair_climb_phase_ == 0) {
+        params_.leg_target_length_m = kPhase0LegTarget;  // 转腿时拉长腿长
+        cond_met = (std::fabs(state_output.current.theta_ll - kThetaTarget) < kThetaTol &&
+                    std::fabs(state_output.current.theta_lr - kThetaTarget) < kThetaTol);
+      } else if (stair_climb_phase_ == 1) {
+        cond_met = (std::fabs(avg_leg_length_m - kRetractLegTarget) < kLegLengthTol);
+      } else {
+        theta_target = 0.0f;  // 回摆到0
+        cond_met = (std::fabs(state_output.current.theta_ll) < kZeroThreshold &&
+                    std::fabs(state_output.current.theta_lr) < kZeroThreshold);
+      }
+
+      // 通用延时切换：条件连续满足 kPhaseStableTicks 个周期后才切 Phase
+      // Phase 2 不再自增，稳定计数直接控制 stair_climb_ready_for_done
+      if (cond_met) {
+        stair_climb_stable_ticks_++;
+        if (stair_climb_phase_ < 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks) {
+          stair_climb_phase_++;
+          stair_climb_stable_ticks_ = 0;
+        }
+      } else {
+        stair_climb_stable_ticks_ = 0;
+      }
+
+      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
+                                                state_output.current.theta_ll_dot);
+      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
+                                                 state_output.current.theta_lr_dot);
+      t_bl_cmd = -left_stair_climb_theta_pid_.out();
+      t_br_cmd = -right_stair_climb_theta_pid_.out();
+
+      output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
+    } else {
+      stair_climb_phase_ = 0;
+      stair_climb_stable_ticks_ = 0;
+      output_.stair_climb_ready_for_done = false;
+      t_bl_cmd = -base_torque_.t_bl;
+      t_br_cmd = -base_torque_.t_br;
+    }
 
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
@@ -506,6 +631,9 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassKg) * kGravityMps2;
   const rm::f32 gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassKg) * kGravityMps2;
 
-  left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+  // left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
+  // right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+
+  left_support_force_est_n_ = left_F_bh + gravity_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right;
 }

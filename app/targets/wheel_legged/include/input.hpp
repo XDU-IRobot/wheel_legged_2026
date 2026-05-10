@@ -4,11 +4,11 @@
 
 #include "librm/device/remote/dr16.hpp"
 
-#include "../include/chassis/chassis.hpp"
-#include "../include/chassis/chassis_state.hpp"
-#include "../include/chassis/fsm.hpp"
-#include "../include/fsm_common.hpp"
-#include "../include/gimbal/fsm.hpp"
+#include "chassis/chassis.hpp"
+#include "chassis/state.hpp"
+#include "chassis/fsm.hpp"
+#include "fsm_common.hpp"
+#include "gimbal/fsm.hpp"
 
 struct SharedResources;
 
@@ -17,7 +17,7 @@ class Actuators;
 }  // namespace chassis_runtime
 
 /**
- * @file  targets/wheel_legged/control_loop/input_resolver.hpp
+ * @file  targets/wheel_legged/include/input.hpp
  * @brief 硬件输入采集、DR16/图传语义折叠与 FSM 输入构建
  */
 
@@ -68,6 +68,7 @@ struct InputSnapshot {
   TcRemoteInput tc_remote{};                              ///< 图传键鼠数据
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
+  bool auto_jump_enabled{false};                          ///< 自动跳跃当前是否已开启
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
   float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）
@@ -87,8 +88,18 @@ struct Dr16SemanticState {
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};  ///< C 键是否已就绪（上升沿检测）
-  bool mid_leg_hold{false};    ///< 是否保持中腿长
+  bool mid_leg_c_armed{true};    ///< C 键是否已就绪（上升沿检测）
+  bool mid_leg_hold{false};      ///< 是否保持中腿长
+  bool q_domain_armed{true};     ///< Q 键是否已就绪（上升沿检测）
+  uint8_t domain_state{0};       ///< Q 键工作域循环：0=kDisabled, 1=kService
+  bool v_high_leg_armed{true};   ///< V 键是否已就绪（上升沿检测）
+  bool b_high_leg_armed{true};   ///< B 键是否已就绪（上升沿检测）
+  bool r_yaw_reset_armed{true};  ///< R 键是否已就绪（上升沿检测）
+  bool f_jump_armed{true};       ///< F 键是否已就绪（上升沿检测）
+  bool high_leg_hold{false};     ///< 是否保持高腿长
+  bool b_double_mode{false};     ///< B 模式：需完成两次上台阶
+  uint8_t b_attempt{0};          ///< B 模式已完成上台阶次数
+  bool stair_climb_done{false};  ///< 上台阶完成后锁定低腿长
 };
 
 /**

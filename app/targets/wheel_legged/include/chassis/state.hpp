@@ -5,13 +5,13 @@
 
 #include <librm.hpp>
 
-#include "../wheel_legged_params.hpp"
-#include "leg_kinematics.hpp"
-#include "lqr_controllers.hpp"
-#include "../utils/kalman_filter.hpp"
+#include "../params.hpp"
+#include "leg.hpp"
+#include "lqr.hpp"
+#include "../utils/kalman.hpp"
 
 /**
- * @file  targets/wheel_legged/include/chassis/chassis_state.hpp
+ * @file  targets/wheel_legged/include/chassis/state.hpp
  * @brief 底盘状态估计模块：传感器输入建模、腿部运动学标定与速度融合
  */
 
@@ -68,11 +68,11 @@ struct ChassisStateEstimatorInput {
   WheelFeedback wheel{};         ///< 左右轮反馈
   ImuFeedback imu{};             ///< 底盘惯导反馈
 
-  rm::f32 dt_s{0.002f};                ///< 估计周期
-  rm::f32 yaw_motor_rad{0.0f};         ///< 云台偏航电机角度，供底盘跟随使用
-  rm::f32 s_ref_m{0.0f};               ///< 外部位移参考
-  bool use_external_s_ref{false};      ///< 是否用外部位移参考覆盖积分位移
-  bool use_wheel_speed_direct{false};  ///< 是否跳过速度融合并直接使用轮速
+  rm::f32 dt_s{0.002f};               ///< 估计周期
+  rm::f32 yaw_motor_rad{0.0f};        ///< 云台偏航电机角度，供底盘跟随使用
+  rm::f32 s_ref_m{0.0f};              ///< 外部位移参考
+  bool use_external_s_ref{false};     ///< 是否用外部位移参考覆盖积分位移
+  bool use_wheel_speed_direct{true};  ///< 是否跳过速度融合并直接使用轮速
 };
 
 /**
@@ -144,7 +144,6 @@ struct ChassisStateEstimatorOutput {
 struct SpeedEstimatorInput {
   rm::f32 wheel_speed_mps{0.0f};  ///< 轮系速度观测
   rm::f32 imu_acc_x_mps2{0.0f};   ///< 惯导 x 轴加速度
-  rm::f32 imu_acc_y_mps2{0.0f};   ///< 惯导 y 轴加速度
   rm::f32 imu_pitch_rad{0.0f};    ///< 机体俯仰角，用于重力/姿态补偿
   rm::f32 dt_s{wheel_legged::params::active::state_estimator::kDefaultDtS};  ///< 估计周期
 };
@@ -159,8 +158,6 @@ class SpeedEstimator {
   /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
     accel_x_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
-                                         wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
-    accel_y_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
                                          wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
 
     kf_.UseAutoAdjustment = 0;
@@ -222,9 +219,9 @@ class SpeedEstimator {
 
     wheel_speed_mps_ = input.wheel_speed_mps;
 
+    constexpr rm::f32 kGravityMps2 = 9.8f;
     const rm::f32 acc_x = accel_x_filter_.apply(input.imu_acc_x_mps2);
-    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2);
-    rm::f32 accel_forward = acc_x - acc_y * std::sin(input.imu_pitch_rad);
+    rm::f32 accel_forward = acc_x - kGravityMps2 * std::sin(input.imu_pitch_rad);
 
     if (accel_bias_count_ < static_cast<int>(wheel_legged::params::active::state_estimator::kAccelBiasInitSamples)) {
       accel_bias_sum_ += accel_forward;
@@ -263,7 +260,6 @@ class SpeedEstimator {
 
  private:
   rm::modules::LowPassFilterConstDt<rm::f32> accel_x_filter_{};
-  rm::modules::LowPassFilterConstDt<rm::f32> accel_y_filter_{};
   rm::f32 wheel_speed_mps_{0.0f};
   rm::f32 accel_bias_{0.0f};
   rm::f32 accel_bias_sum_{0.0f};
@@ -335,9 +331,6 @@ class ChassisStateEstimator {
   void UpdateLegState(const ChassisStateEstimatorInput &input, const rm::f32 dt_s) {
     static constexpr rm::f32 kPiHalf = wheel_legged::params::active::state_estimator::kThetaPiHalf;
 
-    const rm::f32 prev_theta_ll = output_.current.theta_ll;
-    const rm::f32 prev_theta_lr = output_.current.theta_lr;
-
     const CalibratedLegKinematicsInput leg_input = BuildCalibratedLegInput(input);
     output_.calibrated_leg_input = leg_input;
 
@@ -366,8 +359,8 @@ class ChassisStateEstimator {
     output_.current.theta_ll = theta_ll;
     output_.current.theta_lr = theta_lr;
 
-    const rm::f32 raw_theta_ll_dot = (theta_ll - prev_theta_ll) / dt_s;
-    const rm::f32 raw_theta_lr_dot = (theta_lr - prev_theta_lr) / dt_s;
+    const rm::f32 raw_theta_ll_dot = input.imu.gyro_y_rad_s + left_leg_.phi0_dot();
+    const rm::f32 raw_theta_lr_dot = input.imu.gyro_y_rad_s + right_leg_.phi0_dot();
     output_.current.theta_ll_dot = theta_ll_dot_filter_.apply(raw_theta_ll_dot);
     output_.current.theta_lr_dot = theta_lr_dot_filter_.apply(raw_theta_lr_dot);
   }
@@ -407,7 +400,6 @@ class ChassisStateEstimator {
     SpeedEstimatorInput speed_input{};
     speed_input.wheel_speed_mps = output_.wheel_speed_mps;
     speed_input.imu_acc_x_mps2 = input.imu.acc_x_mps2;
-    speed_input.imu_acc_y_mps2 = input.imu.acc_y_mps2;
     speed_input.imu_pitch_rad = input.imu.pitch_rad;
     speed_input.dt_s = dt_s;
     speed_estimator_.Update(speed_input);
