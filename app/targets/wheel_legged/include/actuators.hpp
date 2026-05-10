@@ -249,8 +249,8 @@ class Actuators {
   static void SendWheelCurrent(SharedResources &g, float left_current, float right_current) {
     g.left_wheel->SetCurrent(ClampToI16(left_current));
     g.right_wheel->SetCurrent(ClampToI16(right_current));
-    // g.left_wheel->SetCurrent(ClampToI16(0));
-    // g.right_wheel->SetCurrent(ClampToI16(0));
+//     g.left_wheel->SetCurrent(ClampToI16(0));
+//     g.right_wheel->SetCurrent(ClampToI16(0));
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }
 };

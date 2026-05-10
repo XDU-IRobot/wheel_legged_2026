@@ -34,6 +34,7 @@ constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
+constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
 constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
@@ -428,6 +429,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
+    chassis_update_input.expected.theta_b = kSpinThetaBBiasRad;
   } else if (jump_control_enabled) {
     chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
@@ -442,7 +444,9 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
-  chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
+  if (!spin_control_enabled) {
+    chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
+  }
 
   // ── 7l. 偏航角速度控制 ──
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
