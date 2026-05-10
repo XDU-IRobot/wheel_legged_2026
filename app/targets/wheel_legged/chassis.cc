@@ -161,7 +161,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
   estimator_input.use_external_s_ref = false;
-  estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
+  // estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
+  estimator_input.use_wheel_speed_direct = false;  // 小陀螺也用卡尔曼滤波速度
 
   state_estimator_.Update(estimator_input);
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
@@ -386,16 +387,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 离地时限制竖直力幅值，并将气弹簧补偿衰减，避免轮子空转时力控发散
+    // 离地时将气弹簧补偿全部关掉，避免轮子空转时力控发散
     // 已触发强制低腿长时恢复正常弹簧补偿
     if (off_ground_in_mid_high_leg) {
       if (!force_low_leg_) {
-        left_force_ -= l_spring_torque_ * 0.7f;
-        right_force_ -= r_spring_torque_ * 0.7f;
-        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-        left_force_ = 0;
-        right_force_ = 0;
+        left_force_ -= l_spring_torque_;
+        right_force_ -= r_spring_torque_;
+        left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
       }
     }
 
