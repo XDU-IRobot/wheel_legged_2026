@@ -1,7 +1,7 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
 #include "include/debug.hpp"
-
+f32 flag = 0;
 #include "main.h"
 #include <algorithm>
 #include <cmath>
@@ -41,6 +41,8 @@ constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedTheta
 constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
 constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
 constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
+constexpr float kSpinLegLengthBiasM = ns::control_loop::kSpinLegLengthBiasM;
+constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
 constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
@@ -388,18 +390,21 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
-  // ── 摩擦圆限速（转向优先）──
-  // 当目标偏航速率与目标速度的归一化矢量和超出单位圆时，限制速度以保证转向。
-  if (target_s_dot != 0.0f && chassis_output_enable) {
-    const float yaw_dot = spin_control_enabled ? kSpinTargetYawDotRadS : ctx.filtered_yaw_dot;
-    const float speed_norm = std::fabs(target_s_dot) / forward_max_speed;
-    const float yaw_norm = std::fabs(yaw_dot) / ns::control_loop::kMaxSafeYawRateRadS;
-    const float sum_sq = speed_norm * speed_norm + yaw_norm * yaw_norm;
-    if (sum_sq > 1.0f) {
-      const float max_speed = forward_max_speed * std::sqrt(1.0f - yaw_norm * yaw_norm);
-      target_s_dot = std::copysign(max_speed, target_s_dot);
-    }
-  }
+  // // ── 摩擦圆限速（转向优先）──
+  // // 当目标偏航速率与目标速度的归一化矢量和超出单位圆时，限制速度以保证转向。
+  // if (target_s_dot != 0.0f && chassis_output_enable) {
+  //
+  //   const float yaw_dot = spin_control_enabled ? kSpinTargetYawDotRadS : ctx.filtered_yaw_dot;
+  //   const float speed_norm = std::fabs(target_s_dot) / forward_max_speed;
+  //   const float yaw_norm = std::fabs(yaw_dot) / ns::control_loop::kMaxSafeYawRateRadS;
+  //   const float sum_sq = speed_norm * speed_norm + yaw_norm * yaw_norm;
+  //   flag =0;
+  //   if (sum_sq > 1.0f) {
+  //     flag = 1;
+  //     const float max_speed = forward_max_speed * std::sqrt(1.0f - yaw_norm * yaw_norm);
+  //     target_s_dot = std::copysign(max_speed, target_s_dot);
+  //   }
+  // }
 
   // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
   // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
@@ -455,7 +460,7 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
-  chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
+  chassis_update_input.expected.theta_b = spin_control_enabled ? kSpinThetaBBiasRad : kExpectedThetaBBiasRad;
 
   // ── 7l. 偏航角速度控制 ──
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;

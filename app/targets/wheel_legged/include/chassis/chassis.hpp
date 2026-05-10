@@ -126,7 +126,11 @@ class Chassis {
   bool prev_enable_output_{false};
   bool standup_complete_{false};
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
-  uint16_t stair_climb_stable_ticks_{0};  ///< 当前 Phase 条件连续满足的周期数
+  uint16_t stair_climb_stable_ticks_{0};   ///< 当前 Phase 条件连续满足的周期数
+  uint16_t off_ground_duration_ticks_{0};  ///< 离地持续时间（用于衰减气弹簧补偿）
+  bool force_low_leg_{false};              ///< 离地后腿长过短时强制低腿长
+  uint16_t force_low_leg_ticks_{0};        ///< 强制低腿长已持续时间
+  bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
