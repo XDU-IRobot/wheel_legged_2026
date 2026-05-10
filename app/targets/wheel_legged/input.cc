@@ -40,6 +40,7 @@ constexpr uint16_t kRcKeyD = 0x0008;
 constexpr uint16_t kRcKeyShift = 0x0010;
 constexpr uint16_t kRcKeyQ = 0x0040;
 constexpr uint16_t kRcKeyR = 0x0100;
+constexpr uint16_t kRcKeyF = 0x0200;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
@@ -106,6 +107,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
+  bool f_jump_edge = false;
   if (tc_remote_active) {
     // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
@@ -161,6 +163,14 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.r_yaw_reset_armed = false;
     }
     if (!r_pressed) tc_state.r_yaw_reset_armed = true;
+
+    // F 键：跳跃（上升沿，一次性请求）
+    const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
+    if (f_pressed && tc_state.f_jump_armed) {
+      f_jump_edge = true;
+      tc_state.f_jump_armed = false;
+    }
+    if (!f_pressed) tc_state.f_jump_armed = true;
   }
 
   input.input_valid = has_any_input;
@@ -207,8 +217,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 小陀螺：Shift 键
     request.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
 
-    // 跳跃：图传无拨轮，不触发
-    request.jump_trigger = false;
+    // 跳跃：F 键
+    request.jump_trigger = f_jump_edge;
 
   } else if (dr16.online) {
     // ═══ DR16 兜底 ═══

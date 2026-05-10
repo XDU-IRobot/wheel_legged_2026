@@ -259,6 +259,15 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     smoothed_leg_target_length_m_ = input.target_leg_length_m;
     params_.leg_target_length_m = input.target_leg_length_m;
   }
+  if (force_low_leg_) {
+    constexpr uint16_t kLowLegHoldTicks = 2000;  // 0.3s @ 500Hz
+    params_.leg_target_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
+    force_low_leg_ticks_++;
+    if (force_low_leg_ticks_ >= kLowLegHoldTicks) {
+      force_low_leg_ = false;
+      force_low_leg_ticks_ = 0;
+    }
+  }
   ComputeActuatorTorque(input, state_output);
 }
 
@@ -297,8 +306,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-  right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  if (input.fsm_mode == Fsm::State::kSpin) {
+    constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
+    left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
+    right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
+  } else {
+    left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+  }
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
@@ -312,11 +327,28 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
-  const bool off_ground_in_mid_high_leg =
-      !is_jump_state && (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
-      (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-       right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+  const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                          (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                           right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+
+  // 离地时检测腿长：先确认曾高于 0.3m（中/高腿长），再检测回缩至 0.25m 以下才触发
+  // 防止机器人原本就在低腿长时误触发
+  if (off_ground_in_mid_high_leg) {
+    if (!force_low_leg_) {
+      const float avg_leg = 0.5f * (left_leg_.l0() + right_leg_.l0());
+      if (avg_leg > 0.3f) {
+        leg_was_high_ = true;
+      }
+      if (leg_was_high_ && avg_leg < 0.25f) {
+        force_low_leg_ = true;
+        force_low_leg_ticks_ = 0;
+        leg_was_high_ = false;
+      }
+    }
+  } else {
+    leg_was_high_ = false;
+  }
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
@@ -349,16 +381,22 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // right_force_ = r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg =
-        !is_jump_state && (input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg) &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                            (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                             right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-    // 离地时限制竖直力幅值，避免轮子空转时力控发散（跳跃期间不触发）
+    // 离地时限制竖直力幅值，并将气弹簧补偿衰减，避免轮子空转时力控发散
+    // 已触发强制低腿长时恢复正常弹簧补偿
     if (off_ground_in_mid_high_leg) {
-      left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-      right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      if (!force_low_leg_) {
+        left_force_ -= l_spring_torque_ * 0.7f;
+        right_force_ -= r_spring_torque_ * 0.7f;
+        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        left_force_ = 0;
+        right_force_ = 0;
+      }
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
