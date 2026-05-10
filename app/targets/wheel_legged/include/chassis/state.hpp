@@ -144,7 +144,6 @@ struct ChassisStateEstimatorOutput {
 struct SpeedEstimatorInput {
   rm::f32 wheel_speed_mps{0.0f};  ///< 轮系速度观测
   rm::f32 imu_acc_x_mps2{0.0f};   ///< 惯导 x 轴加速度
-  rm::f32 imu_acc_y_mps2{0.0f};   ///< 惯导 y 轴加速度
   rm::f32 imu_pitch_rad{0.0f};    ///< 机体俯仰角，用于重力/姿态补偿
   rm::f32 dt_s{wheel_legged::params::active::state_estimator::kDefaultDtS};  ///< 估计周期
 };
@@ -159,8 +158,6 @@ class SpeedEstimator {
   /** @brief 初始化滤波器参数与内部状态 */
   void Init() {
     accel_x_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
-                                         wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
-    accel_y_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
                                          wheel_legged::params::active::state_estimator::kImuAccelFilterCutoffHz);
 
     kf_.UseAutoAdjustment = 0;
@@ -222,9 +219,9 @@ class SpeedEstimator {
 
     wheel_speed_mps_ = input.wheel_speed_mps;
 
+    constexpr rm::f32 kGravityMps2 = 9.8f;
     const rm::f32 acc_x = accel_x_filter_.apply(input.imu_acc_x_mps2);
-    const rm::f32 acc_y = accel_y_filter_.apply(input.imu_acc_y_mps2);
-    rm::f32 accel_forward = acc_x - acc_y * std::sin(input.imu_pitch_rad);
+    rm::f32 accel_forward = acc_x - kGravityMps2 * std::sin(input.imu_pitch_rad);
 
     if (accel_bias_count_ < static_cast<int>(wheel_legged::params::active::state_estimator::kAccelBiasInitSamples)) {
       accel_bias_sum_ += accel_forward;
@@ -263,7 +260,6 @@ class SpeedEstimator {
 
  private:
   rm::modules::LowPassFilterConstDt<rm::f32> accel_x_filter_{};
-  rm::modules::LowPassFilterConstDt<rm::f32> accel_y_filter_{};
   rm::f32 wheel_speed_mps_{0.0f};
   rm::f32 accel_bias_{0.0f};
   rm::f32 accel_bias_sum_{0.0f};
@@ -404,7 +400,6 @@ class ChassisStateEstimator {
     SpeedEstimatorInput speed_input{};
     speed_input.wheel_speed_mps = output_.wheel_speed_mps;
     speed_input.imu_acc_x_mps2 = input.imu.acc_x_mps2;
-    speed_input.imu_acc_y_mps2 = input.imu.acc_y_mps2;
     speed_input.imu_pitch_rad = input.imu.pitch_rad;
     speed_input.dt_s = dt_s;
     speed_estimator_.Update(speed_input);
