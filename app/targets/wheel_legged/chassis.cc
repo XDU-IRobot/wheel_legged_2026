@@ -327,10 +327,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
-  const bool off_ground_in_mid_high_leg =
-      !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
-      (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-       right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+  const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                          (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                           right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
   // 离地时检测腿长：先确认曾高于 0.3m（中/高腿长），再检测回缩至 0.25m 以下才触发
@@ -382,10 +381,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // right_force_ = r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg =
-        !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+                                            (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                             right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
     // 离地时限制竖直力幅值，并将气弹簧补偿衰减，避免轮子空转时力控发散
