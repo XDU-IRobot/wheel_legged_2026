@@ -161,8 +161,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
   estimator_input.use_external_s_ref = false;
-  estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
-
+//  estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
+  estimator_input.use_wheel_speed_direct = false;
   state_estimator_.Update(estimator_input);
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
 
@@ -394,8 +394,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         right_force_ -= r_spring_torque_ * 0.7f;
         // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
         // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-        left_force_ = 0;
-        right_force_ = 0;
       }
     }
 

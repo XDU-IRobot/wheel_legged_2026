@@ -13,7 +13,7 @@ f32 flag = 0;
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-
+float debug_pitch_motor_raw_pos_rad;
 DebugSnapshot wl_debug __attribute__((section(".sram4")));
 
 namespace {
@@ -607,6 +607,6 @@ void ControlLoop() {
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
   }
-
+  debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }
