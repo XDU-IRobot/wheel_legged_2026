@@ -46,6 +46,13 @@ struct ChassisStateContext {
   // ── 位置保持（I 项）──
   bool integrate_position{false};  ///< 是否对期望纵向位置进行积分（速度目标归零后冻结为锚点）
 
+  // ── 落地减速（离地→落地边沿触发）──
+  bool landing_decel_active{false};        ///< 落地减速是否激活
+  float landing_theta_bias{0.0f};          ///< 落地减速腿摆角偏置 [rad]
+  uint32_t landing_stable_ticks{0U};       ///< 落地减速稳定计数器
+  uint32_t off_ground_duration_ticks{0U};  ///< 离地持续时间计数器（防单帧误判）
+  bool prev_off_ground_in_mid_leg{false};  ///< 上一周期中腿长是否离地
+
   // ── 偏航跟随 ──
   rm::modules::PID yaw_follow_pid{};                                      ///< 偏航跟随 PID
   bool yaw_follow_pid_initialized{false};                                 ///< 偏航跟随 PID 是否已初始化

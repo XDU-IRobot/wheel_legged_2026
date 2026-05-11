@@ -8,7 +8,7 @@ f32 flag = 0;
 
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
-
+float debug_mid_target_theta;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -46,6 +46,11 @@ constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
 constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
+constexpr float kLandingDecelThetaGain = ns::control_loop::kLandingDecelThetaGain;
+constexpr float kLandingDecelThetaMaxRad = ns::control_loop::kLandingDecelThetaMaxRad;
+constexpr float kLandingDecelThetaRampStepRad = ns::control_loop::kLandingDecelThetaRampStepRad;
+constexpr std::uint32_t kLandingDecelOffGroundMinMs = ns::control_loop::kLandingDecelOffGroundMinMs;
+constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandingDecelStableDurationMs;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -443,6 +448,54 @@ void ControlLoop() {
   wl_debug.filtered_s_dot_mps = ctx.filtered_s_dot;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
+
+  // ── 落地减速：中腿长离地→落地边沿触发，theta_bias = k * s_dot 辅助减速 ──
+  const bool is_mid_leg = chassis_output.mode == chassis::Fsm::State::kMidLeg;
+  const bool off_ground = chassis_control_output.off_ground_in_mid_high_leg;
+
+  // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
+  const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
+  const bool landing_edge =
+      is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
+      ctx.off_ground_duration_ticks >= off_ground_min_ticks;
+  ctx.prev_off_ground_in_mid_leg = off_ground;
+
+  if (off_ground && is_mid_leg) {
+    ctx.off_ground_duration_ticks++;
+  } else {
+    ctx.off_ground_duration_ticks = 0U;
+  }
+
+  if (landing_edge) {
+    ctx.landing_decel_active = true;
+    ctx.landing_stable_ticks = 0U;
+  }
+
+  if (ctx.landing_decel_active) {
+    const bool speed_low =
+        std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
+    if (speed_low) {
+      ctx.landing_stable_ticks++;
+    } else {
+      ctx.landing_stable_ticks = 0U;
+    }
+
+    const uint32_t stable_ticks_needed = kLandingDecelStableDurationMs / 2U;  // 500Hz → 2ms/tick
+    if (ctx.landing_stable_ticks >= stable_ticks_needed) {
+      ctx.landing_decel_active = false;
+    }
+  }
+
+  {
+    const float target_bias =
+        ctx.landing_decel_active
+            ? std::clamp(kLandingDecelThetaGain * current_state.s_dot, -kLandingDecelThetaMaxRad,
+                         kLandingDecelThetaMaxRad)
+            : 0.0f;
+    const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
+    RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
+  }
+
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
@@ -454,8 +507,11 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
+//    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
+//    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
+//      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
