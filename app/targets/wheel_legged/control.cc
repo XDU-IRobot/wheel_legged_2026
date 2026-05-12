@@ -455,9 +455,8 @@ void ControlLoop() {
 
   // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
   const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
-  const bool landing_edge =
-      is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
-      ctx.off_ground_duration_ticks >= off_ground_min_ticks;
+  const bool landing_edge = is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
+                            ctx.off_ground_duration_ticks >= off_ground_min_ticks;
   ctx.prev_off_ground_in_mid_leg = off_ground;
 
   if (off_ground && is_mid_leg) {
@@ -472,8 +471,7 @@ void ControlLoop() {
   }
 
   if (ctx.landing_decel_active) {
-    const bool speed_low =
-        std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
+    const bool speed_low = std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
     if (speed_low) {
       ctx.landing_stable_ticks++;
     } else {
@@ -487,11 +485,9 @@ void ControlLoop() {
   }
 
   {
-    const float target_bias =
-        ctx.landing_decel_active
-            ? std::clamp(kLandingDecelThetaGain * current_state.s_dot, -kLandingDecelThetaMaxRad,
-                         kLandingDecelThetaMaxRad)
-            : 0.0f;
+    const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
+                                                                    -kLandingDecelThetaMaxRad, kLandingDecelThetaMaxRad)
+                                                       : 0.0f;
     const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
     RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
   }
@@ -507,11 +503,11 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
-//    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
-//    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
+    //    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
+    //    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
-//      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
+    //      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
