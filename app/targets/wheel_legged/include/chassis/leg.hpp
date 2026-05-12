@@ -21,12 +21,17 @@ class LegKinematics {
  public:
   LegKinematics(rm::f32 l1 = wheel_legged::params::active::chassis::kLegL1M,
                 rm::f32 l2 = wheel_legged::params::active::chassis::kLegL2M)
-      : l1_(l1), l2_(l2) {}
+      : l1_(l1), l2_(l2) {
+    l0_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::leg_kinematics::kL0DotFilterSampleHz,
+                                        wheel_legged::params::active::leg_kinematics::kL0DotFilterCutoffHz);
+  }
 
   void SetPhi1(const rm::f32 phi1) { phi1_ = phi1; }
   void SetPhi4(const rm::f32 phi4) { phi4_ = phi4; }
   void SetWPhi1(const rm::f32 w_phi1) { w_phi1_ = w_phi1; }
   void SetWPhi4(const rm::f32 w_phi4) { w_phi4_ = w_phi4; }
+  void SetL1(const rm::f32 l1) { l1_ = l1; }
+  void SetL2(const rm::f32 l2) { l2_ = l2; }
 
   [[nodiscard]] rm::f32 l0() const { return l0_; }
   [[nodiscard]] rm::f32 l0_dot() const { return l0_dot_; }
@@ -108,7 +113,7 @@ class LegKinematics {
       jacobi_10_ = 0.0f;
       jacobi_11_ = 0.0f;
       phi0_dot_ = 0.0f;
-      l0_dot_ = (l0_ - prev_l0) / dt;
+      l0_dot_ = l0_dot_filter_.apply((l0_ - prev_l0) / dt);
       return;
     }
 
@@ -120,7 +125,7 @@ class LegKinematics {
     jacobi_10_ = l1_ * sin_p02 * sin_p34 / sin_p32;
     jacobi_11_ = l1_ * cos_p02 * sin_p34 / (l0_ * sin_p32);
 
-    l0_dot_ = (l0_ - prev_l0) / dt;
+    l0_dot_ = l0_dot_filter_.apply((l0_ - prev_l0) / dt);
     phi0_dot_ = (xc_ * yc_dot_ - yc_ * xc_dot_) / (l0_ * l0_);
   }
 
@@ -169,6 +174,9 @@ class LegKinematics {
   // 连杆参数
   rm::f32 l1_{wheel_legged::params::active::chassis::kLegL1M};
   rm::f32 l2_{wheel_legged::params::active::chassis::kLegL2M};
+
+  // l0_dot 低通滤波器
+  rm::modules::LowPassFilterConstDt<rm::f32> l0_dot_filter_{};
 };
 
 }  // namespace chassis::wbr

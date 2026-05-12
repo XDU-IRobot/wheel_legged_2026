@@ -33,6 +33,7 @@ constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFr
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
+constexpr float kSpinExitYawAlignThresholdRad = ns::control_loop::kSpinExitYawAlignThresholdRad;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
@@ -103,7 +104,12 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
-  const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  {
+    const float yaw_err = rm::modules::Wrap(
+        ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
+  }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
@@ -268,8 +274,11 @@ void ControlLoop() {
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;
   const bool mode_changed = (chassis_output.mode != ctx.last_chassis_mode);
-  const bool last_was_spin = (ctx.last_chassis_mode == chassis::Fsm::State::kSpin);
-  const bool now_is_spin = (chassis_output.mode == chassis::Fsm::State::kSpin);
+  const auto is_spin_like = [](chassis::Fsm::State s) {
+    return s == chassis::Fsm::State::kSpin || s == chassis::Fsm::State::kSpinExitPending;
+  };
+  const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
+  const bool now_is_spin = is_spin_like(chassis_output.mode);
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
@@ -345,8 +354,9 @@ void ControlLoop() {
 
   // ── 7f. 纵向速度目标计算 ──
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
-  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
-                                    chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled =
+      (chassis_output.mode == chassis::Fsm::State::kSpin || chassis_output.mode == chassis::Fsm::State::kSpinExitPending) &&
+      chassis_output_enable && chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
        chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&

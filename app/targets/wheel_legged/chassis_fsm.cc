@@ -141,6 +141,17 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.jump_phase = 0U;
       break;
 
+    case chassis::Fsm::State::kSpinExitPending:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.spin_enable = true;
+      control.recovery_enable = false;
+      control.safe_output_required = false;
+      control.leg_profile = requested_leg_profile;
+      control.target_leg_length_m = LegLengthForProfile(requested_leg_profile);
+      control.jump_phase = 0U;
+      break;
+
     case chassis::Fsm::State::kJumpPrep:
       control.enable_dm = true;
       control.run_chassis_update = true;
@@ -309,6 +320,17 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
       } else if (!request.spin_hold) {
+        next_mode = State::kSpinExitPending;
+      }
+      break;
+
+    case State::kSpinExitPending:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
+      } else if (request.spin_exit_yaw_aligned ||
+                 elapsed_ms >= wheel_legged::params::active::chassis_fsm::kSpinExitTimeoutMs) {
         next_mode = requested_normal_state;
       }
       break;

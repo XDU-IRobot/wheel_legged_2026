@@ -48,6 +48,8 @@ class Chassis {
     rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
     rm::f32 right_support_force_n{0.0f};  ///< 右腿支撑力估计
     rm::f32 mean_leg_length_m{0.0f};      ///< 平均腿长
+    rm::f32 left_l0_dot_mps{0.0f};        ///< 左腿腿长变化率
+    rm::f32 right_l0_dot_mps{0.0f};       ///< 右腿腿长变化率
     rm::f32 speed_mps{0.0f};              ///< 融合车速
     rm::f32 wheel_speed_mps{0.0f};        ///< 轮系解算车速
     rm::f32 raw_wheel_speed_mps{0.0f};    ///< 原始轮速观测

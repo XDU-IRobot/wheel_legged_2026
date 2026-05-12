@@ -23,6 +23,7 @@ class Fsm {
     kMidLeg,
     kHighLeg,
     kSpin,
+    kSpinExitPending,
     kJumpPrep,
     kJumpPush,
     kJumpRecover,
