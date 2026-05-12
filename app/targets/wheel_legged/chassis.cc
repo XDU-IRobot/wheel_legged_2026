@@ -640,8 +640,8 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 right_leg_dyn_comp = -(1.0f - eta_right) * right_l0_ddot * std::cos(theta_lr);
 
   // a_c: body vertical acceleration in world frame (z-up), estimated from IMU acceleration and pitch.
-  const rm::f32 body_vertical_acc_mps2 = imu_acc_x_mps2_ * std::sin(theta_b) + imu_acc_z_mps2_ * std::cos(theta_b) -
-                                         kGravityMps2;
+  const rm::f32 body_vertical_acc_mps2 =
+      imu_acc_x_mps2_ * std::sin(theta_b) + imu_acc_z_mps2_ * std::cos(theta_b) - kGravityMps2;
   const rm::f32 body_vertical_acc_limited_mps2 =
       std::clamp(body_vertical_acc_mps2, -2.0f * kGravityMps2, 2.0f * kGravityMps2);
 
