@@ -315,11 +315,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   if (input.fsm_mode == Fsm::State::kSpin) {
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0() , -left_leg_.l0_dot() ,2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0() , -right_leg_.l0_dot() , 2);
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
+                               2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
+                                -right_leg_.l0_dot(), 2);
   } else {
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m , -left_leg_.l0_dot() , 2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m , -right_leg_.l0_dot() , 2);
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
@@ -366,8 +368,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = 250.0f + roll_pid_.out();
       right_force_ = 250.0f - roll_pid_.out();
     } else if (use_jump_retract2) {
-      left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m,-left_leg_.l0_dot(),2);
-      right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m,-right_leg_.l0_dot(),2);
+      left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
+      right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
       leg_length_force = 0.5f * (left_l0_pid_jump_three_.out() + right_l0_pid_jump_three_.out());
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
@@ -394,10 +396,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     // 已触发强制低腿长时恢复正常弹簧补偿
     if (off_ground_in_mid_high_leg) {
       if (!force_low_leg_) {
-        //left_force_ -= l_spring_torque_;
-        //right_force_ -= r_spring_torque_;
-        //left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-        //right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        // left_force_ -= l_spring_torque_;
+        // right_force_ -= r_spring_torque_;
+        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
       }
     }
 

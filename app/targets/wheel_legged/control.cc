@@ -106,8 +106,8 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   {
-    const float yaw_err = rm::modules::Wrap(
-        ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    const float yaw_err =
+        rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
@@ -354,9 +354,9 @@ void ControlLoop() {
 
   // ── 7f. 纵向速度目标计算 ──
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
-  const bool spin_control_enabled =
-      (chassis_output.mode == chassis::Fsm::State::kSpin || chassis_output.mode == chassis::Fsm::State::kSpinExitPending) &&
-      chassis_output_enable && chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled = (chassis_output.mode == chassis::Fsm::State::kSpin ||
+                                     chassis_output.mode == chassis::Fsm::State::kSpinExitPending) &&
+                                    chassis_output_enable && chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
        chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
