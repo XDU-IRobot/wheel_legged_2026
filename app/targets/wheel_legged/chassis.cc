@@ -186,6 +186,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   right_leg_.Update(estimator_input.dt_s);
 
   imu_roll_ = estimator_input.imu.roll_rad;
+  imu_acc_x_mps2_ = estimator_input.imu.acc_x_mps2;
+  imu_acc_z_mps2_ = estimator_input.imu.acc_z_mps2;
   lf_real_torque_ = estimator_input.left_leg.front.torque_nm;
   lb_real_torque_ = estimator_input.left_leg.back.torque_nm;
   rf_real_torque_ = estimator_input.right_leg.front.torque_nm;
@@ -619,6 +621,7 @@ void chassis::Chassis::CalSupportForce() {
 
   const rm::f32 theta_ll = rm::modules::Wrap(output_.current_state.theta_ll, -kPi, kPi);
   const rm::f32 theta_lr = rm::modules::Wrap(output_.current_state.theta_lr, -kPi, kPi);
+  const rm::f32 theta_b = rm::modules::Wrap(output_.current_state.theta_b, -kPi, kPi);
 
   const rm::f32 left_F_bh = l_f * std::cos(theta_ll);
   const rm::f32 right_F_bh = r_f * std::cos(theta_lr);
@@ -630,16 +633,23 @@ void chassis::Chassis::CalSupportForce() {
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
+  const rm::f32 effective_mass_left_kg = 0.5f * kBodyMassKg + eta_left * kLegMassKg;
+  const rm::f32 effective_mass_right_kg = 0.5f * kBodyMassKg + eta_right * kLegMassKg;
 
   const rm::f32 left_leg_dyn_comp = -(1.0f - eta_left) * left_l0_ddot * std::cos(theta_ll);
   const rm::f32 right_leg_dyn_comp = -(1.0f - eta_right) * right_l0_ddot * std::cos(theta_lr);
 
-  const rm::f32 gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassKg) * kGravityMps2;
-  const rm::f32 gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassKg) * kGravityMps2;
+  // a_c: body vertical acceleration in world frame (z-up), estimated from IMU acceleration and pitch.
+  const rm::f32 body_vertical_acc_mps2 = imu_acc_x_mps2_ * std::sin(theta_b) + imu_acc_z_mps2_ * std::cos(theta_b) -
+                                         kGravityMps2;
+  const rm::f32 body_vertical_acc_limited_mps2 =
+      std::clamp(body_vertical_acc_mps2, -2.0f * kGravityMps2, 2.0f * kGravityMps2);
 
-  // left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
-  // right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+  const rm::f32 gravity_support_left = effective_mass_left_kg * kGravityMps2;
+  const rm::f32 gravity_support_right = effective_mass_right_kg * kGravityMps2;
+  const rm::f32 dyn_support_left = effective_mass_left_kg * (body_vertical_acc_limited_mps2 + left_leg_dyn_comp);
+  const rm::f32 dyn_support_right = effective_mass_right_kg * (body_vertical_acc_limited_mps2 + right_leg_dyn_comp);
 
-  left_support_force_est_n_ = left_F_bh + gravity_support_left;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right;
+  left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
 }

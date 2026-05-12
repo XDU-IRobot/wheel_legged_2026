@@ -117,6 +117,8 @@ class Chassis {
   rm::f32 lb_real_torque_{0.0f};
   rm::f32 rf_real_torque_{0.0f};
   rm::f32 rb_real_torque_{0.0f};
+  rm::f32 imu_acc_x_mps2_{0.0f};
+  rm::f32 imu_acc_z_mps2_{0.0f};
 
   rm::f32 left_support_force_est_n_{0.0f};
   rm::f32 right_support_force_est_n_{0.0f};

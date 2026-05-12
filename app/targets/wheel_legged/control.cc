@@ -106,8 +106,8 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   {
-    const float yaw_err =
-        rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
@@ -283,10 +283,12 @@ void ControlLoop() {
   if (mode_changed) {
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
     if (cross_spin) {
-      // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
-      ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       if (!now_is_spin) {
-        ctx.spin_exit_recovery = true;  // 退出小陀螺，启用快速偏航斜坡
+        // 退出小陀螺：偏航已对齐正前方，不继承 phi_dot，直接交给 yaw follow PID 控制
+      } else {
+        // 进入小陀螺：继承当前车体角速度做平滑起步，强制对齐正前方
+        ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+        ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
       }
     }
     ctx.last_chassis_mode = chassis_output.mode;
@@ -330,7 +332,9 @@ void ControlLoop() {
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-    ctx.filtered_yaw_dot = 0.0f;
+    if (!ctx.spin_exit_recovery) {
+      ctx.filtered_yaw_dot = 0.0f;
+    }
     ctx.yaw_follow_pid.Clear();
   }
 
