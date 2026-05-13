@@ -500,7 +500,8 @@ void ControlLoop() {
   //
   // {
   //   const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
-  //                                                                   -kLandingDecelThetaMaxRad, kLandingDecelThetaMaxRad)
+  //                                                                   -kLandingDecelThetaMaxRad,
+  //                                                                   kLandingDecelThetaMaxRad)
   //                                                      : 0.0f;
   //   const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
   //   RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);

@@ -290,7 +290,7 @@ constexpr PidGains kStairClimbThetaPid{6.0f, 0.0f, 1.0f, 15.0f,
                                        0.0f};  ///< 上台阶腿摆角 PID（位置环，跟踪 kStairClimbThetaTargetRad）
 
 // ==== l0_ddot 低通滤波 ====
-constexpr float kL0DdotFilterCutoffHz = 5.0f;   ///< l0_ddot 低通滤波截止频率 [Hz]
+constexpr float kL0DdotFilterCutoffHz = 5.0f;    ///< l0_ddot 低通滤波截止频率 [Hz]
 constexpr float kL0DdotFilterSampleHz = 500.0f;  ///< l0_ddot 低通滤波采样频率 [Hz]
 }  // namespace chassis
 
@@ -669,7 +669,7 @@ constexpr PidGains kStairClimbThetaPid{40.0f, 0.0f, 8.0f, 60.0f,
 constexpr PidGains kJumpThetaPid{150.0f, 0.0f, 50.0f, 250.0f, 40.0f};  ///< 跳跃蹬伸腿摆角 PID（位置环，目标 0 rad）
 
 // ==== l0_ddot 低通滤波 ====
-constexpr float kL0DdotFilterCutoffHz = 5.0f;   ///< l0_ddot 低通滤波截止频率 [Hz]
+constexpr float kL0DdotFilterCutoffHz = 5.0f;    ///< l0_ddot 低通滤波截止频率 [Hz]
 constexpr float kL0DdotFilterSampleHz = 500.0f;  ///< l0_ddot 低通滤波采样频率 [Hz]
 }  // namespace chassis
 
@@ -1045,7 +1045,7 @@ constexpr PidGains kStairClimbThetaPid{40.0f, 0.0f, 8.0f, 60.0f,
                                        30.0f};  ///< 上台阶腿摆角 PID（位置环，跟踪 kStairClimbThetaTargetRad）
 
 // ==== l0_ddot 低通滤波 ====
-constexpr float kL0DdotFilterCutoffHz = 5.0f;   ///< l0_ddot 低通滤波截止频率 [Hz]
+constexpr float kL0DdotFilterCutoffHz = 5.0f;    ///< l0_ddot 低通滤波截止频率 [Hz]
 constexpr float kL0DdotFilterSampleHz = 500.0f;  ///< l0_ddot 低通滤波采样频率 [Hz]
 }  // namespace chassis
 
