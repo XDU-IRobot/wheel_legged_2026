@@ -464,47 +464,47 @@ void ControlLoop() {
   chassis_update_input.expected.phi_dot = 0.0f;
 
   // ── 落地减速：中腿长离地→落地边沿触发，theta_bias = k * s_dot 辅助减速 ──
-  const bool is_mid_leg = chassis_output.mode == chassis::Fsm::State::kMidLeg;
-  const bool off_ground = chassis_control_output.off_ground_in_mid_high_leg;
-
-  // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
-  const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
-  const bool landing_edge = is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
-                            ctx.off_ground_duration_ticks >= off_ground_min_ticks;
-  ctx.prev_off_ground_in_mid_leg = off_ground;
-
-  if (off_ground && is_mid_leg) {
-    ctx.off_ground_duration_ticks++;
-  } else {
-    ctx.off_ground_duration_ticks = 0U;
-  }
-
-  if (landing_edge) {
-    ctx.landing_decel_active = true;
-    ctx.landing_stable_ticks = 0U;
-  }
-
-  if (ctx.landing_decel_active) {
-    const bool speed_low = std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
-    if (speed_low) {
-      ctx.landing_stable_ticks++;
-    } else {
-      ctx.landing_stable_ticks = 0U;
-    }
-
-    const uint32_t stable_ticks_needed = kLandingDecelStableDurationMs / 2U;  // 500Hz → 2ms/tick
-    if (ctx.landing_stable_ticks >= stable_ticks_needed) {
-      ctx.landing_decel_active = false;
-    }
-  }
-
-  {
-    const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
-                                                                    -kLandingDecelThetaMaxRad, kLandingDecelThetaMaxRad)
-                                                       : 0.0f;
-    const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
-    RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
-  }
+  // const bool is_mid_leg = chassis_output.mode == chassis::Fsm::State::kMidLeg;
+  // const bool off_ground = chassis_control_output.off_ground_in_mid_high_leg;
+  //
+  // // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
+  // const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
+  // const bool landing_edge = is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
+  //                           ctx.off_ground_duration_ticks >= off_ground_min_ticks;
+  // ctx.prev_off_ground_in_mid_leg = off_ground;
+  //
+  // if (off_ground && is_mid_leg) {
+  //   ctx.off_ground_duration_ticks++;
+  // } else {
+  //   ctx.off_ground_duration_ticks = 0U;
+  // }
+  //
+  // if (landing_edge) {
+  //   ctx.landing_decel_active = true;
+  //   ctx.landing_stable_ticks = 0U;
+  // }
+  //
+  // if (ctx.landing_decel_active) {
+  //   const bool speed_low = std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
+  //   if (speed_low) {
+  //     ctx.landing_stable_ticks++;
+  //   } else {
+  //     ctx.landing_stable_ticks = 0U;
+  //   }
+  //
+  //   const uint32_t stable_ticks_needed = kLandingDecelStableDurationMs / 2U;  // 500Hz → 2ms/tick
+  //   if (ctx.landing_stable_ticks >= stable_ticks_needed) {
+  //     ctx.landing_decel_active = false;
+  //   }
+  // }
+  //
+  // {
+  //   const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
+  //                                                                   -kLandingDecelThetaMaxRad, kLandingDecelThetaMaxRad)
+  //                                                      : 0.0f;
+  //   const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
+  //   RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
+  // }
 
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;

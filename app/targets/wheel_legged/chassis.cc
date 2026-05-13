@@ -137,6 +137,13 @@ void chassis::Chassis::Init() {
   }
   lqr_controller_.SetLqrCoefficients(coeff_vec);
 
+  left_l0_ddot_filter_.set_cutoff_frequency(
+      wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+      wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+  right_l0_ddot_filter_.set_cutoff_frequency(
+      wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+      wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
   SafeStop();
@@ -626,10 +633,13 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 left_F_bh = l_f * std::cos(theta_ll);
   const rm::f32 right_F_bh = r_f * std::cos(theta_lr);
 
-  const rm::f32 left_l0_ddot = (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
-  const rm::f32 right_l0_ddot = (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
+  const rm::f32 left_l0_ddot_raw = (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
+  const rm::f32 right_l0_ddot_raw = (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
   left_l0_dot_prev_ = left_leg_.l0_dot();
   right_l0_dot_prev_ = right_leg_.l0_dot();
+
+  const rm::f32 left_l0_ddot = left_l0_ddot_filter_.apply(left_l0_ddot_raw);
+  const rm::f32 right_l0_ddot = right_l0_ddot_filter_.apply(right_l0_ddot_raw);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
@@ -652,4 +662,13 @@ void chassis::Chassis::CalSupportForce() {
 
   left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
   right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
+
+  output_.left_F_bh_n = left_F_bh;
+  output_.right_F_bh_n = right_F_bh;
+  output_.left_gravity_support_n = gravity_support_left;
+  output_.right_gravity_support_n = gravity_support_right;
+  output_.left_dyn_support_n = dyn_support_left;
+  output_.right_dyn_support_n = dyn_support_right;
+  output_.left_l0_ddot_mps2 = left_l0_ddot;
+  output_.right_l0_ddot_mps2 = right_l0_ddot;
 }
