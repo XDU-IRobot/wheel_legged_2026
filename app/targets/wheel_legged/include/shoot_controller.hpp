@@ -104,12 +104,12 @@ class ShootController {
             now_angle_ = booster_pos_;
           }
           // 摩擦轮转速不足时等待加速
-          // if (static_cast<float>(fw_[0]->rpm()) >= kFwReadyRpm) {
-          booster_enable_ = true;
-          state_ = State::kReady;
-          // } else {
-          //   init_time_ = kInitTicks;  // 重新延时等待
-          // }
+          if (static_cast<float>(fw_[0]->rpm()) >= kFwReadyRpm) {
+            booster_enable_ = true;
+            state_ = State::kReady;
+          } else {
+            init_time_ = kInitTicks;  // 重新延时等待
+          }
         }
         break;
 
@@ -181,9 +181,11 @@ class ShootController {
 
     // 电机命令下发
     if (booster_enable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kEnable);
       booster_enable_ = false;
     } else if (booster_disable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kDisable);
       booster_disable_ = false;
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {

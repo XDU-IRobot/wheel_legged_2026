@@ -2,12 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
-
-#include "librm.hpp"
-
 #include "common/controllers/gimbal_2dof.hpp"
 #include "../fsm_common.hpp"
 #include "../params.hpp"
+
+using wheel_legged::params::active::yaw_ff;
 
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp
@@ -94,6 +93,8 @@ class Gimbal {
                                           wheel_legged::params::active::gimbal::kPitchMaxRad);
     output_.gimbal_enabled = input.gimbal_enable;
 
+    yaw_ff.Update(output_.yaw_target_rad);
+
     if (!input.gimbal_enable) {
       controller_.Enable(false);
       ClearPid();
@@ -114,7 +115,7 @@ class Gimbal {
 
     const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
     controller_.Enable(true);
-    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,yaw_ff.GetYawSpeedFeedforward());
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 

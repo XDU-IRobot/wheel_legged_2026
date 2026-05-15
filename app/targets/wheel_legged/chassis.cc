@@ -311,8 +311,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
     right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
   } else {
-    left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-    right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    // left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    // right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, filtered_l0_dot_left_);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, filtered_l0_dot_right_);
   }
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
@@ -332,23 +334,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                            right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-  // 离地时检测腿长：先确认曾高于 0.3m（中/高腿长），再检测回缩至 0.25m 以下才触发
-  // 防止机器人原本就在低腿长时误触发
-  if (off_ground_in_mid_high_leg) {
-    if (!force_low_leg_) {
-      const float avg_leg = 0.5f * (left_leg_.l0() + right_leg_.l0());
-      if (avg_leg > 0.3f) {
-        leg_was_high_ = true;
-      }
-      if (leg_was_high_ && avg_leg < 0.25f) {
-        force_low_leg_ = true;
-        force_low_leg_ticks_ = 0;
-        leg_was_high_ = false;
-      }
-    }
-  } else {
-    leg_was_high_ = false;
-  }
 
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
@@ -367,6 +352,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     } else if (use_jump_retract1) {
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
+    } else if (!standup_complete_ && standup_phase_ == 0) {
+      // 起立 Phase 0（收腿）：仅腿长 PID + 气弹簧补偿，关重力/横滚/惯性
+      left_force_ = leg_length_force + l_spring_torque_;
+      right_force_ = leg_length_force + r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -376,26 +365,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
       left_force_ = leg_length_force + gravity_ff_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
       right_force_ = leg_length_force + gravity_ff_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
-
-      // left_force_ = l_spring_torque_;
-      // right_force_ = r_spring_torque_;
     }
 
     const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
                                             (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
-
-    // 离地时限制竖直力幅值，并将气弹簧补偿衰减，避免轮子空转时力控发散
-    // 已触发强制低腿长时恢复正常弹簧补偿
-    if (off_ground_in_mid_high_leg) {
-      if (!force_low_leg_) {
-        left_force_ -= l_spring_torque_ * 0.7f;
-        right_force_ -= r_spring_torque_ * 0.7f;
-        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-      }
-    }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
     if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb || !standup_complete_) {
@@ -446,14 +421,23 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         stair_climb_stable_ticks_ = 0;
       }
 
-      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
-                                                state_output.current.theta_ll_dot);
-      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
-                                                 state_output.current.theta_lr_dot);
-      t_bl_cmd = -left_stair_climb_theta_pid_.out();
-      t_br_cmd = -right_stair_climb_theta_pid_.out();
+      if (stair_climb_phase_<2) {
+        left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
+                                                  state_output.current.theta_ll_dot);
+        right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
+                                                   state_output.current.theta_lr_dot);
+        t_bl_cmd = -left_stair_climb_theta_pid_.out();
+        t_br_cmd = -right_stair_climb_theta_pid_.out();
+      }else if (stair_climb_phase_ == 2){
+        t_bl_cmd = 0;
+        t_br_cmd = 0;
+      }
 
       output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
+    } else if (standup_phase_ == 0) {
+      // 起立 Phase 0（收腿）：关闭 LQR 摆角力矩，仅保留腿长力
+      t_bl_cmd = 0.0f;
+      t_br_cmd = 0.0f;
     } else {
       stair_climb_phase_ = 0;
       stair_climb_stable_ticks_ = 0;
@@ -501,9 +485,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr rm::f32 kRangeHighMax = -1.8f;
       const rm::f32 lw = state_output.current.theta_ll;
       const rm::f32 rw = state_output.current.theta_lr;
-      // 以下代码可能有问题
-      // const rm::f32 lw = rm::modules::Wrap(state_output.current.theta_ll, -kPi, kPi);
-      // const rm::f32 rw = rm::modules::Wrap(state_output.current.theta_lr, -kPi, kPi);
 
       const bool is_front =
           (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad);
@@ -522,17 +503,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const rm::f32 rv = r_in ? 0.0f : dir;
         left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
         right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
-        // 以下代码可能有问题
-        // if (l_in) {
-        //   left_leg_turn_pid_.Clear();
-        // } else {
-        //   left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
-        // }
-        // if (r_in) {
-        //   right_leg_turn_pid_.Clear();
-        // } else {
-        //   right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
-        // }
       }
       left_force_ = 0.0f;
       right_force_ = 0.0f;
@@ -617,10 +587,10 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 left_F_bh = l_f * std::cos(theta_ll);
   const rm::f32 right_F_bh = r_f * std::cos(theta_lr);
 
-  const rm::f32 left_l0_ddot = (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
-  const rm::f32 right_l0_ddot = (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
-  left_l0_dot_prev_ = left_leg_.l0_dot();
-  right_l0_dot_prev_ = right_leg_.l0_dot();
+  const rm::f32 left_l0_ddot = (filtered_l0_dot_left_ - left_l0_dot_prev_) / kControlDtS;
+  const rm::f32 right_l0_ddot = (filtered_l0_dot_right_ - right_l0_dot_prev_) / kControlDtS;
+  left_l0_dot_prev_ = filtered_l0_dot_left_;
+  right_l0_dot_prev_ = filtered_l0_dot_right_;
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
@@ -636,4 +606,6 @@ void chassis::Chassis::CalSupportForce() {
 
   left_support_force_est_n_ = left_F_bh + gravity_support_left;
   right_support_force_est_n_ = right_F_bh + gravity_support_right;
+
 }
+

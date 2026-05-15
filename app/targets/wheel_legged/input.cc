@@ -414,8 +414,20 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 3b. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
   if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    input.mode_request.host_target.yaw_rad = -g.aimbot->yaw() * kDegToRad;
-    input.mode_request.host_target.pitch_rad = g.aimbot->pitch() * kDegToRad;
+    constexpr float kHostTargetCutoffHz = 60.0f;
+    constexpr float kSampleFreqHz = 1.0f / kControlLoopDtS;
+    static rm::modules::LowPassFilterConstDt<rm::f32> host_yaw_filter{};
+    static rm::modules::LowPassFilterConstDt<rm::f32> host_pitch_filter{};
+    static bool host_filters_init = false;
+    if (!host_filters_init) {
+      host_yaw_filter.set_cutoff_frequency(kSampleFreqHz, kHostTargetCutoffHz);
+      host_pitch_filter.set_cutoff_frequency(kSampleFreqHz, kHostTargetCutoffHz);
+      host_filters_init = true;
+    }
+    // input.mode_request.host_target.yaw_rad = host_yaw_filter.apply(g.aimbot->yaw() * kDegToRad);
+    // input.mode_request.host_target.pitch_rad = host_pitch_filter.apply(-g.aimbot->pitch() * kDegToRad);
+    input.mode_request.host_target.yaw_rad = g.aimbot->yaw()* kDegToRad ;
+    input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
     input.mode_request.host_target_valid = true;
     // 修正 target_source：ResolveInputSemantics 计算时 host_target_valid 尚为 false，需重设
     if (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||

@@ -1,7 +1,7 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
 #include "include/debug.hpp"
-f32 flag = 0;
+f32 flag = 0,booster=0;
 #include "main.h"
 #include <algorithm>
 #include <cmath>
@@ -179,13 +179,15 @@ void ControlLoop() {
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
-    const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold;
+    const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold ||
+                              (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3);
     globals->shoot_controller.Update(shooter_enter, fire_trigger);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+    booster = globals->shoot_controller.booster_pos();
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -499,6 +501,22 @@ void ControlLoop() {
   // ── 7m. 底盘控制器执行 ──
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
+
+  // ── LQR 状态误差调试 ──
+  wl_debug.lqr_err_s = chassis_control_output.current_state.s - chassis_update_input.expected.s;
+  wl_debug.lqr_err_s_dot = chassis_control_output.current_state.s_dot - chassis_update_input.expected.s_dot;
+  wl_debug.lqr_err_phi =
+      rm::modules::Wrap(chassis_control_output.current_state.phi - chassis_update_input.expected.phi, -kPi, kPi);
+  wl_debug.lqr_err_phi_dot = chassis_control_output.current_state.phi_dot - chassis_update_input.expected.phi_dot;
+  wl_debug.lqr_err_theta_ll = chassis_control_output.current_state.theta_ll - chassis_update_input.expected.theta_ll;
+  wl_debug.lqr_err_theta_ll_dot =
+      chassis_control_output.current_state.theta_ll_dot - chassis_update_input.expected.theta_ll_dot;
+  wl_debug.lqr_err_theta_lr = chassis_control_output.current_state.theta_lr - chassis_update_input.expected.theta_lr;
+  wl_debug.lqr_err_theta_lr_dot =
+      chassis_control_output.current_state.theta_lr_dot - chassis_update_input.expected.theta_lr_dot;
+  wl_debug.lqr_err_theta_b = chassis_control_output.current_state.theta_b - chassis_update_input.expected.theta_b;
+  wl_debug.lqr_err_theta_b_dot = chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
+
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -508,7 +526,7 @@ void ControlLoop() {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
+    const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
