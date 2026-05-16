@@ -265,8 +265,23 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   } else if (dr16.online) {
     // ═══ DR16 兜底 ═══
 
-    // 工作域：左拨杆
-    request.domain_request = ResolveDomainRequest(dr16.switch_l);
+    // 左拨杆 kDown + 右拨杆的组合用于云台辨识/验证
+    if (dr16.switch_l == rm::device::DR16::SwitchPosition::kDown) {
+      if (dr16.switch_r == rm::device::DR16::SwitchPosition::kUp) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kIdent;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else if (dr16.switch_r == rm::device::DR16::SwitchPosition::kMid) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kFfVerify;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else {
+        request.domain_request = wheel_legged::DomainRequest::kDisabled;
+        leg_request = wheel_legged::LegProfile::kLow;
+      }
+    } else {
+      request.domain_request = ResolveDomainRequest(dr16.switch_l);
+    }
 
     // 腿长 + 战斗子模式：右拨杆
     if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
@@ -286,22 +301,23 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         default:
           break;
       }
-    } else {
+    } else if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
       leg_request = ResolveLegProfile(dr16.switch_r);
     }
 
-    // 小陀螺：拨轮
-    request.spin_hold = dr16.dial >= kWheelSpinThreshold;
+    // 小陀螺 / 跳跃：辨识/验证模式下不响应拨轮
+    if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
+      request.spin_hold = dr16.dial >= kWheelSpinThreshold;
 
-    // 跳跃：拨轮回中后快速负推（非战斗域）
-    if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
-      semantic_state.wheel_action_armed = true;
+      if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
+        semantic_state.wheel_action_armed = true;
+      }
+      const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
+      if (wheel_action_trigger) {
+        semantic_state.wheel_action_armed = false;
+      }
+      request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
     }
-    const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
-    if (wheel_action_trigger) {
-      semantic_state.wheel_action_armed = false;
-    }
-    request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
 
   } else {
     // ═══ 无输入 ═══
@@ -554,6 +570,7 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
       .rc_target = m.rc_target,
       .host_target = m.host_target,
       .host_target_valid = m.host_target_valid,
+      .gimbal_test_profile = m.gimbal_test_profile,
       .chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
                                  chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
       .startup_align_complete = startup_align_complete,

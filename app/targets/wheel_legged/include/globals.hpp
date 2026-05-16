@@ -20,6 +20,7 @@
 #include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
+#include "gimbal/gimbal_ident.hpp"
 #include "librm/device/remote/dr16.hpp"
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
 #include "gimbal/shoot_3fric.hpp"
@@ -79,6 +80,7 @@ struct SharedResources {
   chassis::Chassis chassis{};  ///< 底盘控制器
   gimbal::Fsm gimbal_fsm{};    ///< 云台状态机
   gimbal::Gimbal gimbal{};     ///< 云台控制器
+  gimbal::GimbalIdent gimbal_ident{};  ///< 云台辨识/前馈验证控制器
 
   /**
    * @brief 懒加载单例入口
@@ -197,10 +199,13 @@ struct SharedResources {
       chassis_imu->Begin();
     }
 
+    no_dtcm->ident_uart.Start();
+
     chassis_fsm.Init();
     chassis.Init();
     gimbal_fsm.Init();
     gimbal.Init();
+    gimbal_ident.Init();
 
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
     shoot.Init();

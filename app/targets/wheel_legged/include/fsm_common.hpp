@@ -44,6 +44,15 @@ enum class TargetSource : uint8_t {
 };
 
 /**
+ * @brief 云台测试子模式（Service 域下）
+ */
+enum class GimbalTestProfile : uint8_t {
+  kNormal = 0,  ///< 普通遥控/自瞄
+  kIdent,       ///< 辨识模式：五次谐波轨迹 + 单位置环 PID + 串口采集
+  kFfVerify,    ///< 前馈验证模式：纯动力学前馈跟随五次谐波轨迹
+};
+
+/**
  * @brief 战斗域下的子模式
  * @note  仅当 domain_request == kCombat 时有效。
  *        kAutoAimNoMove / kAutoAimWithMove 优先使用上位机自瞄目标，
@@ -85,11 +94,12 @@ struct ModeRequest {
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
   float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)
 
-  CombatProfile combat_profile{CombatProfile::kNormal};  ///< 战斗域子模式
-  TargetSource target_source{TargetSource::kRc};         ///< 当前目标来源偏好
-  GimbalTarget rc_target{};                              ///< 遥控器积分得到的目标
-  GimbalTarget host_target{};                            ///< 上位机目标 (NUC 自瞄 CAN 反馈)
-  bool host_target_valid{false};                         ///< 上位机目标是否有效 (NUC 启动且在线)
+  CombatProfile combat_profile{CombatProfile::kNormal};          ///< 战斗域子模式
+  TargetSource target_source{TargetSource::kRc};                 ///< 当前目标来源偏好
+  GimbalTarget rc_target{};                                      ///< 遥控器积分得到的目标
+  GimbalTarget host_target{};                                    ///< 上位机目标 (NUC 自瞄 CAN 反馈)
+  bool host_target_valid{false};                                 ///< 上位机目标是否有效 (NUC 启动且在线)
+  GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};  ///< 云台测试子模式
 
   bool fall_detected{false};          ///< 是否检测到倒地 (@todo 未接入 IMU 姿态判断，始终 false)
   uint32_t fall_detected_hold_ms{0};  ///< 倒地持续时间 (@todo 未接入)
@@ -172,9 +182,10 @@ struct GimbalFsmInput {
   TargetSource target_source{TargetSource::kRc};                          ///< 当前目标来源偏好
   GimbalTarget rc_target{};                                               ///< 遥控器积分目标
   GimbalTarget host_target{};                                             ///< 上位机目标 (NUC 自瞄 CAN 反馈)
-  bool host_target_valid{false};        ///< 上位机目标是否有效 (NUC 启动且在线)
-  bool chassis_recovery_active{false};  ///< 底盘是否处于恢复流程
-  bool startup_align_complete{false};   ///< 启动偏航归中是否完成
+  bool host_target_valid{false};                                          ///< 上位机目标是否有效 (NUC 启动且在线)
+  GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};      ///< 云台测试子模式
+  bool chassis_recovery_active{false};                                    ///< 底盘是否处于恢复流程
+  bool startup_align_complete{false};                                     ///< 启动偏航归中是否完成
 };
 
 }  // namespace wheel_legged

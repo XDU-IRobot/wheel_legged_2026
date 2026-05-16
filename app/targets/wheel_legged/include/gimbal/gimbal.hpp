@@ -6,6 +6,7 @@
 #include "librm.hpp"
 
 #include "common/controllers/gimbal_2dof.hpp"
+#include "gimbal_ident.hpp"
 #include "../fsm_common.hpp"
 #include "../params.hpp"
 
@@ -42,6 +43,10 @@ class Gimbal {
     float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
     float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
     float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
+
+    /// 辨识/验证模式专用
+    GimbalIdent *ident{nullptr};                                       ///< 辨识控制器对象
+    wheel_legged::GimbalTestProfile test_profile{wheel_legged::GimbalTestProfile::kNormal};  ///< 测试子模式
   };
 
   /**
@@ -59,6 +64,11 @@ class Gimbal {
     float pitch_pos_rad{0.0f};        ///< 俯仰反馈角
     float pitch_vel_rad_s{0.0f};      ///< 俯仰反馈角速度
     float pitch_cmd_torque_nm{0.0f};  ///< 俯仰输出力矩
+
+    /// 辨识模式串口数据
+    bool ident_data_pending{false};  ///< 是否有待发送的辨识数据
+    const char *ident_tx_data{nullptr};  ///< 待发送数据指针
+    size_t ident_tx_len{0};              ///< 待发送数据长度
   };
 
   /**
@@ -100,6 +110,52 @@ class Gimbal {
       last_use_yaw_motor_feedback_ = false;
       return;
     }
+
+    // 辨识/前馈验证模式：使用电机编码器反馈，走专用控制器
+    if (input.ident != nullptr &&
+        (input.test_profile == wheel_legged::GimbalTestProfile::kIdent ||
+         input.test_profile == wheel_legged::GimbalTestProfile::kFfVerify)) {
+      if (!last_ident_mode_active_) {
+        input.ident->Reset();
+        ClearPid();
+      }
+      last_ident_mode_active_ = true;
+
+      GimbalIdent::Input ident_in{};
+      ident_in.yaw_motor_pos_rad = input.yaw_motor_rad;
+      ident_in.yaw_motor_vel_rad_s = static_cast<float>(input.yaw_motor->vel());
+      ident_in.pitch_motor_pos_rad = input.pitch_motor->pos();
+      ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
+      ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+
+      if (input.test_profile == wheel_legged::GimbalTestProfile::kIdent) {
+        const auto ident_out = input.ident->IdentUpdate(ident_in);
+        output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
+        output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
+        output_.yaw_target_rad = 0.0f;
+        output_.pitch_target_rad = 0.0f;
+        output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
+        output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
+        output_.ident_data_pending = ident_out.data_pending;
+        output_.ident_tx_data = ident_out.tx_data;
+        output_.ident_tx_len = ident_out.tx_len;
+      } else {
+        const auto ident_out = input.ident->FfVerifyUpdate(ident_in);
+        output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
+        output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
+        output_.yaw_target_rad = 0.0f;
+        output_.pitch_target_rad = 0.0f;
+        output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
+        output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
+      }
+      return;
+    }
+    // 退出辨识/验证模式时复位
+    if (last_ident_mode_active_ && input.ident != nullptr) {
+      input.ident->Reset();
+      ClearPid();
+    }
+    last_ident_mode_active_ = false;
 
     if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
       ClearPid();
@@ -206,6 +262,7 @@ class Gimbal {
 
   bool last_use_yaw_motor_feedback_{false};
   bool last_aimbot_mode_{false};
+  bool last_ident_mode_active_{false};
 
   Gimbal2Dof controller_{};
 

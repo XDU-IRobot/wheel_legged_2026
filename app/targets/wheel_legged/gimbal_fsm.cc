@@ -43,6 +43,14 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
     return gimbal::Fsm::State::kDisabled;
   }
 
+  // 辨识/前馈验证模式：直接由 GimbalTestProfile 决定，不走普通模式路由
+  if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kIdent) {
+    return gimbal::Fsm::State::kIdent;
+  }
+  if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kFfVerify) {
+    return gimbal::Fsm::State::kFfVerify;
+  }
+
   const gimbal::Fsm::State normal_mode = ResolveNormalMode(input);
   if (current_mode == gimbal::Fsm::State::kDisabled) {
     return gimbal::Fsm::State::kStartupAlign;
@@ -93,6 +101,18 @@ gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &
     case gimbal::Fsm::State::kRecoveryAlign:
       control.gimbal_enable = true;
       control.align_to_chassis_forward = true;
+      break;
+
+    case gimbal::Fsm::State::kIdent:
+      control.gimbal_enable = true;
+      control.align_to_chassis_forward = false;
+      control.gimbal_test_profile = request.gimbal_test_profile;
+      break;
+
+    case gimbal::Fsm::State::kFfVerify:
+      control.gimbal_enable = true;
+      control.align_to_chassis_forward = false;
+      control.gimbal_test_profile = request.gimbal_test_profile;
       break;
   }
 

@@ -179,9 +179,18 @@ void ControlLoop() {
   gimbal_update_input.gimbal_imu_gyro_z_rad_s = input.gimbal_imu_gyro_z_rad_s;
   gimbal_update_input.gimbal_imu_gyro_x_rad_s = -input.gimbal_imu_gyro_x_rad_s;
   gimbal_update_input.dt_s = kControlLoopDtS;
+  gimbal_update_input.ident = &globals->gimbal_ident;
+  gimbal_update_input.test_profile = gimbal_output.control.gimbal_test_profile;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
+
+  // 辨识模式串口数据发送
+  if (gimbal_control_output.ident_data_pending && gimbal_control_output.ident_tx_data != nullptr) {
+    globals->no_dtcm->ident_uart.Write(
+        reinterpret_cast<const rm::u8 *>(gimbal_control_output.ident_tx_data),
+        gimbal_control_output.ident_tx_len, 5);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）

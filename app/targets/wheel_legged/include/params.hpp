@@ -49,6 +49,35 @@ constexpr float kDmTorqueLimitNm = 10.0f;            ///< DM 电机力矩上限 
 constexpr float kPitchGravityCompensationNm = 1.3f;  ///< 俯仰重力补偿力矩 [Nm]
 }  // namespace gimbal
 
+// ── 云台辨识 ──
+namespace gimbal_ident {
+constexpr float kBaseFreqHz = 0.1f;                     ///< 辨识轨迹基频 [Hz]
+constexpr size_t kHarmonicCount = 5;                     ///< 五次谐波
+constexpr float kEncoderTicksPerRev = 8192.0f;           ///< 编码器一圈 ticks
+constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;    ///< rpm → rad/s
+constexpr float kDmTorqueLimitNm = 10.0f;                ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                    ///< 辨识控制周期 [s]
+
+/// @brief yaw 轴五次谐波幅值 [rad]
+constexpr float kYawAmp[kHarmonicCount] = {3.5f, -2.0f, 1.2f, -0.8f, 0.5f};
+/// @brief pitch 轴五次谐波幅值 [rad]
+constexpr float kPitchAmp[kHarmonicCount] = {0.34f, -0.18f, 0.11f, -0.07f, 0.04f};
+
+/// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
+constexpr PidGains kIdentYawPosPid{400.0f, 0.0f, 10.0f, 10.0f, 0.0f};
+/// @brief 辨识模式 pitch 位置 PID（单位置环）
+constexpr PidGains kIdentPitchPosPid{20.0f, 0.0f, 0.5f, 10.0f, 0.0f};
+
+/// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchCenter = 0.0f;
+/// @brief 辨识轨迹 pitch 下限 [rad]
+constexpr float kIdentPitchTopLimit = -0.3f;
+/// @brief 辨识轨迹 pitch 上限 [rad]
+constexpr float kIdentPitchBottomLimit = 0.25f;
+
+constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
+}  // namespace gimbal_ident
+
 // ── 执行器公共 ──
 namespace actuators {
 constexpr float kWheelCurrentClampAbs = 16000.0f;  ///< 轮电机电流限幅绝对值
