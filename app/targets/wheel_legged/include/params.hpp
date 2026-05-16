@@ -848,14 +848,14 @@ using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode
 constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 CAN ID
 constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kDmLfMasterId = 0x02;  ///< 左前关节主电机 CAN ID
-constexpr std::uint16_t kDmLfSlaveId = 0x01;   ///< 左前关节从电机 CAN ID
-constexpr std::uint16_t kDmLbMasterId = 0x04;  ///< 左后关节主电机 CAN ID
-constexpr std::uint16_t kDmLbSlaveId = 0x03;   ///< 左后关节从电机 CAN ID
-constexpr std::uint16_t kDmRfMasterId = 0x06;  ///< 右前关节主电机 CAN ID
+constexpr std::uint16_t kDmLfMasterId = 0x13;  ///< 左前关节主电机 CAN ID
+constexpr std::uint16_t kDmLfSlaveId = 0x03;   ///< 左前关节从电机 CAN ID
+constexpr std::uint16_t kDmLbMasterId = 0x14;  ///< 左后关节主电机 CAN ID
+constexpr std::uint16_t kDmLbSlaveId = 0x04;   ///< 左后关节从电机 CAN ID
+constexpr std::uint16_t kDmRfMasterId = 0x15;  ///< 右前关节主电机 CAN ID
 constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前关节从电机 CAN ID
-constexpr std::uint16_t kDmRbMasterId = 0x08;  ///< 右后关节主电机 CAN ID
-constexpr std::uint16_t kDmRbSlaveId = 0x07;   ///< 右后关节从电机 CAN ID
+constexpr std::uint16_t kDmRbMasterId = 0x16;  ///< 右后关节主电机 CAN ID
+constexpr std::uint16_t kDmRbSlaveId = 0x06;   ///< 右后关节从电机 CAN ID
 
 constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮电机 CAN ID
 constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮电机 CAN ID
@@ -872,8 +872,8 @@ namespace gimbal {
 using namespace common::gimbal;
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kPitchMotorSettings{0x11, 0x01, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
 constexpr float kPitchMinRad = -0.3f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.3f;   ///< 俯仰角上限 [rad]

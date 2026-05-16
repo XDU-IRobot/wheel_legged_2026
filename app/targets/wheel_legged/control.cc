@@ -299,7 +299,7 @@ void ControlLoop() {
   const bool tc_remote_active = input.tc_remote.valid;
   const bool has_drive_input = dr16_online || tc_remote_active;
 
-  const auto drive = ResolveDriveInput(input.dr16, input.tc_remote);
+  const auto drive = ResolveDriveInput(input.dr16, input.tc_remote, tc_state.dr16_parallel);
   const float forward_input_norm = drive.forward;
   const float side_input_norm = drive.side;
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;
@@ -657,6 +657,7 @@ void ControlLoop() {
     wl_debug.referee_robot_id = 0U;
     wl_debug.referee_bullet_speed_mps = 0.0f;
   }
+  wl_debug.dr16_parallel = static_cast<uint8_t>(tc_state.dr16_parallel);
 
   // ── 自瞄 RX 调试（NUC 反馈，原始为度，转为弧度存储）──
   if (globals->aimbot.has_value()) {
