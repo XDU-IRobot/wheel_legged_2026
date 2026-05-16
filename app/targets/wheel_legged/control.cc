@@ -187,9 +187,8 @@ void ControlLoop() {
 
   // 辨识模式串口数据发送
   if (gimbal_control_output.ident_data_pending && gimbal_control_output.ident_tx_data != nullptr) {
-    globals->no_dtcm->ident_uart.Write(
-        reinterpret_cast<const rm::u8 *>(gimbal_control_output.ident_tx_data),
-        gimbal_control_output.ident_tx_len, 5);
+    globals->no_dtcm->ident_uart.Write(reinterpret_cast<const rm::u8 *>(gimbal_control_output.ident_tx_data),
+                                       gimbal_control_output.ident_tx_len, 5);
   }
 
   // ═══════════════════════════════════════════════════════════════════════

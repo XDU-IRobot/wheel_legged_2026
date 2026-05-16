@@ -76,10 +76,10 @@ struct SharedResources {
   Shoot shoot{};                                  ///< 发射机构状态机
 #endif
 
-  chassis::Fsm chassis_fsm{};  ///< 底盘状态机
-  chassis::Chassis chassis{};  ///< 底盘控制器
-  gimbal::Fsm gimbal_fsm{};    ///< 云台状态机
-  gimbal::Gimbal gimbal{};     ///< 云台控制器
+  chassis::Fsm chassis_fsm{};          ///< 底盘状态机
+  chassis::Chassis chassis{};          ///< 底盘控制器
+  gimbal::Fsm gimbal_fsm{};            ///< 云台状态机
+  gimbal::Gimbal gimbal{};             ///< 云台控制器
   gimbal::GimbalIdent gimbal_ident{};  ///< 云台辨识/前馈验证控制器
 
   /**

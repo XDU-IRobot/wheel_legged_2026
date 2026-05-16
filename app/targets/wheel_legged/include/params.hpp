@@ -72,12 +72,12 @@ const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f},
 
 // ── 云台辨识 ──
 namespace gimbal_ident {
-constexpr float kBaseFreqHz = 0.1f;                     ///< 辨识轨迹基频 [Hz]
-constexpr size_t kHarmonicCount = 5;                     ///< 五次谐波
-constexpr float kEncoderTicksPerRev = 8192.0f;           ///< 编码器一圈 ticks
-constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;    ///< rpm → rad/s
-constexpr float kDmTorqueLimitNm = 10.0f;                ///< DM 电机力矩上限 [Nm]
-constexpr float kDefaultDtS = 0.002f;                    ///< 辨识控制周期 [s]
+constexpr float kBaseFreqHz = 0.1f;                    ///< 辨识轨迹基频 [Hz]
+constexpr size_t kHarmonicCount = 5;                   ///< 五次谐波
+constexpr float kEncoderTicksPerRev = 8192.0f;         ///< 编码器一圈 ticks
+constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;  ///< rpm → rad/s
+constexpr float kDmTorqueLimitNm = 10.0f;              ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [s]
 
 /// @brief yaw 轴五次谐波幅值 [rad]
 constexpr float kYawAmp[kHarmonicCount] = {3.5f, -2.0f, 1.2f, -0.8f, 0.5f};

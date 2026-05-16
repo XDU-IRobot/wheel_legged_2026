@@ -42,7 +42,6 @@ class GimbalIdent {
   };
 
  private:
-
   struct TrajectoryPoint {
     float q;
     float dq;
@@ -66,7 +65,8 @@ class GimbalIdent {
   char tx_buf_[ns_ident::kIdentUartTxBufSize]{};
   size_t tx_len_{0};
 
-  static TrajectoryPoint EvaluateTrajectory(float center, const float (&amplitudes)[ns_ident::kHarmonicCount], float t) {
+  static TrajectoryPoint EvaluateTrajectory(float center, const float (&amplitudes)[ns_ident::kHarmonicCount],
+                                            float t) {
     TrajectoryPoint point{center, 0.0f, 0.0f};
     const float wf = 2.0f * ns::common::kPi * ns_ident::kBaseFreqHz;
     for (size_t i = 0; i < ns_ident::kHarmonicCount; ++i) {
@@ -81,8 +81,7 @@ class GimbalIdent {
   }
 
   void PrepareCsvData(const Input &input, const Output &output) {
-    int len = std::snprintf(tx_buf_, sizeof(tx_buf_), "%lu,",
-                            static_cast<unsigned long>(ident_time_s_ * 1000.0f));
+    int len = std::snprintf(tx_buf_, sizeof(tx_buf_), "%lu,", static_cast<unsigned long>(ident_time_s_ * 1000.0f));
     len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.yaw_cmd_tau);
     len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
     len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, input.yaw_motor_pos_rad);
@@ -115,7 +114,6 @@ class GimbalIdent {
   }
 
  public:
-
   void Init() {
     ident_pid_yaw_.SetKp(ns_ident::kIdentYawPosPid.kp)
         .SetKi(ns_ident::kIdentYawPosPid.ki)
@@ -177,8 +175,8 @@ class GimbalIdent {
     const auto pitch_traj = EvaluateTrajectory(0.0f, ns_ident::kPitchAmp, ff_verify_time_s_);
 
     const Eigen::Vector3f g_stationary(0.0f, 0.0f, -9.81f);
-    const auto ff = dynamics_.ComputeFfDecomposed(yaw_traj.q, pitch_traj.q, yaw_traj.dq, pitch_traj.dq,
-                                                   yaw_traj.ddq, pitch_traj.ddq, g_stationary);
+    const auto ff = dynamics_.ComputeFfDecomposed(yaw_traj.q, pitch_traj.q, yaw_traj.dq, pitch_traj.dq, yaw_traj.ddq,
+                                                  pitch_traj.ddq, g_stationary);
 
     ff_verify_time_s_ += input.dt_s;
 

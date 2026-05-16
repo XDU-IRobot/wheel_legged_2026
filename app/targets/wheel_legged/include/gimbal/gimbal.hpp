@@ -45,7 +45,7 @@ class Gimbal {
     float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
 
     /// 辨识/验证模式专用
-    GimbalIdent *ident{nullptr};                                       ///< 辨识控制器对象
+    GimbalIdent *ident{nullptr};                                                             ///< 辨识控制器对象
     wheel_legged::GimbalTestProfile test_profile{wheel_legged::GimbalTestProfile::kNormal};  ///< 测试子模式
   };
 
@@ -66,7 +66,7 @@ class Gimbal {
     float pitch_cmd_torque_nm{0.0f};  ///< 俯仰输出力矩
 
     /// 辨识模式串口数据
-    bool ident_data_pending{false};  ///< 是否有待发送的辨识数据
+    bool ident_data_pending{false};      ///< 是否有待发送的辨识数据
     const char *ident_tx_data{nullptr};  ///< 待发送数据指针
     size_t ident_tx_len{0};              ///< 待发送数据长度
   };
@@ -112,9 +112,8 @@ class Gimbal {
     }
 
     // 辨识/前馈验证模式：使用电机编码器反馈，走专用控制器
-    if (input.ident != nullptr &&
-        (input.test_profile == wheel_legged::GimbalTestProfile::kIdent ||
-         input.test_profile == wheel_legged::GimbalTestProfile::kFfVerify)) {
+    if (input.ident != nullptr && (input.test_profile == wheel_legged::GimbalTestProfile::kIdent ||
+                                   input.test_profile == wheel_legged::GimbalTestProfile::kFfVerify)) {
       if (!last_ident_mode_active_) {
         input.ident->Reset();
         ClearPid();

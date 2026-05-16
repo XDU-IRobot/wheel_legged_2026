@@ -48,7 +48,7 @@ class Fsm {
       bool gimbal_enable{false};             ///< 是否使能云台电机
       bool align_to_chassis_forward{false};  ///< 是否忽略目标并对齐车体前方
       wheel_legged::TargetSource active_target_source{wheel_legged::TargetSource::kRc};  ///< 实际采用的目标来源
-      wheel_legged::GimbalTarget gimbal_target{};                                   ///< 实际下发给云台控制器的目标
+      wheel_legged::GimbalTarget gimbal_target{};  ///< 实际下发给云台控制器的目标
       wheel_legged::GimbalTestProfile gimbal_test_profile{wheel_legged::GimbalTestProfile::kNormal};  ///< 测试子模式
     };
 
