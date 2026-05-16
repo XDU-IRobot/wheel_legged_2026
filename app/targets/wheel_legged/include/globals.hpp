@@ -120,6 +120,7 @@ struct SharedResources {
     prepare_uart_rx_to_idle_dma(huart5, UART5_IRQn, DMA1_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
     prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
+    prepare_uart_rx_to_idle_dma(huart7, UART7_IRQn, DMA1_Stream3_IRQn);
 
     dr16.Begin();
 
@@ -198,8 +199,6 @@ struct SharedResources {
       chassis_imu.emplace(no_dtcm->imu_uart);
       chassis_imu->Begin();
     }
-
-    no_dtcm->ident_uart.Start();
 
     chassis_fsm.Init();
     chassis.Init();

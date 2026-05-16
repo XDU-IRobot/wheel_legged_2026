@@ -74,29 +74,41 @@ const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f},
 namespace gimbal_ident {
 constexpr float kBaseFreqHz = 0.1f;                    ///< 辨识轨迹基频 [Hz]
 constexpr size_t kHarmonicCount = 5;                   ///< 五次谐波
-constexpr float kEncoderTicksPerRev = 8192.0f;         ///< 编码器一圈 ticks
 constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;  ///< rpm → rad/s
 constexpr float kDmTorqueLimitNm = 10.0f;              ///< DM 电机力矩上限 [Nm]
 constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [s]
 
-/// @brief yaw 轴五次谐波幅值 [rad]
-constexpr float kYawAmp[kHarmonicCount] = {3.5f, -2.0f, 1.2f, -0.8f, 0.5f};
-/// @brief pitch 轴五次谐波幅值 [rad]
-constexpr float kPitchAmp[kHarmonicCount] = {0.34f, -0.18f, 0.11f, -0.07f, 0.04f};
+/// @brief yaw 轴五次谐波幅值 [rad]（sum_abs=6.0，~70%峰值因子下覆盖 ±241°）
+constexpr float kYawAmp[kHarmonicCount] = {2.5f, -1.5f, 1.0f, -0.6f, 0.4f};
+/// @brief pitch 轴五次谐波幅值 [rad]（sum_abs=0.58，峰值~±0.44，留余量不触及机械限位 [0.6, 1.6]）
+constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};
 
 /// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
-constexpr PidGains kIdentYawPosPid{400.0f, 0.0f, 10.0f, 10.0f, 0.0f};
+constexpr PidGains kIdentYawPosPid{11.0f, 0.0f, 0.1f, 10.0f, 0.0f};
 /// @brief 辨识模式 pitch 位置 PID（单位置环）
-constexpr PidGains kIdentPitchPosPid{20.0f, 0.0f, 0.5f, 10.0f, 0.0f};
+constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};
 
 /// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
-constexpr float kIdentPitchCenter = 0.0f;
+constexpr float kIdentPitchCenter = 1.1f;
 /// @brief 辨识轨迹 pitch 下限 [rad]
-constexpr float kIdentPitchTopLimit = -0.3f;
+constexpr float kIdentPitchTopLimit = 0.6f;
 /// @brief 辨识轨迹 pitch 上限 [rad]
-constexpr float kIdentPitchBottomLimit = 0.25f;
+constexpr float kIdentPitchBottomLimit = 1.6f;
 
 constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.01840039f,   // theta_0: I1zz_com
+    0.01493814f,   // theta_1: I2xx_com
+    0.03804828f,   // theta_2: I2yy_com
+    -0.10281495f,  // theta_3: m2*l2x 水平前向偏心
+    -0.13614424f,  // theta_4: m2*l2z 垂直上向偏心
+    0.13102762f,   // theta_5: fv1  yaw 粘滞摩擦
+    0.52290111f,   // theta_6: fc1  yaw 库仑摩擦
+    0.89830570f,   // theta_7: fv2  pitch 粘滞摩擦
+    0.04230919f,   // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal_ident
 
 // ── 执行器公共 ──

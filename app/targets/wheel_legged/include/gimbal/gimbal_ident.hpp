@@ -36,6 +36,8 @@ class GimbalIdent {
   struct Output {
     float yaw_cmd_tau{0.0f};
     float pitch_cmd_tau{0.0f};
+    float yaw_target_rad{0.0f};
+    float pitch_target_rad{0.0f};
     bool data_pending{false};
     const char *tx_data{nullptr};
     size_t tx_len{0};
@@ -125,6 +127,10 @@ class GimbalIdent {
         .SetKd(ns_ident::kIdentPitchPosPid.kd)
         .SetMaxOut(ns_ident::kIdentPitchPosPid.max_out)
         .SetMaxIout(ns_ident::kIdentPitchPosPid.max_iout);
+
+    Eigen::Matrix<float, 9, 1> theta;
+    for (int i = 0; i < 9; ++i) theta(i) = ns_ident::kIdentTheta[i];
+    dynamics_.SetTheta(theta);
   }
 
   Output IdentUpdate(const Input &input) {
@@ -141,7 +147,12 @@ class GimbalIdent {
     const auto yaw_traj = EvaluateTrajectory(ident_yaw_center_, ns_ident::kYawAmp, ident_time_s_);
     const auto pitch_traj = EvaluateTrajectory(ident_pitch_center_, ns_ident::kPitchAmp, ident_time_s_);
 
-    const float yaw_target = yaw_traj.q;
+    // yaw 目标过圈处理：将连续轨迹目标映射到编码器当前圈，保证 PID 走最短路径
+    float yaw_err = yaw_traj.q - input.yaw_motor_pos_rad;
+    if (yaw_err > ns::common::kPi) yaw_err -= 2.0f * ns::common::kPi;
+    if (yaw_err < -ns::common::kPi) yaw_err += 2.0f * ns::common::kPi;
+    const float yaw_target = input.yaw_motor_pos_rad + yaw_err;
+
     const float pitch_target =
         std::clamp(pitch_traj.q, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
 
@@ -153,6 +164,8 @@ class GimbalIdent {
     Output out{};
     out.yaw_cmd_tau = std::clamp(ident_pid_yaw_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.pitch_cmd_tau = std::clamp(ident_pid_pitch_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
+    out.yaw_target_rad = yaw_target;
+    out.pitch_target_rad = pitch_target;
 
     if (++data_tick_counter_ >= 5) {
       data_tick_counter_ = 0;
@@ -165,6 +178,7 @@ class GimbalIdent {
     return out;
   }
 
+  /// @brief 全前馈验证：五次谐波轨迹 + 完整动力学前馈（惯性+耦合+重力+摩擦）
   Output FfVerifyUpdate(const Input &input) {
     if (!ff_verify_active_) {
       ff_verify_time_s_ = 0.0f;
@@ -173,9 +187,17 @@ class GimbalIdent {
 
     const auto yaw_traj = EvaluateTrajectory(0.0f, ns_ident::kYawAmp, ff_verify_time_s_);
     const auto pitch_traj = EvaluateTrajectory(0.0f, ns_ident::kPitchAmp, ff_verify_time_s_);
+    // pitch 加中心偏移，与辨识时编码器坐标系一致
+    const float pitch_q = pitch_traj.q + ns_ident::kIdentPitchCenter;
+
+    // yaw 过圈处理：轨迹位置映射到编码器当前圈，保证 sin_q1/cos_q1 与实物一致
+    float yaw_err = yaw_traj.q - input.yaw_motor_pos_rad;
+    if (yaw_err > ns::common::kPi) yaw_err -= 2.0f * ns::common::kPi;
+    if (yaw_err < -ns::common::kPi) yaw_err += 2.0f * ns::common::kPi;
+    const float yaw_q = input.yaw_motor_pos_rad + yaw_err;
 
     const Eigen::Vector3f g_stationary(0.0f, 0.0f, -9.81f);
-    const auto ff = dynamics_.ComputeFfDecomposed(yaw_traj.q, pitch_traj.q, yaw_traj.dq, pitch_traj.dq, yaw_traj.ddq,
+    const auto ff = dynamics_.ComputeFfDecomposed(yaw_q, pitch_q, yaw_traj.dq, pitch_traj.dq, yaw_traj.ddq,
                                                   pitch_traj.ddq, g_stationary);
 
     ff_verify_time_s_ += input.dt_s;
@@ -183,6 +205,8 @@ class GimbalIdent {
     Output out{};
     out.yaw_cmd_tau = std::clamp(ff.yaw, -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.pitch_cmd_tau = std::clamp(ff.pitch, -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
+    out.yaw_target_rad = yaw_q;
+    out.pitch_target_rad = pitch_q;
     return out;
   }
 
