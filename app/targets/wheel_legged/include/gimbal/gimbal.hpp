@@ -202,7 +202,8 @@ class Gimbal {
     // pitch 目标转到辨识编码器坐标系
     const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
     const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
-    const auto ff = dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
+    const auto ff =
+        dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
 
     output_.yaw_cmd_torque_nm =
         std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
