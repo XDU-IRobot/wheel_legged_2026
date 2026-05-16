@@ -6,6 +6,7 @@
 #include "librm.hpp"
 
 #include "common/controllers/gimbal_2dof.hpp"
+#include "common/controllers/gimbal_dynamics.hpp"
 #include "gimbal_ident.hpp"
 #include "../fsm_common.hpp"
 #include "../params.hpp"
@@ -76,6 +77,10 @@ class Gimbal {
    */
   void Init() {
     last_use_yaw_motor_feedback_ = false;
+    ff_ready_ = false;
+    Eigen::Matrix<float, 9, 1> theta;
+    for (int i = 0; i < 9; ++i) theta(i) = wheel_legged::params::common::gimbal_ident::kIdentTheta[i];
+    dynamics_.SetTheta(theta);
     ConfigurePid();
     ClearPid();
     output_ = {};
@@ -127,6 +132,9 @@ class Gimbal {
       ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
       ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
 
+      output_.yaw_vel_rad_s = ident_in.yaw_motor_vel_rad_s;
+      output_.pitch_vel_rad_s = ident_in.pitch_motor_vel_rad_s;
+
       if (input.test_profile == wheel_legged::GimbalTestProfile::kIdent) {
         const auto ident_out = input.ident->IdentUpdate(ident_in);
         output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
@@ -153,6 +161,7 @@ class Gimbal {
     if (last_ident_mode_active_ && input.ident != nullptr) {
       input.ident->Reset();
       ClearPid();
+      ff_ready_ = false;
     }
     last_ident_mode_active_ = false;
 
@@ -173,14 +182,34 @@ class Gimbal {
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 
+    // 动力学前馈：目标速度/加速度通过数值微分计算
+    float yaw_dq = 0.0f, pitch_dq = 0.0f;
+    float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
+    if (ff_ready_) {
+      const float inv_dt = 1.0f / prev_dt_s_;
+      yaw_dq = (output_.yaw_target_rad - prev_yaw_target_) * inv_dt;
+      pitch_dq = (output_.pitch_target_rad - prev_pitch_target_) * inv_dt;
+      yaw_ddq = (yaw_dq - prev_yaw_dq_) * inv_dt;
+      pitch_ddq = (pitch_dq - prev_pitch_dq_) * inv_dt;
+    }
+    prev_yaw_target_ = output_.yaw_target_rad;
+    prev_pitch_target_ = output_.pitch_target_rad;
+    prev_yaw_dq_ = yaw_dq;
+    prev_pitch_dq_ = pitch_dq;
+    prev_dt_s_ = dt_s;
+    ff_ready_ = true;
+
+    // pitch 目标转到辨识编码器坐标系
+    const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
+    const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
+    const auto ff = dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
+
     output_.yaw_cmd_torque_nm =
-        std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+        std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                    wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-    const float pitch_gravity_ff =
-        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.gimbal_imu_pitch_rad);
-    output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
-                                             -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                                             wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    output_.pitch_cmd_torque_nm =
+        std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
   }
 
   /** @brief 获取最近一次云台控制输出 */
@@ -264,6 +293,15 @@ class Gimbal {
   bool last_ident_mode_active_{false};
 
   Gimbal2Dof controller_{};
+  Gimbal2DofDynamics dynamics_{};
+
+  // 目标数值微分状态
+  float prev_yaw_target_{0.0f};
+  float prev_pitch_target_{0.0f};
+  float prev_yaw_dq_{0.0f};
+  float prev_pitch_dq_{0.0f};
+  float prev_dt_s_{0.0f};
+  bool ff_ready_{false};
 
   UpdateOutput output_{};
 };
