@@ -30,6 +30,9 @@ constexpr float kRcYawRateMaxRadS = params::active::control_loop::kRcYawRateMaxR
 constexpr float kRcPitchRateMaxRadS = params::active::control_loop::kRcPitchRateMaxRadS;
 constexpr float kTcMouseYawRateMaxRadS = params::active::control_loop::kTcMouseYawRateMaxRadS;
 constexpr float kTcMousePitchRateMaxRadS = params::active::control_loop::kTcMousePitchRateMaxRadS;
+constexpr float kDr16MouseMax = params::active::control_loop::kDr16MouseMax;
+constexpr float kDr16MouseYawRateMaxRadS = params::active::control_loop::kDr16MouseYawRateMaxRadS;
+constexpr float kDr16MousePitchRateMaxRadS = params::active::control_loop::kDr16MousePitchRateMaxRadS;
 constexpr float kPitchTargetMinRad = params::active::control_loop::kPitchTargetMinRad;
 constexpr float kPitchTargetMaxRad = params::active::control_loop::kPitchTargetMaxRad;
 
@@ -55,7 +58,7 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
 DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, bool dr16_parallel) {
   DriveInputNorm out{};
 
-  // 图传链路在线时优先使用 WASD；图传离线时降级为 DR16 摇杆
+  // VT03 键鼠 > DR16 键盘 > DR16 摇杆
   if (tc_remote.valid) {
     const uint16_t keys = tc_remote.keyboard_value;
     if ((keys & kRcKeyW) != 0U) {
@@ -68,14 +71,30 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     } else if ((keys & kRcKeyA) != 0U) {
       out.side = -1.0f;
     }
-    // 并行模式：键鼠无输入时降级到 DR16 右摇杆
-    if (dr16_parallel && dr16.online && out.forward == 0.0f && out.side == 0.0f) {
+    // 并行模式（键盘空闲）或 DR16 回退：键鼠无输入时降级到 DR16 右摇杆
+    if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online &&
+        out.forward == 0.0f && out.side == 0.0f) {
       out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
       out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
     }
   } else if (dr16.online) {
-    out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-    out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    // DR16 键盘 WASD
+    const uint16_t keys = dr16.keyboard;
+    if ((keys & kRcKeyW) != 0U) {
+      out.forward = 1.0f;
+    } else if ((keys & kRcKeyS) != 0U) {
+      out.forward = -1.0f;
+    }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
+    }
+    // 键盘无输入时降级到摇杆
+    if (out.forward == 0.0f && out.side == 0.0f) {
+      out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+      out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    }
   }
   return out;
 }
@@ -108,8 +127,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
                            TcSemanticState &tc_state, InputSnapshot &input) {
   // 严格优先级：CAN 桥/裁判系统（tc_remote）> DR16
   // tc_remote 在线时，DR16 所有通道均被忽略，不混合来源。
-  const bool tc_remote_active = tc_remote.valid;
-  const bool has_any_input = dr16.online || tc_remote_active;
+  const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
+  const bool has_any_input = dr16.online || tc_remote.valid;
 
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
@@ -239,8 +258,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 跳跃：F 键
     request.jump_trigger = f_jump_edge;
 
-    // 并行模式：DR16 拨杆/拨轮也响应（键鼠优先，DR16 补充）
-    if (tc_state.dr16_parallel && dr16.online) {
+    // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
+    const bool keyboard_idle = (tc_remote.keyboard_value == 0);
+    if (tc_state.dr16_parallel && dr16.online && keyboard_idle) {
       if (request.domain_request == wheel_legged::DomainRequest::kDisabled) {
         request.domain_request = ResolveDomainRequest(dr16.switch_l);
       }
@@ -360,15 +380,22 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       if (mouse_active) {
         yaw_delta += mouse_yaw;
         pitch_delta += mouse_pitch;
-      } else if (tc_state.dr16_parallel && dr16.online) {
-        // 鼠标静止 + 并行模式 → 降级到 DR16 左摇杆
+      } else if (tc_state.dr16_parallel && dr16.online && tc_remote.keyboard_value == 0) {
+        // 鼠标静止 + 键盘空闲 + 并行模式 → 降级到 DR16 左摇杆
         yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
         pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
       }
-    } else {
-      // DR16 左摇杆
-      yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+    } else if (dr16.online) {
+      // DR16 鼠标（VT03 离线时的中间档）
+      const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
+      if (dr16_mouse_active) {
+        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
+      } else {
+        // DR16 左摇杆（兜底）
+        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      }
     }
     semantic_state.rc_target.yaw_rad =
         rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -params::active::kPi, params::active::kPi);
@@ -443,6 +470,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
   } else if (dr16.online) {
     tc_remote.valid = true;
+    tc_remote.tc_from_dr16 = true;
     tc_remote.mouse_x = dr16.mouse_x;
     tc_remote.mouse_y = dr16.mouse_y;
     tc_remote.left_button = dr16.mouse_left;
@@ -452,7 +480,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 3a. 使能边沿检测：从 kDisabled 进入使能域时，腿长状态全部归零（低腿长起立）
   {
-    const bool tc_active = tc_remote.valid;
+    const bool tc_active = tc_remote.valid && !tc_remote.tc_from_dr16;
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
     if (tc_active) {
       predicted_domain =
