@@ -79,7 +79,7 @@ constexpr float kDmTorqueLimitNm = 10.0f;              ///< DM 电机力矩上�
 constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [s]
 
 /// @brief yaw 轴五次谐波幅值 [rad]（sum_abs=6.0，~70%峰值因子下覆盖 ±241°）
-constexpr float kYawAmp[kHarmonicCount] = {2.5f, -1.5f, 1.0f, -0.6f, 0.4f};
+constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};
 /// @brief pitch 轴五次谐波幅值 [rad]（sum_abs=0.58，峰值~±0.44，留余量不触及机械限位 [0.6, 1.6]）
 constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};
 
@@ -89,26 +89,14 @@ constexpr PidGains kIdentYawPosPid{11.0f, 0.0f, 0.1f, 10.0f, 0.0f};
 constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};
 
 /// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
-constexpr float kIdentPitchCenter = 1.1f;
+constexpr float kIdentPitchCenter = -2.299f;
 /// @brief 辨识轨迹 pitch 下限 [rad]
-constexpr float kIdentPitchTopLimit = 0.6f;
+constexpr float kIdentPitchTopLimit = -2.6f;
 /// @brief 辨识轨迹 pitch 上限 [rad]
-constexpr float kIdentPitchBottomLimit = 1.6f;
+constexpr float kIdentPitchBottomLimit = -1.6f;
 
 constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
 
-/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
-constexpr float kIdentTheta[9] = {
-    0.01840039f,   // theta_0: I1zz_com
-    0.01493814f,   // theta_1: I2xx_com
-    0.03804828f,   // theta_2: I2yy_com
-    -0.10281495f,  // theta_3: m2*l2x 水平前向偏心
-    -0.13614424f,  // theta_4: m2*l2z 垂直上向偏心
-    0.13102762f,   // theta_5: fv1  yaw 粘滞摩擦
-    0.52290111f,   // theta_6: fc1  yaw 库仑摩擦
-    0.89830570f,   // theta_7: fv2  pitch 粘滞摩擦
-    0.04230919f,   // theta_8: fc2  pitch 库仑摩擦
-};
 }  // namespace gimbal_ident
 
 // ── 执行器公共 ──
@@ -153,6 +141,19 @@ constexpr PidGains kYawPositionPid{27.0f, 0.0f, 0.0f, 1000.0f, 1.0f};    ///< �
 constexpr PidGains kYawSpeedPid{1.1f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 10.0f, 0.0f};         ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.f,     // theta_0: I1zz_com
+    0.f,     // theta_1: I2xx_com
+    0.f,     // theta_2: I2yy_com
+    0.f,     // theta_3: m2*l2x 水平前向偏心
+    0.f,     // theta_4: m2*l2z 垂直上向偏心
+    0.f,     // theta_5: fv1  yaw 粘滞摩擦
+    0.f,     // theta_6: fc1  yaw 库仑摩擦
+    0.f,     // theta_7: fv2  pitch 粘滞摩擦
+    0.f,     // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（Hero：三摩擦轮 + DM 拨盘）──
@@ -530,6 +531,19 @@ inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    /
 inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
 inline constexpr PidGains kPitchPositionPid{23.0f, 0.0f, 0.15f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+        0.01840039f,   // theta_0: I1zz_com
+            0.01493814f,   // theta_1: I2xx_com
+            0.03804828f,   // theta_2: I2yy_com
+            -0.10281495f,  // theta_3: m2*l2x 水平前向偏心
+            -0.13614424f,  // theta_4: m2*l2z 垂直上向偏心
+            0.13102762f,   // theta_5: fv1  yaw 粘滞摩擦
+            0.52290111f,   // theta_6: fc1  yaw 库仑摩擦
+            0.89830570f,   // theta_7: fv2  pitch 粘滞摩擦
+            0.04230919f,   // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
@@ -886,13 +900,26 @@ constexpr std::uint16_t kDialId = 0x07;       ///< 拨盘电机 CAN ID
 namespace gimbal {
 using namespace common::gimbal;
 
-constexpr float kPitchMinRad = -0.3f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.3f;   ///< 俯仰角上限 [rad]
+constexpr float kPitchMinRad = -0.35f;  ///< 俯仰角下限 [rad]
+constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
 
 constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};   ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.1f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.012257f,     // theta_0: I1zz_com
+    0.032210f,     // theta_1: I2xx_com
+    0.043163f,     // theta_2: I2yy_com
+    0.097069f,     // theta_3: m2*l2x 水平前向偏心
+    0.114014f,     // theta_4: m2*l2z 垂直上向偏心
+    0.259783f,     // theta_5: fv1  yaw 粘滞摩擦
+    0.226098f,     // theta_6: fc1  yaw 库仑摩擦
+    0.788615f,     // theta_7: fv2  pitch 粘滞摩擦
+    0.118902f,     // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
@@ -1091,7 +1118,7 @@ constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大
 constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kDr16MousePitchRateMaxRadS = 1.5f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.25f;         ///< RC 积分俯仰目标上限 [rad]
+constexpr float kPitchTargetMaxRad = 0.6f;         ///< RC 积分俯仰目标上限 [rad]
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]
@@ -1119,7 +1146,7 @@ constexpr float kLandingDecelThetaRampStepRad = 0.01f;      ///< 落地减速腿
 constexpr std::uint32_t kLandingDecelOffGroundMinMs = 60U;  ///< 离地最短持续时间（防单帧误判）[ms]
 constexpr std::uint32_t kLandingDecelStableDurationMs = 400U;  ///< 落地减速稳定保持时间 [ms]
 
-constexpr float kYawFollowFixedTargetRad = 0.f;                  ///< 偏航跟随固定目标偏置角 [rad]
+constexpr float kYawFollowFixedTargetRad = 0.38f;                  ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;            ///< 偏航跟随侧向目标偏置角 [rad]
 constexpr PidGains kYawFollowPid{8.2f, 0.0f, 1.2f, 6.0f, 0.0f};  ///< 偏航跟随 PID
 

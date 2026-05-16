@@ -226,7 +226,7 @@ class Actuators {
   static void SendGimbalMitCommand(SharedResources &g, float yaw_tau, float pitch_tau) {
     if (g.yaw_motor.has_value()) {
       g.yaw_motor->SetMitCommand(0.0f, 0.0f, yaw_tau, 0.0f, 0.0f);
-      // g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+//       g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
     if (g.pitch_motor.has_value()) {
       g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);

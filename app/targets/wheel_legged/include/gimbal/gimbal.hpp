@@ -79,7 +79,7 @@ class Gimbal {
     last_use_yaw_motor_feedback_ = false;
     ff_ready_ = false;
     Eigen::Matrix<float, 9, 1> theta;
-    for (int i = 0; i < 9; ++i) theta(i) = wheel_legged::params::common::gimbal_ident::kIdentTheta[i];
+    for (int i = 0; i < 9; ++i) theta(i) = wheel_legged::params::active::gimbal::kIdentTheta[i];
     dynamics_.SetTheta(theta);
     ConfigurePid();
     ClearPid();

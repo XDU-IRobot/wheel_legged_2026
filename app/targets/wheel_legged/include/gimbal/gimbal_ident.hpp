@@ -129,7 +129,7 @@ class GimbalIdent {
         .SetMaxIout(ns_ident::kIdentPitchPosPid.max_iout);
 
     Eigen::Matrix<float, 9, 1> theta;
-    for (int i = 0; i < 9; ++i) theta(i) = ns_ident::kIdentTheta[i];
+    for (int i = 0; i < 9; ++i) theta(i) = ns::active::gimbal::kIdentTheta[i];
     dynamics_.SetTheta(theta);
   }
 
