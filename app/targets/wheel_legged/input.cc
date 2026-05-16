@@ -254,13 +254,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
           semantic_state.wheel_action_armed = true;
         }
-        const bool wheel_action_trigger =
-            semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
+        const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
         if (wheel_action_trigger) {
           semantic_state.wheel_action_armed = false;
         }
-        request.jump_trigger = wheel_action_trigger &&
-                               request.domain_request != wheel_legged::DomainRequest::kCombat;
+        request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
       }
     }
 
@@ -338,8 +336,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     float pitch_delta = 0.0f;
     if (tc_remote_active) {
       // 图传鼠标（优先）
-      const float mouse_yaw = static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
-      const float mouse_pitch = static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
+      const float mouse_yaw =
+          static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
+      const float mouse_pitch =
+          static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
       const bool mouse_active = (tc_remote.mouse_x != 0 || tc_remote.mouse_y != 0);
       if (mouse_active) {
         yaw_delta += mouse_yaw;
