@@ -41,28 +41,28 @@ class Chassis {
     rm::f32 lw_tau{0.0f};  ///< 左轮电机力矩
     rm::f32 rw_tau{0.0f};  ///< 右轮电机力矩
 
-    rm::f32 left_l0_pid_out{0.0f};        ///< 左腿腿长 PID 输出
-    rm::f32 right_l0_pid_out{0.0f};       ///< 右腿腿长 PID 输出
-    rm::f32 left_force_n{0.0f};           ///< 左腿竖直力
-    rm::f32 right_force_n{0.0f};          ///< 右腿竖直力
-    rm::f32 left_support_force_n{0.0f};   ///< 左腿支撑力估计
-    rm::f32 right_support_force_n{0.0f};  ///< 右腿支撑力估计
-    rm::f32 left_F_bh_n{0.0f};            ///< 左腿雅可比反力（竖直分量）
-    rm::f32 right_F_bh_n{0.0f};           ///< 右腿雅可比反力（竖直分量）
-    rm::f32 left_gravity_support_n{0.0f}; ///< 左腿重力支撑分量
-    rm::f32 right_gravity_support_n{0.0f}; ///< 右腿重力支撑分量
-    rm::f32 left_dyn_support_n{0.0f};     ///< 左腿动力学补偿分量
-    rm::f32 right_dyn_support_n{0.0f};    ///< 右腿动力学补偿分量
-    rm::f32 mean_leg_length_m{0.0f};      ///< 平均腿长
-    rm::f32 left_l0_dot_mps{0.0f};        ///< 左腿腿长变化率
-    rm::f32 right_l0_dot_mps{0.0f};       ///< 右腿腿长变化率
-    rm::f32 left_l0_ddot_mps2{0.0f};      ///< 左腿腿长加速度
-    rm::f32 right_l0_ddot_mps2{0.0f};     ///< 右腿腿长加速度
-    rm::f32 speed_mps{0.0f};              ///< 融合车速
-    rm::f32 wheel_speed_mps{0.0f};        ///< 轮系解算车速
-    rm::f32 raw_wheel_speed_mps{0.0f};    ///< 原始轮速观测
-    rm::f32 raw_accel_speed_mps{0.0f};    ///< 原始加速度积分速度
-    rm::f32 current_speed_mps{0.0f};      ///< 速度融合当前估计
+    rm::f32 left_l0_pid_out{0.0f};          ///< 左腿腿长 PID 输出
+    rm::f32 right_l0_pid_out{0.0f};         ///< 右腿腿长 PID 输出
+    rm::f32 left_force_n{0.0f};             ///< 左腿竖直力
+    rm::f32 right_force_n{0.0f};            ///< 右腿竖直力
+    rm::f32 left_support_force_n{0.0f};     ///< 左腿支撑力估计
+    rm::f32 right_support_force_n{0.0f};    ///< 右腿支撑力估计
+    rm::f32 left_F_bh_n{0.0f};              ///< 左腿雅可比反力（竖直分量）
+    rm::f32 right_F_bh_n{0.0f};             ///< 右腿雅可比反力（竖直分量）
+    rm::f32 left_gravity_support_n{0.0f};   ///< 左腿重力支撑分量
+    rm::f32 right_gravity_support_n{0.0f};  ///< 右腿重力支撑分量
+    rm::f32 left_dyn_support_n{0.0f};       ///< 左腿动力学补偿分量
+    rm::f32 right_dyn_support_n{0.0f};      ///< 右腿动力学补偿分量
+    rm::f32 mean_leg_length_m{0.0f};        ///< 平均腿长
+    rm::f32 left_l0_dot_mps{0.0f};          ///< 左腿腿长变化率
+    rm::f32 right_l0_dot_mps{0.0f};         ///< 右腿腿长变化率
+    rm::f32 left_l0_ddot_mps2{0.0f};        ///< 左腿腿长加速度
+    rm::f32 right_l0_ddot_mps2{0.0f};       ///< 右腿腿长加速度
+    rm::f32 speed_mps{0.0f};                ///< 融合车速
+    rm::f32 wheel_speed_mps{0.0f};          ///< 轮系解算车速
+    rm::f32 raw_wheel_speed_mps{0.0f};      ///< 原始轮速观测
+    rm::f32 raw_accel_speed_mps{0.0f};      ///< 原始加速度积分速度
+    rm::f32 current_speed_mps{0.0f};        ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true

@@ -137,12 +137,10 @@ void chassis::Chassis::Init() {
   }
   lqr_controller_.SetLqrCoefficients(coeff_vec);
 
-  left_l0_ddot_filter_.set_cutoff_frequency(
-      wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
-      wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
-  right_l0_ddot_filter_.set_cutoff_frequency(
-      wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
-      wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+  left_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+                                            wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+  right_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+                                             wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
 
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
