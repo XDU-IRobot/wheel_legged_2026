@@ -36,6 +36,8 @@ class GimbalIdent {
   struct Output {
     float yaw_cmd_tau{0.0f};
     float pitch_cmd_tau{0.0f};
+    float yaw_target_rad{0.0f};
+    float pitch_target_rad{0.0f};
     bool data_pending{false};
     const char *tx_data{nullptr};
     size_t tx_len{0};
@@ -141,7 +143,12 @@ class GimbalIdent {
     const auto yaw_traj = EvaluateTrajectory(ident_yaw_center_, ns_ident::kYawAmp, ident_time_s_);
     const auto pitch_traj = EvaluateTrajectory(ident_pitch_center_, ns_ident::kPitchAmp, ident_time_s_);
 
-    const float yaw_target = yaw_traj.q;
+    // yaw 目标过圈处理：将连续轨迹目标映射到编码器当前圈，保证 PID 走最短路径
+    float yaw_err = yaw_traj.q - input.yaw_motor_pos_rad;
+    if (yaw_err > ns::common::kPi) yaw_err -= 2.0f * ns::common::kPi;
+    if (yaw_err < -ns::common::kPi) yaw_err += 2.0f * ns::common::kPi;
+    const float yaw_target = input.yaw_motor_pos_rad + yaw_err;
+
     const float pitch_target =
         std::clamp(pitch_traj.q, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
 
@@ -153,6 +160,8 @@ class GimbalIdent {
     Output out{};
     out.yaw_cmd_tau = std::clamp(ident_pid_yaw_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.pitch_cmd_tau = std::clamp(ident_pid_pitch_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
+    out.yaw_target_rad = yaw_target;
+    out.pitch_target_rad = pitch_target;
 
     if (++data_tick_counter_ >= 5) {
       data_tick_counter_ = 0;
@@ -183,6 +192,8 @@ class GimbalIdent {
     Output out{};
     out.yaw_cmd_tau = std::clamp(ff.yaw, -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.pitch_cmd_tau = std::clamp(ff.pitch, -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
+    out.yaw_target_rad = yaw_traj.q;
+    out.pitch_target_rad = pitch_traj.q;
     return out;
   }
 

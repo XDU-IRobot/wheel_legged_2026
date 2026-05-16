@@ -81,20 +81,20 @@ constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [
 
 /// @brief yaw 轴五次谐波幅值 [rad]
 constexpr float kYawAmp[kHarmonicCount] = {3.5f, -2.0f, 1.2f, -0.8f, 0.5f};
-/// @brief pitch 轴五次谐波幅值 [rad]
-constexpr float kPitchAmp[kHarmonicCount] = {0.34f, -0.18f, 0.11f, -0.07f, 0.04f};
+/// @brief pitch 轴五次谐波幅值 [rad]（center=1.11，范围 [0.645, 1.575]，距限位各留 0.025 rad 余量）
+constexpr float kPitchAmp[kHarmonicCount] = {0.34f, -0.09f, 0.14f, -0.06f, 0.05f};
 
 /// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
-constexpr PidGains kIdentYawPosPid{400.0f, 0.0f, 10.0f, 10.0f, 0.0f};
+constexpr PidGains kIdentYawPosPid{40.0f, 0.0f, 0.2f, 10.0f, 0.0f};
 /// @brief 辨识模式 pitch 位置 PID（单位置环）
 constexpr PidGains kIdentPitchPosPid{20.0f, 0.0f, 0.5f, 10.0f, 0.0f};
 
-/// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
-constexpr float kIdentPitchCenter = 0.0f;
+/// @brief 辨识轨迹 pitch 中心角 [rad]（[0.62, 1.6] 中点，最大化辨识区间）
+constexpr float kIdentPitchCenter = 1.11f;
 /// @brief 辨识轨迹 pitch 下限 [rad]
-constexpr float kIdentPitchTopLimit = -0.3f;
+constexpr float kIdentPitchTopLimit = 0.62f;
 /// @brief 辨识轨迹 pitch 上限 [rad]
-constexpr float kIdentPitchBottomLimit = 0.25f;
+constexpr float kIdentPitchBottomLimit = 1.6f;
 
 constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
 }  // namespace gimbal_ident

@@ -131,8 +131,8 @@ class Gimbal {
         const auto ident_out = input.ident->IdentUpdate(ident_in);
         output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
         output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
-        output_.yaw_target_rad = 0.0f;
-        output_.pitch_target_rad = 0.0f;
+        output_.yaw_target_rad = ident_out.yaw_target_rad;
+        output_.pitch_target_rad = ident_out.pitch_target_rad;
         output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
         output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
         output_.ident_data_pending = ident_out.data_pending;
@@ -142,8 +142,8 @@ class Gimbal {
         const auto ident_out = input.ident->FfVerifyUpdate(ident_in);
         output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
         output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
-        output_.yaw_target_rad = 0.0f;
-        output_.pitch_target_rad = 0.0f;
+        output_.yaw_target_rad = ident_out.yaw_target_rad;
+        output_.pitch_target_rad = ident_out.pitch_target_rad;
         output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
         output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
       }
