@@ -52,6 +52,7 @@ struct TcRemoteInput {
   bool left_button{false};     ///< 鼠标左键
   bool right_button{false};    ///< 鼠标右键
   uint16_t keyboard_value{0};  ///< 键盘按键位掩码
+  bool tc_from_dr16{false};    ///< 数据是否来自 DR16 回退（非真实 VT03）
 };
 
 /**
