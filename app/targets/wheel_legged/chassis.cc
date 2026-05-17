@@ -348,9 +348,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                            right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
-
-  // if (output_.posture_valid) {
-  if (true) {
+  if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
@@ -458,11 +456,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
     }
-
-    left_force_ = l_spring_torque_;
-    right_force_ = r_spring_torque_;
-    t_bl_cmd = 0;
-    t_br_cmd = 0;
 
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;

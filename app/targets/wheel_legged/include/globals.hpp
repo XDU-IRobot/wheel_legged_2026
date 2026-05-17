@@ -20,6 +20,7 @@
 #include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
+#include "gimbal/gimbal_ident.hpp"
 #include "librm/device/remote/dr16.hpp"
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
 #include "gimbal/shoot_3fric.hpp"
@@ -58,8 +59,8 @@ struct SharedResources {
   std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
-  std::optional<rm::device::Referee<rm::device::RefereeRevision::kV170>> referee{};  ///< 裁判系统串口
-  std::optional<DypCanRxBridge> dyp_rx{};                                            ///< DYP 测距 CAN 接收
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口
+  std::optional<DypCanRxBridge> dyp_rx{};                                               ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -77,10 +78,11 @@ struct SharedResources {
   Shoot shoot{};                                  ///< 发射机构状态机
 #endif
 
-  chassis::Fsm chassis_fsm{};  ///< 底盘状态机
-  chassis::Chassis chassis{};  ///< 底盘控制器
-  gimbal::Fsm gimbal_fsm{};    ///< 云台状态机
-  gimbal::Gimbal gimbal{};     ///< 云台控制器
+  chassis::Fsm chassis_fsm{};          ///< 底盘状态机
+  chassis::Chassis chassis{};          ///< 底盘控制器
+  gimbal::Fsm gimbal_fsm{};            ///< 云台状态机
+  gimbal::Gimbal gimbal{};             ///< 云台控制器
+  gimbal::GimbalIdent gimbal_ident{};  ///< 云台辨识/前馈验证控制器
 
   /**
    * @brief 懒加载单例入口
@@ -120,6 +122,7 @@ struct SharedResources {
     prepare_uart_rx_to_idle_dma(huart5, UART5_IRQn, DMA1_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
     prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
+    prepare_uart_rx_to_idle_dma(huart7, UART7_IRQn, DMA1_Stream3_IRQn);
 
     const auto prepare_uart_tx_dma = [](UART_HandleTypeDef &huart, const IRQn_Type uart_irqn,
                                         const IRQn_Type dma_tx_irqn) {
@@ -215,6 +218,7 @@ struct SharedResources {
     chassis.Init();
     gimbal_fsm.Init();
     gimbal.Init();
+    gimbal_ident.Init();
 
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
     shoot.Init();

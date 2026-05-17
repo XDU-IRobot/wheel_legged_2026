@@ -31,6 +31,11 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   int16_t dr16_left_y_raw;    // 左摇杆 Y
   int16_t dr16_right_x_raw;   // 右摇杆 X
   int16_t dr16_right_y_raw;   // 右摇杆 Y
+  int16_t dr16_mouse_x;       // DR16 鼠标 X
+  int16_t dr16_mouse_y;       // DR16 鼠标 Y
+  uint8_t dr16_mouse_left;    // DR16 鼠标左键
+  uint8_t dr16_mouse_right;   // DR16 鼠标右键
+  uint16_t dr16_keyboard;     // DR16 键盘按键位掩码
 
   // ── 遥控器/图传语义请求 ──
   uint8_t input_domain_request;     // 解析后的工作域
@@ -187,6 +192,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
+  uint8_t dr16_parallel;           // DR16 并行模式是否开启
 
   // ── 云台 IMU 欧拉角（Frame C: 0x112）──
   float gimbal_euler_yaw_rad;    // 云台 IMU 偏航角

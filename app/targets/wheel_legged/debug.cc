@@ -21,6 +21,11 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.dr16_switch_l_raw = static_cast<int32_t>(input.dr16.switch_l);
   wl_debug.dr16_switch_r_raw = static_cast<int32_t>(input.dr16.switch_r);
   wl_debug.dr16_dial_raw = input.dr16.dial;
+  wl_debug.dr16_mouse_x = input.dr16.mouse_x;
+  wl_debug.dr16_mouse_y = input.dr16.mouse_y;
+  wl_debug.dr16_mouse_left = static_cast<uint8_t>(input.dr16.mouse_left);
+  wl_debug.dr16_mouse_right = static_cast<uint8_t>(input.dr16.mouse_right);
+  wl_debug.dr16_keyboard = input.dr16.keyboard;
 
   // ── DR16 语义请求 ──
   wl_debug.dr16_enable_request = static_cast<uint8_t>(

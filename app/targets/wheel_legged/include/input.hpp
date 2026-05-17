@@ -30,11 +30,16 @@ struct Dr16RawInput {
   bool online{false};                                                                     ///< DR16 是否在线
   rm::device::DR16::SwitchPosition switch_l{rm::device::DR16::SwitchPosition::kUnknown};  ///< 左拨杆
   rm::device::DR16::SwitchPosition switch_r{rm::device::DR16::SwitchPosition::kUnknown};  ///< 右拨杆
-  int16_t right_y{0};  ///< 右摇杆 Y（前进/后退）
-  int16_t right_x{0};  ///< 右摇杆 X（平移）
-  int16_t left_x{0};   ///< 左摇杆 X（偏航速率）
-  int16_t left_y{0};   ///< 左摇杆 Y（俯仰速率）
-  int16_t dial{0};     ///< 拨轮值
+  int16_t right_y{0};       ///< 右摇杆 Y（前进/后退）
+  int16_t right_x{0};       ///< 右摇杆 X（平移）
+  int16_t left_x{0};        ///< 左摇杆 X（偏航速率）
+  int16_t left_y{0};        ///< 左摇杆 Y（俯仰速率）
+  int16_t dial{0};          ///< 拨轮值
+  int16_t mouse_x{0};       ///< 鼠标 X 增量
+  int16_t mouse_y{0};       ///< 鼠标 Y 增量
+  bool mouse_left{false};   ///< 鼠标左键
+  bool mouse_right{false};  ///< 鼠标右键
+  uint16_t keyboard{0};     ///< 键盘按键位掩码
 };
 
 /**
@@ -45,8 +50,9 @@ struct TcRemoteInput {
   int16_t mouse_x{0};          ///< 鼠标 X 增量
   int16_t mouse_y{0};          ///< 鼠标 Y 增量
   bool left_button{false};     ///< 鼠标左键
-  bool right_button{false};    ///< 鼠标右键（预留，当前未使用）
+  bool right_button{false};    ///< 鼠标右键
   uint16_t keyboard_value{0};  ///< 键盘按键位掩码
+  bool tc_from_dr16{false};    ///< 数据是否来自 DR16 回退（非真实 VT03）
 };
 
 /**
@@ -65,7 +71,7 @@ struct DriveInputNorm {
 struct InputSnapshot {
   bool input_valid{false};                                ///< 是否有可信的输入源
   Dr16RawInput dr16{};                                    ///< DR16 原始值
-  TcRemoteInput tc_remote{};                              ///< 图传键鼠数据
+  TcRemoteInput tc_remote{};                              ///< 图传键鼠数据（CAN 桥）
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_enabled{false};                          ///< 自动跳跃当前是否已开启
@@ -88,18 +94,21 @@ struct Dr16SemanticState {
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};    ///< C 键是否已就绪（上升沿检测）
-  bool mid_leg_hold{false};      ///< 是否保持中腿长
-  bool q_domain_armed{true};     ///< Q 键是否已就绪（上升沿检测）
-  uint8_t domain_state{0};       ///< Q 键工作域循环：0=kDisabled, 1=kService
-  bool v_high_leg_armed{true};   ///< V 键是否已就绪（上升沿检测）
-  bool b_high_leg_armed{true};   ///< B 键是否已就绪（上升沿检测）
-  bool r_yaw_reset_armed{true};  ///< R 键是否已就绪（上升沿检测）
-  bool f_jump_armed{true};       ///< F 键是否已就绪（上升沿检测）
-  bool high_leg_hold{false};     ///< 是否保持高腿长
-  bool b_double_mode{false};     ///< B 模式：需完成两次上台阶
-  uint8_t b_attempt{0};          ///< B 模式已完成上台阶次数
-  bool stair_climb_done{false};  ///< 上台阶完成后锁定低腿长
+  bool mid_leg_c_armed{true};      ///< C 键是否已就绪（上升沿检测）
+  bool mid_leg_hold{false};        ///< 是否保持中腿长
+  bool q_domain_armed{true};       ///< Q 键是否已就绪（上升沿检测）
+  uint8_t domain_state{0};         ///< Q 键工作域循环：0=kDisabled, 1=kService
+  bool v_high_leg_armed{true};     ///< V 键是否已就绪（上升沿检测）
+  bool b_high_leg_armed{true};     ///< B 键是否已就绪（上升沿检测）
+  bool r_yaw_reset_armed{true};    ///< R 键是否已就绪（上升沿检测）
+  bool f_jump_armed{true};         ///< F 键是否已就绪（上升沿检测）
+  bool high_leg_hold{false};       ///< 是否保持高腿长
+  bool b_double_mode{false};       ///< B 模式：需完成两次上台阶
+  uint8_t b_attempt{0};            ///< B 模式已完成上台阶次数
+  bool stair_climb_done{false};    ///< 上台阶完成后锁定低腿长
+  bool dr16_parallel_armed{true};  ///< G 键长按触发防抖
+  float g_hold_ms{0.0f};           ///< G 键已按住时长 (ms)
+  bool dr16_parallel{false};       ///< DR16 是否并行生效
 };
 
 /**
@@ -112,12 +121,13 @@ float NormalizeDr16Axis(int16_t axis, int16_t axis_max_abs);
 
 /**
  * @brief 综合 DR16 摇杆与图传键盘解析驾驶方向
- * @param dr16      DR16 原始输入
- * @param tc_remote 图传键鼠输入
+ * @param dr16         DR16 原始输入
+ * @param tc_remote    图传键鼠输入
+ * @param dr16_parallel DR16 是否并行生效
  * @return 归一化驾驶方向（forward, side）
- * @note  图传 WASD 优先于 DR16 摇杆；两者可叠加
+ * @note  图传 WASD 优先于 DR16 摇杆；并行模式下键鼠无输入时降级到 DR16
  */
-DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote);
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, bool dr16_parallel);
 
 /**
  * @brief 将 DR16 右拨杆映射为腿长档位

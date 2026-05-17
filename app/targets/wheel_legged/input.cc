@@ -30,6 +30,9 @@ constexpr float kRcYawRateMaxRadS = params::active::control_loop::kRcYawRateMaxR
 constexpr float kRcPitchRateMaxRadS = params::active::control_loop::kRcPitchRateMaxRadS;
 constexpr float kTcMouseYawRateMaxRadS = params::active::control_loop::kTcMouseYawRateMaxRadS;
 constexpr float kTcMousePitchRateMaxRadS = params::active::control_loop::kTcMousePitchRateMaxRadS;
+constexpr float kDr16MouseMax = params::active::control_loop::kDr16MouseMax;
+constexpr float kDr16MouseYawRateMaxRadS = params::active::control_loop::kDr16MouseYawRateMaxRadS;
+constexpr float kDr16MousePitchRateMaxRadS = params::active::control_loop::kDr16MousePitchRateMaxRadS;
 constexpr float kPitchTargetMinRad = params::active::control_loop::kPitchTargetMinRad;
 constexpr float kPitchTargetMaxRad = params::active::control_loop::kPitchTargetMaxRad;
 
@@ -44,6 +47,7 @@ constexpr uint16_t kRcKeyF = 0x0200;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
+constexpr uint16_t kRcKeyG = 0x0400;
 
 }  // namespace
 
@@ -51,10 +55,10 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
   return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(axis_max_abs), -1.0f, 1.0f);
 }
 
-DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote) {
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, bool dr16_parallel) {
   DriveInputNorm out{};
 
-  // 图传链路在线时优先使用 WASD；图传离线时降级为 DR16 摇杆
+  // VT03 键鼠 > DR16 键盘 > DR16 摇杆
   if (tc_remote.valid) {
     const uint16_t keys = tc_remote.keyboard_value;
     if ((keys & kRcKeyW) != 0U) {
@@ -67,9 +71,30 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     } else if ((keys & kRcKeyA) != 0U) {
       out.side = -1.0f;
     }
+    // 并行模式（键盘空闲）或 DR16 回退：键鼠无输入时降级到 DR16 右摇杆
+    if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online &&
+        out.forward == 0.0f && out.side == 0.0f) {
+      out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+      out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    }
   } else if (dr16.online) {
-    out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-    out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    // DR16 键盘 WASD
+    const uint16_t keys = dr16.keyboard;
+    if ((keys & kRcKeyW) != 0U) {
+      out.forward = 1.0f;
+    } else if ((keys & kRcKeyS) != 0U) {
+      out.forward = -1.0f;
+    }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
+    }
+    // 键盘无输入时降级到摇杆
+    if (out.forward == 0.0f && out.side == 0.0f) {
+      out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+      out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    }
   }
   return out;
 }
@@ -102,8 +127,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
                            TcSemanticState &tc_state, InputSnapshot &input) {
   // 严格优先级：CAN 桥/裁判系统（tc_remote）> DR16
   // tc_remote 在线时，DR16 所有通道均被忽略，不混合来源。
-  const bool tc_remote_active = tc_remote.valid;
-  const bool has_any_input = dr16.online || tc_remote_active;
+  const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
+  const bool has_any_input = dr16.online || tc_remote.valid;
 
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
@@ -171,6 +196,19 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
+
+    // G 键长按 1s：切换 DR16 并行模式
+    const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
+    if (g_pressed) {
+      tc_state.g_hold_ms += kControlLoopDtS * 1000.0f;
+      if (tc_state.g_hold_ms >= 1000.0f && tc_state.dr16_parallel_armed) {
+        tc_state.dr16_parallel = !tc_state.dr16_parallel;
+        tc_state.dr16_parallel_armed = false;
+      }
+    } else {
+      tc_state.g_hold_ms = 0.0f;
+      tc_state.dr16_parallel_armed = true;
+    }
   }
 
   input.input_valid = has_any_input;
@@ -220,11 +258,50 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 跳跃：F 键
     request.jump_trigger = f_jump_edge;
 
+    // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
+    const bool keyboard_idle = (tc_remote.keyboard_value == 0);
+    if (tc_state.dr16_parallel && dr16.online && keyboard_idle) {
+      if (request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+        request.domain_request = ResolveDomainRequest(dr16.switch_l);
+      }
+      if (leg_request == wheel_legged::LegProfile::kLow) {
+        leg_request = ResolveLegProfile(dr16.switch_r);
+      }
+      if (!request.spin_hold) {
+        request.spin_hold = dr16.dial >= kWheelSpinThreshold;
+      }
+      if (!request.jump_trigger) {
+        if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
+          semantic_state.wheel_action_armed = true;
+        }
+        const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
+        if (wheel_action_trigger) {
+          semantic_state.wheel_action_armed = false;
+        }
+        request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
+      }
+    }
+
   } else if (dr16.online) {
     // ═══ DR16 兜底 ═══
 
-    // 工作域：左拨杆
-    request.domain_request = ResolveDomainRequest(dr16.switch_l);
+    // 左拨杆 kDown + 右拨杆的组合用于云台辨识/验证
+    if (dr16.switch_l == rm::device::DR16::SwitchPosition::kDown) {
+      if (dr16.switch_r == rm::device::DR16::SwitchPosition::kUp) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kIdent;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else if (dr16.switch_r == rm::device::DR16::SwitchPosition::kMid) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kFfVerify;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else {
+        request.domain_request = wheel_legged::DomainRequest::kDisabled;
+        leg_request = wheel_legged::LegProfile::kLow;
+      }
+    } else {
+      request.domain_request = ResolveDomainRequest(dr16.switch_l);
+    }
 
     // 腿长 + 战斗子模式：右拨杆
     if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
@@ -244,22 +321,23 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         default:
           break;
       }
-    } else {
+    } else if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
       leg_request = ResolveLegProfile(dr16.switch_r);
     }
 
-    // 小陀螺：拨轮
-    request.spin_hold = dr16.dial >= kWheelSpinThreshold;
+    // 小陀螺 / 跳跃：辨识/验证模式下不响应拨轮
+    if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
+      request.spin_hold = dr16.dial >= kWheelSpinThreshold;
 
-    // 跳跃：拨轮回中后快速负推（非战斗域）
-    if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
-      semantic_state.wheel_action_armed = true;
+      if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
+        semantic_state.wheel_action_armed = true;
+      }
+      const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
+      if (wheel_action_trigger) {
+        semantic_state.wheel_action_armed = false;
+      }
+      request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
     }
-    const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
-    if (wheel_action_trigger) {
-      semantic_state.wheel_action_armed = false;
-    }
-    request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
 
   } else {
     // ═══ 无输入 ═══
@@ -293,13 +371,31 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     float yaw_delta = 0.0f;
     float pitch_delta = 0.0f;
     if (tc_remote_active) {
-      // 图传鼠标
-      yaw_delta += static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta += static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
-    } else {
-      // DR16 左摇杆
-      yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-      pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      // 图传鼠标（优先）
+      const float mouse_yaw =
+          static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
+      const float mouse_pitch =
+          static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
+      const bool mouse_active = (tc_remote.mouse_x != 0 || tc_remote.mouse_y != 0);
+      if (mouse_active) {
+        yaw_delta += mouse_yaw;
+        pitch_delta += mouse_pitch;
+      } else if (tc_state.dr16_parallel && dr16.online && tc_remote.keyboard_value == 0) {
+        // 鼠标静止 + 键盘空闲 + 并行模式 → 降级到 DR16 左摇杆
+        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      }
+    } else if (dr16.online) {
+      // DR16 鼠标（VT03 离线时的中间档）
+      const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
+      if (dr16_mouse_active) {
+        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
+      } else {
+        // DR16 左摇杆（兜底）
+        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      }
     }
     semantic_state.rc_target.yaw_rad =
         rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -params::active::kPi, params::active::kPi);
@@ -335,21 +431,56 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       .left_x = g.dr16.left_x(),
       .left_y = g.dr16.left_y(),
       .dial = g.dr16.dial(),
+      .mouse_x = g.dr16.mouse_x(),
+      .mouse_y = g.dr16.mouse_y(),
+      .mouse_left = g.dr16.mouse_button_left(),
+      .mouse_right = g.dr16.mouse_button_right(),
   };
+
+  // DR16 键盘位掩码
+  {
+    uint16_t keys = 0;
+    if (g.dr16.key(rm::device::DR16::Key::kW)) keys |= 0x0001;
+    if (g.dr16.key(rm::device::DR16::Key::kS)) keys |= 0x0002;
+    if (g.dr16.key(rm::device::DR16::Key::kA)) keys |= 0x0004;
+    if (g.dr16.key(rm::device::DR16::Key::kD)) keys |= 0x0008;
+    if (g.dr16.key(rm::device::DR16::Key::kShift)) keys |= 0x0010;
+    if (g.dr16.key(rm::device::DR16::Key::kCtrl)) keys |= 0x0020;
+    if (g.dr16.key(rm::device::DR16::Key::kQ)) keys |= 0x0040;
+    if (g.dr16.key(rm::device::DR16::Key::kE)) keys |= 0x0080;
+    if (g.dr16.key(rm::device::DR16::Key::kR)) keys |= 0x0100;
+    if (g.dr16.key(rm::device::DR16::Key::kF)) keys |= 0x0200;
+    if (g.dr16.key(rm::device::DR16::Key::kG)) keys |= 0x0400;
+    if (g.dr16.key(rm::device::DR16::Key::kZ)) keys |= 0x0800;
+    if (g.dr16.key(rm::device::DR16::Key::kX)) keys |= 0x1000;
+    if (g.dr16.key(rm::device::DR16::Key::kC)) keys |= 0x2000;
+    if (g.dr16.key(rm::device::DR16::Key::kV)) keys |= 0x4000;
+    if (g.dr16.key(rm::device::DR16::Key::kB)) keys |= 0x8000;
+    dr16.keyboard = keys;
+  }
+
+  // 键鼠数据：VT03 优先，否则 DR16
   TcRemoteInput tc_remote{};
   if (keyboard_rx_valid) {
-    // CAN 桥键鼠数据（云台 C 板转发 VT03）
     tc_remote.valid = true;
     tc_remote.mouse_x = g.gimbal_rx->mouse_x();
     tc_remote.mouse_y = g.gimbal_rx->mouse_y();
     tc_remote.left_button = g.gimbal_rx->left_button();
     tc_remote.right_button = g.gimbal_rx->right_button();
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();
+  } else if (dr16.online) {
+    tc_remote.valid = true;
+    tc_remote.tc_from_dr16 = true;
+    tc_remote.mouse_x = dr16.mouse_x;
+    tc_remote.mouse_y = dr16.mouse_y;
+    tc_remote.left_button = dr16.mouse_left;
+    tc_remote.right_button = dr16.mouse_right;
+    tc_remote.keyboard_value = dr16.keyboard;
   }
 
   // 3a. 使能边沿检测：从 kDisabled 进入使能域时，腿长状态全部归零（低腿长起立）
   {
-    const bool tc_active = tc_remote.valid;
+    const bool tc_active = tc_remote.valid && !tc_remote.tc_from_dr16;
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
     if (tc_active) {
       predicted_domain =
@@ -479,6 +610,7 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
       .rc_target = m.rc_target,
       .host_target = m.host_target,
       .host_target_valid = m.host_target_valid,
+      .gimbal_test_profile = m.gimbal_test_profile,
       .chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
                                  chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
       .startup_align_complete = startup_align_complete,

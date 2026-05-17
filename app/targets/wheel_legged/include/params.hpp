@@ -41,14 +41,64 @@ constexpr double kGimbalCanTxLimitHz = 4000.0;  ///< 云台电机 CAN 发送频�
 constexpr std::size_t kDr16UartRxBufferSize = 18;      ///< DR16 遥控器串口接收缓冲区大小 [byte]
 constexpr std::size_t kImuUartRxBufferSize = 518;      ///< IMU 串口接收缓冲区大小 [byte]
 constexpr std::size_t kRefereeUartRxBufferSize = 256;  ///< 裁判系统串口接收缓冲区大小 [byte]
+
+using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
+constexpr std::uint16_t kDmLfMasterId = 0x13;  ///< 左前关节主电机 CAN ID
+constexpr std::uint16_t kDmLfSlaveId = 0x03;   ///< 左前关节从电机 CAN ID
+constexpr std::uint16_t kDmLbMasterId = 0x14;  ///< 左后关节主电机 CAN ID
+constexpr std::uint16_t kDmLbSlaveId = 0x04;   ///< 左后关节从电机 CAN ID
+constexpr std::uint16_t kDmRfMasterId = 0x15;  ///< 右前关节主电机 CAN ID
+constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前关节从电机 CAN ID
+constexpr std::uint16_t kDmRbMasterId = 0x16;  ///< 右后关节主电机 CAN ID
+constexpr std::uint16_t kDmRbSlaveId = 0x06;   ///< 右后关节从电机 CAN ID
+
+const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 }  // namespace globals
 
-// ── 云台公共（控制周期、力矩上限、重力补偿）──
+// ── 云台公共（控制周期、力矩上限、重力补偿、电机配置）──
 namespace gimbal {
+using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
+
 constexpr float kDefaultDtS = 0.002f;                ///< 云台控制默认周期 [s]
 constexpr float kDmTorqueLimitNm = 10.0f;            ///< DM 电机力矩上限 [Nm]
-constexpr float kPitchGravityCompensationNm = 0.50;  ///< 俯仰重力补偿力矩 [Nm]
+constexpr float kPitchGravityCompensationNm = 1.3f;  ///< 俯仰重力补偿力矩 [Nm]
+
+const DmMitSettings kPitchMotorSettings{0x11, 0x01, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 }  // namespace gimbal
+
+// ── 云台辨识 ──
+namespace gimbal_ident {
+constexpr float kBaseFreqHz = 0.1f;                    ///< 辨识轨迹基频 [Hz]
+constexpr size_t kHarmonicCount = 5;                   ///< 五次谐波
+constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;  ///< rpm → rad/s
+constexpr float kDmTorqueLimitNm = 10.0f;              ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [s]
+
+/// @brief yaw 轴五次谐波幅值 [rad]（sum_abs=6.0，~70%峰值因子下覆盖 ±241°）
+constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};
+/// @brief pitch 轴五次谐波幅值 [rad]（sum_abs=0.58，峰值~±0.44，留余量不触及机械限位 [0.6, 1.6]）
+constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};
+
+/// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
+constexpr PidGains kIdentYawPosPid{11.0f, 0.0f, 0.1f, 10.0f, 0.0f};
+/// @brief 辨识模式 pitch 位置 PID（单位置环）
+constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};
+
+/// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchCenter = -2.299f;
+/// @brief 辨识轨迹 pitch 下限 [rad]
+constexpr float kIdentPitchTopLimit = -2.6f;
+/// @brief 辨识轨迹 pitch 上限 [rad]
+constexpr float kIdentPitchBottomLimit = -1.6f;
+
+constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
+
+}  // namespace gimbal_ident
 
 // ── 执行器公共 ──
 namespace actuators {
@@ -78,15 +128,14 @@ inline YawSpeedFeedforward yaw_ff{0.002f, 1.f};
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
 using namespace common::globals;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 constexpr std::uint16_t kLeftWheelId = 0x05;   ///< 左轮毂电机 CAN ID
 constexpr std::uint16_t kRightWheelId = 0x02;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kDmLfMasterId = 0x13;  ///< 左前关节主电机 CAN ID
-constexpr std::uint16_t kDmLfSlaveId = 0x03;   ///< 左前关节从电机 CAN ID
-constexpr std::uint16_t kDmLbMasterId = 0x14;  ///< 左后关节主电机 CAN ID
-constexpr std::uint16_t kDmLbSlaveId = 0x04;   ///< 左后关节从电机 CAN ID
+constexpr std::uint16_t kDmLfMasterId = 0x14;  ///< 左前关节主电机 CAN ID
+constexpr std::uint16_t kDmLfSlaveId = 0x04;   ///< 左前关节从电机 CAN ID
+constexpr std::uint16_t kDmLbMasterId = 0x13;  ///< 左后关节主电机 CAN ID
+constexpr std::uint16_t kDmLbSlaveId = 0x03;   ///< 左后关节从电机 CAN ID
 constexpr std::uint16_t kDmRfMasterId = 0x15;  ///< 右前关节主电机 CAN ID
 constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前关节从电机 CAN ID
 constexpr std::uint16_t kDmRbMasterId = 0x16;  ///< 右后关节主电机 CAN ID
@@ -101,10 +150,6 @@ const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f
 // ── 云台 ──
 namespace gimbal {
 using namespace common::gimbal;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
-
-const DmMitSettings kPitchMotorSettings{0x11, 0x01, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
 constexpr float kPitchMinRad = -0.35f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.7f;    ///< 俯仰角上限 [rad]
@@ -113,6 +158,19 @@ constexpr PidGains kYawPositionPid{27.0f, 0.0f, 0.0f, 1000.0f, 1.0f};    ///< �
 constexpr PidGains kYawSpeedPid{1.1f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.0f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 10.0f, 0.0f};         ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.f,  // theta_0: I1zz_com
+    0.f,  // theta_1: I2xx_com
+    0.f,  // theta_2: I2yy_com
+    0.f,  // theta_3: m2*l2x 水平前向偏心
+    0.f,  // theta_4: m2*l2z 垂直上向偏心
+    0.f,  // theta_5: fv1  yaw 粘滞摩擦
+    0.f,  // theta_6: fc1  yaw 库仑摩擦
+    0.f,  // theta_7: fv2  pitch 粘滞摩擦
+    0.f,  // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（Hero：三摩擦轮 + DM 拨盘）──
@@ -195,7 +253,7 @@ constexpr float kLegL1M = 0.215f;      ///< 五连杆主动杆长度 [m]
 constexpr float kLegL2M = 0.254f;      ///< 五连杆从动杆长度 [m]
 
 // -- 左腿弹簧补偿三次多项式系数：tau = c0 + c1*l + c2*l^2 + c3*l^3 --
-constexpr float kLeftSpringC0 = -143.005613f ;
+constexpr float kLeftSpringC0 = -120.005613f ;
 constexpr float kLeftSpringC1 = -129.143860f ;
 constexpr float kLeftSpringC2 = -915.501683f;
 constexpr float kLeftSpringC3 = 2986.584000f ;
@@ -240,7 +298,7 @@ constexpr float kOffGroundSupportForceThresholdN = 10.0f;  ///< 支撑力低于�
 constexpr float kOffGroundSupportForceClampN = 60.0f;     ///< 离地时支持力限幅值 [N]
 
 // ==== 物理参数（变体专属）====
-constexpr float kBodyMassKg = 24.0f;  ///< 机体质量 [kg]
+constexpr float kBodyMassKg = 30.0f;  ///< 机体质量 [kg]
 
 // ==== 基本运动（横滚平衡）====
 constexpr float kRollBalanceTargetRad = 0.030f;  ///< 横滚平衡目标角 [rad]
@@ -293,8 +351,8 @@ constexpr std::array<float, 240> kCtrlP{
 };
 
 // ==== 基本运动（PID 增益）====
-constexpr PidGains kLeftL0Pid{4500.0f, 0.f, 150.0f, 130.0f, 0.0f};   ///< 左腿腿长 PID（常规）
-constexpr PidGains kRightL0Pid{4500.0f, 0.f, 150.0f, 130.0f, 0.0f};  ///< 右腿腿长 PID（常规）
+constexpr PidGains kLeftL0Pid{4000.0f, 0.f, 150.0f, 130.0f, 0.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0Pid{4000.0f, 0.f, 150.0f, 130.0f, 0.0f};  ///< 右腿腿长 PID（常规）
 constexpr PidGains kRollPid{800.0f, 0.1f, 20.0f, 40.0f, 10.0f};        ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
@@ -336,15 +394,18 @@ constexpr float kAutoJumpDistanceHoldTimeS = 0.05f;           ///< 自动跳跃�
 constexpr float kControlLoopDtS = 0.002f;  ///< 控制环周期 [s]
 
 // -- 摇杆/键鼠输入归一化 --
-constexpr std::int16_t kDr16AxisMaxAbs = 660;     ///< DR16 摇杆轴最大绝对值（用于归一化到 [-1,1]）
-constexpr float kRcStickMax = 660.0f;             ///< RC 摇杆最大值（用于积分目标速率计算）
-constexpr float kTcMouseMax = 200.0f;             ///< 图传鼠标增量最大值（用于积分目标速率计算）
-constexpr float kRcYawRateMaxRadS = -2.5f;        ///< RC 摇杆满偏时偏航积分速率 [rad/s]
-constexpr float kRcPitchRateMaxRadS = 1.5f;       ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
-constexpr float kTcMouseYawRateMaxRadS = -2.0f;   ///< 图传鼠标满偏时偏航积分速率 [rad/s]
-constexpr float kTcMousePitchRateMaxRadS = 1.0f;  ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.35f;      ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.7f;        ///< RC 积分俯仰目标上限 [rad]
+constexpr std::int16_t kDr16AxisMaxAbs = 660;       ///< DR16 摇杆轴最大绝对值（用于归一化到 [-1,1]）
+constexpr float kRcStickMax = 660.0f;               ///< RC 摇杆最大值（用于积分目标速率计算）
+constexpr float kTcMouseMax = 200.0f;               ///< 图传鼠标增量最大值（用于积分目标速率计算）
+constexpr float kRcYawRateMaxRadS = -2.5f;          ///< RC 摇杆满偏时偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS = 1.5f;         ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
+constexpr float kTcMouseYawRateMaxRadS = -2.0f;     ///< 图传鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kTcMousePitchRateMaxRadS = 1.0f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
+constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kDr16MousePitchRateMaxRadS = 1.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMaxRad = 0.7f;          ///< RC 积分俯仰目标上限 [rad]
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]
@@ -443,10 +504,10 @@ constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};       ///< �
 constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< 观测矩阵 H
 
 // -- 关节零位偏移 --
-constexpr float kLeftPhi1OffsetRad = -1.375f + M_PI;          ///< 左腿前关节零位偏移 [rad]
-constexpr float kLeftPhi4OffsetRad = -1.77f;          ///< 左腿后关节零位偏移 [rad]
-constexpr float kRightPhi1OffsetRad = 2.1244f + M_PI + 0.13f;  ///< 右腿前关节零位偏移 [rad]
-constexpr float kRightPhi4OffsetRad = 0.46f + 0.123f;         ///< 右腿后关节零位偏移 [rad]
+constexpr float kLeftPhi1OffsetRad = 2.8f+ M_PI;          ///< 左腿前关节零位偏移 [rad]
+constexpr float kLeftPhi4OffsetRad = 0.4f;                 ///< 左腿后关节零位偏移 [rad]
+constexpr float kRightPhi1OffsetRad = 2.1244f + M_PI + 0.13f-0.068f ;  ///< 右腿前关节零位偏移 [rad]
+constexpr float kRightPhi4OffsetRad = 0.46f + 0.123f+ 0.136;         ///< 右腿后关节零位偏移 [rad]
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──
@@ -483,42 +544,21 @@ constexpr PidGains kPitchSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.3f};         ///< �
 namespace infantry3 {
 using namespace common;
 
-inline YawSpeedFeedforward yaw_ff{0.002f, 0.5f};
-
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
 using namespace common::globals;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 constexpr std::uint16_t kLeftWheelId = 0x02;   ///< 左轮毂电机 CAN ID
 constexpr std::uint16_t kRightWheelId = 0x03;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kDmLfMasterId = 0x17;  ///< 左前关节主电机 CAN ID
-constexpr std::uint16_t kDmLfSlaveId = 0x07;   ///< 左前关节从电机 CAN ID
-constexpr std::uint16_t kDmLbMasterId = 0x14;  ///< 左后关节主电机 CAN ID
-constexpr std::uint16_t kDmLbSlaveId = 0x04;   ///< 左后关节从电机 CAN ID
-constexpr std::uint16_t kDmRfMasterId = 0x16;  ///< 右前关节主电机 CAN ID
-constexpr std::uint16_t kDmRfSlaveId = 0x06;   ///< 右前关节从电机 CAN ID
-constexpr std::uint16_t kDmRbMasterId = 0x15;  ///< 右后关节主电机 CAN ID
-constexpr std::uint16_t kDmRbSlaveId = 0x05;   ///< 右后关节从电机 CAN ID
-
 constexpr std::uint16_t kFricLeftId = 0x02;   ///< 左摩擦轮电机 CAN ID
 constexpr std::uint16_t kFricRightId = 0x04;  ///< 右摩擦轮电机 CAN ID
 constexpr std::uint16_t kDialId = 0x01;       ///< 拨盘电机 CAN ID
-
-const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 }  // namespace globals
 
 // ── 云台 ──
 namespace gimbal {
 using namespace common::gimbal;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
-
-const DmMitSettings kPitchMotorSettings{0x05, 0x04, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-const DmMitSettings kYawMotorSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
 constexpr float kPitchMinRad = -0.3f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.25f;  ///< 俯仰角上限 [rad]
@@ -527,6 +567,19 @@ inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    /
 inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
 inline constexpr PidGains kPitchPositionPid{23.0f, 0.0f, 0.15f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.012257f,  // theta_0: I1zz_com
+    0.032210f,  // theta_1: I2xx_com
+    0.043163f,  // theta_2: I2yy_com
+    0.097069f,  // theta_3: m2*l2x 水平前向偏心
+    0.114014f,  // theta_4: m2*l2z 垂直上向偏心
+    0.259783f,  // theta_5: fv1  yaw 粘滞摩擦
+    0.226098f,  // theta_6: fc1  yaw 库仑摩擦
+    0.788615f,  // theta_7: fv2  pitch 粘滞摩擦
+    0.118902f,  // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
@@ -594,15 +647,15 @@ constexpr float kLegL1M = 0.215f;      ///< 五连杆主动杆长度 [m]
 constexpr float kLegL2M = 0.254f;      ///< 五连杆从动杆长度 [m]
 
 // -- 左腿弹簧补偿三次多项式系数：tau = c0 + c1*l + c2*l^2 + c3*l^3 --
-constexpr float kLeftSpringC0 = 109.0278f;
-constexpr float kLeftSpringC1 = -3227.4026f;
-constexpr float kLeftSpringC2 = 13092.0860f;
-constexpr float kLeftSpringC3 = -17390.f;
+constexpr float kLeftSpringC0 = 146.4908f;
+constexpr float kLeftSpringC1 = -2493.9365f;
+constexpr float kLeftSpringC2 = 6027.0066f;
+constexpr float kLeftSpringC3 = -4062.3715f;
 // -- 右腿弹簧补偿三次多项式系数 --
-constexpr float kRightSpringC0 = -83.6842f;
-constexpr float kRightSpringC1 = -85.2641f;
-constexpr float kRightSpringC2 = -2217.8975f;
-constexpr float kRightSpringC3 = 5979.2188f;
+constexpr float kRightSpringC0 = 146.4908f;
+constexpr float kRightSpringC1 = -2493.9365f;
+constexpr float kRightSpringC2 = 6027.0066f;
+constexpr float kRightSpringC3 = -4062.3715f;
 
 // -- 质量/惯量/重力 --
 constexpr float kLegMassKg = 2.3f;     ///< 单条腿质量 [kg]
@@ -717,15 +770,18 @@ constexpr float kAutoJumpDistanceHoldTimeS = 0.05f;           ///< 自动跳跃�
 constexpr float kControlLoopDtS = 0.002f;  ///< 控制环周期 [s]
 
 // -- 摇杆/键鼠输入归一化 --
-constexpr std::int16_t kDr16AxisMaxAbs = 660;     ///< DR16 摇杆轴最大绝对值
-constexpr float kRcStickMax = 660.0f;             ///< RC 摇杆最大值
-constexpr float kTcMouseMax = 200.0f;             ///< 图传鼠标增量最大值
-constexpr float kRcYawRateMaxRadS = -2.5f;        ///< RC 摇杆满偏时偏航积分速率 [rad/s]
-constexpr float kRcPitchRateMaxRadS = 1.5f;       ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
-constexpr float kTcMouseYawRateMaxRadS = -2.0f;   ///< 图传鼠标满偏时偏航积分速率 [rad/s]
-constexpr float kTcMousePitchRateMaxRadS = 1.0f;  ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.35f;      ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.25f;       ///< RC 积分俯仰目标上限 [rad]
+constexpr std::int16_t kDr16AxisMaxAbs = 660;       ///< DR16 摇杆轴最大绝对值
+constexpr float kRcStickMax = 660.0f;               ///< RC 摇杆最大值
+constexpr float kTcMouseMax = 200.0f;               ///< 图传鼠标增量最大值
+constexpr float kRcYawRateMaxRadS = -2.5f;          ///< RC 摇杆满偏时偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS = 1.5f;         ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
+constexpr float kTcMouseYawRateMaxRadS = -2.0f;     ///< 图传鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kTcMousePitchRateMaxRadS = 1.0f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
+constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kDr16MousePitchRateMaxRadS = 1.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMaxRad = 0.25f;         ///< RC 积分俯仰目标上限 [rad]
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]
@@ -753,7 +809,7 @@ constexpr float kLandingDecelThetaRampStepRad = 0.008f;       ///< 落地减速�
 constexpr std::uint32_t kLandingDecelOffGroundMinMs = 40U;    ///< 离地最短持续时间（防单帧误判）[ms]
 constexpr std::uint32_t kLandingDecelStableDurationMs = 50U;  ///< 落地减速稳定保持时间 [ms]
 
-constexpr float kYawFollowFixedTargetRad = 0.f;                 ///< 偏航跟随固定目标偏置角 [rad]
+constexpr float kYawFollowFixedTargetRad = 0.38f;               ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;           ///< 偏航跟随侧向目标偏置角 [rad]
 constexpr PidGains kYawFollowPid{5.0f, 0.0f, 0.f, 4.0f, 0.0f};  ///< 偏航跟随 PID
 
@@ -824,10 +880,10 @@ constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};       ///< �
 constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< 观测矩阵 H
 
 // -- 关节零位偏移 --
-constexpr float kLeftPhi1OffsetRad = kPi - 2.94f;           ///< 左腿前关节零位偏移 [rad]
-constexpr float kLeftPhi4OffsetRad = 0.59f;                 ///< 左腿后关节零位偏移 [rad]
-constexpr float kRightPhi1OffsetRad = kPi + 2.4f + 0.018f;  ///< 右腿前关节零位偏移 [rad]
-constexpr float kRightPhi4OffsetRad = -1.87f - 0.076f;      ///< 右腿后关节零位偏移 [rad]
+constexpr float kLeftPhi1OffsetRad = 1.38f - 1.8383f + M_PI;            ///< 左腿前关节零位偏移 [rad]
+constexpr float kLeftPhi4OffsetRad = 0.86f + 0.7531f;                   ///< 左腿后关节零位偏移 [rad]
+constexpr float kRightPhi1OffsetRad = 1.26f + 0.06f - 2.16641f + M_PI;  ///< 右腿前关节零位偏移 [rad]
+constexpr float kRightPhi4OffsetRad = 0.65f;                            ///< 右腿后关节零位偏移 [rad]
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──
@@ -864,50 +920,42 @@ constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 8.0f, 0.3f};       ///< 自
 namespace infantry4 {
 using namespace common;
 
-inline YawSpeedFeedforward yaw_ff{0.002f, 0.5f};
-
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
 using namespace common::globals;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
 constexpr std::uint16_t kLeftWheelId = 0x06;   ///< 左轮毂电机 CAN ID
 constexpr std::uint16_t kRightWheelId = 0x05;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kDmLfMasterId = 0x02;  ///< 左前关节主电机 CAN ID
-constexpr std::uint16_t kDmLfSlaveId = 0x01;   ///< 左前关节从电机 CAN ID
-constexpr std::uint16_t kDmLbMasterId = 0x04;  ///< 左后关节主电机 CAN ID
-constexpr std::uint16_t kDmLbSlaveId = 0x03;   ///< 左后关节从电机 CAN ID
-constexpr std::uint16_t kDmRfMasterId = 0x06;  ///< 右前关节主电机 CAN ID
-constexpr std::uint16_t kDmRfSlaveId = 0x05;   ///< 右前关节从电机 CAN ID
-constexpr std::uint16_t kDmRbMasterId = 0x08;  ///< 右后关节主电机 CAN ID
-constexpr std::uint16_t kDmRbSlaveId = 0x07;   ///< 右后关节从电机 CAN ID
-
 constexpr std::uint16_t kFricLeftId = 0x07;   ///< 左摩擦轮电机 CAN ID
 constexpr std::uint16_t kFricRightId = 0x08;  ///< 右摩擦轮电机 CAN ID
 constexpr std::uint16_t kDialId = 0x07;       ///< 拨盘电机 CAN ID
-
-const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
-const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 }  // namespace globals
 
 // ── 云台 ──
 namespace gimbal {
 using namespace common::gimbal;
-using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-const DmMitSettings kPitchMotorSettings{0x12, 0x11, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-const DmMitSettings kYawMotorSettings{0x13, 0x03, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
-
-constexpr float kPitchMinRad = -0.3f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.3f;   ///< 俯仰角上限 [rad]
+constexpr float kPitchMinRad = -0.35f;  ///< 俯仰角下限 [rad]
+constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
 
 constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};   ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.1f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
+
+/// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
+constexpr float kIdentTheta[9] = {
+    0.012257f,  // theta_0: I1zz_com
+    0.032210f,  // theta_1: I2xx_com
+    0.043163f,  // theta_2: I2yy_com
+    0.097069f,  // theta_3: m2*l2x 水平前向偏心
+    0.114014f,  // theta_4: m2*l2z 垂直上向偏心
+    0.259783f,  // theta_5: fv1  yaw 粘滞摩擦
+    0.226098f,  // theta_6: fc1  yaw 库仑摩擦
+    0.788615f,  // theta_7: fv2  pitch 粘滞摩擦
+    0.118902f,  // theta_8: fc2  pitch 库仑摩擦
+};
 }  // namespace gimbal
 
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
@@ -1095,15 +1143,18 @@ constexpr float kAutoJumpDistanceHoldTimeS = 0.05f;           ///< 自动跳跃�
 constexpr float kControlLoopDtS = 0.002f;  ///< 控制环周期 [s]
 
 // -- 摇杆/键鼠输入归一化 --
-constexpr std::int16_t kDr16AxisMaxAbs = 660;     ///< DR16 摇杆轴最大绝对值
-constexpr float kRcStickMax = 660.0f;             ///< RC 摇杆最大值
-constexpr float kTcMouseMax = 200.0f;             ///< 图传鼠标增量最大值
-constexpr float kRcYawRateMaxRadS = -2.5f;        ///< RC 摇杆满偏时偏航积分速率 [rad/s]
-constexpr float kRcPitchRateMaxRadS = 1.5f;       ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
-constexpr float kTcMouseYawRateMaxRadS = -2.0f;   ///< 图传鼠标满偏时偏航积分速率 [rad/s]
-constexpr float kTcMousePitchRateMaxRadS = 1.5f;  ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.35f;      ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.25f;       ///< RC 积分俯仰目标上限 [rad]
+constexpr std::int16_t kDr16AxisMaxAbs = 660;       ///< DR16 摇杆轴最大绝对值
+constexpr float kRcStickMax = 660.0f;               ///< RC 摇杆最大值
+constexpr float kTcMouseMax = 200.0f;               ///< 图传鼠标增量最大值
+constexpr float kRcYawRateMaxRadS = -2.5f;          ///< RC 摇杆满偏时偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS = 1.5f;         ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
+constexpr float kTcMouseYawRateMaxRadS = -2.0f;     ///< 图传鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kTcMousePitchRateMaxRadS = 1.5f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
+constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
+constexpr float kDr16MousePitchRateMaxRadS = 1.5f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMaxRad = 0.6f;          ///< RC 积分俯仰目标上限 [rad]
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]
@@ -1131,7 +1182,7 @@ constexpr float kLandingDecelThetaRampStepRad = 0.01f;      ///< 落地减速腿
 constexpr std::uint32_t kLandingDecelOffGroundMinMs = 60U;  ///< 离地最短持续时间（防单帧误判）[ms]
 constexpr std::uint32_t kLandingDecelStableDurationMs = 400U;  ///< 落地减速稳定保持时间 [ms]
 
-constexpr float kYawFollowFixedTargetRad = -1.72f;               ///< 偏航跟随固定目标偏置角 [rad]
+constexpr float kYawFollowFixedTargetRad = 0.f;                  ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;            ///< 偏航跟随侧向目标偏置角 [rad]
 constexpr PidGains kYawFollowPid{8.2f, 0.0f, 1.2f, 6.0f, 0.0f};  ///< 偏航跟随 PID
 
@@ -1202,10 +1253,10 @@ constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};       ///< �
 constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< 观测矩阵 H
 
 // -- 关节零位偏移 --
-constexpr float kLeftPhi1OffsetRad = -1.50f + M_PI;   ///< 左腿前关节零位偏移 [rad]
-constexpr float kLeftPhi4OffsetRad = -1.50f;          ///< 左腿后关节零位偏移 [rad]
-constexpr float kRightPhi1OffsetRad = -1.42f + M_PI;  ///< 右腿前关节零位偏移 [rad]
-constexpr float kRightPhi4OffsetRad = -1.62f;         ///< 右腿后关节零位偏移 [rad]
+constexpr float kLeftPhi1OffsetRad = 1.38f + M_PI;   ///< 左腿前关节零位偏移 [rad]
+constexpr float kLeftPhi4OffsetRad = 0.86f;          ///< 左腿后关节零位偏移 [rad]
+constexpr float kRightPhi1OffsetRad = 1.26f + M_PI;  ///< 右腿前关节零位偏移 [rad]
+constexpr float kRightPhi4OffsetRad = 1.02f;         ///< 右腿后关节零位偏移 [rad]
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──
