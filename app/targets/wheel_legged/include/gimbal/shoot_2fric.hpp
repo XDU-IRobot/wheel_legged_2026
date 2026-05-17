@@ -23,7 +23,7 @@ class Shoot {
   void Enable();
   void Disable();
   ShootOutput Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                     bool fire_flag, bool shoot_enabled);
+                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm);
 
   bool enabled() const { return enabled_; }
 

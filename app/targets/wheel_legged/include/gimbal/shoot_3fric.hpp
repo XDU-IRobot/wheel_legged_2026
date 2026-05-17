@@ -54,8 +54,9 @@ class ShootController {
    * @brief 射击状态机 + PID，每 500Hz 控制周期调用一次
    * @param enter_shoot  true = 进入射击模式
    * @param fire_trigger true = 触发发射（dial > 阈值）
+   * @param fric_speed_target_rpm 摩擦轮目标转速 [rpm]（运行时可调）
    */
-  void Update(bool enter_shoot, bool fire_trigger) {
+  void Update(bool enter_shoot, bool fire_trigger, float fric_speed_target_rpm) {
     booster_pos_ = booster_->pos();
 
     switch (state_) {
@@ -145,13 +146,12 @@ class ShootController {
 
     // 摩擦轮速度 PID
     {
-      constexpr float kFwTarget = params::active::shoot::kFwTargetSpeedRpm;
       constexpr float kFwBrakeTargetRpm = -100.0f;
       constexpr float kFwBrakeThresholdRpm = 500.0f;
 
       for (int i = 0; i < 3; ++i) {
         if (enter_shoot) {
-          fw_speed_pid_[i]->Update(kFwTarget, static_cast<float>(fw_[i]->rpm()));
+          fw_speed_pid_[i]->Update(fric_speed_target_rpm, static_cast<float>(fw_[i]->rpm()));
           fw_[i]->SetCurrent(static_cast<std::int16_t>(fw_speed_pid_[i]->out()));
         } else if (static_cast<float>(fw_[i]->rpm()) >= kFwBrakeThresholdRpm) {
           fw_speed_pid_[i]->Update(kFwBrakeTargetRpm, static_cast<float>(fw_[i]->rpm()));

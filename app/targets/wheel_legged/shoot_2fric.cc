@@ -26,13 +26,13 @@ void Shoot::Enable() { enabled_ = true; }
 void Shoot::Disable() { enabled_ = false; }
 
 ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                          bool fire_flag, bool shoot_enabled) {
+                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm) {
   ShootOutput out{};
 
   if (shoot_enabled) {
     controller_.Enable(true);
     controller_.Arm(true);
-    controller_.SetArmSpeed(ns::kFricSpeedTargetRpm);
+    controller_.SetArmSpeed(fric_speed_target_rpm);
 
     if (fire_flag) {
       controller_.SetMode(Shoot2Fric::kFullAuto);

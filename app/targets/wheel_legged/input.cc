@@ -48,6 +48,10 @@ constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
 constexpr uint16_t kRcKeyG = 0x0400;
+constexpr uint16_t kRcKeyZ = 0x0800;
+constexpr uint16_t kRcKeyX = 0x1000;
+
+constexpr float kFricSpeedStepRpm = 20.0f;  ///< Z/X 键每次调整摩擦轮转速步长 [rpm]
 
 }  // namespace
 
@@ -130,6 +134,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
   const bool has_any_input = dr16.online || tc_remote.valid;
 
+  // ── 摩擦轮目标转速初始化（首次从参数表加载，后续由 Z/X 键调整）──
+  if (tc_state.fric_speed_target_rpm == 0.0f) {
+    tc_state.fric_speed_target_rpm = params::active::shoot::kFricSpeedTargetRpm;
+  }
+
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
   bool f_jump_edge = false;
@@ -209,6 +218,22 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.g_hold_ms = 0.0f;
       tc_state.dr16_parallel_armed = true;
     }
+
+    // Z 键：摩擦轮目标转速 -20 rpm（上升沿）
+    const bool z_pressed = (tc_remote.keyboard_value & kRcKeyZ) != 0U;
+    if (z_pressed && tc_state.z_fric_dec_armed) {
+      tc_state.fric_speed_target_rpm -= kFricSpeedStepRpm;
+      tc_state.z_fric_dec_armed = false;
+    }
+    if (!z_pressed) tc_state.z_fric_dec_armed = true;
+
+    // X 键：摩擦轮目标转速 +20 rpm（上升沿）
+    const bool x_pressed = (tc_remote.keyboard_value & kRcKeyX) != 0U;
+    if (x_pressed && tc_state.x_fric_inc_armed) {
+      tc_state.fric_speed_target_rpm += kFricSpeedStepRpm;
+      tc_state.x_fric_inc_armed = false;
+    }
+    if (!x_pressed) tc_state.x_fric_inc_armed = true;
   }
 
   input.input_valid = has_any_input;
@@ -235,7 +260,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         break;
       case 1:
       default:
-        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.domain_request = wheel_legged::DomainRequest::kCombat;
         break;
     }
 

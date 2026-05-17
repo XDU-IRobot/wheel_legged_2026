@@ -109,6 +109,9 @@ struct TcSemanticState {
   bool dr16_parallel_armed{true};  ///< G 键长按触发防抖
   float g_hold_ms{0.0f};           ///< G 键已按住时长 (ms)
   bool dr16_parallel{false};       ///< DR16 是否并行生效
+  bool z_fric_dec_armed{true};     ///< Z 键是否已就绪（上升沿检测，摩擦轮减速）
+  bool x_fric_inc_armed{true};     ///< X 键是否已就绪（上升沿检测，摩擦轮升速）
+  float fric_speed_target_rpm{0.0f};  ///< 摩擦轮目标转速 [rpm]（运行时可调，0 表示未初始化）
 };
 
 /**

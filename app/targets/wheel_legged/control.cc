@@ -217,7 +217,7 @@ void ControlLoop() {
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold;
-    globals->shoot_controller.Update(shooter_enter, fire_trigger);
+    globals->shoot_controller.Update(shooter_enter, fire_trigger, tc_state.fric_speed_target_rpm);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
@@ -242,10 +242,13 @@ void ControlLoop() {
     const bool fire_flag =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
     const auto shoot_output = globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm,
-                                                    kControlLoopDtS, fire_flag, in_combat);
+                                                    kControlLoopDtS, fire_flag, in_combat,
+                                                    tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif
+
+  wl_debug.fric_speed_target_rpm = tc_state.fric_speed_target_rpm;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 6：云台启动归中判稳
@@ -690,10 +693,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
-    wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
-    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
-    wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
+    // wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
+    // wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
+    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
+    // wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
