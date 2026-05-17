@@ -166,6 +166,13 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
   gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
+    constexpr float kDegToRad = ns::kPi / 180.0f;
+    gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
+    gimbal_update_input.aimbot_pitch_vel = globals->aimbot->pitch_vel() * kDegToRad;
+    gimbal_update_input.aimbot_yaw_acc = globals->aimbot->yaw_acc() * kDegToRad;
+    gimbal_update_input.aimbot_pitch_acc = globals->aimbot->pitch_acc() * kDegToRad;
+  }
   if (gimbal_startup_align_active) {
     // 归中阶段：强制对齐车头方向，覆盖 FSM 下发的目标
     gimbal_update_input.align_to_chassis_forward = false;

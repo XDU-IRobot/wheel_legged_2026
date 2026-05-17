@@ -84,16 +84,16 @@ constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};
 constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};
 
 /// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
-constexpr PidGains kIdentYawPosPid{11.0f, 0.0f, 0.1f, 10.0f, 0.0f};
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};
 /// @brief 辨识模式 pitch 位置 PID（单位置环）
 constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};
 
 /// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
-constexpr float kIdentPitchCenter = -2.299f;
+constexpr float kIdentPitchCenter = 1.f;
 /// @brief 辨识轨迹 pitch 下限 [rad]
-constexpr float kIdentPitchTopLimit = -2.6f;
+constexpr float kIdentPitchTopLimit = 0.6f;
 /// @brief 辨识轨迹 pitch 上限 [rad]
-constexpr float kIdentPitchBottomLimit = -1.6f;
+constexpr float kIdentPitchBottomLimit = 1.6f;
 
 constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
 
@@ -905,20 +905,22 @@ constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
 
 constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};   ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
-constexpr PidGains kPitchPositionPid{26.0f, 0.0f, 0.1f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 0.8f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
 
 /// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
 constexpr float kIdentTheta[9] = {
-    0.012257f,  // theta_0: I1zz_com
-    0.032210f,  // theta_1: I2xx_com
-    0.043163f,  // theta_2: I2yy_com
-    0.097069f,  // theta_3: m2*l2x 水平前向偏心
-    0.114014f,  // theta_4: m2*l2z 垂直上向偏心
-    0.259783f,  // theta_5: fv1  yaw 粘滞摩擦
-    0.226098f,  // theta_6: fc1  yaw 库仑摩擦
-    0.788615f,  // theta_7: fv2  pitch 粘滞摩擦
-    0.118902f,  // theta_8: fc2  pitch 库仑摩擦
+  0.01840039f,   // theta_0: I1zz_com
+           0.01493814f,   // theta_1: I2xx_com
+           0.03804828f,   // theta_2: I2yy_com
+           -0.10281495f,  // theta_3: m2*l2x 水平前向偏心
+           -0.13614424f,  // theta_4: m2*l2z 垂直上向偏心
+           0.13102762f,   // theta_5: fv1  yaw 粘滞摩擦
+           0.52290111f,   // theta_6: fc1  yaw 库仑摩擦
+           0.89830570f,   // theta_7: fv2  pitch 粘滞摩擦
+           0.04230919f,   // theta_8: fc2  pitch 库仑摩擦
+  // 0.02201508,  0.01519048,  0.04691807, -0.03485965, -0.17437838,
+  //         0.3031819 ,  0.29709704,  0.48645403,  0.19344995
 };
 }  // namespace gimbal
 

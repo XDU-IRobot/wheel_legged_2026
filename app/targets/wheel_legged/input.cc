@@ -545,8 +545,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 3b. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
   if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    input.mode_request.host_target.yaw_rad = -g.aimbot->yaw() * kDegToRad;
-    input.mode_request.host_target.pitch_rad = g.aimbot->pitch() * kDegToRad;
+    input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+    input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
     input.mode_request.host_target_valid = true;
     // 修正 target_source：ResolveInputSemantics 计算时 host_target_valid 尚为 false，需重设
     if (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||

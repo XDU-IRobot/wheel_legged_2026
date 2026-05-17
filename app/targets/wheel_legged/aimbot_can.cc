@@ -14,6 +14,14 @@ f32 AimbotCanCommunicator::pitch() const { return pitch_; }
 
 u8 AimbotCanCommunicator::nuc_start_flag() const { return nuc_start_flag_; }
 
+f32 AimbotCanCommunicator::yaw_vel() const { return yaw_vel_; }
+
+f32 AimbotCanCommunicator::pitch_vel() const { return pitch_vel_; }
+
+f32 AimbotCanCommunicator::yaw_acc() const { return yaw_acc_; }
+
+f32 AimbotCanCommunicator::pitch_acc() const { return pitch_acc_; }
+
 void AimbotCanCommunicator::RxCallback(const hal::CanFrame *msg) {
   if (msg->rx_std_id == 0x170) {
     ReportStatus(kOk);
@@ -22,6 +30,13 @@ void AimbotCanCommunicator::RxCallback(const hal::CanFrame *msg) {
     yaw_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[2]) << 8) | msg->data[3]));
     pitch_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[4]) << 8) | msg->data[5]));
     nuc_start_flag_ = static_cast<u8>(msg->data[6]);
+  }
+  if (msg->rx_std_id == 0x160) {
+    ReportStatus(kOk);
+    yaw_vel_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[0]) << 8) | msg->data[1]));
+    pitch_vel_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[2]) << 8) | msg->data[3]));
+    yaw_acc_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[4]) << 8) | msg->data[5]));
+    pitch_acc_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[6]) << 8) | msg->data[7]));
   }
 }
 
