@@ -277,8 +277,10 @@ class ChassisStateEstimator {
   /** @brief 初始化估计器 */
   void Init(const ChassisStateEstimatorConfig &config) {
     config_ = config;
-    left_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
-    right_leg_ = wbr::LegKinematics(config_.leg_l1_m, config_.leg_l2_m);
+    left_leg_.SetL1(config_.leg_l1_m);
+    left_leg_.SetL2(config_.leg_l2_m);
+    right_leg_.SetL1(config_.leg_l1_m);
+    right_leg_.SetL2(config_.leg_l2_m);
     theta_ll_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
                                               config_.theta_dot_filter_cutoff_hz);
     theta_lr_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,

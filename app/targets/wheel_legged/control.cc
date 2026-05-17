@@ -8,12 +8,12 @@ f32 flag = 0,booster=0;
 
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
-
+float debug_mid_target_theta;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-
+float debug_pitch_motor_raw_pos_rad;
 DebugSnapshot wl_debug __attribute__((section(".sram4")));
 
 namespace {
@@ -33,6 +33,7 @@ constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFr
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
+constexpr float kSpinExitYawAlignThresholdRad = ns::control_loop::kSpinExitYawAlignThresholdRad;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
@@ -46,6 +47,11 @@ constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
 constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
+constexpr float kLandingDecelThetaGain = ns::control_loop::kLandingDecelThetaGain;
+constexpr float kLandingDecelThetaMaxRad = ns::control_loop::kLandingDecelThetaMaxRad;
+constexpr float kLandingDecelThetaRampStepRad = ns::control_loop::kLandingDecelThetaRampStepRad;
+constexpr std::uint32_t kLandingDecelOffGroundMinMs = ns::control_loop::kLandingDecelOffGroundMinMs;
+constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandingDecelStableDurationMs;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -98,7 +104,12 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
-  const chassis::Fsm::Input chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  {
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
+  }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
@@ -186,7 +197,7 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
-    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+    // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
     booster = globals->shoot_controller.booster_pos();
   }
 #else
@@ -265,16 +276,21 @@ void ControlLoop() {
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;
   const bool mode_changed = (chassis_output.mode != ctx.last_chassis_mode);
-  const bool last_was_spin = (ctx.last_chassis_mode == chassis::Fsm::State::kSpin);
-  const bool now_is_spin = (chassis_output.mode == chassis::Fsm::State::kSpin);
+  const auto is_spin_like = [](chassis::Fsm::State s) {
+    return s == chassis::Fsm::State::kSpin || s == chassis::Fsm::State::kSpinExitPending;
+  };
+  const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
+  const bool now_is_spin = is_spin_like(chassis_output.mode);
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
     if (cross_spin) {
-      // 进出小陀螺时继承当前车体角速度，避免阶梯跳变
-      ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       if (!now_is_spin) {
-        ctx.spin_exit_recovery = true;  // 退出小陀螺，启用快速偏航斜坡
+        // 退出小陀螺：偏航已对齐正前方，不继承 phi_dot，直接交给 yaw follow PID 控制
+      } else {
+        // 进入小陀螺：继承当前车体角速度做平滑起步，强制对齐正前方
+        ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+        ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
       }
     }
     ctx.last_chassis_mode = chassis_output.mode;
@@ -318,7 +334,9 @@ void ControlLoop() {
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-    ctx.filtered_yaw_dot = 0.0f;
+    if (!ctx.spin_exit_recovery) {
+      ctx.filtered_yaw_dot = 0.0f;
+    }
     ctx.yaw_follow_pid.Clear();
   }
 
@@ -342,8 +360,9 @@ void ControlLoop() {
 
   // ── 7f. 纵向速度目标计算 ──
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
-  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
-                                    chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled = (chassis_output.mode == chassis::Fsm::State::kSpin ||
+                                     chassis_output.mode == chassis::Fsm::State::kSpinExitPending) &&
+                                    chassis_output_enable && chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
        chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
@@ -445,6 +464,51 @@ void ControlLoop() {
   wl_debug.filtered_s_dot_mps = ctx.filtered_s_dot;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
+
+  // ── 落地减速：中腿长离地→落地边沿触发，theta_bias = k * s_dot 辅助减速 ──
+  // const bool is_mid_leg = chassis_output.mode == chassis::Fsm::State::kMidLeg;
+  // const bool off_ground = chassis_control_output.off_ground_in_mid_high_leg;
+  //
+  // // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
+  // const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
+  // const bool landing_edge = is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
+  //                           ctx.off_ground_duration_ticks >= off_ground_min_ticks;
+  // ctx.prev_off_ground_in_mid_leg = off_ground;
+  //
+  // if (off_ground && is_mid_leg) {
+  //   ctx.off_ground_duration_ticks++;
+  // } else {
+  //   ctx.off_ground_duration_ticks = 0U;
+  // }
+  //
+  // if (landing_edge) {
+  //   ctx.landing_decel_active = true;
+  //   ctx.landing_stable_ticks = 0U;
+  // }
+  //
+  // if (ctx.landing_decel_active) {
+  //   const bool speed_low = std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
+  //   if (speed_low) {
+  //     ctx.landing_stable_ticks++;
+  //   } else {
+  //     ctx.landing_stable_ticks = 0U;
+  //   }
+  //
+  //   const uint32_t stable_ticks_needed = kLandingDecelStableDurationMs / 2U;  // 500Hz → 2ms/tick
+  //   if (ctx.landing_stable_ticks >= stable_ticks_needed) {
+  //     ctx.landing_decel_active = false;
+  //   }
+  // }
+  //
+  // {
+  //   const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
+  //                                                                   -kLandingDecelThetaMaxRad,
+  //                                                                   kLandingDecelThetaMaxRad)
+  //                                                      : 0.0f;
+  //   const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
+  //   RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
+  // }
+
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
@@ -456,13 +520,18 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
+    //    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
+    //    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
+    //      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
-  chassis_update_input.expected.theta_b = spin_control_enabled ? kSpinThetaBBiasRad : kExpectedThetaBBiasRad;
+  if (!spin_control_enabled) {
+    chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
+  }
 
   // ── 7l. 偏航角速度控制 ──
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
@@ -623,6 +692,27 @@ void ControlLoop() {
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
   }
-
+  debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
+
+  // ── UI 更新（操作手屏）──
+  {
+    // Dynamic: 发射/aimbot 数据
+    ui_g_Dynamic_Fric_Rpm->number = static_cast<int32_t>(wl_debug.fw_raw_rpm_1);
+    ui_g_Dynamic_Bult_Spd_Num->number = static_cast<int32_t>(wl_debug.referee_bullet_speed_mps);
+    ui_g_Dynamic_Offset_Pitch_Num->number = static_cast<int32_t>(wl_debug.gimbal_euler_pitch_rad * 1000.f);
+    ui_g_Dynamic_Distance_Num->number = 0;
+    ui_g_Dynamic_Bult_Amount_Num->number = 0;
+
+    // Dynamic2: 状态数据
+    ui_g_Dynamic2_Leg_length->number = static_cast<int32_t>(wl_debug.chassis_mean_leg_length_m * 1000.f);
+    ui_g_Dynamic2_Chassis_State->number = static_cast<int32_t>(chassis_output.mode);
+    ui_g_Dynamic2_Gimbal_State->number = static_cast<int32_t>(gimbal_output.mode);
+    ui_g_Dynamic2_Offset_Yaw_Num->number = static_cast<int32_t>(wl_debug.gimbal_euler_yaw_rad * 1000.f);
+
+    // ui_update_g_Dynamic();
+    // ui_update_g_Dynamic2();
+    // ui_update_g_Dynamic3();
+  }
+
 }

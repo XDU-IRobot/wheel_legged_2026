@@ -11,14 +11,13 @@
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
 uint8_t debug_stair_climb_phase_ = 0;
-
+f32 l_pid;
 namespace {
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
 
 constexpr rm::f32 kLegL1M = wheel_legged::params::active::chassis::kLegL1M;
 constexpr rm::f32 kLegL2M = wheel_legged::params::active::chassis::kLegL2M;
-constexpr rm::f32 kSpringTorqueScale = wheel_legged::params::active::chassis::kSpringTorqueScale;
 
 constexpr rm::f32 kBodyMassKg = wheel_legged::params::active::chassis::kBodyMassKg;
 constexpr rm::f32 kLegMassKg = wheel_legged::params::active::chassis::kLegMassKg;
@@ -57,20 +56,25 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
 }
 
 /**
- * @brief 根据腿长估算机械弹簧对关节的等效补偿力矩
+ * @brief 左腿弹簧补偿力矩（三次多项式）
  */
-rm::f32 ComputeSpringTorqueFromLegLength(const rm::f32 leg_length_m) {
-  static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
-  const rm::f32 x =
-      std::acos((kLegL2M * kLegL2M + kLegL1M * kLegL1M - leg_length_m * leg_length_m) / (2.0f * kLegL2M * kLegL1M));
-  return -(std::sqrt(wheel_legged::params::active::chassis::kSpringModelA -
-                     wheel_legged::params::active::chassis::kSpringModelB * std::cos(x)) *
-           std::sin(x - kPi / wheel_legged::params::active::chassis::kSpringPhaseDivisor) /
-           (std::sqrt(wheel_legged::params::active::chassis::kSpringModelC -
-                      wheel_legged::params::active::chassis::kSpringModelD *
-                          std::cos(x - kPi / wheel_legged::params::active::chassis::kSpringPhaseDivisor)) *
-            std::sin(x))) *
-         kSpringTorqueScale;
+rm::f32 ComputeLeftSpringTorque(const rm::f32 leg_length_m) {
+  const rm::f32 l2 = leg_length_m * leg_length_m;
+  return wheel_legged::params::active::chassis::kLeftSpringC0 +
+         wheel_legged::params::active::chassis::kLeftSpringC1 * leg_length_m +
+         wheel_legged::params::active::chassis::kLeftSpringC2 * l2 +
+         wheel_legged::params::active::chassis::kLeftSpringC3 * l2 * leg_length_m;
+}
+
+/**
+ * @brief 右腿弹簧补偿力矩（三次多项式）
+ */
+rm::f32 ComputeRightSpringTorque(const rm::f32 leg_length_m) {
+  const rm::f32 l2 = leg_length_m * leg_length_m;
+  return wheel_legged::params::active::chassis::kRightSpringC0 +
+         wheel_legged::params::active::chassis::kRightSpringC1 * leg_length_m +
+         wheel_legged::params::active::chassis::kRightSpringC2 * l2 +
+         wheel_legged::params::active::chassis::kRightSpringC3 * l2 * leg_length_m;
 }
 
 /**
@@ -133,6 +137,11 @@ void chassis::Chassis::Init() {
   }
   lqr_controller_.SetLqrCoefficients(coeff_vec);
 
+  left_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+                                            wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+  right_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
+                                             wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
+
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
   SafeStop();
@@ -161,7 +170,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   estimator_input.dt_s = (estimator_input.dt_s > 0.0f) ? estimator_input.dt_s : kControlDtS;
   estimator_input.s_ref_m = input.expected.s;
   estimator_input.use_external_s_ref = false;
-  estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
+  // estimator_input.use_wheel_speed_direct = (input.fsm_mode == Fsm::State::kSpin);
+  estimator_input.use_wheel_speed_direct = false;  // 小陀螺也用卡尔曼滤波速度
 
   state_estimator_.Update(estimator_input);
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
@@ -181,6 +191,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   right_leg_.Update(estimator_input.dt_s);
 
   imu_roll_ = estimator_input.imu.roll_rad;
+  imu_acc_x_mps2_ = estimator_input.imu.acc_x_mps2;
+  imu_acc_z_mps2_ = estimator_input.imu.acc_z_mps2;
   lf_real_torque_ = estimator_input.left_leg.front.torque_nm;
   lb_real_torque_ = estimator_input.left_leg.back.torque_nm;
   rf_real_torque_ = estimator_input.right_leg.front.torque_nm;
@@ -188,6 +200,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   output_.current_state = state_output.current;
   output_.mean_leg_length_m = 0.5f * (state_output.left_leg_length_m + state_output.right_leg_length_m);
+  output_.left_l0_dot_mps = left_leg_.l0_dot();
+  output_.right_l0_dot_mps = right_leg_.l0_dot();
   output_.wheel_speed_mps = state_output.wheel_speed_mps;
   output_.speed_mps = state_output.fused_speed_mps;
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
@@ -308,20 +322,20 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   if (input.fsm_mode == Fsm::State::kSpin) {
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
-    left_l0_pid_.Update(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0());
-    right_l0_pid_.Update(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0());
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
+                               2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
+                                -right_leg_.l0_dot(), 2);
   } else {
-    // left_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-    // right_l0_pid_.Update(params_.leg_target_length_m, avg_leg_length_m);
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, filtered_l0_dot_left_);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, filtered_l0_dot_right_);
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
 
-  l_spring_torque_ = ComputeSpringTorqueFromLegLength(left_leg_.l0());
-  r_spring_torque_ = ComputeSpringTorqueFromLegLength(right_leg_.l0());
+  l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
+  r_spring_torque_ = ComputeRightSpringTorque(right_leg_.l0());
 
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
@@ -335,7 +349,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
 
-  if (output_.posture_valid) {
+  // if (output_.posture_valid) {
+  if (true) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
@@ -344,18 +359,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = 250.0f + roll_pid_.out();
       right_force_ = 250.0f - roll_pid_.out();
     } else if (use_jump_retract2) {
-      left_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
-      right_l0_pid_jump_three_.Update(params_.leg_target_length_m, avg_leg_length_m);
+      left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
+      right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
       leg_length_force = 0.5f * (left_l0_pid_jump_three_.out() + right_l0_pid_jump_three_.out());
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else if (use_jump_retract1) {
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
-    } else if (!standup_complete_ && standup_phase_ == 0) {
-      // 起立 Phase 0（收腿）：仅腿长 PID + 气弹簧补偿，关重力/横滚/惯性
-      left_force_ = leg_length_force + l_spring_torque_;
-      right_force_ = leg_length_force + r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -371,6 +382,17 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                             (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+
+    // 离地时将气弹簧补偿全部关掉，避免轮子空转时力控发散
+    // 已触发强制低腿长时恢复正常弹簧补偿
+    if (off_ground_in_mid_high_leg) {
+      if (!force_low_leg_) {
+        // left_force_ -= l_spring_torque_;
+        // right_force_ -= r_spring_torque_;
+        // left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        // right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      }
+    }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
     if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb || !standup_complete_) {
@@ -421,23 +443,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         stair_climb_stable_ticks_ = 0;
       }
 
-      if (stair_climb_phase_<2) {
-        left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
-                                                  state_output.current.theta_ll_dot);
-        right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
-                                                   state_output.current.theta_lr_dot);
-        t_bl_cmd = -left_stair_climb_theta_pid_.out();
-        t_br_cmd = -right_stair_climb_theta_pid_.out();
-      }else if (stair_climb_phase_ == 2){
-        t_bl_cmd = 0;
-        t_br_cmd = 0;
-      }
+      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
+                                                state_output.current.theta_ll_dot);
+      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
+                                                 state_output.current.theta_lr_dot);
+      t_bl_cmd = -left_stair_climb_theta_pid_.out();
+      t_br_cmd = -right_stair_climb_theta_pid_.out();
 
       output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
-    } else if (standup_phase_ == 0) {
-      // 起立 Phase 0（收腿）：关闭 LQR 摆角力矩，仅保留腿长力
-      t_bl_cmd = 0.0f;
-      t_br_cmd = 0.0f;
     } else {
       stair_climb_phase_ = 0;
       stair_climb_stable_ticks_ = 0;
@@ -445,6 +458,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
     }
+
+    left_force_ = l_spring_torque_;
+    right_force_ = r_spring_torque_;
+    t_bl_cmd = 0;
+    t_br_cmd = 0;
 
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
@@ -583,29 +601,47 @@ void chassis::Chassis::CalSupportForce() {
 
   const rm::f32 theta_ll = rm::modules::Wrap(output_.current_state.theta_ll, -kPi, kPi);
   const rm::f32 theta_lr = rm::modules::Wrap(output_.current_state.theta_lr, -kPi, kPi);
+  const rm::f32 theta_b = rm::modules::Wrap(output_.current_state.theta_b, -kPi, kPi);
 
   const rm::f32 left_F_bh = l_f * std::cos(theta_ll);
   const rm::f32 right_F_bh = r_f * std::cos(theta_lr);
 
-  const rm::f32 left_l0_ddot = (filtered_l0_dot_left_ - left_l0_dot_prev_) / kControlDtS;
-  const rm::f32 right_l0_ddot = (filtered_l0_dot_right_ - right_l0_dot_prev_) / kControlDtS;
-  left_l0_dot_prev_ = filtered_l0_dot_left_;
-  right_l0_dot_prev_ = filtered_l0_dot_right_;
+  const rm::f32 left_l0_ddot_raw = (left_leg_.l0_dot() - left_l0_dot_prev_) / kControlDtS;
+  const rm::f32 right_l0_ddot_raw = (right_leg_.l0_dot() - right_l0_dot_prev_) / kControlDtS;
+  left_l0_dot_prev_ = left_leg_.l0_dot();
+  right_l0_dot_prev_ = right_leg_.l0_dot();
+
+  const rm::f32 left_l0_ddot = left_l0_ddot_filter_.apply(left_l0_ddot_raw);
+  const rm::f32 right_l0_ddot = right_l0_ddot_filter_.apply(right_l0_ddot_raw);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
+  const rm::f32 effective_mass_left_kg = 0.5f * kBodyMassKg + eta_left * kLegMassKg;
+  const rm::f32 effective_mass_right_kg = 0.5f * kBodyMassKg + eta_right * kLegMassKg;
 
   const rm::f32 left_leg_dyn_comp = -(1.0f - eta_left) * left_l0_ddot * std::cos(theta_ll);
   const rm::f32 right_leg_dyn_comp = -(1.0f - eta_right) * right_l0_ddot * std::cos(theta_lr);
 
-  const rm::f32 gravity_support_left = (0.5f * kBodyMassKg + eta_left * kLegMassKg) * kGravityMps2;
-  const rm::f32 gravity_support_right = (0.5f * kBodyMassKg + eta_right * kLegMassKg) * kGravityMps2;
+  // a_c: body vertical acceleration in world frame (z-up), estimated from IMU acceleration and pitch.
+  const rm::f32 body_vertical_acc_mps2 =
+      imu_acc_x_mps2_ * std::sin(theta_b) + imu_acc_z_mps2_ * std::cos(theta_b) - kGravityMps2;
+  const rm::f32 body_vertical_acc_limited_mps2 =
+      std::clamp(body_vertical_acc_mps2, -2.0f * kGravityMps2, 2.0f * kGravityMps2);
 
-  // left_support_force_est_n_ = left_F_bh + gravity_support_left + kLegMassKg * left_leg_dyn_comp;
-  // right_support_force_est_n_ = right_F_bh + gravity_support_right + kLegMassKg * right_leg_dyn_comp;
+  const rm::f32 gravity_support_left = effective_mass_left_kg * kGravityMps2;
+  const rm::f32 gravity_support_right = effective_mass_right_kg * kGravityMps2;
+  const rm::f32 dyn_support_left = effective_mass_left_kg * (body_vertical_acc_limited_mps2 + left_leg_dyn_comp);
+  const rm::f32 dyn_support_right = effective_mass_right_kg * (body_vertical_acc_limited_mps2 + right_leg_dyn_comp);
 
-  left_support_force_est_n_ = left_F_bh + gravity_support_left;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right;
+  left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
 
+  output_.left_F_bh_n = left_F_bh;
+  output_.right_F_bh_n = right_F_bh;
+  output_.left_gravity_support_n = gravity_support_left;
+  output_.right_gravity_support_n = gravity_support_right;
+  output_.left_dyn_support_n = dyn_support_left;
+  output_.right_dyn_support_n = dyn_support_right;
+  output_.left_l0_ddot_mps2 = left_l0_ddot;
+  output_.right_l0_ddot_mps2 = right_l0_ddot;
 }
-

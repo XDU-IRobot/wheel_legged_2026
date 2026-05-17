@@ -130,6 +130,7 @@ struct ChassisFsmInput {
   LegProfile leg_request{LegProfile::kLow};                ///< 腿长档位请求
   CombatProfile combat_profile{CombatProfile::kNormal};    ///< 战斗域子模式
   bool spin_hold{false};                                   ///< 小陀螺保持请求
+  bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
   float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
   float theta_ll_rad{0.0f};                                ///< 当前左腿摆角

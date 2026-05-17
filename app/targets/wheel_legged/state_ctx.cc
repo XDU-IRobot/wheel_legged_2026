@@ -34,6 +34,10 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   yaw_follow_pid.Clear();
   integrate_position = false;
   yaw_follow_target_initialized = false;
+  landing_decel_active = false;
+  landing_theta_bias = 0.0f;
+  landing_stable_ticks = 0U;
+  off_ground_duration_ticks = 0U;
 }
 
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {

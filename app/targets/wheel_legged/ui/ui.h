@@ -1,0 +1,39 @@
+//
+// Created by RM UI Designer
+// Static Edition
+//
+
+#ifndef UI_H
+#define UI_H
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "ui_interface.h"
+
+#include "ui_g.h"
+
+void ui_init_g_Dynamic();
+void ui_update_g_Dynamic();
+void ui_remove_g_Dynamic();
+void ui_init_g_Dynamic2();
+void ui_update_g_Dynamic2();
+void ui_remove_g_Dynamic2();
+void ui_init_g_Dynamic3();
+void ui_update_g_Dynamic3();
+void ui_remove_g_Dynamic3();
+void ui_init_g_Static();
+void ui_update_g_Static();
+void ui_remove_g_Static();
+void ui_init_g_Static2();
+void ui_update_g_Static2();
+void ui_remove_g_Static2();
+void ui_init_g_Static3();
+void ui_update_g_Static3();
+void ui_remove_g_Static3();
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // UI_H

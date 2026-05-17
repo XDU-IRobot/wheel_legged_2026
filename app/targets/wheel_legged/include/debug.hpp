@@ -142,18 +142,28 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float lqr_err_theta_b_dot;   // theta_b_dot 误差
 
   // ── 底盘状态 ──
-  float chassis_mean_leg_length_m;      // 平均腿长
-  float chassis_left_leg_length_m;      // 左腿长度
-  float chassis_right_leg_length_m;     // 右腿长度
-  float chassis_left_l0_pid_out;        // 左腿腿长 PID 输出
-  float chassis_right_l0_pid_out;       // 右腿腿长 PID 输出
-  float chassis_speed_mps;              // 车体融合速度
-  float chassis_left_force_n;           // 左腿竖直力
-  float chassis_right_force_n;          // 右腿竖直力
-  float chassis_left_support_force_n;   // 左腿支撑力
-  float chassis_right_support_force_n;  // 右腿支撑力
-  uint8_t chassis_posture_valid;        // 姿态有效
-  uint8_t chassis_off_ground;           // 离地
+  float chassis_mean_leg_length_m;        // 平均腿长
+  float chassis_left_leg_length_m;        // 左腿长度
+  float chassis_right_leg_length_m;       // 右腿长度
+  float chassis_left_l0_dot_mps;          // 左腿腿长变化率
+  float chassis_right_l0_dot_mps;         // 右腿腿长变化率
+  float chassis_left_l0_ddot_mps2;        // 左腿腿长加速度
+  float chassis_right_l0_ddot_mps2;       // 右腿腿长加速度
+  float chassis_left_l0_pid_out;          // 左腿腿长 PID 输出
+  float chassis_right_l0_pid_out;         // 右腿腿长 PID 输出
+  float chassis_speed_mps;                // 车体融合速度
+  float chassis_left_force_n;             // 左腿竖直力
+  float chassis_right_force_n;            // 右腿竖直力
+  float chassis_left_support_force_n;     // 左腿支撑力
+  float chassis_right_support_force_n;    // 右腿支撑力
+  float chassis_left_F_bh_n;              // 左腿雅可比反力
+  float chassis_right_F_bh_n;             // 右腿雅可比反力
+  float chassis_left_gravity_support_n;   // 左腿重力支撑
+  float chassis_right_gravity_support_n;  // 右腿重力支撑
+  float chassis_left_dyn_support_n;       // 左腿动力学补偿
+  float chassis_right_dyn_support_n;      // 右腿动力学补偿
+  uint8_t chassis_posture_valid;          // 姿态有效
+  uint8_t chassis_off_ground;             // 离地
 
   // ── DYP 超声波 ──
   uint16_t dyp_distance_raw_left;        // 左超声波原始读数

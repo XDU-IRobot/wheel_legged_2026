@@ -48,6 +48,12 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_right_force_n = chassis_control_output.right_force_n;
   wl_debug.chassis_left_support_force_n = chassis_control_output.left_support_force_n;
   wl_debug.chassis_right_support_force_n = chassis_control_output.right_support_force_n;
+  wl_debug.chassis_left_F_bh_n = chassis_control_output.left_F_bh_n;
+  wl_debug.chassis_right_F_bh_n = chassis_control_output.right_F_bh_n;
+  wl_debug.chassis_left_gravity_support_n = chassis_control_output.left_gravity_support_n;
+  wl_debug.chassis_right_gravity_support_n = chassis_control_output.right_gravity_support_n;
+  wl_debug.chassis_left_dyn_support_n = chassis_control_output.left_dyn_support_n;
+  wl_debug.chassis_right_dyn_support_n = chassis_control_output.right_dyn_support_n;
   wl_debug.chassis_off_ground = static_cast<uint8_t>(chassis_control_output.off_ground_in_mid_high_leg);
 
   // ── 关节电机原始反馈 ──
@@ -104,6 +110,10 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.state_l_r_m = x.l_r;
   wl_debug.chassis_left_leg_length_m = x.l_l;
   wl_debug.chassis_right_leg_length_m = x.l_r;
+  wl_debug.chassis_left_l0_dot_mps = chassis_control_output.left_l0_dot_mps;
+  wl_debug.chassis_right_l0_dot_mps = chassis_control_output.right_l0_dot_mps;
+  wl_debug.chassis_left_l0_ddot_mps2 = chassis_control_output.left_l0_ddot_mps2;
+  wl_debug.chassis_right_l0_ddot_mps2 = chassis_control_output.right_l0_ddot_mps2;
   wl_debug.chassis_left_l0_pid_out = chassis_control_output.left_l0_pid_out;
   wl_debug.chassis_right_l0_pid_out = chassis_control_output.right_l0_pid_out;
 

@@ -16,7 +16,9 @@
 struct SharedResourcesNoDtcm {
   rm::hal::Serial<wheel_legged::params::active::globals::kDr16UartRxBufferSize> rc_uart{huart5, false, true};
   rm::hal::Serial<wheel_legged::params::active::globals::kImuUartRxBufferSize> imu_uart{huart10, false, true};
-  rm::hal::Serial<wheel_legged::params::active::globals::kRefereeUartRxBufferSize> referee_uart{huart1, false, true};
+  rm::hal::Serial<wheel_legged::params::active::globals::kRefereeUartRxBufferSize> referee_uart{huart1, true, true};
 };
 
 extern __attribute__((section(".sram4"))) SharedResourcesNoDtcm globals_no_dtcm;
+
+
