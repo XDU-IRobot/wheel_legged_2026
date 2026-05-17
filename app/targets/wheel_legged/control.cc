@@ -198,6 +198,17 @@ void ControlLoop() {
                                        gimbal_control_output.ident_tx_len, 5);
   }
 
+  // 超级电容 TX：每周期从裁判系统读取功率上限和缓冲能量，下发给超级电容
+  if (globals->supercap.has_value() && globals->referee.has_value()) {
+    rm::device::GkSupercap::TxData supercap_tx{};
+    supercap_tx.enable_dcdc = 1;
+    supercap_tx.system_restart = 0;
+    supercap_tx.resv0 = 0;
+    supercap_tx.feedback_referee_power_limit = globals->referee->data().robot_status.chassis_power_limit;
+    supercap_tx.feedback_referee_energy_buffer = globals->referee->data().power_heat_data.buffer_energy;
+    globals->supercap->Update(supercap_tx);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
@@ -228,9 +239,10 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
-    const auto shoot_output =
-        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, input.dr16.dial,
-                              input.tc_remote.left_button, in_combat);
+    const bool fire_flag =
+        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+    const auto shoot_output = globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm,
+                                                    kControlLoopDtS, fire_flag, in_combat);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif
@@ -675,6 +687,21 @@ void ControlLoop() {
   }
   wl_debug.dr16_parallel = static_cast<uint8_t>(tc_state.dr16_parallel);
 
+  // ── 超级电容调试 ──
+  if (globals->supercap.has_value()) {
+    wl_debug.supercap_enable_dcdc = 1U;
+    wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
+    wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
+    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
+    wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
+  } else {
+    wl_debug.supercap_enable_dcdc = 0U;
+    wl_debug.supercap_error_code = 0U;
+    wl_debug.supercap_chassis_power = 0.0f;
+    wl_debug.supercap_chassis_power_limit = 0U;
+    wl_debug.supercap_cap_energy = 0U;
+  }
+
   // ── 自瞄 RX 调试（NUC 反馈，原始为度，转为弧度存储）──
   if (globals->aimbot.has_value()) {
     constexpr float kDegToRad = kPi / 180.0f;
@@ -690,6 +717,6 @@ void ControlLoop() {
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
   }
-  debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
+  debug_pitch_motor_raw_pos_rad = globals->dial->pos_rad();
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }

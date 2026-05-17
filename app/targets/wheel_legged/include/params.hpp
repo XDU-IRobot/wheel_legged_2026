@@ -56,6 +56,8 @@ const DmMitSettings kDmLfSettings{kDmLfMasterId, kDmLfSlaveId, kPi, 45.0f, 54.0f
 const DmMitSettings kDmLbSettings{kDmLbMasterId, kDmLbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 const DmMitSettings kDmRfSettings{kDmRfMasterId, kDmRfSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
 const DmMitSettings kDmRbSettings{kDmRbMasterId, kDmRbSlaveId, kPi, 45.0f, 54.0f, {0.0f, 500.0f}, {0.0f, 10.0f}};
+
+constexpr std::uint16_t kSupercapRxStdId = 0x210;  ///< 超级电容反馈 CAN 标准 ID (wheel_can)
 }  // namespace globals
 
 // ── 云台公共（控制周期、力矩上限、重力补偿、电机配置）──
@@ -513,11 +515,11 @@ namespace globals {
 using namespace common::globals;
 
 constexpr std::uint16_t kLeftWheelId = 0x02;   ///< 左轮毂电机 CAN ID
-constexpr std::uint16_t kRightWheelId = 0x03;  ///< 右轮毂电机 CAN ID
+constexpr std::uint16_t kRightWheelId = 0x01;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kFricLeftId = 0x02;   ///< 左摩擦轮电机 CAN ID
+constexpr std::uint16_t kFricLeftId = 0x01;   ///< 左摩擦轮电机 CAN ID
 constexpr std::uint16_t kFricRightId = 0x04;  ///< 右摩擦轮电机 CAN ID
-constexpr std::uint16_t kDialId = 0x01;       ///< 拨盘电机 CAN ID
+constexpr std::uint16_t kDialId = 0x03;       ///< 拨盘电机 CAN ID
 }  // namespace globals
 
 // ── 云台 ──
@@ -525,7 +527,7 @@ namespace gimbal {
 using namespace common::gimbal;
 
 constexpr float kPitchMinRad = -0.3f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.25f;  ///< 俯仰角上限 [rad]
+constexpr float kPitchMaxRad = 0.6f;   ///< 俯仰角上限 [rad]
 
 inline constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.05f, 10.0f, 1.0f};    ///< 偏航位置 PID
 inline constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};          ///< 偏航速度 PID
@@ -551,8 +553,8 @@ namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                            ///< 摩擦轮数量
 constexpr float kFricSpeedTargetRpm = 6900.0f;                           ///< 摩擦轮目标转速 [rpm]
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID
-constexpr PidGains kDialSpeedPid{15.0f, 0.f, 0.2f, 2000.0f, 0.0f};       ///< 拨盘速度 PID
-constexpr PidGains kDialPositionPid{8.0f, 0.f, 0.0f, 12000.0f, 0.0f};    ///< 拨盘位置 PID
+constexpr PidGains kDialSpeedPid{15.0f, 0.f, 0.2f, 8000.0f, 0.0f};       ///< 拨盘速度 PID
+constexpr PidGains kDialPositionPid{8.0f, 0.f, 0.0f, 1500.0f, 0.0f};     ///< 拨盘位置 PID
 constexpr int16_t kDialFireThreshold = -600;                             ///< 发射触发拨轮阈值
 constexpr float kShootFrequencyHz = 10.0f;                               ///< 发射频率 [Hz]
 }  // namespace shoot
@@ -568,7 +570,7 @@ constexpr float kStairClimbThetaTargetRad = 0.85f;                 ///< 上台�
 constexpr std::uint32_t kStairClimbDurationMs = 220U;              ///< 上台阶最长持续时间 [ms]
 constexpr float kStairClimbLegLengthNearTargetToleranceM = 0.03f;  ///< 腿长到位容差 [m]
 constexpr float kStairClimbThetaNearZeroThresholdRad = 0.12f;  ///< 摆角归零判定阈值（上台阶完成） [rad]
-constexpr std::uint32_t kStairClimbPitchStableMs = 250U;       ///< 上台阶完成后俯仰稳定等待时间 [ms]
+constexpr std::uint32_t kStairClimbPitchStableMs = 150U;       ///< 上台阶完成后俯仰稳定等待时间 [ms]
 
 // ==== 倒地自启 ====
 constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;        ///< 倒地确认时间 [ms]
@@ -595,10 +597,10 @@ constexpr float kJumpMidRecoverLegLengthM = 0.20f;      ///< 跳跃回收阶段�
 constexpr float kJumpMidPushReachedLegLengthM = 0.25f;  ///< 蹬伸到位判定腿长 [m]
 
 // ==== 基本运动（腿长档位）====
-constexpr float kLowLegLengthM = 0.127f;             ///< 低腿长档位目标腿长 [m]
-constexpr float kMidLegLengthM = 0.18f;              ///< 中腿长档位目标腿长 [m]
-constexpr float kHighLegLengthM = 0.29f;             ///< 高腿长档位目标腿长 [m]
-constexpr float kLegLengthRampTimeS = 0.5f;          ///< 腿长切换斜坡时间 [s]
+constexpr float kLowLegLengthM = 0.15f;              ///< 低腿长档位目标腿长 [m]
+constexpr float kMidLegLengthM = 0.21f;              ///< 中腿长档位目标腿长 [m]
+constexpr float kHighLegLengthM = 0.32f;             ///< 高腿长档位目标腿长 [m]
+constexpr float kLegLengthRampTimeS = 0.4f;          ///< 腿长切换斜坡时间 [s]
 constexpr std::uint32_t kSpinExitTimeoutMs = 3000U;  ///< 小陀螺预测退出超时兜底 [ms]
 }  // namespace chassis_fsm
 
@@ -611,15 +613,15 @@ constexpr float kLegL1M = 0.215f;      ///< 五连杆主动杆长度 [m]
 constexpr float kLegL2M = 0.254f;      ///< 五连杆从动杆长度 [m]
 
 // -- 左腿弹簧补偿三次多项式系数：tau = c0 + c1*l + c2*l^2 + c3*l^3 --
-constexpr float kLeftSpringC0 = 146.4908f;
-constexpr float kLeftSpringC1 = -2493.9365f;
-constexpr float kLeftSpringC2 = 6027.0066f;
-constexpr float kLeftSpringC3 = -4062.3715f;
+constexpr float kLeftSpringC0 = 75.269401f;
+constexpr float kLeftSpringC1 = -1872.833463f;
+constexpr float kLeftSpringC2 = 4779.020146f;
+constexpr float kLeftSpringC3 = -3726.603083f;
 // -- 右腿弹簧补偿三次多项式系数 --
-constexpr float kRightSpringC0 = 146.4908f;
-constexpr float kRightSpringC1 = -2493.9365f;
-constexpr float kRightSpringC2 = 6027.0066f;
-constexpr float kRightSpringC3 = -4062.3715f;
+constexpr float kRightSpringC0 = -128.58f;
+constexpr float kRightSpringC1 = 941.47f;
+constexpr float kRightSpringC2 = -7421.14f;
+constexpr float kRightSpringC3 = 13247.60f;
 
 // -- 质量/惯量/重力 --
 constexpr float kLegMassKg = 2.3f;     ///< 单条腿质量 [kg]
@@ -663,33 +665,31 @@ constexpr float kRollBalanceTargetRad = 0.0126f;  ///< 横滚平衡目标角 [ra
 
 // ==== 基本运动（LQR 增益矩阵）====
 constexpr std::array<float, 240> kCtrlP{
-    -6.0418,  -47.135,   33.938,   65.786,     -18.54,  -32.595,    -8.1719, -44.227, 40.203,    66.488,   -34.501,
-    -35.867,  -5.1067,   17.581,   -8.7096,    -17.756, -2.0712,    12.058,  -3.3389, 12.602,    -7.0543,  -11.165,
-    -3.3839,  10.252,    -11.058,  -94.4,      22.368,  67.174,     25.043,  -32.781, -0.75975,  -8.5889,  3.7382,
-    -6.8352,  5.0696,    -5.4338,  -4.5357,    -2.7356, -10.94,     29.375,  -26.821, -2.932,    -0.43947, -2.5017,
-    -0.57193, 8.2367,    -15.033,  -0.0014361, -27.314, 21.883,     44.501,  26.222,  -48.523,   -35.275,  -3.2188,
-    1.1036,   8.603,     4.8043,   -8.3005,    -8.081,  -6.0418,    33.938,  -47.135, -32.595,   -18.54,   65.786,
-    -8.1719,  40.203,    -44.227,  -35.867,    -34.501, 66.488,     5.1067,  8.7096,  -17.581,   -12.058,  2.0712,
-    17.756,   3.3389,    7.0543,   -12.602,    -10.252, 3.3839,     11.165,  -4.5357, -10.94,    -2.7356,  -2.932,
-    -26.821,  29.375,    -0.43947, -0.57193,   -2.5017, -0.0014361, -15.033, 8.2367,  -11.058,   22.368,   -94.4,
-    -32.781,  25.043,    67.174,   -0.75975,   3.7382,  -8.5889,    -5.4338, 5.0696,  -6.8352,   -27.314,  44.501,
-    21.883,   -35.275,   -48.523,  26.222,     -3.2188, 8.603,      1.1036,  -8.081,  -8.3005,   4.8043,   21.997,
-    36.895,   -76.954,   -146.96,  105.64,     56.929,  25.668,     35.153,  -94.91,  -156.24,   142.94,   63.935,
-    -4.3523,  -33.542,   -9.8113,  57.715,     -17.063, 15.054,     -2.8945, -24.78,  -4.4588,   40.21,    -11.728,
-    6.2654,   71.019,    -57.896,  -8.2545,    21.3,    72.175,     -4.683,  3.5773,  9.0787,    -5.9202,  -5.6915,
-    4.2879,   4.7767,    -1.8168,  -28.256,    -3.2042, 3.1463,     -48.217, -6.5011, -0.045783, 3.3007,   5.405,
-    -16.891,  9.659,     -12.649,  -39.979,    -251.93, 53.701,     246.32,  76.706,  -67.619,   -0.21243, -18.652,
-    -3.6476,  9.2131,    19.154,   1.609,      21.997,  -76.954,    36.895,  56.929,  105.64,    -146.96,  25.668,
-    -94.91,   35.153,    63.935,   142.94,     -156.24, 4.3523,     9.8113,  33.542,  -15.054,   17.063,   -57.715,
-    2.8945,   4.4588,    24.78,    -6.2654,    11.728,  -40.21,     -1.8168, -3.2042, -28.256,   -6.5011,  -48.217,
-    3.1463,   -0.045783, 5.405,    3.3007,     -12.649, 9.659,      -16.891, 71.019,  -8.2545,   -57.896,  -4.683,
-    72.175,   21.3,      3.5773,   -5.9202,    9.0787,  4.7767,     4.2879,  -5.6915, -39.979,   53.701,   -251.93,
-    -67.619,  76.706,    246.32,   -0.21243,   -3.6476, -18.652,    1.609,   19.154,  9.2131,
+    -3.677,   -32.988,  24.461,   48.301,  -20.221,  -18.65,  -5.4053,  -31.594,  29.749,   50.226,  -31.774, -21.334,
+    -0.4175,  1.7027,   -0.90249, -1.3779, -0.35613, 1.427,   -1.6348,  6.8432,   -3.7572,  -5.3276, -1.7495, 6.0114,
+    -8.9221,  -76.933,  16.932,   65.319,  11.018,   -23.105, -0.63901, -5.9927,  2.6725,   -4.2325, 2.9722,  -3.3463,
+    -3.7108,  0.5577,   -7.9065,  15.573,  -16.845,  8.4484,  -0.36151, -1.5052,  -0.15169, 5.6756,  -10.98,  1.6107,
+    -22.882,  19.136,   37.053,   25.301,  -39.854,  -31.989, -2.6428,  1.1039,   6.8776,   4.1077,  -6.9379, -6.4466,
+    -3.677,   24.461,   -32.988,  -18.65,  -20.221,  48.301,  -5.4053,  29.749,   -31.594,  -21.334, -31.774, 50.226,
+    0.4175,   0.90249,  -1.7027,  -1.427,  0.35613,  1.3779,  1.6348,   3.7572,   -6.8432,  -6.0114, 1.7495,  5.3276,
+    -3.7108,  -7.9065,  0.5577,   8.4484,  -16.845,  15.573,  -0.36151, -0.15169, -1.5052,  1.6107,  -10.98,  5.6756,
+    -8.9221,  16.932,   -76.933,  -23.105, 11.018,   65.319,  -0.63901, 2.6725,   -5.9927,  -3.3463, 2.9722,  -4.2325,
+    -22.882,  37.053,   19.136,   -31.989, -39.854,  25.301,  -2.6428,  6.8776,   1.1039,   -6.4466, -6.9379, 4.1077,
+    14.973,   14.374,   -42.451,  -99.811, 81.846,   28.667,  19.013,   13.372,   -61.938,  -112.22, 117.2,   38.726,
+    -0.39352, -3.7216,  -0.66662, 6.0658,  -1.909,   1.1948,  -1.5451,  -15.078,  -2.2603,  24.33,   -7.6647, 4.0882,
+    62.226,   -63.598,  -0.23276, 4.5871,  62.311,   -15.904, 3.2133,   4.3118,   -3.8103,  -7.0271, 8.0555,  1.9061,
+    -1.0296,  -34.247,  -6.7155,  23.435,  -27.607,  1.5564,  0.017199, 0.78704,  3.7539,   -10.097, 4.5952,  -7.2083,
+    -37.8,    -245.28,  61.414,   255.59,  68.796,   -87.372, -0.75878, -19.468,  0.21409,  13.351,  15.923,  -3.3155,
+    14.973,   -42.451,  14.374,   28.667,  81.846,   -99.811, 19.013,   -61.938,  13.372,   38.726,  117.2,   -112.22,
+    0.39352,  0.66662,  3.7216,   -1.1948, 1.909,    -6.0658, 1.5451,   2.2603,   15.078,   -4.0882, 7.6647,  -24.33,
+    -1.0296,  -6.7155,  -34.247,  1.5564,  -27.607,  23.435,  0.017199, 3.7539,   0.78704,  -7.2083, 4.5952,  -10.097,
+    62.226,   -0.23276, -63.598,  -15.904, 62.311,   4.5871,  3.2133,   -3.8103,  4.3118,   1.9061,  8.0555,  -7.0271,
+    -37.8,    61.414,   -245.28,  -87.372, 68.796,   255.59,  -0.75878, 0.21409,  -19.468,  -3.3155, 15.923,  13.351,
 };
 
 // ==== 基本运动（PID 增益）====
-constexpr PidGains kLeftL0Pid{4500.0f, 0.f, 300.0f, 170.0f, 10.0f};   ///< 左腿腿长 PID（常规）
-constexpr PidGains kRightL0Pid{4500.0f, 0.f, 300.0f, 170.0f, 10.0f};  ///< 右腿腿长 PID（常规）
+constexpr PidGains kLeftL0Pid{3000.0f, 0.f, 180.0f, 170.0f, 10.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0Pid{3000.0f, 0.f, 180.0f, 170.0f, 10.0f};  ///< 右腿腿长 PID（常规）
 constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 180.0f, 0.0f};      ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
@@ -744,8 +744,8 @@ constexpr float kTcMousePitchRateMaxRadS = 1.0f;    ///< 图传鼠标满偏时�
 constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
 constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kDr16MousePitchRateMaxRadS = 1.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.25f;         ///< RC 积分俯仰目标上限 [rad]
+constexpr float kPitchTargetMinRad = -0.3f;         ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMaxRad = 0.65f;         ///< RC 积分俯仰目标上限 [rad]
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]

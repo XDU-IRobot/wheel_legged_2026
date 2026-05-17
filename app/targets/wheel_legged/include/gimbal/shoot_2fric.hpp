@@ -23,7 +23,7 @@ class Shoot {
   void Enable();
   void Disable();
   ShootOutput Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                     int16_t dr16_dial, bool mouse_left, bool shoot_enabled);
+                     bool fire_flag, bool shoot_enabled);
 
   bool enabled() const { return enabled_; }
 

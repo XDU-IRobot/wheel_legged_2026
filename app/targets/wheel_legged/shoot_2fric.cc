@@ -26,7 +26,7 @@ void Shoot::Enable() { enabled_ = true; }
 void Shoot::Disable() { enabled_ = false; }
 
 ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                          int16_t dr16_dial, bool mouse_left, bool shoot_enabled) {
+                          bool fire_flag, bool shoot_enabled) {
   ShootOutput out{};
 
   if (shoot_enabled) {
@@ -34,7 +34,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     controller_.Arm(true);
     controller_.SetArmSpeed(ns::kFricSpeedTargetRpm);
 
-    if (dr16_dial < ns::kDialFireThreshold || mouse_left) {
+    if (fire_flag) {
       controller_.SetMode(Shoot2Fric::kFullAuto);
       controller_.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
