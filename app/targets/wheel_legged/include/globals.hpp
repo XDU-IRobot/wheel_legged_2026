@@ -17,6 +17,7 @@
 #include "gimbal_can_bridge.hpp"
 #include "utils/dyp_can.hpp"
 #include "utils/aimbot_can.hpp"
+#include "librm/device/supercap/gk_supercap.hpp"
 #include "librm/device/referee/referee.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
@@ -58,6 +59,7 @@ struct SharedResources {
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口
+  std::optional<rm::device::GkSupercap> supercap{};                                      ///< 超级电容 (wheel_can)
   std::optional<DypCanRxBridge> dyp_rx{};                                               ///< DYP 测距 CAN 接收
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
@@ -153,6 +155,9 @@ struct SharedResources {
         }
       });
       no_dtcm->referee_uart.Start();
+    }
+    if (!supercap.has_value()) {
+      supercap.emplace(*wheel_can);
     }
     if (!dyp_rx.has_value()) {
       dyp_rx.emplace(*gimbal_can);
