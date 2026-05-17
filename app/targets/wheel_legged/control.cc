@@ -232,11 +232,10 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
-    const bool fire_flag = input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold
-                           || input.tc_remote.left_button;
-    const auto shoot_output =
-        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat);
+    const bool fire_flag =
+        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+    const auto shoot_output = globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm,
+                                                    kControlLoopDtS, fire_flag, in_combat);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif

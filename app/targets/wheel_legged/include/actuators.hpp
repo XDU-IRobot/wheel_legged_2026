@@ -97,11 +97,11 @@ class Actuators {
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
     if (g.fric_left.has_value()) {
       g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-//            g.fric_left->SetCurrent(static_cast<int16_t>(0));
+      //            g.fric_left->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.fric_right.has_value()) {
       g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
-//            g.fric_right->SetCurrent(static_cast<int16_t>(0));
+      //            g.fric_right->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.dial.has_value()) {
       g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
@@ -235,22 +235,22 @@ class Actuators {
   }
 
   static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
-//    g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//    g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//    g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//    g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //    g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //    g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //    g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //    g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
 
-     g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
-     g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
-     g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
-     g.dm_rf->SetMitCommand(0.0f, 0.0f, rf_tau, 0.0f, 0.0f);
+    g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
+    g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
+    g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
+    g.dm_rf->SetMitCommand(0.0f, 0.0f, rf_tau, 0.0f, 0.0f);
   }
 
   static void SendWheelCurrent(SharedResources &g, float left_current, float right_current) {
-     g.left_wheel->SetCurrent(ClampToI16(left_current));
-     g.right_wheel->SetCurrent(ClampToI16(right_current));
-//    g.left_wheel->SetCurrent(ClampToI16(0));
-//    g.right_wheel->SetCurrent(ClampToI16(0));
+    g.left_wheel->SetCurrent(ClampToI16(left_current));
+    g.right_wheel->SetCurrent(ClampToI16(right_current));
+    //    g.left_wheel->SetCurrent(ClampToI16(0));
+    //    g.right_wheel->SetCurrent(ClampToI16(0));
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }
 };
