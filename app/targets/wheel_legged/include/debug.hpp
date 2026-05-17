@@ -181,8 +181,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
-  uint8_t shoot_enabled;           // 发射使能
-  float fric_speed_target_rpm;     // 摩擦轮目标转速 [rpm]（运行时可调）
+  uint8_t shoot_enabled;        // 发射使能
+  float fric_speed_target_rpm;  // 摩擦轮目标转速 [rpm]（运行时可调）
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;  // DM 拨盘位置 (hero)
   float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)
