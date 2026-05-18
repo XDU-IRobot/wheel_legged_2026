@@ -124,6 +124,18 @@ struct SharedResources {
     prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart7, UART7_IRQn, DMA1_Stream3_IRQn);
 
+    const auto prepare_uart_tx_dma = [](UART_HandleTypeDef &huart, const IRQn_Type uart_irqn,
+                                        const IRQn_Type dma_tx_irqn) {
+      (void)HAL_UART_AbortTransmit(&huart);
+      __HAL_UART_CLEAR_FLAG(&huart, UART_FLAG_TC);
+      huart.ErrorCode = HAL_UART_ERROR_NONE;
+      huart.gState = HAL_UART_STATE_READY;
+      HAL_NVIC_ClearPendingIRQ(uart_irqn);
+      HAL_NVIC_ClearPendingIRQ(dma_tx_irqn);
+    };
+
+    prepare_uart_tx_dma(huart1, USART1_IRQn, DMA2_Stream1_IRQn);
+
     dr16.Begin();
 
     if (!joint_can.has_value()) {

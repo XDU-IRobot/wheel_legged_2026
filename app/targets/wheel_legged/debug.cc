@@ -119,6 +119,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_right_l0_dot_mps = chassis_control_output.right_l0_dot_mps;
   wl_debug.chassis_left_l0_ddot_mps2 = chassis_control_output.left_l0_ddot_mps2;
   wl_debug.chassis_right_l0_ddot_mps2 = chassis_control_output.right_l0_ddot_mps2;
+  wl_debug.filtered_theta_ll_dot_rad_s = chassis_control_output.filtered_theta_ll_dot;
+  wl_debug.filtered_theta_lr_dot_rad_s = chassis_control_output.filtered_theta_lr_dot;
   wl_debug.chassis_left_l0_pid_out = chassis_control_output.left_l0_pid_out;
   wl_debug.chassis_right_l0_pid_out = chassis_control_output.right_l0_pid_out;
 

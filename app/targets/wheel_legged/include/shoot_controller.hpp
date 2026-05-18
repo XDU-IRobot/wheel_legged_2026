@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <optional>
 
 #include "librm/device/actuator/dm_motor.hpp"
@@ -31,6 +32,12 @@ class ShootController {
   static constexpr float kStallFallback = params::active::gimbal::kStallFallbackRad;
   static constexpr float kFwReadyRpm = params::active::gimbal::kFwReadySpeedThresholdRpm;
 
+  static constexpr uint16_t kShootDelayMin = 250;             ///< 最短发射间隔 [tick]
+  static constexpr uint16_t kShootDelayMax = 800;             ///< 最长发射间隔 [tick]
+  static constexpr int32_t kHeatCoolingGuard = 100;           ///< 热量余量达到此值允许再次射击
+  static constexpr int32_t kLocalHeatDecrementPerShot = 120;  ///< 每次射击本地热量扣减
+  static constexpr uint16_t kDefaultHeatLimit = 100;          ///< 裁判离线时的默认热量上限
+
  public:
   ShootController() = default;
 
@@ -53,6 +60,17 @@ class ShootController {
     fw_speed_pid_[0].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
     fw_speed_pid_[1].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
     fw_speed_pid_[2].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
+  }
+
+  void SetHeat(uint16_t current_heat, uint16_t heat_limit, bool referee_online) {
+    if (referee_online) {
+      heat_delta_ = static_cast<int32_t>(heat_limit) - static_cast<int32_t>(current_heat);
+      heat_limit_ = heat_limit;
+      referee_online_ = true;
+    } else {
+      referee_online_ = false;
+      heat_limit_ = kDefaultHeatLimit;
+    }
   }
 
   /**
@@ -104,12 +122,12 @@ class ShootController {
             now_angle_ = booster_pos_;
           }
           // 摩擦轮转速不足时等待加速
-          // if (static_cast<float>(fw_[0]->rpm()) >= kFwReadyRpm) {
-          booster_enable_ = true;
-          state_ = State::kReady;
-          // } else {
-          //   init_time_ = kInitTicks;  // 重新延时等待
-          // }
+          if (static_cast<float>(fw_[0]->rpm()) >= kFwReadyRpm) {
+            booster_enable_ = true;
+            state_ = State::kReady;
+          } else {
+            init_time_ = kInitTicks;  // 重新延时等待
+          }
         }
         break;
 
@@ -119,8 +137,13 @@ class ShootController {
           state_ = State::kStop;
         } else if (fire_trigger) {
           state_ = State::kShooting;
-          shoot_time_ = kShootTicks;
+          shoot_time_ = std::clamp(
+              static_cast<uint16_t>(static_cast<int32_t>(kShootTicks) - (static_cast<int32_t>(heat_limit_) - 100) / 2),
+              kShootDelayMin, kShootDelayMax);
           now_angle_ = next_angle_;
+          if (!referee_online_) {
+            heat_delta_ -= kLocalHeatDecrementPerShot;
+          }
         }
         break;
 
@@ -145,6 +168,7 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
+        } else if (referee_online_ && heat_delta_ < kHeatCoolingGuard) {
         } else {
           state_ = State::kReady;
         }
@@ -181,9 +205,11 @@ class ShootController {
 
     // 电机命令下发
     if (booster_enable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kEnable);
       booster_enable_ = false;
     } else if (booster_disable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kDisable);
       booster_disable_ = false;
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
@@ -204,6 +230,10 @@ class ShootController {
   float init_time_{0.0f};
   float shoot_time_{0.0f};
   float booster_pos_{0.0f};
+
+  int32_t heat_delta_{0};
+  uint16_t heat_limit_{kDefaultHeatLimit};
+  bool referee_online_{false};
 
   FwMotor *fw_[3]{nullptr};
   BoosterMotor *booster_{nullptr};

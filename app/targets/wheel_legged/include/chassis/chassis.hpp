@@ -58,12 +58,15 @@ class Chassis {
     rm::f32 right_l0_dot_mps{0.0f};         ///< 右腿腿长变化率
     rm::f32 left_l0_ddot_mps2{0.0f};        ///< 左腿腿长加速度
     rm::f32 right_l0_ddot_mps2{0.0f};       ///< 右腿腿长加速度
+    rm::f32 filtered_theta_ll_dot{0.0f};    ///< 滤波后左腿摆角速度
+    rm::f32 filtered_theta_lr_dot{0.0f};    ///< 滤波后右腿摆角速度
     rm::f32 speed_mps{0.0f};                ///< 融合车速
     rm::f32 wheel_speed_mps{0.0f};          ///< 轮系解算车速
     rm::f32 raw_wheel_speed_mps{0.0f};      ///< 原始轮速观测
     rm::f32 raw_accel_speed_mps{0.0f};      ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};        ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
+    bool off_ground_gravity_off{false};      ///< 离地 > 0.1s 重力补偿已关闭
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
@@ -135,16 +138,34 @@ class Chassis {
   rm::modules::LowPassFilterConstDt<rm::f32> left_l0_ddot_filter_{};
   rm::modules::LowPassFilterConstDt<rm::f32> right_l0_ddot_filter_{};
 
+  rm::f32 filtered_l0_dot_left_{0.0f};
+  rm::f32 filtered_l0_dot_right_{0.0f};
+  rm::modules::LowPassFilterConstDt<rm::f32> left_l0_dot_filter_{};
+  rm::modules::LowPassFilterConstDt<rm::f32> right_l0_dot_filter_{};
+
+  rm::modules::LowPassFilterConstDt<rm::f32> left_theta_dot_filter_{};
+  rm::modules::LowPassFilterConstDt<rm::f32> right_theta_dot_filter_{};
+  rm::f32 filtered_theta_ll_dot_{0.0f};
+  rm::f32 filtered_theta_lr_dot_{0.0f};
+  bool theta_dot_filter_initialized_{false};
+
   rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
 
   bool prev_enable_output_{false};
+  bool l0_dot_filter_initialized_{false};
   bool standup_complete_{false};
+  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿到目标腿长, 1=摆角收敛, 2=起立完成
+  uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};   ///< 当前 Phase 条件连续满足的周期数
   uint16_t off_ground_duration_ticks_{0};  ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};              ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};        ///< 强制低腿长已持续时间
   bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
+  bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
+  bool was_off_ground_{false};             ///< 上一周期离地状态（用于检测着地边沿）
+  float spring_compensation_scale_{1.0f};  ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};

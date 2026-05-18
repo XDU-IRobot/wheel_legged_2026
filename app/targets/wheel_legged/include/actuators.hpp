@@ -4,7 +4,7 @@
 
 #include "globals.hpp"
 #include "params.hpp"
-
+extern float l_c, r_c;
 /**
  * @file  targets/wheel_legged/include/actuators.hpp
  * @brief 执行器适配层：反馈采集与电机命令下发
@@ -247,10 +247,12 @@ class Actuators {
   }
 
   static void SendWheelCurrent(SharedResources &g, float left_current, float right_current) {
-    g.left_wheel->SetCurrent(ClampToI16(left_current));
-    g.right_wheel->SetCurrent(ClampToI16(right_current));
-    // g.left_wheel->SetCurrent(ClampToI16(0));
-    // g.right_wheel->SetCurrent(ClampToI16(0));
+    // g.left_wheel->SetCurrent(ClampToI16(left_current));
+    // g.right_wheel->SetCurrent(ClampToI16(right_current));
+    l_c = left_current;
+    r_c = right_current;
+    g.left_wheel->SetCurrent(ClampToI16(0));
+    g.right_wheel->SetCurrent(ClampToI16(0));
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }
 };
