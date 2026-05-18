@@ -251,7 +251,7 @@ Leg_data_r = Leg_data_l;
 
 % ==================== infantry4 ====================
        % s     ds     phi     dphi     theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
-  lqr_Q = [30,    0,     0,      0,       0,       0,        0,       0,        0,      0;
+  lqr_Q = [50,    0,     0,      0,       0,       0,        0,       0,        0,      0;
            0,    60,     0,      0,       0,       0,        0,       0,        0,      0;
            0,    0,     1,      0,       0,       0,        0,       0,        0,      0;
            0,    0,     0,      10,       0,       0,        0,       0,        0,      0;
