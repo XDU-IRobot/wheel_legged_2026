@@ -4,7 +4,7 @@
 
 #include "globals.hpp"
 #include "params.hpp"
-extern float l_c,r_c;
+extern float l_c, r_c;
 /**
  * @file  targets/wheel_legged/include/actuators.hpp
  * @brief 执行器适配层：反馈采集与电机命令下发

@@ -613,7 +613,8 @@ void ControlLoop() {
   wl_debug.lqr_err_theta_lr_dot =
       chassis_control_output.current_state.theta_lr_dot - chassis_update_input.expected.theta_lr_dot;
   wl_debug.lqr_err_theta_b = chassis_control_output.current_state.theta_b - chassis_update_input.expected.theta_b;
-  wl_debug.lqr_err_theta_b_dot = chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
+  wl_debug.lqr_err_theta_b_dot =
+      chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 

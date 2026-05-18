@@ -32,11 +32,11 @@ class ShootController {
   static constexpr float kStallFallback = params::active::gimbal::kStallFallbackRad;
   static constexpr float kFwReadyRpm = params::active::gimbal::kFwReadySpeedThresholdRpm;
 
-  static constexpr uint16_t kShootDelayMin = 250;                ///< 最短发射间隔 [tick]
-  static constexpr uint16_t kShootDelayMax = 800;                ///< 最长发射间隔 [tick]
-  static constexpr int32_t kHeatCoolingGuard = 100;              ///< 热量余量达到此值允许再次射击
-  static constexpr int32_t kLocalHeatDecrementPerShot = 120;     ///< 每次射击本地热量扣减
-  static constexpr uint16_t kDefaultHeatLimit = 100;             ///< 裁判离线时的默认热量上限
+  static constexpr uint16_t kShootDelayMin = 250;             ///< 最短发射间隔 [tick]
+  static constexpr uint16_t kShootDelayMax = 800;             ///< 最长发射间隔 [tick]
+  static constexpr int32_t kHeatCoolingGuard = 100;           ///< 热量余量达到此值允许再次射击
+  static constexpr int32_t kLocalHeatDecrementPerShot = 120;  ///< 每次射击本地热量扣减
+  static constexpr uint16_t kDefaultHeatLimit = 100;          ///< 裁判离线时的默认热量上限
 
  public:
   ShootController() = default;
@@ -138,8 +138,7 @@ class ShootController {
         } else if (fire_trigger) {
           state_ = State::kShooting;
           shoot_time_ = std::clamp(
-              static_cast<uint16_t>(static_cast<int32_t>(kShootTicks) -
-                                    (static_cast<int32_t>(heat_limit_) - 100) / 2),
+              static_cast<uint16_t>(static_cast<int32_t>(kShootTicks) - (static_cast<int32_t>(heat_limit_) - 100) / 2),
               kShootDelayMin, kShootDelayMax);
           now_angle_ = next_angle_;
           if (!referee_online_) {

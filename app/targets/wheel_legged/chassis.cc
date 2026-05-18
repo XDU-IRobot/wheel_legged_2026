@@ -6,8 +6,8 @@
 
 #include "include/params.hpp"
 bool flag;
-f32 lf_tau, rf_tau, lb_tau, rb_tau,l_t;
-float l_c,r_c;
+f32 lf_tau, rf_tau, lb_tau, rb_tau, l_t;
+float l_c, r_c;
 /**
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
@@ -262,8 +262,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
-      constexpr float kRetractLenThresholdM =
-          wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
+      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
       if (left_leg_.l0() < kRetractLenThresholdM && right_leg_.l0() < kRetractLenThresholdM) {
         standup_phase_ = 1;
       }
@@ -437,10 +436,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 离地时支持力限幅
     if (off_ground_in_mid_high_leg) {
-      left_force_ =
-          std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-      right_force_ =
-          std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+      right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
@@ -462,7 +459,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kRetractLegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
       constexpr float kLegLengthTol =
           wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
-      // constexpr float kZeroThreshold = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
+      // constexpr float kZeroThreshold =
+      // wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
       constexpr float kZeroThreshold = 1.5f;
       constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
 
@@ -518,9 +516,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     output_.lb_tau = -output_.lb_tau;
 
     lb_tau = output_.lb_tau;
-        lf_tau = output_.lf_tau;
-        rb_tau = output_.rb_tau;
-        rf_tau = output_.rf_tau;
+    lf_tau = output_.lf_tau;
+    rb_tau = output_.rb_tau;
+    rf_tau = output_.rf_tau;
   } else {
     if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&

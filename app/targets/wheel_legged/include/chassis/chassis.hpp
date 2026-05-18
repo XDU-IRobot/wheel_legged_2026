@@ -154,16 +154,16 @@ class Chassis {
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
   bool standup_complete_{false};
-  uint8_t standup_phase_{0};              ///< 起立阶段：0=收腿到目标腿长, 1=摆角收敛, 2=起立完成
-  uint16_t standup_phase_stable_ticks_{0}; ///< 起立阶段切换所需的连续满足周期数
+  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿到目标腿长, 1=摆角收敛, 2=起立完成
+  uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};   ///< 当前 Phase 条件连续满足的周期数
   uint16_t off_ground_duration_ticks_{0};  ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};              ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};        ///< 强制低腿长已持续时间
   bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
-  bool off_ground_kd_active_{false};  ///< 着地边沿后 Kd 增大锁存
-  uint16_t kd_active_ticks_{0};       ///< Kd 增大已持续时间
+  bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
   bool was_off_ground_{false};             ///< 上一周期离地状态（用于检测着地边沿）
   float spring_compensation_scale_{1.0f};  ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
 
