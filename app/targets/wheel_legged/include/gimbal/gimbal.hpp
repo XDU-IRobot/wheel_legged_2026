@@ -34,6 +34,10 @@ class Gimbal {
     bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
     bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
     bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
+    float aimbot_yaw_vel{0.0f};            ///< 自瞄目标偏航角速度 (rad/s)
+    float aimbot_pitch_vel{0.0f};          ///< 自瞄目标俯仰角速度 (rad/s)
+    float aimbot_yaw_acc{0.0f};            ///< 自瞄目标偏航角加速度 (rad/s^2)
+    float aimbot_pitch_acc{0.0f};          ///< 自瞄目标俯仰角加速度 (rad/s^2)
     wheel_legged::GimbalTarget target{};   ///< 云台角度目标
     float chassis_yaw_rad{0.0f};           ///< 车体偏航角
     float chassis_pitch_rad{0.0f};         ///< 车体俯仰角，用于俯仰重力补偿
@@ -239,28 +243,44 @@ class Gimbal {
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 
-    // 动力学前馈：目标速度/加速度通过数值微分计算
+    // 动力学前馈：自瞄在线时由 0x160 包获取，否则数值微分
     float yaw_dq = 0.0f, pitch_dq = 0.0f;
     float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
-    if (ff_ready_) {
-      const float inv_dt = 1.0f / prev_dt_s_;
-      yaw_dq = (output_.yaw_target_rad - prev_yaw_target_) * inv_dt;
-      pitch_dq = (output_.pitch_target_rad - prev_pitch_target_) * inv_dt;
-      yaw_ddq = (yaw_dq - prev_yaw_dq_) * inv_dt;
-      pitch_ddq = (pitch_dq - prev_pitch_dq_) * inv_dt;
+    if (input.aimbot_mode) {
+      yaw_dq = -input.aimbot_yaw_vel;
+      pitch_dq = input.aimbot_pitch_vel;
+      yaw_ddq = -input.aimbot_yaw_acc;
+      pitch_ddq = input.aimbot_pitch_acc;
+      ff_ready_ = false;
+    } else {
+      if (ff_ready_) {
+        const float inv_dt = 1.0f / prev_dt_s_;
+        yaw_dq = (output_.yaw_target_rad - prev_yaw_target_) * inv_dt;
+        pitch_dq = (output_.pitch_target_rad - prev_pitch_target_) * inv_dt;
+        yaw_ddq = (yaw_dq - prev_yaw_dq_) * inv_dt;
+        pitch_ddq = (pitch_dq - prev_pitch_dq_) * inv_dt;
+      }
+      prev_yaw_target_ = output_.yaw_target_rad;
+      prev_pitch_target_ = output_.pitch_target_rad;
+      prev_yaw_dq_ = yaw_dq;
+      prev_pitch_dq_ = pitch_dq;
+      prev_dt_s_ = dt_s;
+      ff_ready_ = true;
     }
-    prev_yaw_target_ = output_.yaw_target_rad;
-    prev_pitch_target_ = output_.pitch_target_rad;
-    prev_yaw_dq_ = yaw_dq;
-    prev_pitch_dq_ = pitch_dq;
-    prev_dt_s_ = dt_s;
-    ff_ready_ = true;
 
     // pitch 目标转到辨识编码器坐标系
     const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
+    // const float pitch_q_enc = output_.pitch_target_rad ;
     const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
     const auto ff =
         dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
+
+    // output_.yaw_cmd_torque_nm =
+    //     std::clamp(controller_.output().yaw+ff.x() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    // output_.pitch_cmd_torque_nm =
+    //     std::clamp(controller_.output().pitch+ff.y() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 
     output_.yaw_cmd_torque_nm =
         std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,

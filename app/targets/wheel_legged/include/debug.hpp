@@ -185,7 +185,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
-  uint8_t shoot_enabled;  // 发射使能
+  uint8_t shoot_enabled;        // 发射使能
+  float fric_speed_target_rpm;  // 摩擦轮目标转速 [rpm]（运行时可调）
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;  // DM 拨盘位置 (hero)
   float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)
@@ -197,6 +198,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
   uint8_t dr16_parallel;           // DR16 并行模式是否开启
+
+  // ── 超级电容 ──
+  uint8_t supercap_enable_dcdc;           // 电容开启标志
+  uint8_t supercap_error_code;            // 错误码
+  float supercap_chassis_power;           // 底盘功率 [W]
+  uint16_t supercap_chassis_power_limit;  // 底盘功率上限
+  uint8_t supercap_cap_energy;            // 电容能量百分比
 
   // ── 云台 IMU 欧拉角（Frame C: 0x112）──
   float gimbal_euler_yaw_rad;    // 云台 IMU 偏航角

@@ -1,7 +1,6 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
 #include "include/debug.hpp"
-
 #include "main.h"
 #include <algorithm>
 #include <cmath>
@@ -166,6 +165,13 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
   gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
+    constexpr float kDegToRad = ns::kPi / 180.0f;
+    gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
+    gimbal_update_input.aimbot_pitch_vel = globals->aimbot->pitch_vel() * kDegToRad;
+    gimbal_update_input.aimbot_yaw_acc = globals->aimbot->yaw_acc() * kDegToRad;
+    gimbal_update_input.aimbot_pitch_acc = globals->aimbot->pitch_acc() * kDegToRad;
+  }
   if (gimbal_startup_align_active) {
     // 归中阶段：强制对齐车头方向，覆盖 FSM 下发的目标
     gimbal_update_input.align_to_chassis_forward = false;
@@ -191,6 +197,17 @@ void ControlLoop() {
                                        gimbal_control_output.ident_tx_len, 5);
   }
 
+  // 超级电容 TX：每周期从裁判系统读取功率上限和缓冲能量，下发给超级电容
+  if (globals->supercap.has_value() && globals->referee.has_value()) {
+    rm::device::GkSupercap::TxData supercap_tx{};
+    supercap_tx.enable_dcdc = 1;
+    supercap_tx.system_restart = 0;
+    supercap_tx.resv0 = 0;
+    supercap_tx.feedback_referee_power_limit = globals->referee->data().robot_status.chassis_power_limit;
+    supercap_tx.feedback_referee_energy_buffer = globals->referee->data().power_heat_data.buffer_energy;
+    globals->supercap->Update(supercap_tx);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
@@ -200,7 +217,7 @@ void ControlLoop() {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold ||
                               (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3);
-    globals->shoot_controller.Update(shooter_enter, fire_trigger);
+    globals->shoot_controller.Update(shooter_enter, fire_trigger, tc_state.fric_speed_target_rpm);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
@@ -222,12 +239,16 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
+    const bool fire_flag =
+        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
     const auto shoot_output =
-        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, input.dr16.dial,
-                              input.tc_remote.left_button, in_combat);
+        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
+                              in_combat, tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif
+
+  wl_debug.fric_speed_target_rpm = tc_state.fric_speed_target_rpm;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 6：云台启动归中判稳
@@ -605,7 +626,7 @@ void ControlLoop() {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
+    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -688,6 +709,21 @@ void ControlLoop() {
   }
   wl_debug.dr16_parallel = static_cast<uint8_t>(tc_state.dr16_parallel);
 
+  // ── 超级电容调试 ──
+  if (globals->supercap.has_value()) {
+    wl_debug.supercap_enable_dcdc = 1U;
+    // wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
+    // wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
+    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
+    // wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
+  } else {
+    wl_debug.supercap_enable_dcdc = 0U;
+    wl_debug.supercap_error_code = 0U;
+    wl_debug.supercap_chassis_power = 0.0f;
+    wl_debug.supercap_chassis_power_limit = 0U;
+    wl_debug.supercap_cap_energy = 0U;
+  }
+
   // ── 自瞄 RX 调试（NUC 反馈，原始为度，转为弧度存储）──
   if (globals->aimbot.has_value()) {
     constexpr float kDegToRad = kPi / 180.0f;
@@ -705,5 +741,4 @@ void ControlLoop() {
   }
   debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
-
 }
