@@ -387,6 +387,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
+  } else if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
+             combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
+    // 自瞄模式：屏蔽遥控器积分，rc_target 同步到当前云台 IMU 位置（与 host_target 同坐标系）
+    semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
+    semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
+    semantic_state.gimbal_target_initialized = true;
   } else {
     if (!semantic_state.gimbal_target_initialized) {
       semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
@@ -567,17 +573,21 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // }
   // input.auto_jump_enabled = s_auto_jump_enabled;
 
-  // 3b. 自瞄上位机目标（NUC 反馈 → host_target，覆盖语义折叠中的 rc_target）
-  if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0) {
+  // 3b. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
+  if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0 &&
+      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
+       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove)) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
-    input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
-    input.mode_request.host_target_valid = true;
-    // 修正 target_source：ResolveInputSemantics 计算时 host_target_valid 尚为 false，需重设
-    if (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
-        input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
-      input.mode_request.target_source = wheel_legged::TargetSource::kHost;
+    if (g.aimbot->aimbot_state() != 0) {
+      input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+      input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+    } else {
+      // NUC 无有效目标，目标锁定为当前云台角度，避免切入自瞄时云台甩到默认值
+      input.mode_request.host_target.yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
+      input.mode_request.host_target.pitch_rad = gimbal_rx_valid ? -g.gimbal_rx->pitch_rad() : 0.0f;
     }
+    input.mode_request.host_target_valid = true;
+    input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
