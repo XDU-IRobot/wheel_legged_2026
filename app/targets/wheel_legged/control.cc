@@ -96,9 +96,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
 
-  wl_debug.tc_mid_leg_hold = tc_state.mid_leg_hold ? 1 : 0;
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
-  wl_debug.tc_stair_climb_done = tc_state.stair_climb_done ? 1 : 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
@@ -237,14 +235,23 @@ void ControlLoop() {
     const float fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
     const float fric_right_rpm =
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
+    wl_debug.fric_left_rpm = fric_left_rpm;
+    wl_debug.fric_right_rpm = fric_right_rpm;
+    if (globals->dial.has_value()) {
+      globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
+    }
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
+    wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool fire_flag =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+    const bool auto_aim = chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
+                          chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm);
+                              in_combat, tc_state.fric_speed_target_rpm, auto_aim);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
+    wl_debug.shot_count = globals->shoot.shot_count();
   }
 #endif
 
@@ -679,11 +686,9 @@ void ControlLoop() {
     constexpr float kDegToRad = kPi / 180.0f;
     wl_debug.gimbal_euler_yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
     wl_debug.gimbal_euler_pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
-    wl_debug.gimbal_euler_roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
   } else {
     wl_debug.gimbal_euler_yaw_rad = 0.0f;
     wl_debug.gimbal_euler_pitch_rad = 0.0f;
-    wl_debug.gimbal_euler_roll_rad = 0.0f;
   }
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();
@@ -708,8 +713,6 @@ void ControlLoop() {
     wl_debug.referee_robot_id = 0U;
     wl_debug.referee_bullet_speed_mps = 0.0f;
   }
-  wl_debug.dr16_parallel = static_cast<uint8_t>(tc_state.dr16_parallel);
-
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;

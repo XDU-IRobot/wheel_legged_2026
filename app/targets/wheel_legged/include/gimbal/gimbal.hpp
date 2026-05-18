@@ -8,7 +8,7 @@
 #include "../fsm_common.hpp"
 #include "../params.hpp"
 
-using wheel_legged::params::active::yaw_ff;
+//using wheel_legged::params::active::yaw_ff;
 
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp
@@ -68,6 +68,11 @@ class Gimbal {
     float pitch_pos_rad{0.0f};        ///< 俯仰反馈角
     float pitch_vel_rad_s{0.0f};      ///< 俯仰反馈角速度
     float pitch_cmd_torque_nm{0.0f};  ///< 俯仰输出力矩
+
+    float yaw_dq{0.0f};    ///< 偏航目标角速度 (rad/s)
+    float pitch_dq{0.0f};  ///< 俯仰目标角速度 (rad/s)
+    float yaw_ddq{0.0f};   ///< 偏航目标角加速度 (rad/s^2)
+    float pitch_ddq{0.0f}; ///< 俯仰目标角加速度 (rad/s^2)
 
     /// 辨识模式串口数据
     bool ident_data_pending{false};      ///< 是否有待发送的辨识数据
@@ -267,6 +272,10 @@ class Gimbal {
         prev_dt_s_ = dt_s;
         ff_ready_ = true;
       }
+      output_.yaw_dq = yaw_dq;
+      output_.pitch_dq = pitch_dq;
+      output_.yaw_ddq = yaw_ddq;
+      output_.pitch_ddq = pitch_ddq;
 
       // pitch 目标转到辨识编码器坐标系
       const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
@@ -275,19 +284,18 @@ class Gimbal {
       const auto ff =
           dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
 
-      // output_.yaw_cmd_torque_nm =
-      //     std::clamp(controller_.output().yaw+ff.x() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(controller_.output().pitch+ff.y() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw+ff.x() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm =
-          std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().pitch +ff.y() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.yaw_cmd_torque_nm =
+      //     std::clamp(ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.pitch_cmd_torque_nm =
+      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     }
 #endif
   }

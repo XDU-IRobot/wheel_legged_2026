@@ -134,6 +134,10 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_pitch_pos_feedback_rad = gimbal_control_output.pitch_pos_rad;
   wl_debug.gimbal_pitch_vel_feedback_rad_s = gimbal_control_output.pitch_vel_rad_s;
   wl_debug.pitch_cmd_torque_nm = gimbal_control_output.pitch_cmd_torque_nm;
+  wl_debug.gimbal_yaw_dq_rad_s = gimbal_control_output.yaw_dq;
+  wl_debug.gimbal_pitch_dq_rad_s = gimbal_control_output.pitch_dq;
+  wl_debug.gimbal_yaw_ddq_rad_s2 = gimbal_control_output.yaw_ddq;
+  wl_debug.gimbal_pitch_ddq_rad_s2 = gimbal_control_output.pitch_ddq;
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
@@ -143,5 +147,5 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.input_target_source = static_cast<uint8_t>(input.mode_request.target_source);
   wl_debug.input_host_target_valid = static_cast<uint8_t>(input.mode_request.host_target_valid);
   wl_debug.gimbal_target_yaw_rad = gimbal_control_output.yaw_target_rad;
-  wl_debug.gimbal_target_pitch_rad = gimbal_control_output.pitch_target_rad;
+  wl_debug.gimbal_target_pitch_rad = -gimbal_control_output.pitch_target_rad;
 }

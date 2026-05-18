@@ -389,10 +389,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.gimbal_target_initialized = false;
   } else if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
              combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
-    // 自瞄模式：屏蔽遥控器积分，rc_target 同步到当前云台 IMU 位置（与 host_target 同坐标系）
-    semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
-    semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
-    semantic_state.gimbal_target_initialized = true;
+    // 自瞄模式：仅在切入时锁定当前云台 IMU 位置；后续不更新，由 PID 保持
+    if (!semantic_state.gimbal_target_initialized) {
+      semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
+      semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
+      semantic_state.gimbal_target_initialized = true;
+    }
   } else {
     if (!semantic_state.gimbal_target_initialized) {
       semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
@@ -574,11 +576,12 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // input.auto_jump_enabled = s_auto_jump_enabled;
 
   // 3b. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
-  if (g.aimbot.has_value() && g.aimbot->nuc_start_flag() != 0 &&
+  if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
+      g.aimbot->nuc_start_flag() != 0 &&
       (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
        input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove)) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    if (g.aimbot->aimbot_state() != 0) {
+    if (g.aimbot->aimbot_target() != 0) {
       input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
       input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
     } else {

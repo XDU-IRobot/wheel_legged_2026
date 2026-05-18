@@ -26,15 +26,15 @@ class AimbotCanCommunicator final : public CanDevice {
 
  private:
   // 收nuc
-  u8 aimbot_state_{};
-  u8 aimbot_target_{};
-  f32 yaw_{};
-  f32 pitch_{};
-  u8 nuc_start_flag_{};
-  f32 yaw_vel_{};
-  f32 pitch_vel_{};
-  f32 yaw_acc_{};
-  f32 pitch_acc_{};
+  u8 aimbot_state_{0};
+  u8 aimbot_target_{0};
+  f32 yaw_{0};
+  f32 pitch_{0};
+  u8 nuc_start_flag_{0};
+  f32 yaw_vel_{0};
+  f32 pitch_vel_{0};
+  f32 yaw_acc_{0};
+  f32 pitch_acc_{0};
   // 缓冲区
   u8 tx_buf_[8]{};
 };
