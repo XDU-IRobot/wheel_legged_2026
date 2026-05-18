@@ -576,8 +576,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // input.auto_jump_enabled = s_auto_jump_enabled;
 
   // 3b. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
-  if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
-      g.aimbot->nuc_start_flag() != 0 &&
+  if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk && g.aimbot->nuc_start_flag() != 0 &&
       (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
        input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove)) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
