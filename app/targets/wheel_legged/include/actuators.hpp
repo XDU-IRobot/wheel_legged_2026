@@ -4,7 +4,7 @@
 
 #include "globals.hpp"
 #include "params.hpp"
-
+extern float l_c,r_c;
 /**
  * @file  targets/wheel_legged/include/actuators.hpp
  * @brief 执行器适配层：反馈采集与电机命令下发
@@ -235,20 +235,22 @@ class Actuators {
   }
 
   static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
-    // g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-    // g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-    // g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-    // g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
 
-    g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
-    g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
-    g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
-    g.dm_rf->SetMitCommand(0.0f, 0.0f, rf_tau, 0.0f, 0.0f);
+    // g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
+    // g.dm_lf->SetMitCommand(0.0f, 0.0f, lf_tau, 0.0f, 0.0f);
+    // g.dm_rb->SetMitCommand(0.0f, 0.0f, rb_tau, 0.0f, 0.0f);
+    // g.dm_rf->SetMitCommand(0.0f, 0.0f, rf_tau, 0.0f, 0.0f);
   }
 
   static void SendWheelCurrent(SharedResources &g, float left_current, float right_current) {
     // g.left_wheel->SetCurrent(ClampToI16(left_current));
     // g.right_wheel->SetCurrent(ClampToI16(right_current));
+    l_c = left_current;
+    r_c = right_current;
     g.left_wheel->SetCurrent(ClampToI16(0));
     g.right_wheel->SetCurrent(ClampToI16(0));
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);

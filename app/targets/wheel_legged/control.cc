@@ -1,7 +1,7 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
 #include "include/debug.hpp"
-f32 flag = 0,booster=0;
+
 #include "main.h"
 #include <algorithm>
 #include <cmath>
@@ -206,7 +206,6 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
     // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
-    booster = globals->shoot_controller.booster_pos();
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -520,6 +519,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
+    chassis_update_input.expected.theta_b = kSpinThetaBBiasRad;
   } else if (jump_control_enabled) {
     chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
@@ -593,6 +593,8 @@ void ControlLoop() {
       chassis_control_output.current_state.theta_lr_dot - chassis_update_input.expected.theta_lr_dot;
   wl_debug.lqr_err_theta_b = chassis_control_output.current_state.theta_b - chassis_update_input.expected.theta_b;
   wl_debug.lqr_err_theta_b_dot = chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
+  wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
+  wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
 
@@ -703,25 +705,5 @@ void ControlLoop() {
   }
   debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
-
-  // ── UI 更新（操作手屏）──
-  {
-    // Dynamic: 发射/aimbot 数据
-    ui_g_Dynamic_Fric_Rpm->number = static_cast<int32_t>(wl_debug.fw_raw_rpm_1);
-    ui_g_Dynamic_Bult_Spd_Num->number = static_cast<int32_t>(wl_debug.referee_bullet_speed_mps);
-    ui_g_Dynamic_Offset_Pitch_Num->number = static_cast<int32_t>(wl_debug.gimbal_euler_pitch_rad * 1000.f);
-    ui_g_Dynamic_Distance_Num->number = 0;
-    ui_g_Dynamic_Bult_Amount_Num->number = 0;
-
-    // Dynamic2: 状态数据
-    ui_g_Dynamic2_Leg_length->number = static_cast<int32_t>(wl_debug.chassis_mean_leg_length_m * 1000.f);
-    ui_g_Dynamic2_Chassis_State->number = static_cast<int32_t>(chassis_output.mode);
-    ui_g_Dynamic2_Gimbal_State->number = static_cast<int32_t>(gimbal_output.mode);
-    ui_g_Dynamic2_Offset_Yaw_Num->number = static_cast<int32_t>(wl_debug.gimbal_euler_yaw_rad * 1000.f);
-
-    // ui_update_g_Dynamic();
-    // ui_update_g_Dynamic2();
-    // ui_update_g_Dynamic3();
-  }
 
 }

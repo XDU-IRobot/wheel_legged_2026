@@ -28,8 +28,6 @@
 #include "gimbal/shoot_2fric.hpp"
 #endif
 
-#include "../ui/ui.h"
-
 /**
  * @file  targets/wheel_legged/include/globals.hpp
  * @brief 轮腿目标共享资源与调试导出变量
@@ -223,13 +221,6 @@ struct SharedResources {
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
     shoot.Init();
 #endif
-
-    //ui_init_g_Static();
-    // ui_init_g_Static2();
-    // ui_init_g_Static3();
-    // ui_init_g_Dynamic();
-    // ui_init_g_Dynamic2();
-    // ui_init_g_Dynamic3();
   }
 };
 

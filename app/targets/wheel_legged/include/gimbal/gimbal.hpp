@@ -89,7 +89,9 @@ class Gimbal {
    * @brief 执行一次云台控制更新，仅计算力矩，不操作电机
    */
   void Update(const UpdateInput &input) {
-    output_ = {};
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    {
+     output_ = {};
 
     if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
       last_use_yaw_motor_feedback_ = false;
@@ -109,6 +111,60 @@ class Gimbal {
     output_.gimbal_enabled = input.gimbal_enable;
 
     yaw_ff.Update(output_.yaw_target_rad);
+
+    if (!input.gimbal_enable) {
+      controller_.Enable(false);
+      ClearPid();
+      last_use_yaw_motor_feedback_ = false;
+      return;
+    }
+
+    if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
+      ClearPid();
+    }
+    last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
+
+    if (input.aimbot_mode != last_aimbot_mode_) {
+      ClearPid();
+      input.aimbot_mode ? ConfigureAimbotPid() : ConfigurePid();
+    }
+    last_aimbot_mode_ = input.aimbot_mode;
+
+    const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+    controller_.Enable(true);
+    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, yaw_ff.GetYawSpeedFeedforward());
+    controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
+                       dt_s);
+
+    output_.yaw_cmd_torque_nm =
+        std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    const float pitch_gravity_ff =
+        wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.gimbal_imu_pitch_rad);
+    output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + pitch_gravity_ff,
+                                             -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                                             wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    }
+#else
+    {
+     output_ = {};
+
+    if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
+      last_use_yaw_motor_feedback_ = false;
+      ClearPid();
+      return;
+    }
+
+    output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
+    output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
+    output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
+    output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
+
+    const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
+    output_.yaw_target_rad = desired_yaw;
+    output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
+                                          wheel_legged::params::active::gimbal::kPitchMaxRad);
+    output_.gimbal_enabled = input.gimbal_enable;
 
     if (!input.gimbal_enable) {
       controller_.Enable(false);
@@ -179,7 +235,7 @@ class Gimbal {
 
     const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
     controller_.Enable(true);
-    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,yaw_ff.GetYawSpeedFeedforward());
+    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
     controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                        dt_s);
 
@@ -211,7 +267,8 @@ class Gimbal {
                    wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     output_.pitch_cmd_torque_nm =
         std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);   }
+#endif
   }
 
   /** @brief 获取最近一次云台控制输出 */
