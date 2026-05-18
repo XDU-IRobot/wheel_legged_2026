@@ -241,9 +241,9 @@ void ControlLoop() {
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool fire_flag =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const auto shoot_output = globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm,
-                                                    kControlLoopDtS, fire_flag, in_combat,
-                                                    tc_state.fric_speed_target_rpm);
+    const auto shoot_output =
+        globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
+                              in_combat, tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
   }
 #endif
