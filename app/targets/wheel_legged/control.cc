@@ -245,7 +245,9 @@ void ControlLoop() {
     wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool fire_flag =
-        (globals->aimbot->aimbot_state()==0 &&( input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button) )|| ((globals->aimbot->aimbot_state() >> 1) & 1);
+        (globals->aimbot->aimbot_state() == 0 &&
+         (input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button)) ||
+        ((globals->aimbot->aimbot_state() >> 1) & 1);
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm);
