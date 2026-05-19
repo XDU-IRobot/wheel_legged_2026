@@ -8,6 +8,9 @@
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
 float debug_mid_target_theta;
+f32 yaw_motor_tau, pitch_motor_tau;
+float yaw_motor_pos, pitch_motor_pos;
+float yaw_motor_vel, pitch_motor_vel;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -649,7 +652,7 @@ void ControlLoop() {
     const float bullet_speed =
         (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
-    globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, 0.0f, robot_id, aimbot_mode, imu_count, bullet_speed);
+    globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg,robot_id, aimbot_mode, imu_count, bullet_speed);
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;
@@ -739,6 +742,12 @@ void ControlLoop() {
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
   }
-  debug_pitch_motor_raw_pos_rad = globals->pitch_motor->pos();
+  yaw_motor_pos = globals->yaw_motor->pos();
+  yaw_motor_vel = globals->yaw_motor->vel();
+  yaw_motor_tau = globals->yaw_motor->tau();
+  pitch_motor_pos = globals->pitch_motor->pos();
+  pitch_motor_vel = globals->pitch_motor->vel();
+  pitch_motor_tau = globals->pitch_motor->tau();
+
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 }

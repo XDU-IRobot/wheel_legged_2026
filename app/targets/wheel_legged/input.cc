@@ -579,8 +579,17 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
        input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove)) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
     if (g.aimbot->aimbot_state() != 0) {
-      input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
-      input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      {
+        input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+        input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+      }
+#else
+{
+  input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+  input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+}
+#endif
     } else {
       // NUC 无有效目标，目标锁定为当前云台角度，避免切入自瞄时云台甩到默认值
       input.mode_request.host_target.yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;

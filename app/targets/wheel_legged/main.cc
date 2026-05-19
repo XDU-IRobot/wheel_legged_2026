@@ -1,7 +1,6 @@
 #include "common/bsp/timer_task_scheduler.hpp"
 
 #include <etl/delegate.h>
-
 #include "include/globals.hpp"
 #include "include/globals_no_dtcm.hpp"
 
@@ -11,7 +10,6 @@
  * @file  targets/wheel_legged/main.cc
  * @brief 应用入口：初始化共享资源并启动 500Hz 控制任务
  */
-
 SharedResources *globals{nullptr};
 __attribute__((section(".sram4"))) SharedResourcesNoDtcm globals_no_dtcm;
 namespace {

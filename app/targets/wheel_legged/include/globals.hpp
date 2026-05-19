@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <optional>
-
 #include "fdcan.h"
 #include "stm32h7xx_it.h"
 #include "usart.h"

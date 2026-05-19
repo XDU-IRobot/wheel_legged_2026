@@ -93,7 +93,7 @@ class Gimbal {
    * @brief 执行一次云台控制更新，仅计算力矩，不操作电机
    */
   void Update(const UpdateInput &input) {
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+
     {
      output_ = {};
 
@@ -149,146 +149,146 @@ class Gimbal {
                                              -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                                              wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     }
-#else
-    {
-     output_ = {};
 
-    if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
-      last_use_yaw_motor_feedback_ = false;
-      ClearPid();
-      return;
-    }
-
-    output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
-    output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
-    output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
-    output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
-
-    const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
-    output_.yaw_target_rad = desired_yaw;
-    output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
-                                          wheel_legged::params::active::gimbal::kPitchMaxRad);
-    output_.gimbal_enabled = input.gimbal_enable;
-
-    if (!input.gimbal_enable) {
-      controller_.Enable(false);
-      ClearPid();
-      last_use_yaw_motor_feedback_ = false;
-      return;
-    }
-
-    // 辨识/前馈验证模式：使用电机编码器反馈，走专用控制器
-    if (input.ident != nullptr && (input.test_profile == wheel_legged::GimbalTestProfile::kIdent ||
-                                   input.test_profile == wheel_legged::GimbalTestProfile::kFfVerify)) {
-      if (!last_ident_mode_active_) {
-        input.ident->Reset();
-        ClearPid();
-      }
-      last_ident_mode_active_ = true;
-
-      GimbalIdent::Input ident_in{};
-      ident_in.yaw_motor_pos_rad = input.yaw_motor_rad;
-      ident_in.yaw_motor_vel_rad_s = static_cast<float>(input.yaw_motor->vel());
-      ident_in.pitch_motor_pos_rad = input.pitch_motor->pos();
-      ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
-      ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
-
-      output_.yaw_vel_rad_s = ident_in.yaw_motor_vel_rad_s;
-      output_.pitch_vel_rad_s = ident_in.pitch_motor_vel_rad_s;
-
-      if (input.test_profile == wheel_legged::GimbalTestProfile::kIdent) {
-        const auto ident_out = input.ident->IdentUpdate(ident_in);
-        output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
-        output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
-        output_.yaw_target_rad = ident_out.yaw_target_rad;
-        output_.pitch_target_rad = ident_out.pitch_target_rad;
-        output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
-        output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
-        output_.ident_data_pending = ident_out.data_pending;
-        output_.ident_tx_data = ident_out.tx_data;
-        output_.ident_tx_len = ident_out.tx_len;
-      } else {
-        const auto ident_out = input.ident->FfVerifyUpdate(ident_in);
-        output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
-        output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
-        output_.yaw_target_rad = ident_out.yaw_target_rad;
-        output_.pitch_target_rad = ident_out.pitch_target_rad;
-        output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
-        output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
-      }
-      return;
-    }
-    // 退出辨识/验证模式时复位
-    if (last_ident_mode_active_ && input.ident != nullptr) {
-      input.ident->Reset();
-      ClearPid();
-      ff_ready_ = false;
-    }
-    last_ident_mode_active_ = false;
-
-    if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
-      ClearPid();
-    }
-    last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
-
-    if (input.aimbot_mode != last_aimbot_mode_) {
-      ClearPid();
-      input.aimbot_mode ? ConfigureAimbotPid() : ConfigurePid();
-    }
-    last_aimbot_mode_ = input.aimbot_mode;
-
-    const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
-    controller_.Enable(true);
-    controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
-    controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
-                       dt_s);
-
-    // 动力学前馈：自瞄在线时由 0x160 包获取，否则数值微分
-    float yaw_dq = 0.0f, pitch_dq = 0.0f;
-    float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
-    if (input.aimbot_mode) {
-      yaw_dq = -input.aimbot_yaw_vel;
-      pitch_dq = input.aimbot_pitch_vel;
-      yaw_ddq = -input.aimbot_yaw_acc;
-      pitch_ddq = input.aimbot_pitch_acc;
-      ff_ready_ = false;
-    } else {
-      if (ff_ready_) {
-        const float inv_dt = 1.0f / prev_dt_s_;
-        yaw_dq = (output_.yaw_target_rad - prev_yaw_target_) * inv_dt;
-        pitch_dq = (output_.pitch_target_rad - prev_pitch_target_) * inv_dt;
-        yaw_ddq = (yaw_dq - prev_yaw_dq_) * inv_dt;
-        pitch_ddq = (pitch_dq - prev_pitch_dq_) * inv_dt;
-      }
-      prev_yaw_target_ = output_.yaw_target_rad;
-      prev_pitch_target_ = output_.pitch_target_rad;
-      prev_yaw_dq_ = yaw_dq;
-      prev_pitch_dq_ = pitch_dq;
-      prev_dt_s_ = dt_s;
-      ff_ready_ = true;
-    }
-
-    // pitch 目标转到辨识编码器坐标系
-    const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
-    // const float pitch_q_enc = output_.pitch_target_rad ;
-    const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
-    const auto ff =
-        dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
-
+    // {
+    //  output_ = {};
+    //
+    // if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
+    //   last_use_yaw_motor_feedback_ = false;
+    //   ClearPid();
+    //   return;
+    // }
+    //
+    // output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
+    // output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
+    // output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
+    // output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
+    //
+    // const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
+    // output_.yaw_target_rad = desired_yaw;
+    // output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
+    //                                       wheel_legged::params::active::gimbal::kPitchMaxRad);
+    // output_.gimbal_enabled = input.gimbal_enable;
+    //
+    // if (!input.gimbal_enable) {
+    //   controller_.Enable(false);
+    //   ClearPid();
+    //   last_use_yaw_motor_feedback_ = false;
+    //   return;
+    // }
+    //
+    // // 辨识/前馈验证模式：使用电机编码器反馈，走专用控制器
+    // if (input.ident != nullptr && (input.test_profile == wheel_legged::GimbalTestProfile::kIdent ||
+    //                                input.test_profile == wheel_legged::GimbalTestProfile::kFfVerify)) {
+    //   if (!last_ident_mode_active_) {
+    //     input.ident->Reset();
+    //     ClearPid();
+    //   }
+    //   last_ident_mode_active_ = true;
+    //
+    //   GimbalIdent::Input ident_in{};
+    //   ident_in.yaw_motor_pos_rad = input.yaw_motor_rad;
+    //   ident_in.yaw_motor_vel_rad_s = static_cast<float>(input.yaw_motor->vel());
+    //   ident_in.pitch_motor_pos_rad = input.pitch_motor->pos();
+    //   ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
+    //   ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+    //
+    //   output_.yaw_vel_rad_s = ident_in.yaw_motor_vel_rad_s;
+    //   output_.pitch_vel_rad_s = ident_in.pitch_motor_vel_rad_s;
+    //
+    //   if (input.test_profile == wheel_legged::GimbalTestProfile::kIdent) {
+    //     const auto ident_out = input.ident->IdentUpdate(ident_in);
+    //     output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
+    //     output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
+    //     output_.yaw_target_rad = ident_out.yaw_target_rad;
+    //     output_.pitch_target_rad = ident_out.pitch_target_rad;
+    //     output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
+    //     output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
+    //     output_.ident_data_pending = ident_out.data_pending;
+    //     output_.ident_tx_data = ident_out.tx_data;
+    //     output_.ident_tx_len = ident_out.tx_len;
+    //   } else {
+    //     const auto ident_out = input.ident->FfVerifyUpdate(ident_in);
+    //     output_.yaw_cmd_torque_nm = ident_out.yaw_cmd_tau;
+    //     output_.pitch_cmd_torque_nm = ident_out.pitch_cmd_tau;
+    //     output_.yaw_target_rad = ident_out.yaw_target_rad;
+    //     output_.pitch_target_rad = ident_out.pitch_target_rad;
+    //     output_.yaw_pos_rad = ident_in.yaw_motor_pos_rad;
+    //     output_.pitch_pos_rad = ident_in.pitch_motor_pos_rad;
+    //   }
+    //   return;
+    // }
+    // // 退出辨识/验证模式时复位
+    // if (last_ident_mode_active_ && input.ident != nullptr) {
+    //   input.ident->Reset();
+    //   ClearPid();
+    //   ff_ready_ = false;
+    // }
+    // last_ident_mode_active_ = false;
+    //
+    // if (input.use_yaw_motor_feedback != last_use_yaw_motor_feedback_) {
+    //   ClearPid();
+    // }
+    // last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
+    //
+    // if (input.aimbot_mode != last_aimbot_mode_) {
+    //   ClearPid();
+    //   input.aimbot_mode ? ConfigureAimbotPid() : ConfigurePid();
+    // }
+    // last_aimbot_mode_ = input.aimbot_mode;
+    //
+    // const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+    // controller_.Enable(true);
+    // controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+    // controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
+    //                    dt_s);
+    //
+    // // 动力学前馈：自瞄在线时由 0x160 包获取，否则数值微分
+    // float yaw_dq = 0.0f, pitch_dq = 0.0f;
+    // float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
+    // if (input.aimbot_mode) {
+    //   yaw_dq = -input.aimbot_yaw_vel;
+    //   pitch_dq = input.aimbot_pitch_vel;
+    //   yaw_ddq = -input.aimbot_yaw_acc;
+    //   pitch_ddq = input.aimbot_pitch_acc;
+    //   ff_ready_ = false;
+    // } else {
+    //   if (ff_ready_) {
+    //     const float inv_dt = 1.0f / prev_dt_s_;
+    //     yaw_dq = (output_.yaw_target_rad - prev_yaw_target_) * inv_dt;
+    //     pitch_dq = (output_.pitch_target_rad - prev_pitch_target_) * inv_dt;
+    //     yaw_ddq = (yaw_dq - prev_yaw_dq_) * inv_dt;
+    //     pitch_ddq = (pitch_dq - prev_pitch_dq_) * inv_dt;
+    //   }
+    //   prev_yaw_target_ = output_.yaw_target_rad;
+    //   prev_pitch_target_ = output_.pitch_target_rad;
+    //   prev_yaw_dq_ = yaw_dq;
+    //   prev_pitch_dq_ = pitch_dq;
+    //   prev_dt_s_ = dt_s;
+    //   ff_ready_ = true;
+    // }
+    //
+    // // pitch 目标转到辨识编码器坐标系
+    // const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
+    // // const float pitch_q_enc = output_.pitch_target_rad ;
+    // const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
+    // const auto ff =
+    //     dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
+    //
+    // // output_.yaw_cmd_torque_nm =
+    // //     std::clamp(controller_.output().yaw+ff.x() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    // //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    // // output_.pitch_cmd_torque_nm =
+    // //     std::clamp(controller_.output().pitch+ff.y() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    // //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    //
     // output_.yaw_cmd_torque_nm =
-    //     std::clamp(controller_.output().yaw+ff.x() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    //     std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
     //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     // output_.pitch_cmd_torque_nm =
-    //     std::clamp(controller_.output().pitch+ff.y() , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-    //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+    //     std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+    //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);   }
 
-    output_.yaw_cmd_torque_nm =
-        std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-    output_.pitch_cmd_torque_nm =
-        std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                   wheel_legged::params::active::gimbal::kDmTorqueLimitNm);   }
-#endif
   }
 
   /** @brief 获取最近一次云台控制输出 */
