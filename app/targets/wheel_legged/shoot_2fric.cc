@@ -81,8 +81,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     if (effective_limit > ns::kHeatSafetyMargin &&
         current_heat_ + ns::kHeatPerShot > effective_limit - ns::kHeatSafetyMargin) {
       heat_suppressed_ = true;
-    } else if (effective_limit > ns::kHeatResumeMargin &&
-               current_heat_ < effective_limit - ns::kHeatResumeMargin) {
+    } else if (effective_limit > ns::kHeatResumeMargin && current_heat_ < effective_limit - ns::kHeatResumeMargin) {
       heat_suppressed_ = false;
     } else if (effective_limit <= ns::kHeatSafetyMargin) {
       // 裁判系统给的 heat_limit 异常（0 或极小值），强制解除抑制

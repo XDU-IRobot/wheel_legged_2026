@@ -1277,7 +1277,7 @@ constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};    ///< 自瞄�
 // constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.8f, 10.0f, 1.5f};  ///< 自瞄俯仰位置 PID
 // constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 自瞄俯仰速度 PID
 constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 1.f, 10.0f, 0.4f};  ///< 自瞄俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 自瞄俯仰速度 PID
+constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};     ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
 }  // namespace infantry4
