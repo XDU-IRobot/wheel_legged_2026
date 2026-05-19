@@ -32,10 +32,24 @@ class Shoot {
   int32_t dial_linear_pos() const { return dial_encoder_counter_.linear_ticks(); }
   auto &dial_encoder_counter() { return dial_encoder_counter_; }
 
+  void SetHeatParams(uint16_t heat_limit, uint16_t cooling_rate) {
+    heat_limit_ = heat_limit;
+    cooling_rate_ = cooling_rate;
+  }
+  float current_heat() const { return current_heat_; }
+  uint16_t heat_limit() const { return heat_limit_; }
+  uint16_t cooling_rate() const { return cooling_rate_; }
+  bool heat_over_limit() const { return heat_suppressed_; }
+
  private:
   bool enabled_{false};
   bool fric_ready_{false};
   uint32_t shot_count_{0};
   EncoderCounter dial_encoder_counter_;
   Shoot2Fric controller_{9, 37.58f};
+
+  float current_heat_{0.0f};
+  uint16_t heat_limit_{240};
+  uint16_t cooling_rate_{40};
+  bool heat_suppressed_{false};
 };

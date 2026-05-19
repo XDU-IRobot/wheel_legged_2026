@@ -34,7 +34,8 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     controller_.Arm(true);
     controller_.SetArmSpeed(fric_speed_target_rpm);
 
-    if (fire_flag) {
+    const bool effective_fire = fire_flag && !heat_suppressed_;
+    if (effective_fire) {
       controller_.SetMode(Shoot2Fric::kFullAuto);
       controller_.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
@@ -64,7 +65,22 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
 
     if (fric_ready_ && (target_abs - left_abs > kDropThresholdRpm || target_abs - right_abs > kDropThresholdRpm)) {
       ++shot_count_;
+      current_heat_ += ns::kHeatPerShot;
       fric_ready_ = false;
+    }
+  }
+
+  // 本地热量闭环：冷却衰减与发射抑制
+  {
+    current_heat_ -= static_cast<float>(cooling_rate_) * dt;
+    if (current_heat_ < 0.0f) {
+      current_heat_ = 0.0f;
+    }
+
+    if (current_heat_ + ns::kHeatPerShot > static_cast<float>(heat_limit_) - ns::kHeatSafetyMargin) {
+      heat_suppressed_ = true;
+    } else if (current_heat_ < static_cast<float>(heat_limit_) - ns::kHeatResumeMargin) {
+      heat_suppressed_ = false;
     }
   }
 

@@ -248,12 +248,25 @@ void ControlLoop() {
         (globals->aimbot->aimbot_state() == 0 &&
          (input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button)) ||
         ((globals->aimbot->aimbot_state() >> 1) & 1);
+
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t heat_limit = ref_online ? globals->referee->data().robot_status.shooter_barrel_heat_limit
+                                          : ns::shoot::kDefaultHeatLimit;
+    const uint16_t cooling_rate = ref_online ? globals->referee->data().robot_status.shooter_barrel_cooling_value
+                                             : ns::shoot::kDefaultCoolingRate;
+    globals->shoot.SetHeatParams(heat_limit, cooling_rate);
+
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
     wl_debug.shoot_dial_current = shoot_output.dial_current;
+    wl_debug.shoot_local_heat = globals->shoot.current_heat();
+    wl_debug.shoot_heat_limit = globals->shoot.heat_limit();
+    wl_debug.shoot_cooling_rate = globals->shoot.cooling_rate();
+    wl_debug.shoot_heat_suppressed = globals->shoot.heat_over_limit() ? 1U : 0U;
   }
 #endif
 

@@ -296,6 +296,13 @@ class Gimbal {
       // output_.pitch_cmd_torque_nm =
       //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
       //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+
+      // output_.yaw_cmd_torque_nm =
+      //     std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.pitch_cmd_torque_nm =
+      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     }
 #endif
   }
