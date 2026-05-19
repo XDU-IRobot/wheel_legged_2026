@@ -26,7 +26,7 @@ void Shoot::Enable() { enabled_ = true; }
 void Shoot::Disable() { enabled_ = false; }
 
 ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool auto_aim) {
+                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm) {
   ShootOutput out{};
 
   if (shoot_enabled) {
@@ -34,32 +34,20 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     controller_.Arm(true);
     controller_.SetArmSpeed(fric_speed_target_rpm);
 
-    if (auto_aim) {
-      // 自瞄模式：单发，拨轮上升沿触发
-      controller_.SetMode(Shoot2Fric::kSingleShot);
-      const bool fire_rising_edge = fire_flag && !prev_fire_flag_;
-      if (fire_rising_edge) {
-        controller_.Fire();
-      }
+    if (fire_flag) {
+      controller_.SetMode(Shoot2Fric::kFullAuto);
+      controller_.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
-      // 普通模式：连发
-      if (fire_flag) {
-        controller_.SetMode(Shoot2Fric::kFullAuto);
-        controller_.SetShootFrequency(ns::kShootFrequencyHz);
-      } else {
-        controller_.SetMode(Shoot2Fric::kStop);
-      }
-      controller_.Fire();
+      controller_.SetMode(Shoot2Fric::kStop);
     }
-    prev_fire_flag_ = fire_flag;
+    controller_.Fire();
   } else {
     controller_.Enable(true);
     controller_.Arm(true);
     controller_.SetArmSpeed(0);
-    prev_fire_flag_ = false;
   }
 
-  controller_.Update(-fric_left_rpm, -fric_right_rpm, dial_encoder, dial_rpm, dt);
+  controller_.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, dt);
 
   // 打弹检测：摩擦轮达速后降速超过 200 rpm 记为一发
   {

@@ -194,6 +194,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float fric_left_rpm;          // 左摩擦轮实际转速 [rpm]
   float fric_right_rpm;         // 右摩擦轮实际转速 [rpm]
   float dial_encoder_raw;       // 拨盘编码器原始值
+  float shoot_dial_current;     // 拨盘电机输出电流
   uint32_t shot_count;          // 打弹成功计数
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;  // DM 拨盘位置 (hero)

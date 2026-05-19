@@ -908,8 +908,8 @@ using namespace common::globals;
 constexpr std::uint16_t kLeftWheelId = 0x02;   ///< 左轮毂电机 CAN ID
 constexpr std::uint16_t kRightWheelId = 0x01;  ///< 右轮毂电机 CAN ID
 
-constexpr std::uint16_t kFricLeftId = 0x04;   ///< 左摩擦轮电机 CAN ID
-constexpr std::uint16_t kFricRightId = 0x01;  ///< 右摩擦轮电机 CAN ID
+constexpr std::uint16_t kFricLeftId = 0x01;   ///< 左摩擦轮电机 CAN ID
+constexpr std::uint16_t kFricRightId = 0x04;  ///< 右摩擦轮电机 CAN ID
 constexpr std::uint16_t kDialId = 0x03;       ///< 拨盘电机 CAN ID
 }  // namespace globals
 

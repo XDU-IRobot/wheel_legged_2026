@@ -48,6 +48,7 @@ constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
 constexpr float kLandingDecelThetaGain = ns::control_loop::kLandingDecelThetaGain;
 constexpr float kLandingDecelThetaMaxRad = ns::control_loop::kLandingDecelThetaMaxRad;
+
 constexpr float kLandingDecelThetaRampStepRad = ns::control_loop::kLandingDecelThetaRampStepRad;
 constexpr std::uint32_t kLandingDecelOffGroundMinMs = ns::control_loop::kLandingDecelOffGroundMinMs;
 constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandingDecelStableDurationMs;
@@ -244,14 +245,13 @@ void ControlLoop() {
     wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool fire_flag =
-        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const bool auto_aim = chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
-                          chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove;
+        (globals->aimbot->aimbot_state()==0 &&( input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button) )|| ((globals->aimbot->aimbot_state() >> 1) & 1);
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm, auto_aim);
+                              in_combat, tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
+    wl_debug.shoot_dial_current = shoot_output.dial_current;
   }
 #endif
 

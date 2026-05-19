@@ -24,7 +24,7 @@ class Shoot {
   void Enable();
   void Disable();
   ShootOutput Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool auto_aim);
+                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm);
 
   bool enabled() const { return enabled_; }
   uint32_t shot_count() const { return shot_count_; }
@@ -35,7 +35,6 @@ class Shoot {
  private:
   bool enabled_{false};
   bool fric_ready_{false};
-  bool prev_fire_flag_{false};
   uint32_t shot_count_{0};
   EncoderCounter dial_encoder_counter_;
   Shoot2Fric controller_{9, 37.58f};
