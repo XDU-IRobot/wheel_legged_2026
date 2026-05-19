@@ -116,10 +116,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t pitch_motor_status;             // 俯仰 DM 状态
 
   // ── 云台动力学前馈 ──
-  float gimbal_yaw_dq_rad_s;    // 偏航目标角速度
-  float gimbal_pitch_dq_rad_s;  // 俯仰目标角速度
-  float gimbal_yaw_ddq_rad_s2;  // 偏航目标角加速度
-  float gimbal_pitch_ddq_rad_s2; // 俯仰目标角加速度
+  float gimbal_yaw_dq_rad_s;      // 偏航目标角速度
+  float gimbal_pitch_dq_rad_s;    // 俯仰目标角速度
+  float gimbal_yaw_ddq_rad_s2;    // 偏航目标角加速度
+  float gimbal_pitch_ddq_rad_s2;  // 俯仰目标角加速度
 
   // ── 底盘模型状态向量 ──
   float state_s_m;                 // 纵向位置
