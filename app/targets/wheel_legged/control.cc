@@ -251,8 +251,8 @@ void ControlLoop() {
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
-    const uint16_t heat_limit = ref_online ? globals->referee->data().robot_status.shooter_barrel_heat_limit
-                                          : ns::shoot::kDefaultHeatLimit;
+    const uint16_t heat_limit =
+        ref_online ? globals->referee->data().robot_status.shooter_barrel_heat_limit : ns::shoot::kDefaultHeatLimit;
     const uint16_t cooling_rate = ref_online ? globals->referee->data().robot_status.shooter_barrel_cooling_value
                                              : ns::shoot::kDefaultCoolingRate;
     globals->shoot.SetHeatParams(heat_limit, cooling_rate);
