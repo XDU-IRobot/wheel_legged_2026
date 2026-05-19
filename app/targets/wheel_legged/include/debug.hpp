@@ -212,6 +212,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
+  uint16_t referee_barrel_heat;    // 裁判系统上报的枪口热量（可对比 shoot_local_heat）
 
   // ── 超级电容 ──
   uint8_t supercap_enable_dcdc;           // 电容开启标志

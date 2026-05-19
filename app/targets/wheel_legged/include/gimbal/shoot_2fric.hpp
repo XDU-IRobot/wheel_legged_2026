@@ -33,8 +33,12 @@ class Shoot {
   auto &dial_encoder_counter() { return dial_encoder_counter_; }
 
   void SetHeatParams(uint16_t heat_limit, uint16_t cooling_rate) {
-    heat_limit_ = heat_limit;
-    cooling_rate_ = cooling_rate;
+    if (heat_limit > 0) {
+      heat_limit_ = heat_limit;
+    }
+    if (cooling_rate > 0) {
+      cooling_rate_ = cooling_rate;
+    }
   }
   float current_heat() const { return current_heat_; }
   uint16_t heat_limit() const { return heat_limit_; }

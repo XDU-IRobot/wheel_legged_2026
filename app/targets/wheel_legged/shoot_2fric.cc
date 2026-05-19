@@ -77,9 +77,15 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
       current_heat_ = 0.0f;
     }
 
-    if (current_heat_ + ns::kHeatPerShot > static_cast<float>(heat_limit_) - ns::kHeatSafetyMargin) {
+    const float effective_limit = static_cast<float>(heat_limit_);
+    if (effective_limit > ns::kHeatSafetyMargin &&
+        current_heat_ + ns::kHeatPerShot > effective_limit - ns::kHeatSafetyMargin) {
       heat_suppressed_ = true;
-    } else if (current_heat_ < static_cast<float>(heat_limit_) - ns::kHeatResumeMargin) {
+    } else if (effective_limit > ns::kHeatResumeMargin &&
+               current_heat_ < effective_limit - ns::kHeatResumeMargin) {
+      heat_suppressed_ = false;
+    } else if (effective_limit <= ns::kHeatSafetyMargin) {
+      // 裁判系统给的 heat_limit 异常（0 或极小值），强制解除抑制
       heat_suppressed_ = false;
     }
   }

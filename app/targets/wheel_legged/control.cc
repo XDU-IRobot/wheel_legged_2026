@@ -723,10 +723,12 @@ void ControlLoop() {
     wl_debug.referee_online = 1U;
     wl_debug.referee_robot_id = globals->referee->data().robot_status.robot_id;
     wl_debug.referee_bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
+    wl_debug.referee_barrel_heat = globals->referee->data().power_heat_data.shooter_17mm_1_barrel_heat;
   } else {
     wl_debug.referee_online = 0U;
     wl_debug.referee_robot_id = 0U;
     wl_debug.referee_bullet_speed_mps = 0.0f;
+    wl_debug.referee_barrel_heat = 0U;
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
