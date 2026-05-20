@@ -686,7 +686,9 @@ void ControlLoop() {
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
     const float bullet_speed =
-        (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
+        (referee_online && referee_bullet_speed >= 20.0f)
+            ? referee_bullet_speed
+            : ((referee_online && referee_bullet_speed > 0.0f) ? 23.0f : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 
