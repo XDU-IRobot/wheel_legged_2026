@@ -1286,7 +1286,7 @@ constexpr PidGains kYawPositionPid{42.0f, 0.f, 1.5f, 10.0f, 1.5f};  ///< 自瞄�
 constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};     ///< 自瞄偏航速度 PID
 // constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.8f, 10.0f, 1.5f};  ///< 自瞄俯仰位置 PID
 // constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 自瞄俯仰速度 PID
-constexpr PidGains kPitchPositionPid{40.0f, 0.f, 1.8f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.f, 1.8f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};    ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
