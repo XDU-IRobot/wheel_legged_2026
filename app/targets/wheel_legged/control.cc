@@ -337,6 +337,9 @@ void ControlLoop() {
   chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
+  chassis_update_input.recovery_manual_mode = chassis_input.request.recovery_manual_mode;
+  chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
+  chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;

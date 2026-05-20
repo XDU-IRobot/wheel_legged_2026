@@ -26,13 +26,6 @@ class Shoot2Fric {
       single_shoot_complete_ = true;
     }
 
-    if (!enabled_) {
-      output_.fric_1 = 0.0f;
-      output_.fric_2 = 0.0f;
-      output_.loader = 0.0f;
-      return;
-    }
-
     // 摩擦轮控制
     if (!armed_) {
       target_.fric_speed = 0.0f;
@@ -45,6 +38,12 @@ class Shoot2Fric {
     output_.fric_2 = pid_.fric_2_speed.out();
 
     // 拨盘控制
+    if (!enabled_) {
+//      output_.fric_1 = 0.0f;
+//      output_.fric_2 = 0.0f;
+      output_.loader = 0.0f;
+      return;
+    }
     if (!single_shoot_complete_) {
       // 单发模式：位置 - 速度串级
       pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);

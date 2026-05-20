@@ -27,6 +27,9 @@ class Chassis {
     bool enable_output{false};                     ///< 是否允许输出电机命令
     bool run_chassis_update{false};                ///< 是否执行底盘控制计算
     bool spin_enable{false};                       ///< 是否开启小陀螺
+    bool recovery_manual_mode{false};              ///< 倒地自启手动模式
+    rm::f32 manual_left_leg_speed{0.0f};           ///< 手动模式左腿摆角速度目标 [rad/s]
+    rm::f32 manual_right_leg_speed{0.0f};          ///< 手动模式右腿摆角速度目标 [rad/s]
     rm::f32 target_leg_length_m{wheel_legged::params::active::chassis_fsm::kMidLegLengthM};  ///< 目标腿长
   };
 
@@ -153,8 +156,9 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{false};
-  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿到目标腿长, 1=摆角收敛, 2=起立完成
+  bool standup_complete_{true};                   ///< 起立完成（首次启动默认完成，仅恢复后重走）
+  uint8_t standup_phase_{0};                      ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  bool prev_fsm_was_recovery_{false};             ///< 上一周期是否在恢复状态
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};   ///< 当前 Phase 条件连续满足的周期数
@@ -166,6 +170,7 @@ class Chassis {
   uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
   bool was_off_ground_{false};             ///< 上一周期离地状态（用于检测着地边沿）
   float spring_compensation_scale_{1.0f};  ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
+  bool off_ground_200ms_reached_{false};   ///< 离地已持续 200ms（落地后触发强制低腿长）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
@@ -176,6 +181,8 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_leg_turn_pid_manual_{};
+  rm::modules::PID right_leg_turn_pid_manual_{};
   rm::modules::PID left_stair_climb_theta_pid_{};   ///< 上台阶左腿摆角 PID（位置环）
   rm::modules::PID right_stair_climb_theta_pid_{};  ///< 上台阶右腿摆角 PID（位置环）
 

@@ -87,21 +87,26 @@
 			<member name="item42" type="CObject_ptr">ObjId0357</member>
 			<member name="item43" type="CObject_ptr">ObjId0358</member>
 			<member name="item44" type="CObject_ptr">ObjId0373</member>
-			<member name="item45" type="CObject_ptr">ObjId0379</member>
-			<member name="item46" type="CObject_ptr">ObjId0380</member>
-			<member name="item47" type="CObject_ptr">ObjId0381</member>
-			<member name="item48" type="CObject_ptr">ObjId0382</member>
-			<member name="item49" type="CObject_ptr">ObjId0383</member>
-			<member name="item50" type="CObject_ptr">ObjId0384</member>
-			<member name="item51" type="CObject_ptr">ObjId0385</member>
-			<member name="item52" type="CObject_ptr">ObjId0386</member>
-			<member name="item53" type="CObject_ptr">ObjId0387</member>
-			<member name="item54" type="CObject_ptr">ObjId0388</member>
-			<member name="item55" type="CObject_ptr">ObjId0389</member>
-			<member name="item56" type="CObject_ptr">ObjId0390</member>
-			<member name="item57" type="CObject_ptr">ObjId0391</member>
-			<member name="item58" type="CObject_ptr">ObjId0392</member>
-			<member name="item59" type="CObject_ptr">ObjId0393</member>
+			<member name="item45" type="CObject_ptr">ObjId0374</member>
+			<member name="item46" type="CObject_ptr">ObjId0375</member>
+			<member name="item47" type="CObject_ptr">ObjId0393</member>
+			<member name="item48" type="CObject_ptr">ObjId0394</member>
+			<member name="item49" type="CObject_ptr">ObjId0395</member>
+			<member name="item50" type="CObject_ptr">ObjId0396</member>
+			<member name="item51" type="CObject_ptr">ObjId0417</member>
+			<member name="item52" type="CObject_ptr">ObjId0418</member>
+			<member name="item53" type="CObject_ptr">ObjId0429</member>
+			<member name="item54" type="CObject_ptr">ObjId0430</member>
+			<member name="item55" type="CObject_ptr">ObjId0431</member>
+			<member name="item56" type="CObject_ptr">ObjId0432</member>
+			<member name="item57" type="CObject_ptr">ObjId0433</member>
+			<member name="item58" type="CObject_ptr">ObjId0434</member>
+			<member name="item59" type="CObject_ptr">ObjId0435</member>
+			<member name="item60" type="CObject_ptr">ObjId0461</member>
+			<member name="item61" type="CObject_ptr">ObjId0462</member>
+			<member name="item62" type="CObject_ptr">ObjId0463</member>
+			<member name="item63" type="CObject_ptr">ObjId0464</member>
+			<member name="item64" type="CObject_ptr">ObjId0465</member>
 		</object>
 		<object name="ObjId0166" type="CVariable">
 			<member name="name" type="string">wl_debug.chassis_left_leg_length_m</member>
@@ -2117,7 +2122,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">debug_pitch_motor_raw_pos_rad</member>
-			<member name="last_addr" type="uint32">0x200007EC</member>
+			<member name="last_addr" type="uint32">0x20000B38</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2215,7 +2220,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">wl_debug.gimbal_euler_pitch_rad</member>
-			<member name="last_addr" type="uint32">0x2400120C</member>
+			<member name="last_addr" type="uint32">0x2400123C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2260,109 +2265,11 @@
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
 		<object name="ObjId0373" type="CVariable">
-			<member name="name" type="string">wl_debug.gimbal_target_yaw_rad</member>
+			<member name="name" type="string">force_low_leg_debug</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.gimbal_target_yaw_rad</member>
-			<member name="last_addr" type="uint32">0x24001038</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0379" type="CVariable">
-			<member name="name" type="string">wl_debug.fric_speed_target_rpm</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.fric_speed_target_rpm</member>
-			<member name="last_addr" type="uint32">0x240011D1</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0380" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_enabled</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_enabled</member>
-			<member name="last_addr" type="uint32">0x240011D0</member>
+			<member name="address" type="string">force_low_leg_debug</member>
+			<member name="last_addr" type="uint32">0x2000079B</member>
 			<member name="byte_size" type="sint32">1</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2406,12 +2313,12 @@
 			<member name="modif_address" type="string"/>
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
-		<object name="ObjId0381" type="CVariable">
-			<member name="name" type="string">wl_debug.fric_left_rpm</member>
+		<object name="ObjId0374" type="CVariable">
+			<member name="name" type="string">wl_debug.chassis_left_support_force_n</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.fric_left_rpm</member>
-			<member name="last_addr" type="uint32">0x240011D5</member>
+			<member name="address" type="string">wl_debug.chassis_left_support_force_n</member>
+			<member name="last_addr" type="uint32">0x2400118E</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2455,502 +2362,12 @@
 			<member name="modif_address" type="string"/>
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
-		<object name="ObjId0382" type="CVariable">
-			<member name="name" type="string">wl_debug.shot_count</member>
+		<object name="ObjId0375" type="CVariable">
+			<member name="name" type="string">wl_debug.chassis_right_support_force_n</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shot_count</member>
-			<member name="last_addr" type="uint32">0x240011E5</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0383" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_latency_ms</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_latency_ms</member>
-			<member name="last_addr" type="uint32">0x240011D5</member>
-			<member name="byte_size" type="sint32">2</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0384" type="CVariable">
-			<member name="name" type="string">wl_debug.dial_encoder_raw</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.dial_encoder_raw</member>
-			<member name="last_addr" type="uint32">0x240011DD</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0385" type="CVariable">
-			<member name="name" type="string">wl_debug.gimbal_pitch_dq_rad_s</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.gimbal_pitch_dq_rad_s</member>
-			<member name="last_addr" type="uint32">0x240010EE</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0386" type="CVariable">
-			<member name="name" type="string">wl_debug.dr16_left_y_raw</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.dr16_left_y_raw</member>
-			<member name="last_addr" type="uint32">0x24001015</member>
-			<member name="byte_size" type="sint32">2</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">1</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0387" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_fire_flag</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_fire_flag</member>
-			<member name="last_addr" type="uint32">0x240011D1</member>
-			<member name="byte_size" type="sint32">1</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0388" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_fire_rising_edge</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_fire_rising_edge</member>
-			<member name="last_addr" type="uint32">0x240011D2</member>
-			<member name="byte_size" type="sint32">1</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0389" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_single_shot_busy</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_single_shot_busy</member>
-			<member name="last_addr" type="uint32">0x240011D3</member>
-			<member name="byte_size" type="sint32">1</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">0</member>
-			<member name="type_fmt" type="string">Fixed point number</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">0</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0390" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_dial_current</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_dial_current</member>
-			<member name="last_addr" type="uint32">0x240011E1</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0391" type="CVariable">
-			<member name="name" type="string">wl_debug.shoot_fric_left_current</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.shoot_fric_left_current</member>
-			<member name="last_addr" type="uint32">0x240011E9</member>
-			<member name="byte_size" type="sint32">4</member>
-			<member name="description" type="string"/>
-			<member name="comment" type="string"/>
-			<member name="virtual" type="sint32">0</member>
-			<member name="virtual_default" type="string">0</member>
-			<member name="treat_as" type="sint32">2</member>
-			<member name="type_fmt" type="string">IEEE floating point</member>
-			<member name="bit_shift" type="sint32">0</member>
-			<member name="bit_mask" type="string">no mask (-1)</member>
-			<member name="value_trf" type="CObject_ptr">NULL</member>
-			<member name="enum_enabled" type="sint32">0</member>
-			<member name="enum_num_always" type="sint32">0</member>
-			<member name="enum_default_val" type="string">unknown</member>
-			<member name="enum_num_with_default" type="sint32">1</member>
-			<member name="enum" type="string"/>
-			<member name="show_as" type="sint32">4</member>
-			<member name="show_val" type="sint32">1</member>
-			<member name="show_max" type="sint32">0</member>
-			<member name="show_min" type="sint32">0</member>
-			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
-			<member name="show_num_lzero_fill" type="sint32">0</member>
-			<member name="show_num_afp_digs" type="sint32">2147483647</member>
-			<member name="show_num_exp" type="sint32">0</member>
-			<member name="show_ascii_zterm" type="sint32">0</member>
-			<member name="show_ascii_rev" type="sint32">0</member>
-			<member name="show_ascii_hex" type="sint32">1</member>
-			<member name="show_ascii_chwdt" type="sint32">1</member>
-			<member name="filt_enabled" type="sint32">0</member>
-			<member name="filt_reset_onmod" type="sint32">1</member>
-			<member name="filt_time" type="uint32">0x1388</member>
-			<member name="modif_mode" type="sint32">0</member>
-			<member name="modif_edit_mode" type="sint32">2</member>
-			<member name="modif_set_mode" type="sint32">0</member>
-			<member name="modif_auto_fin" type="sint32">1</member>
-			<member name="modif_auto_hide" type="sint32">1</member>
-			<member name="modif_predefs_modes" type="uint32">0x1</member>
-			<member name="modif_predefs_other" type="string"/>
-			<member name="modif_set_min" type="string"/>
-			<member name="modif_set_max" type="string"/>
-			<member name="modif_set_step" type="string"/>
-			<member name="modif_address" type="string"/>
-			<member name="modif_last_addr" type="uint32">0x0</member>
-		</object>
-		<object name="ObjId0392" type="CVariable">
-			<member name="name" type="string">wl_debug.referee_bullet_speed_mps</member>
-			<member name="unit" type="string">unit</member>
-			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.referee_bullet_speed_mps</member>
-			<member name="last_addr" type="uint32">0x240011FB</member>
+			<member name="address" type="string">wl_debug.chassis_right_support_force_n</member>
+			<member name="last_addr" type="uint32">0x24001192</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -2995,11 +2412,11 @@
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
 		<object name="ObjId0393" type="CVariable">
-			<member name="name" type="string">wl_debug.aimbot_rx_state</member>
+			<member name="name" type="string">wl_debug.dr16_online </member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">wl_debug.aimbot_rx_state</member>
-			<member name="last_addr" type="uint32">0x24001212</member>
+			<member name="address" type="string">wl_debug.dr16_online </member>
+			<member name="last_addr" type="uint32">0x24001008</member>
 			<member name="byte_size" type="sint32">1</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -3043,6 +2460,839 @@
 			<member name="modif_address" type="string"/>
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
+		<object name="ObjId0394" type="CVariable">
+			<member name="name" type="string">wl_debug.yaw_cmd_target_rad</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.yaw_cmd_target_rad</member>
+			<member name="last_addr" type="uint32">0x240010D0</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0395" type="CVariable">
+			<member name="name" type="string">wl_debug.yaw_cmd_torque_nm</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.yaw_cmd_torque_nm</member>
+			<member name="last_addr" type="uint32">0x240010D4</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0396" type="CVariable">
+			<member name="name" type="string">wl_debug.pitch_cmd_target_rad</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.pitch_cmd_target_rad</member>
+			<member name="last_addr" type="uint32">0x240010E1</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0417" type="CVariable">
+			<member name="name" type="string">debug_pitch_err</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_pitch_err</member>
+			<member name="last_addr" type="uint32">0x20000BB4</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0418" type="CVariable">
+			<member name="name" type="string">debug_yaw_err</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_yaw_err</member>
+			<member name="last_addr" type="uint32">0x20000BB8</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0429" type="CVariable">
+			<member name="name" type="string">debug_dial_tal</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_dial_tal</member>
+			<member name="last_addr" type="uint32">0x200007FC</member>
+			<member name="byte_size" type="sint32">2</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">1</member>
+			<member name="type_fmt" type="string">Fixed point number</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0430" type="CVariable">
+			<member name="name" type="string">wl_debug.aimbot_rx_yaw_rad</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.aimbot_rx_yaw_rad</member>
+			<member name="last_addr" type="uint32">0x24001245</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0431" type="CVariable">
+			<member name="name" type="string">wl_debug.aimbot_rx_pitch_rad</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.aimbot_rx_pitch_rad</member>
+			<member name="last_addr" type="uint32">0x24001249</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0432" type="CVariable">
+			<member name="name" type="string">pitch_ff</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">pitch_ff</member>
+			<member name="last_addr" type="uint32">0x20000800</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0433" type="CVariable">
+			<member name="name" type="string">yaw_ff</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">yaw_ff</member>
+			<member name="last_addr" type="uint32">0x200007FC</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0434" type="CVariable">
+			<member name="name" type="string">debug_yaw_vel</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_yaw_vel</member>
+			<member name="last_addr" type="uint32">0x200007FC</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0435" type="CVariable">
+			<member name="name" type="string">debug_yaw_acc</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_yaw_acc</member>
+			<member name="last_addr" type="uint32">0x20000800</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0461" type="CVariable">
+			<member name="name" type="string">wl_debug.shoot_fire_latency_ms</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.shoot_fire_latency_ms</member>
+			<member name="last_addr" type="uint32">0x24001222</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0462" type="CVariable">
+			<member name="name" type="string">wl_debug.shoot_local_heat</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.shoot_local_heat</member>
+			<member name="last_addr" type="uint32">0x24001219</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0463" type="CVariable">
+			<member name="name" type="string">wl_debug.referee_barrel_heat</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">wl_debug.referee_barrel_heat</member>
+			<member name="last_addr" type="uint32">0x2400122D</member>
+			<member name="byte_size" type="sint32">2</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">0</member>
+			<member name="type_fmt" type="string">Fixed point number</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">0</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0464" type="CVariable">
+			<member name="name" type="string">debug_cooling_rate</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_cooling_rate</member>
+			<member name="last_addr" type="uint32">0x200007F8</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
+		<object name="ObjId0465" type="CVariable">
+			<member name="name" type="string">debug_heat_limit</member>
+			<member name="unit" type="string">unit</member>
+			<member name="period" type="sint32">0</member>
+			<member name="address" type="string">debug_heat_limit</member>
+			<member name="last_addr" type="uint32">0x200007FC</member>
+			<member name="byte_size" type="sint32">4</member>
+			<member name="description" type="string"/>
+			<member name="comment" type="string"/>
+			<member name="virtual" type="sint32">0</member>
+			<member name="virtual_default" type="string">0</member>
+			<member name="treat_as" type="sint32">2</member>
+			<member name="type_fmt" type="string">IEEE floating point</member>
+			<member name="bit_shift" type="sint32">0</member>
+			<member name="bit_mask" type="string">no mask (-1)</member>
+			<member name="value_trf" type="CObject_ptr">NULL</member>
+			<member name="enum_enabled" type="sint32">0</member>
+			<member name="enum_num_always" type="sint32">0</member>
+			<member name="enum_default_val" type="string">unknown</member>
+			<member name="enum_num_with_default" type="sint32">1</member>
+			<member name="enum" type="string"/>
+			<member name="show_as" type="sint32">4</member>
+			<member name="show_val" type="sint32">1</member>
+			<member name="show_max" type="sint32">0</member>
+			<member name="show_min" type="sint32">0</member>
+			<member name="show_num_fixed_digs" type="sint32">2147483647</member>
+			<member name="show_num_lzero_fill" type="sint32">0</member>
+			<member name="show_num_afp_digs" type="sint32">2147483647</member>
+			<member name="show_num_exp" type="sint32">0</member>
+			<member name="show_ascii_zterm" type="sint32">0</member>
+			<member name="show_ascii_rev" type="sint32">0</member>
+			<member name="show_ascii_hex" type="sint32">1</member>
+			<member name="show_ascii_chwdt" type="sint32">1</member>
+			<member name="filt_enabled" type="sint32">0</member>
+			<member name="filt_reset_onmod" type="sint32">1</member>
+			<member name="filt_time" type="uint32">0x1388</member>
+			<member name="modif_mode" type="sint32">0</member>
+			<member name="modif_edit_mode" type="sint32">2</member>
+			<member name="modif_set_mode" type="sint32">0</member>
+			<member name="modif_auto_fin" type="sint32">1</member>
+			<member name="modif_auto_hide" type="sint32">1</member>
+			<member name="modif_predefs_modes" type="uint32">0x1</member>
+			<member name="modif_predefs_other" type="string"/>
+			<member name="modif_set_min" type="string"/>
+			<member name="modif_set_max" type="string"/>
+			<member name="modif_set_step" type="string"/>
+			<member name="modif_address" type="string"/>
+			<member name="modif_last_addr" type="uint32">0x0</member>
+		</object>
 		<object name="ObjId0036" type="CObList"/>
 		<object name="ObjId0037" type="CObList"/>
 		<object name="ObjId0038" type="CMapWordToOb"/>
@@ -3056,10 +3306,10 @@
 		</object>
 		<object name="ObjId0041" type="CPrjDoc_Hi509FileType"/>
 		<object name="ObjId0042" type="CObList">
-			<member name="item0" type="CObject_ptr">ObjId0374</member>
+			<member name="item0" type="CObject_ptr">ObjId0376</member>
 		</object>
-		<object name="ObjId0374" type="CPrjDoc_MapFileInfo">
-			<member name="file_name" type="string">..\..\..\..\build\Debug-infantry4\app\wheel_legged.elf</member>
+		<object name="ObjId0376" type="CPrjDoc_MapFileInfo">
+			<member name="file_name" type="string">..\..\..\..\build\Debug-infantry3\app\wheel_legged.elf</member>
 			<member name="file_type" type="CObject_ptr">ObjId0040</member>
 		</object>
 		<object name="ObjId0044" type="CStringList"/>
@@ -3126,21 +3376,26 @@
 			<member name="item34" type="CObject_ptr">ObjId0357</member>
 			<member name="item35" type="CObject_ptr">ObjId0358</member>
 			<member name="item36" type="CObject_ptr">ObjId0373</member>
-			<member name="item37" type="CObject_ptr">ObjId0379</member>
-			<member name="item38" type="CObject_ptr">ObjId0380</member>
-			<member name="item39" type="CObject_ptr">ObjId0381</member>
-			<member name="item40" type="CObject_ptr">ObjId0382</member>
-			<member name="item41" type="CObject_ptr">ObjId0383</member>
-			<member name="item42" type="CObject_ptr">ObjId0384</member>
-			<member name="item43" type="CObject_ptr">ObjId0385</member>
-			<member name="item44" type="CObject_ptr">ObjId0386</member>
-			<member name="item45" type="CObject_ptr">ObjId0387</member>
-			<member name="item46" type="CObject_ptr">ObjId0388</member>
-			<member name="item47" type="CObject_ptr">ObjId0389</member>
-			<member name="item48" type="CObject_ptr">ObjId0390</member>
-			<member name="item49" type="CObject_ptr">ObjId0391</member>
-			<member name="item50" type="CObject_ptr">ObjId0392</member>
-			<member name="item51" type="CObject_ptr">ObjId0393</member>
+			<member name="item37" type="CObject_ptr">ObjId0374</member>
+			<member name="item38" type="CObject_ptr">ObjId0375</member>
+			<member name="item39" type="CObject_ptr">ObjId0393</member>
+			<member name="item40" type="CObject_ptr">ObjId0394</member>
+			<member name="item41" type="CObject_ptr">ObjId0395</member>
+			<member name="item42" type="CObject_ptr">ObjId0396</member>
+			<member name="item43" type="CObject_ptr">ObjId0417</member>
+			<member name="item44" type="CObject_ptr">ObjId0418</member>
+			<member name="item45" type="CObject_ptr">ObjId0429</member>
+			<member name="item46" type="CObject_ptr">ObjId0430</member>
+			<member name="item47" type="CObject_ptr">ObjId0431</member>
+			<member name="item48" type="CObject_ptr">ObjId0432</member>
+			<member name="item49" type="CObject_ptr">ObjId0433</member>
+			<member name="item50" type="CObject_ptr">ObjId0434</member>
+			<member name="item51" type="CObject_ptr">ObjId0435</member>
+			<member name="item52" type="CObject_ptr">ObjId0461</member>
+			<member name="item53" type="CObject_ptr">ObjId0462</member>
+			<member name="item54" type="CObject_ptr">ObjId0463</member>
+			<member name="item55" type="CObject_ptr">ObjId0464</member>
+			<member name="item56" type="CObject_ptr">ObjId0465</member>
 		</object>
 		<object name="ObjId0047" type="CObList"/>
 		<object name="ObjId0048" type="CObList">
@@ -3152,9 +3407,12 @@
 			<member name="item5" type="CObject_ptr">ObjId0291</member>
 			<member name="item6" type="CObject_ptr">ObjId0301</member>
 			<member name="item7" type="CObject_ptr">ObjId0359</member>
-			<member name="item8" type="CObject_ptr">ObjId0394</member>
-			<member name="item9" type="CObject_ptr">ObjId0404</member>
-			<member name="item10" type="CObject_ptr">ObjId0413</member>
+			<member name="item8" type="CObject_ptr">ObjId0377</member>
+			<member name="item9" type="CObject_ptr">ObjId0397</member>
+			<member name="item10" type="CObject_ptr">ObjId0436</member>
+			<member name="item11" type="CObject_ptr">ObjId0466</member>
+			<member name="item12" type="CObject_ptr">ObjId0474</member>
+			<member name="item13" type="CObject_ptr">ObjId0482</member>
 		</object>
 		<object name="ObjId0216" type="CPrjItemScope">
 			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
@@ -4238,13 +4496,11 @@
 			<member name="graph_x_min_auto" type="sint32">1</member>
 			<member name="graph_x_max_auto" type="sint32">1</member>
 			<member name="graph_break_line" type="sint32">0</member>
-			<member name="graph_var_count" type="sint32">5</member>
-			<member name="var_count" type="sint32">5</member>
+			<member name="graph_var_count" type="sint32">3</member>
+			<member name="var_count" type="sint32">3</member>
 			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0360</member>
 			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0361</member>
 			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0362</member>
-			<member name="var3_info" type="CPrjItemRS_VarInfo">ObjId0375</member>
-			<member name="var4_info" type="CPrjItemRS_VarInfo">ObjId0376</member>
 			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0363</member>
 			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0364</member>
 			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0365</member>
@@ -4269,22 +4525,10 @@
 			<member name="color" type="uint32">0xA95918</member>
 		</object>
 		<object name="ObjId0362" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0168</member>
-			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">1</member>
-			<member name="color" type="uint32">0x227DF3</member>
-		</object>
-		<object name="ObjId0375" type="CPrjItemRS_VarInfo">
 			<member name="variable" type="CObject_ptr">ObjId0358</member>
-			<member name="visible" type="sint32">0</member>
-			<member name="y_block" type="sint32">1</member>
-			<member name="color" type="uint32">0x478C00</member>
-		</object>
-		<object name="ObjId0376" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0373</member>
 			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">1</member>
-			<member name="color" type="uint32">0x912C66</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x478C00</member>
 		</object>
 		<object name="ObjId0363" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">0</member>
@@ -4382,7 +4626,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0394" type="CPrjItemScope">
+		<object name="ObjId0377" type="CPrjItemScope">
 			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
 			<member name="tree_expand" type="sint32">1</member>
 			<member name="data_capture_mode" type="sint32">0</member>
@@ -4390,7 +4634,7 @@
 			<member name="data_capture_file_type" type="sint32">0</member>
 			<member name="data_capture_dir" type="string">C:\Data</member>
 			<member name="data_absolute_time" type="sint32">0</member>
-			<member name="name" type="string">fric</member>
+			<member name="name" type="string">New Oscilloscope</member>
 			<member name="href" type="string"/>
 			<member name="graph_buffer" type="sint32">10000</member>
 			<member name="graph_type" type="sint32">0</member>
@@ -4409,187 +4653,39 @@
 			<member name="graph_break_line" type="sint32">0</member>
 			<member name="graph_var_count" type="sint32">3</member>
 			<member name="var_count" type="sint32">3</member>
-			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0395</member>
-			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0396</member>
-			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0397</member>
-			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0398</member>
-			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0399</member>
-			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0400</member>
-			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0401</member>
-			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0402</member>
-			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0403</member>
-			<member name="scope_period" type="real64">0.00000000000000000000e+00</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0378</member>
+			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0379</member>
+			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0380</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0381</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0382</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0383</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0384</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0385</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0386</member>
+			<member name="scope_period" type="real64">1.00000000000000005551e-01</member>
 			<member name="scope_x_autoscale" type="sint32">1</member>
 			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
 			<member name="scope_ignore_duplicity" type="sint32">0</member>
 		</object>
-		<object name="ObjId0395" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0381</member>
+		<object name="ObjId0378" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0374</member>
 			<member name="visible" type="sint32">1</member>
 			<member name="y_block" type="sint32">0</member>
-			<member name="color" type="uint32">0x2E2DED</member>
-		</object>
-		<object name="ObjId0396" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0382</member>
-			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">1</member>
-			<member name="color" type="uint32">0x478C00</member>
-		</object>
-		<object name="ObjId0397" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0383</member>
-			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">2</member>
 			<member name="color" type="uint32">0xA95918</member>
 		</object>
-		<object name="ObjId0398" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">0</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0399" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">1</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0400" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">2</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0401" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">3</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0402" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">4</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0403" type="CPrjItemRS_YBlockInfo">
-			<member name="join_class" type="sint32">5</member>
-			<member name="laxis_label" type="string">lAxis</member>
-			<member name="laxis_style" type="sint32">0</member>
-			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="laxis_min_auto" type="sint32">1</member>
-			<member name="laxis_max_auto" type="sint32">1</member>
-			<member name="raxis_label" type="string">rAxis</member>
-			<member name="raxis_style" type="sint32">0</member>
-			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
-			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
-			<member name="raxis_min_auto" type="sint32">1</member>
-			<member name="raxis_max_auto" type="sint32">1</member>
-			<member name="raxis_subsets" type="sint32">0</member>
-		</object>
-		<object name="ObjId0404" type="CPrjItemScope">
-			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
-			<member name="tree_expand" type="sint32">1</member>
-			<member name="data_capture_mode" type="sint32">0</member>
-			<member name="data_capture_onaction" type="sint32">0</member>
-			<member name="data_capture_file_type" type="sint32">0</member>
-			<member name="data_capture_dir" type="string">C:\Data</member>
-			<member name="data_absolute_time" type="sint32">0</member>
-			<member name="name" type="string">dial</member>
-			<member name="href" type="string"/>
-			<member name="graph_buffer" type="sint32">10000</member>
-			<member name="graph_type" type="sint32">0</member>
-			<member name="graph_x_units" type="sint32">2</member>
-			<member name="graph_x_label" type="string">Time</member>
-			<member name="graph_x_addunits" type="sint32">1</member>
-			<member name="graph_legend_loc" type="sint32">0</member>
-			<member name="graph_legen_vis" type="sint32">1</member>
-			<member name="graph_legend_inside" type="sint32">1</member>
-			<member name="graph_grid_horz" type="sint32">1</member>
-			<member name="graph_grid_vert" type="sint32">1</member>
-			<member name="graph_x_min" type="real64">0.00000000000000000000e+00</member>
-			<member name="graph_x_max" type="real64">1.00000000000000000000e+02</member>
-			<member name="graph_x_min_auto" type="sint32">1</member>
-			<member name="graph_x_max_auto" type="sint32">1</member>
-			<member name="graph_break_line" type="sint32">0</member>
-			<member name="graph_var_count" type="sint32">2</member>
-			<member name="var_count" type="sint32">2</member>
-			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0405</member>
-			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0406</member>
-			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0407</member>
-			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0408</member>
-			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0409</member>
-			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0410</member>
-			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0411</member>
-			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0412</member>
-			<member name="scope_period" type="real64">0.00000000000000000000e+00</member>
-			<member name="scope_x_autoscale" type="sint32">1</member>
-			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
-			<member name="scope_ignore_duplicity" type="sint32">0</member>
-		</object>
-		<object name="ObjId0405" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0384</member>
+		<object name="ObjId0379" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0375</member>
 			<member name="visible" type="sint32">1</member>
 			<member name="y_block" type="sint32">0</member>
-			<member name="color" type="uint32">0x2E2DED</member>
+			<member name="color" type="uint32">0x227DF3</member>
 		</object>
-		<object name="ObjId0406" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0381</member>
+		<object name="ObjId0380" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0373</member>
 			<member name="visible" type="sint32">1</member>
 			<member name="y_block" type="sint32">1</member>
-			<member name="color" type="uint32">0x478C00</member>
+			<member name="color" type="uint32">0xA95918</member>
 		</object>
-		<object name="ObjId0407" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0381" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">0</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4605,7 +4701,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0408" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0382" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">1</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4621,7 +4717,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0409" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0383" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">2</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4637,7 +4733,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0410" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0384" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">3</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4653,7 +4749,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0411" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0385" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">4</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4669,7 +4765,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0412" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0386" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">5</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4685,7 +4781,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0413" type="CPrjItemScope">
+		<object name="ObjId0397" type="CPrjItemScope">
 			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
 			<member name="tree_expand" type="sint32">1</member>
 			<member name="data_capture_mode" type="sint32">0</member>
@@ -4693,7 +4789,7 @@
 			<member name="data_capture_file_type" type="sint32">0</member>
 			<member name="data_capture_dir" type="string">C:\Data</member>
 			<member name="data_absolute_time" type="sint32">0</member>
-			<member name="name" type="string">shoot</member>
+			<member name="name" type="string">gimbal</member>
 			<member name="href" type="string"/>
 			<member name="graph_buffer" type="sint32">10000</member>
 			<member name="graph_type" type="sint32">0</member>
@@ -4712,62 +4808,62 @@
 			<member name="graph_break_line" type="sint32">0</member>
 			<member name="graph_var_count" type="sint32">6</member>
 			<member name="var_count" type="sint32">6</member>
-			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0414</member>
-			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0415</member>
-			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0416</member>
-			<member name="var3_info" type="CPrjItemRS_VarInfo">ObjId0417</member>
-			<member name="var4_info" type="CPrjItemRS_VarInfo">ObjId0418</member>
-			<member name="var5_info" type="CPrjItemRS_VarInfo">ObjId0419</member>
-			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0420</member>
-			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0421</member>
-			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0422</member>
-			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0423</member>
-			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0424</member>
-			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0425</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0419</member>
+			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0420</member>
+			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0421</member>
+			<member name="var3_info" type="CPrjItemRS_VarInfo">ObjId0422</member>
+			<member name="var4_info" type="CPrjItemRS_VarInfo">ObjId0423</member>
+			<member name="var5_info" type="CPrjItemRS_VarInfo">ObjId0424</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0402</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0403</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0404</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0405</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0406</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0407</member>
 			<member name="scope_period" type="real64">0.00000000000000000000e+00</member>
 			<member name="scope_x_autoscale" type="sint32">1</member>
 			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
 			<member name="scope_ignore_duplicity" type="sint32">0</member>
 		</object>
-		<object name="ObjId0414" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0388</member>
+		<object name="ObjId0419" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0394</member>
 			<member name="visible" type="sint32">1</member>
 			<member name="y_block" type="sint32">0</member>
-			<member name="color" type="uint32">0x2E2DED</member>
-		</object>
-		<object name="ObjId0415" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0389</member>
-			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">1</member>
 			<member name="color" type="uint32">0x478C00</member>
 		</object>
-		<object name="ObjId0416" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0390</member>
+		<object name="ObjId0420" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0168</member>
 			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">2</member>
+			<member name="y_block" type="sint32">0</member>
 			<member name="color" type="uint32">0xA95918</member>
 		</object>
-		<object name="ObjId0417" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0392</member>
+		<object name="ObjId0421" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0169</member>
 			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">3</member>
+			<member name="y_block" type="sint32">1</member>
+			<member name="color" type="uint32">0xA95918</member>
+		</object>
+		<object name="ObjId0422" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0396</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">1</member>
 			<member name="color" type="uint32">0x227DF3</member>
 		</object>
-		<object name="ObjId0418" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0381</member>
+		<object name="ObjId0423" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0417</member>
 			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">4</member>
+			<member name="y_block" type="sint32">2</member>
 			<member name="color" type="uint32">0x912C66</member>
 		</object>
-		<object name="ObjId0419" type="CPrjItemRS_VarInfo">
-			<member name="variable" type="CObject_ptr">ObjId0393</member>
+		<object name="ObjId0424" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0418</member>
 			<member name="visible" type="sint32">1</member>
-			<member name="y_block" type="sint32">5</member>
+			<member name="y_block" type="sint32">3</member>
 			<member name="color" type="uint32">0x201DA1</member>
 		</object>
-		<object name="ObjId0420" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0402" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">0</member>
-			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_label" type="string">unit</member>
 			<member name="laxis_style" type="sint32">0</member>
 			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
 			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
@@ -4781,7 +4877,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0421" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0403" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">1</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4797,7 +4893,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0422" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0404" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">2</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4813,7 +4909,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0423" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0405" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">3</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4829,7 +4925,7 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0424" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0406" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">4</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4845,7 +4941,599 @@
 			<member name="raxis_max_auto" type="sint32">1</member>
 			<member name="raxis_subsets" type="sint32">0</member>
 		</object>
-		<object name="ObjId0425" type="CPrjItemRS_YBlockInfo">
+		<object name="ObjId0407" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">5</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0436" type="CPrjItemScope">
+			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
+			<member name="tree_expand" type="sint32">1</member>
+			<member name="data_capture_mode" type="sint32">0</member>
+			<member name="data_capture_onaction" type="sint32">0</member>
+			<member name="data_capture_file_type" type="sint32">0</member>
+			<member name="data_capture_dir" type="string">C:\Data</member>
+			<member name="data_absolute_time" type="sint32">0</member>
+			<member name="name" type="string">aimbot</member>
+			<member name="href" type="string"/>
+			<member name="graph_buffer" type="sint32">10000</member>
+			<member name="graph_type" type="sint32">0</member>
+			<member name="graph_x_units" type="sint32">2</member>
+			<member name="graph_x_label" type="string">Time</member>
+			<member name="graph_x_addunits" type="sint32">1</member>
+			<member name="graph_legend_loc" type="sint32">0</member>
+			<member name="graph_legen_vis" type="sint32">1</member>
+			<member name="graph_legend_inside" type="sint32">1</member>
+			<member name="graph_grid_horz" type="sint32">1</member>
+			<member name="graph_grid_vert" type="sint32">1</member>
+			<member name="graph_x_min" type="real64">0.00000000000000000000e+00</member>
+			<member name="graph_x_max" type="real64">1.00000000000000000000e+02</member>
+			<member name="graph_x_min_auto" type="sint32">1</member>
+			<member name="graph_x_max_auto" type="sint32">1</member>
+			<member name="graph_break_line" type="sint32">0</member>
+			<member name="graph_var_count" type="sint32">4</member>
+			<member name="var_count" type="sint32">4</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0437</member>
+			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0438</member>
+			<member name="var2_info" type="CPrjItemRS_VarInfo">ObjId0439</member>
+			<member name="var3_info" type="CPrjItemRS_VarInfo">ObjId0440</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0441</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0442</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0443</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0444</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0445</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0446</member>
+			<member name="scope_period" type="real64">0.00000000000000000000e+00</member>
+			<member name="scope_x_autoscale" type="sint32">1</member>
+			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
+			<member name="scope_ignore_duplicity" type="sint32">0</member>
+		</object>
+		<object name="ObjId0437" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0431</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x478C00</member>
+		</object>
+		<object name="ObjId0438" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0169</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0xFF</member>
+		</object>
+		<object name="ObjId0439" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0168</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">1</member>
+			<member name="color" type="uint32">0xFF</member>
+		</object>
+		<object name="ObjId0440" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0430</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">1</member>
+			<member name="color" type="uint32">0x71B33C</member>
+		</object>
+		<object name="ObjId0441" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">0</member>
+			<member name="laxis_label" type="string">unit</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0442" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">1</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0443" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">2</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0444" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">3</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0445" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">4</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0446" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">5</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0466" type="CPrjItemScope">
+			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
+			<member name="tree_expand" type="sint32">1</member>
+			<member name="data_capture_mode" type="sint32">0</member>
+			<member name="data_capture_onaction" type="sint32">0</member>
+			<member name="data_capture_file_type" type="sint32">0</member>
+			<member name="data_capture_dir" type="string">C:\Data</member>
+			<member name="data_absolute_time" type="sint32">0</member>
+			<member name="name" type="string">New Oscilloscope</member>
+			<member name="href" type="string"/>
+			<member name="graph_buffer" type="sint32">10000</member>
+			<member name="graph_type" type="sint32">0</member>
+			<member name="graph_x_units" type="sint32">2</member>
+			<member name="graph_x_label" type="string">Time</member>
+			<member name="graph_x_addunits" type="sint32">1</member>
+			<member name="graph_legend_loc" type="sint32">0</member>
+			<member name="graph_legen_vis" type="sint32">1</member>
+			<member name="graph_legend_inside" type="sint32">1</member>
+			<member name="graph_grid_horz" type="sint32">1</member>
+			<member name="graph_grid_vert" type="sint32">1</member>
+			<member name="graph_x_min" type="real64">0.00000000000000000000e+00</member>
+			<member name="graph_x_max" type="real64">1.00000000000000000000e+02</member>
+			<member name="graph_x_min_auto" type="sint32">1</member>
+			<member name="graph_x_max_auto" type="sint32">1</member>
+			<member name="graph_break_line" type="sint32">0</member>
+			<member name="graph_var_count" type="sint32">1</member>
+			<member name="var_count" type="sint32">1</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0467</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0468</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0469</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0470</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0471</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0472</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0473</member>
+			<member name="scope_period" type="real64">1.00000000000000005551e-01</member>
+			<member name="scope_x_autoscale" type="sint32">1</member>
+			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
+			<member name="scope_ignore_duplicity" type="sint32">0</member>
+		</object>
+		<object name="ObjId0467" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0461</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x2E2DED</member>
+		</object>
+		<object name="ObjId0468" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">0</member>
+			<member name="laxis_label" type="string">unit</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0469" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">1</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0470" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">2</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0471" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">3</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0472" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">4</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0473" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">5</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0474" type="CPrjItemScope">
+			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
+			<member name="tree_expand" type="sint32">1</member>
+			<member name="data_capture_mode" type="sint32">0</member>
+			<member name="data_capture_onaction" type="sint32">0</member>
+			<member name="data_capture_file_type" type="sint32">0</member>
+			<member name="data_capture_dir" type="string">C:\Data</member>
+			<member name="data_absolute_time" type="sint32">0</member>
+			<member name="name" type="string">New Oscilloscope</member>
+			<member name="href" type="string"/>
+			<member name="graph_buffer" type="sint32">10000</member>
+			<member name="graph_type" type="sint32">0</member>
+			<member name="graph_x_units" type="sint32">2</member>
+			<member name="graph_x_label" type="string">Time</member>
+			<member name="graph_x_addunits" type="sint32">1</member>
+			<member name="graph_legend_loc" type="sint32">0</member>
+			<member name="graph_legen_vis" type="sint32">1</member>
+			<member name="graph_legend_inside" type="sint32">1</member>
+			<member name="graph_grid_horz" type="sint32">1</member>
+			<member name="graph_grid_vert" type="sint32">1</member>
+			<member name="graph_x_min" type="real64">0.00000000000000000000e+00</member>
+			<member name="graph_x_max" type="real64">1.00000000000000000000e+02</member>
+			<member name="graph_x_min_auto" type="sint32">1</member>
+			<member name="graph_x_max_auto" type="sint32">1</member>
+			<member name="graph_break_line" type="sint32">0</member>
+			<member name="graph_var_count" type="sint32">1</member>
+			<member name="var_count" type="sint32">1</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0475</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0476</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0477</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0478</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0479</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0480</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0481</member>
+			<member name="scope_period" type="real64">1.00000000000000005551e-01</member>
+			<member name="scope_x_autoscale" type="sint32">1</member>
+			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
+			<member name="scope_ignore_duplicity" type="sint32">0</member>
+		</object>
+		<object name="ObjId0475" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0461</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x2E2DED</member>
+		</object>
+		<object name="ObjId0476" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">0</member>
+			<member name="laxis_label" type="string">unit</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0477" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">1</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0478" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">2</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0479" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">3</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0480" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">4</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0481" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">5</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0482" type="CPrjItemScope">
+			<member name="parent_item" type="CObject_ptr">ObjId0045</member>
+			<member name="tree_expand" type="sint32">1</member>
+			<member name="data_capture_mode" type="sint32">0</member>
+			<member name="data_capture_onaction" type="sint32">0</member>
+			<member name="data_capture_file_type" type="sint32">0</member>
+			<member name="data_capture_dir" type="string">C:\Data</member>
+			<member name="data_absolute_time" type="sint32">0</member>
+			<member name="name" type="string">New Oscilloscope</member>
+			<member name="href" type="string"/>
+			<member name="graph_buffer" type="sint32">10000</member>
+			<member name="graph_type" type="sint32">0</member>
+			<member name="graph_x_units" type="sint32">2</member>
+			<member name="graph_x_label" type="string">Time</member>
+			<member name="graph_x_addunits" type="sint32">1</member>
+			<member name="graph_legend_loc" type="sint32">0</member>
+			<member name="graph_legen_vis" type="sint32">1</member>
+			<member name="graph_legend_inside" type="sint32">1</member>
+			<member name="graph_grid_horz" type="sint32">1</member>
+			<member name="graph_grid_vert" type="sint32">1</member>
+			<member name="graph_x_min" type="real64">0.00000000000000000000e+00</member>
+			<member name="graph_x_max" type="real64">1.00000000000000000000e+02</member>
+			<member name="graph_x_min_auto" type="sint32">1</member>
+			<member name="graph_x_max_auto" type="sint32">1</member>
+			<member name="graph_break_line" type="sint32">0</member>
+			<member name="graph_var_count" type="sint32">2</member>
+			<member name="var_count" type="sint32">2</member>
+			<member name="var0_info" type="CPrjItemRS_VarInfo">ObjId0483</member>
+			<member name="var1_info" type="CPrjItemRS_VarInfo">ObjId0484</member>
+			<member name="yblock0_info" type="CPrjItemRS_YBlockInfo">ObjId0485</member>
+			<member name="yblock1_info" type="CPrjItemRS_YBlockInfo">ObjId0486</member>
+			<member name="yblock2_info" type="CPrjItemRS_YBlockInfo">ObjId0487</member>
+			<member name="yblock3_info" type="CPrjItemRS_YBlockInfo">ObjId0488</member>
+			<member name="yblock4_info" type="CPrjItemRS_YBlockInfo">ObjId0489</member>
+			<member name="yblock5_info" type="CPrjItemRS_YBlockInfo">ObjId0490</member>
+			<member name="scope_period" type="real64">1.00000000000000005551e-01</member>
+			<member name="scope_x_autoscale" type="sint32">1</member>
+			<member name="scope_x_width" type="real64">1.00000000000000000000e+01</member>
+			<member name="scope_ignore_duplicity" type="sint32">0</member>
+		</object>
+		<object name="ObjId0483" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0462</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x2E2DED</member>
+		</object>
+		<object name="ObjId0484" type="CPrjItemRS_VarInfo">
+			<member name="variable" type="CObject_ptr">ObjId0463</member>
+			<member name="visible" type="sint32">1</member>
+			<member name="y_block" type="sint32">0</member>
+			<member name="color" type="uint32">0x478C00</member>
+		</object>
+		<object name="ObjId0485" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">0</member>
+			<member name="laxis_label" type="string">unit</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0486" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">1</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0487" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">2</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0488" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">3</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0489" type="CPrjItemRS_YBlockInfo">
+			<member name="join_class" type="sint32">4</member>
+			<member name="laxis_label" type="string">lAxis</member>
+			<member name="laxis_style" type="sint32">0</member>
+			<member name="laxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="laxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="laxis_min_auto" type="sint32">1</member>
+			<member name="laxis_max_auto" type="sint32">1</member>
+			<member name="raxis_label" type="string">rAxis</member>
+			<member name="raxis_style" type="sint32">0</member>
+			<member name="raxis_min" type="real64">-1.00000000000000000000e+01</member>
+			<member name="raxis_max" type="real64">1.00000000000000000000e+01</member>
+			<member name="raxis_min_auto" type="sint32">1</member>
+			<member name="raxis_max_auto" type="sint32">1</member>
+			<member name="raxis_subsets" type="sint32">0</member>
+		</object>
+		<object name="ObjId0490" type="CPrjItemRS_YBlockInfo">
 			<member name="join_class" type="sint32">5</member>
 			<member name="laxis_label" type="string">lAxis</member>
 			<member name="laxis_style" type="sint32">0</member>
@@ -4984,37 +5672,47 @@
 			<member name="key35" type="CObject_ptr">ObjId0358</member>
 			<member name="value35" type="CObject_ptr">ObjId0371</member>
 			<member name="key36" type="CObject_ptr">ObjId0373</member>
-			<member name="value36" type="CObject_ptr">ObjId0377</member>
-			<member name="key37" type="CObject_ptr">ObjId0379</member>
-			<member name="value37" type="CObject_ptr">ObjId0426</member>
-			<member name="key38" type="CObject_ptr">ObjId0380</member>
-			<member name="value38" type="CObject_ptr">ObjId0428</member>
-			<member name="key39" type="CObject_ptr">ObjId0381</member>
-			<member name="value39" type="CObject_ptr">ObjId0430</member>
-			<member name="key40" type="CObject_ptr">ObjId0382</member>
-			<member name="value40" type="CObject_ptr">ObjId0432</member>
-			<member name="key41" type="CObject_ptr">ObjId0383</member>
-			<member name="value41" type="CObject_ptr">ObjId0434</member>
-			<member name="key42" type="CObject_ptr">ObjId0384</member>
-			<member name="value42" type="CObject_ptr">ObjId0436</member>
-			<member name="key43" type="CObject_ptr">ObjId0385</member>
-			<member name="value43" type="CObject_ptr">ObjId0438</member>
-			<member name="key44" type="CObject_ptr">ObjId0386</member>
-			<member name="value44" type="CObject_ptr">ObjId0440</member>
-			<member name="key45" type="CObject_ptr">ObjId0387</member>
-			<member name="value45" type="CObject_ptr">ObjId0442</member>
-			<member name="key46" type="CObject_ptr">ObjId0388</member>
-			<member name="value46" type="CObject_ptr">ObjId0444</member>
-			<member name="key47" type="CObject_ptr">ObjId0389</member>
-			<member name="value47" type="CObject_ptr">ObjId0446</member>
-			<member name="key48" type="CObject_ptr">ObjId0390</member>
-			<member name="value48" type="CObject_ptr">ObjId0448</member>
-			<member name="key49" type="CObject_ptr">ObjId0391</member>
-			<member name="value49" type="CObject_ptr">ObjId0450</member>
-			<member name="key50" type="CObject_ptr">ObjId0392</member>
-			<member name="value50" type="CObject_ptr">ObjId0452</member>
-			<member name="key51" type="CObject_ptr">ObjId0393</member>
-			<member name="value51" type="CObject_ptr">ObjId0454</member>
+			<member name="value36" type="CObject_ptr">ObjId0387</member>
+			<member name="key37" type="CObject_ptr">ObjId0374</member>
+			<member name="value37" type="CObject_ptr">ObjId0389</member>
+			<member name="key38" type="CObject_ptr">ObjId0375</member>
+			<member name="value38" type="CObject_ptr">ObjId0391</member>
+			<member name="key39" type="CObject_ptr">ObjId0393</member>
+			<member name="value39" type="CObject_ptr">ObjId0409</member>
+			<member name="key40" type="CObject_ptr">ObjId0394</member>
+			<member name="value40" type="CObject_ptr">ObjId0411</member>
+			<member name="key41" type="CObject_ptr">ObjId0395</member>
+			<member name="value41" type="CObject_ptr">ObjId0413</member>
+			<member name="key42" type="CObject_ptr">ObjId0396</member>
+			<member name="value42" type="CObject_ptr">ObjId0415</member>
+			<member name="key43" type="CObject_ptr">ObjId0417</member>
+			<member name="value43" type="CObject_ptr">ObjId0425</member>
+			<member name="key44" type="CObject_ptr">ObjId0418</member>
+			<member name="value44" type="CObject_ptr">ObjId0427</member>
+			<member name="key45" type="CObject_ptr">ObjId0429</member>
+			<member name="value45" type="CObject_ptr">ObjId0447</member>
+			<member name="key46" type="CObject_ptr">ObjId0430</member>
+			<member name="value46" type="CObject_ptr">ObjId0449</member>
+			<member name="key47" type="CObject_ptr">ObjId0431</member>
+			<member name="value47" type="CObject_ptr">ObjId0451</member>
+			<member name="key48" type="CObject_ptr">ObjId0432</member>
+			<member name="value48" type="CObject_ptr">ObjId0453</member>
+			<member name="key49" type="CObject_ptr">ObjId0433</member>
+			<member name="value49" type="CObject_ptr">ObjId0455</member>
+			<member name="key50" type="CObject_ptr">ObjId0434</member>
+			<member name="value50" type="CObject_ptr">ObjId0457</member>
+			<member name="key51" type="CObject_ptr">ObjId0435</member>
+			<member name="value51" type="CObject_ptr">ObjId0459</member>
+			<member name="key52" type="CObject_ptr">ObjId0461</member>
+			<member name="value52" type="CObject_ptr">ObjId0491</member>
+			<member name="key53" type="CObject_ptr">ObjId0462</member>
+			<member name="value53" type="CObject_ptr">ObjId0493</member>
+			<member name="key54" type="CObject_ptr">ObjId0463</member>
+			<member name="value54" type="CObject_ptr">ObjId0495</member>
+			<member name="key55" type="CObject_ptr">ObjId0464</member>
+			<member name="value55" type="CObject_ptr">ObjId0497</member>
+			<member name="key56" type="CObject_ptr">ObjId0465</member>
+			<member name="value56" type="CObject_ptr">ObjId0499</member>
 		</object>
 		<object name="ObjId0185" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
@@ -5060,7 +5758,20 @@
 			<member name="row_height" type="sint32">15</member>
 			<member name="row_cell_formats" type="CObArrayEx">ObjId0202</member>
 		</object>
-		<object name="ObjId0202" type="CObArray" length="0"/>
+		<object name="ObjId0202" type="CObArray" length="2">
+			<member name="index1" type="CObject_ptr">ObjId0408</member>
+		</object>
+		<object name="ObjId0408" type="CPrjItemBlock_CellFormat">
+			<member name="font_name" type="string">Tahoma</member>
+			<member name="font_set" type="uint8">0x0</member>
+			<member name="font_size" type="real32">8.00000000e+00</member>
+			<member name="font_bold" type="sint32">0</member>
+			<member name="font_italic" type="sint32">0</member>
+			<member name="font_underline" type="sint32">0</member>
+			<member name="alignment" type="sint32">33</member>
+			<member name="backcolor" type="uint32">0xFFFFFF</member>
+			<member name="forecolor" type="uint32">0x0</member>
+		</object>
 		<object name="ObjId0203" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
 			<member name="row_cell_formats" type="CObArrayEx">ObjId0204</member>
@@ -5196,86 +5907,111 @@
 			<member name="row_cell_formats" type="CObArrayEx">ObjId0372</member>
 		</object>
 		<object name="ObjId0372" type="CObArray" length="0"/>
-		<object name="ObjId0377" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0387" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0378</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0388</member>
 		</object>
-		<object name="ObjId0378" type="CObArray" length="0"/>
-		<object name="ObjId0426" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0388" type="CObArray" length="0"/>
+		<object name="ObjId0389" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0427</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0390</member>
 		</object>
-		<object name="ObjId0427" type="CObArray" length="0"/>
-		<object name="ObjId0428" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0390" type="CObArray" length="0"/>
+		<object name="ObjId0391" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0429</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0392</member>
 		</object>
-		<object name="ObjId0429" type="CObArray" length="0"/>
-		<object name="ObjId0430" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0392" type="CObArray" length="0"/>
+		<object name="ObjId0409" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0431</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0410</member>
 		</object>
-		<object name="ObjId0431" type="CObArray" length="0"/>
-		<object name="ObjId0432" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0410" type="CObArray" length="0"/>
+		<object name="ObjId0411" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0433</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0412</member>
 		</object>
-		<object name="ObjId0433" type="CObArray" length="0"/>
-		<object name="ObjId0434" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0412" type="CObArray" length="0"/>
+		<object name="ObjId0413" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0435</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0414</member>
 		</object>
-		<object name="ObjId0435" type="CObArray" length="0"/>
-		<object name="ObjId0436" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0414" type="CObArray" length="0"/>
+		<object name="ObjId0415" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0437</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0416</member>
 		</object>
-		<object name="ObjId0437" type="CObArray" length="0"/>
-		<object name="ObjId0438" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0416" type="CObArray" length="0"/>
+		<object name="ObjId0425" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0439</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0426</member>
 		</object>
-		<object name="ObjId0439" type="CObArray" length="0"/>
-		<object name="ObjId0440" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0426" type="CObArray" length="0"/>
+		<object name="ObjId0427" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0441</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0428</member>
 		</object>
-		<object name="ObjId0441" type="CObArray" length="0"/>
-		<object name="ObjId0442" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0428" type="CObArray" length="0"/>
+		<object name="ObjId0447" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0443</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0448</member>
 		</object>
-		<object name="ObjId0443" type="CObArray" length="0"/>
-		<object name="ObjId0444" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0448" type="CObArray" length="0"/>
+		<object name="ObjId0449" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0445</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0450</member>
 		</object>
-		<object name="ObjId0445" type="CObArray" length="0"/>
-		<object name="ObjId0446" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0450" type="CObArray" length="0"/>
+		<object name="ObjId0451" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0447</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0452</member>
 		</object>
-		<object name="ObjId0447" type="CObArray" length="0"/>
-		<object name="ObjId0448" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0452" type="CObArray" length="0"/>
+		<object name="ObjId0453" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0449</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0454</member>
 		</object>
-		<object name="ObjId0449" type="CObArray" length="0"/>
-		<object name="ObjId0450" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0454" type="CObArray" length="0"/>
+		<object name="ObjId0455" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0451</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0456</member>
 		</object>
-		<object name="ObjId0451" type="CObArray" length="0"/>
-		<object name="ObjId0452" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0456" type="CObArray" length="0"/>
+		<object name="ObjId0457" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0453</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0458</member>
 		</object>
-		<object name="ObjId0453" type="CObArray" length="0"/>
-		<object name="ObjId0454" type="CPrjItemBlock_VarInfo">
+		<object name="ObjId0458" type="CObArray" length="0"/>
+		<object name="ObjId0459" type="CPrjItemBlock_VarInfo">
 			<member name="row_height" type="sint32">15</member>
-			<member name="row_cell_formats" type="CObArrayEx">ObjId0455</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0460</member>
 		</object>
-		<object name="ObjId0455" type="CObArray" length="0"/>
+		<object name="ObjId0460" type="CObArray" length="0"/>
+		<object name="ObjId0491" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0492</member>
+		</object>
+		<object name="ObjId0492" type="CObArray" length="0"/>
+		<object name="ObjId0493" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0494</member>
+		</object>
+		<object name="ObjId0494" type="CObArray" length="0"/>
+		<object name="ObjId0495" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0496</member>
+		</object>
+		<object name="ObjId0496" type="CObArray" length="0"/>
+		<object name="ObjId0497" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0498</member>
+		</object>
+		<object name="ObjId0498" type="CObArray" length="0"/>
+		<object name="ObjId0499" type="CPrjItemBlock_VarInfo">
+			<member name="row_height" type="sint32">15</member>
+			<member name="row_cell_formats" type="CObArrayEx">ObjId0500</member>
+		</object>
+		<object name="ObjId0500" type="CObArray" length="0"/>
 		<object name="ObjId0159" type="CFlashProgDlg">
 			<member name="is_default" type="sint32">1</member>
 			<member name="csw_addr" type="string">fprgCSW</member>

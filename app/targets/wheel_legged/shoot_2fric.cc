@@ -53,8 +53,8 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     }
     controller_.Fire();
   } else {
-    controller_.Enable(true);
-    controller_.Arm(true);
+    controller_.Enable(false);
+    controller_.Arm(false);
     controller_.SetArmSpeed(0);
   }
 

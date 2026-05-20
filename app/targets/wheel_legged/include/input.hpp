@@ -109,8 +109,8 @@ struct TcSemanticState {
   bool dr16_parallel_armed{true};     ///< G 键长按触发防抖
   float g_hold_ms{0.0f};              ///< G 键已按住时长 (ms)
   bool dr16_parallel{false};          ///< DR16 是否并行生效
-  bool z_fric_dec_armed{true};        ///< Z 键是否已就绪（上升沿检测，摩擦轮减速）
-  bool x_fric_inc_armed{true};        ///< X 键是否已就绪（上升沿检测，摩擦轮升速）
+  bool z_fric_dec_armed{true};        ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
+  bool x_fric_inc_armed{true};        ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）
   float fric_speed_target_rpm{0.0f};  ///< 摩擦轮目标转速 [rpm]（运行时可调，0 表示未初始化）
   bool e_ui_refresh{false};           ///< E 键是否按下（UI 刷新控制）
   bool auto_aim_hold{false};          ///< 鼠标右键按住时自瞄模式（电平有效）
@@ -118,6 +118,9 @@ struct TcSemanticState {
   bool ctrl_f_armed{true};           ///< Ctrl+F 组合键上升沿检测
   bool ctrl_g_armed{true};           ///< Ctrl+G 组合键上升沿检测
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
+  bool recovery_manual_mode{false};   ///< 倒地自启手动模式（Z 键长按切换）
+  bool z_recovery_armed{true};        ///< Z 键是否已就绪（长按防抖）
+  float z_hold_ms{0.0f};              ///< Z 键已按住时长 [ms]
 };
 
 /**
