@@ -24,7 +24,7 @@ class Shoot {
   void Enable();
   void Disable();
   ShootOutput Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm);
+                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot = false);
 
   bool enabled() const { return enabled_; }
   uint32_t shot_count() const { return shot_count_; }
@@ -44,6 +44,13 @@ class Shoot {
   uint16_t heat_limit() const { return heat_limit_; }
   uint16_t cooling_rate() const { return cooling_rate_; }
   bool heat_over_limit() const { return heat_suppressed_; }
+  uint8_t shoot_mode() const { return static_cast<uint8_t>(controller_.mode()); }
+  bool single_complete() const { return controller_.shoot_flag(); }
+  float loader_pos_error() const { return controller_.position(); }
+  float loader_pos_target() const { return controller_.target().loader_position; }
+  float loader_pos_pid_out() const { return controller_.pid().loader_position.out(); }
+  float loader_spd_target() const { return controller_.target().loader_speed; }
+  float loader_spd_pid_out() const { return controller_.pid().loader_speed.out(); }
 
  private:
   bool enabled_{false};

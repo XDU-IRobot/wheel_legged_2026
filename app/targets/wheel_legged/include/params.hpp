@@ -949,12 +949,12 @@ constexpr float kIdentTheta[9] = {
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                            ///< 摩擦轮数量
-constexpr float kFricSpeedTargetRpm = 6500.0f;                           ///< 摩擦轮目标转速 [rpm]
+constexpr float kFricSpeedTargetRpm = 6700.0f;                           ///< 摩擦轮目标转速 [rpm]
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID
 constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};  ///< 拨盘速度 PID
-constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};  ///< 拨盘位置 PID
+constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 500.0f};  ///< 拨盘位置 PID
 constexpr int16_t kDialFireThreshold = -600;                             ///< 发射触发拨轮阈值
-constexpr float kShootFrequencyHz = 3.0f;                                ///< 发射频率 [Hz]
+constexpr float kShootFrequencyHz = 14.0f;                                ///< 发射频率 [Hz]
 
 // ── 本地热量闭环 ──
 constexpr float kHeatPerShot = 10.0f;       ///< 每发子弹热量增量 [热量单位]
@@ -1272,12 +1272,22 @@ using namespace common::main;
 namespace aimbot {
 constexpr uint8_t kRobotId = 4U;                                   ///< 机器人 ID
 constexpr float kBulletSpeedMps = 23.0f;                           ///< 弹速 [m/s]
-constexpr PidGains kYawPositionPid{40.0f, 0.f, 1.f, 10.0f, 1.5f};  ///< 自瞄偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};    ///< 自瞄偏航速度 PID
+// constexpr PidGains kYawPositionPid{30.0f, 0.f, 1.5f, 10.0f, 1.5f};  ///< 自瞄偏航位置 PID
+// constexpr PidGains kYawSpeedPid{0.7f, 0.0f, 0.0f, 8.0f, 0.4f};    ///< 自瞄偏航速度 PID
+// constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 0.4f};  ///< 自瞄俯仰位置 PID
+// constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 8.0f, 0.0f};     ///< 自瞄俯仰速度 PID
+
+// constexpr PidGains kYawPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 1.0f};    ///< 偏航位置 PID
+// constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
+// constexpr PidGains kPitchPositionPid{20.0f, 0.0f, 0.8f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+// constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
+
+constexpr PidGains kYawPositionPid{42.0f, 0.f, 1.5f, 10.0f, 1.5f};    ///< 自瞄偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};          ///< 自瞄偏航速度 PID
 // constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.8f, 10.0f, 1.5f};  ///< 自瞄俯仰位置 PID
 // constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 自瞄俯仰速度 PID
-constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 1.f, 10.0f, 0.4f};  ///< 自瞄俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};     ///< 自瞄俯仰速度 PID
+constexpr PidGains kPitchPositionPid{40.0f, 0.f, 1.8f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
 }  // namespace infantry4
