@@ -104,8 +104,8 @@ class Actuators {
       // g.fric_right->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.dial.has_value()) {
-      g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
-      // g.dial->SetCurrent(static_cast<int16_t>(0));
+      // g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
+      g.dial->SetCurrent(static_cast<int16_t>(0));
     }
     rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);

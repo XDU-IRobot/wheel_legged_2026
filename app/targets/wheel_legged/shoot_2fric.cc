@@ -26,7 +26,7 @@ void Shoot::Enable() { enabled_ = true; }
 void Shoot::Disable() { enabled_ = false; }
 
 ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm) {
+                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot) {
   ShootOutput out{};
 
   if (shoot_enabled) {
@@ -36,7 +36,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
 
     const bool effective_fire = fire_flag && !heat_suppressed_;
     if (effective_fire) {
-      controller_.SetMode(Shoot2Fric::kFullAuto);
+      controller_.SetMode(single_shot ? Shoot2Fric::kSingleShot : Shoot2Fric::kFullAuto);
       controller_.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
       controller_.SetMode(Shoot2Fric::kStop);

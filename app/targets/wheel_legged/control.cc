@@ -241,13 +241,14 @@ void ControlLoop() {
     if (globals->dial.has_value()) {
       globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
     }
-    const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
+    const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->shoot.dial_linear_pos()) : 0.0f;
     wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
-    const bool fire_flag =
-        (globals->aimbot->aimbot_state() == 0 &&
-         (input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button)) ||
-        ((globals->aimbot->aimbot_state() >> 1) & 1);
+    const bool manual_fire =
+        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+    const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
+                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                            (manual_fire || ((globals->aimbot->aimbot_state() >> 1) & 1)));
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
@@ -257,9 +258,10 @@ void ControlLoop() {
                                              : ns::shoot::kDefaultCoolingRate;
     globals->shoot.SetHeatParams(heat_limit, cooling_rate);
 
+    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm);
+                              in_combat, tc_state.fric_speed_target_rpm, single_shot);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
     wl_debug.shoot_dial_current = shoot_output.dial_current;
@@ -267,6 +269,17 @@ void ControlLoop() {
     wl_debug.shoot_heat_limit = globals->shoot.heat_limit();
     wl_debug.shoot_cooling_rate = globals->shoot.cooling_rate();
     wl_debug.shoot_heat_suppressed = globals->shoot.heat_over_limit() ? 1U : 0U;
+    wl_debug.shoot_mode = globals->shoot.shoot_mode();
+    wl_debug.shoot_single_complete = globals->shoot.single_complete() ? 1U : 0U;
+    wl_debug.shoot_fire_flag = fire_flag ? 1U : 0U;
+    wl_debug.shoot_effective_fire = (fire_flag && !globals->shoot.heat_over_limit()) ? 1U : 0U;
+    wl_debug.shoot_loader_pos_error = globals->shoot.loader_pos_error();
+    wl_debug.shoot_loader_pos_target = globals->shoot.loader_pos_target();
+    wl_debug.shoot_loader_pos_feedback = dial_encoder;
+    wl_debug.shoot_loader_pos_pid_out = globals->shoot.loader_pos_pid_out();
+    wl_debug.shoot_loader_spd_target = globals->shoot.loader_spd_target();
+    wl_debug.shoot_loader_spd_feedback = dial_rpm;
+    wl_debug.shoot_loader_spd_pid_out = globals->shoot.loader_spd_pid_out();
   }
 #endif
 
