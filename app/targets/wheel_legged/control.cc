@@ -316,9 +316,9 @@ void ControlLoop() {
 
   // ── 底盘输出使能条件 ──
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
-  const bool chassis_output_enable =
-      chassis_posture_invalid ? chassis_output.control.enable_dm
-                              : chassis_output.control.enable_dm && chassis_startup_ready;
+  const bool chassis_output_enable = chassis_posture_invalid
+                                         ? chassis_output.control.enable_dm
+                                         : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 7：底盘控制
