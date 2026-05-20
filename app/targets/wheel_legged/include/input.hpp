@@ -112,12 +112,12 @@ struct TcSemanticState {
   bool z_fric_dec_armed{true};        ///< Z 键是否已就绪（上升沿检测，摩擦轮减速）
   bool x_fric_inc_armed{true};        ///< X 键是否已就绪（上升沿检测，摩擦轮升速）
   float fric_speed_target_rpm{0.0f};  ///< 摩擦轮目标转速 [rpm]（运行时可调，0 表示未初始化）
-  bool e_ui_refresh{false};            ///< E 键是否按下（UI 刷新控制）
-  bool auto_aim_hold{false};           ///< 鼠标右键按住时自瞄模式（电平有效）
+  bool e_ui_refresh{false};           ///< E 键是否按下（UI 刷新控制）
+  bool auto_aim_hold{false};          ///< 鼠标右键按住时自瞄模式（电平有效）
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
-  bool ctrl_f_armed{true};             ///< Ctrl+F 组合键上升沿检测
-  bool ctrl_g_armed{true};             ///< Ctrl+G 组合键上升沿检测
-  AimMode aim_mode{AimMode::kAmmo};    ///< 右键自瞄子模式
+  bool ctrl_f_armed{true};           ///< Ctrl+F 组合键上升沿检测
+  bool ctrl_g_armed{true};           ///< Ctrl+G 组合键上升沿检测
+  AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
 };
 
 /**

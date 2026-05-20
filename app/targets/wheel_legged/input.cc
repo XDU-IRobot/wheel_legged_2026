@@ -256,9 +256,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // Ctrl+G 组合键：kAmmo ↔ kFuBig（上升沿 toggle）
     const bool g_pressed_combo = (tc_remote.keyboard_value & kRcKeyG) != 0U;
     if (ctrl_pressed && g_pressed_combo && tc_state.ctrl_g_armed) {
-      tc_state.aim_mode = (tc_state.aim_mode == TcSemanticState::AimMode::kFuBig)
-                              ? TcSemanticState::AimMode::kAmmo
-                              : TcSemanticState::AimMode::kFuBig;
+      tc_state.aim_mode = (tc_state.aim_mode == TcSemanticState::AimMode::kFuBig) ? TcSemanticState::AimMode::kAmmo
+                                                                                  : TcSemanticState::AimMode::kFuBig;
       tc_state.ctrl_g_armed = false;
     }
     if (!ctrl_pressed || !g_pressed_combo) tc_state.ctrl_g_armed = true;

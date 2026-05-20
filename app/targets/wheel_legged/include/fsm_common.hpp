@@ -59,10 +59,10 @@ enum class GimbalTestProfile : uint8_t {
  *        通信异常时自动降级为遥控器积分目标。
  */
 enum class CombatProfile : uint8_t {
-  kNormal = 0,   ///< 正常战斗：底盘有力，RC目标
-  kAutoAimAmmo,   ///< 自瞄装甲板：底盘有力，上位机目标
-  kAutoAimFuSmall,     ///< 自瞄打小符：底盘有力，上位机目标
-  kAutoAimFuBig,  ///< 自瞄打大符：底盘有力，上位机目标
+  kNormal = 0,      ///< 正常战斗：底盘有力，RC目标
+  kAutoAimAmmo,     ///< 自瞄装甲板：底盘有力，上位机目标
+  kAutoAimFuSmall,  ///< 自瞄打小符：底盘有力，上位机目标
+  kAutoAimFuBig,    ///< 自瞄打大符：底盘有力，上位机目标
 };
 
 /**
