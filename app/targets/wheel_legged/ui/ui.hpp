@@ -82,7 +82,7 @@ inline void ui_init() {
 
 inline void static1_func() {
   static rm::device::UICharacter static_1;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_1.character.fillCharacter("py", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
                                      static_cast<u16>(8.728), static_cast<u16>(738.454), 30, 5);
     memcpy(static_1.data, "P:\nY:", 5);
@@ -94,7 +94,7 @@ inline void static1_func() {
 
 inline void static2_func() {
   static rm::device::UICharacter static_2;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_2.character.fillCharacter("leg", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
                                      static_cast<u16>(1600.849), static_cast<u16>(862.595), 30, 10);
     memcpy(static_2.data, "LEG: L M H", 10);
@@ -106,7 +106,7 @@ inline void static2_func() {
 
 inline void static3_func() {
   static rm::device::UIFigure2 static_3;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_3.figure1.fillLine("ll", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, 547, 86,
                               722, 516);
     static_3.figure2.fillLine("rl", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, 1378,
@@ -119,7 +119,7 @@ inline void static3_func() {
 
 inline void static4_func() {
   static rm::device::UIFigure2 static_4;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_4.figure1.fillRec("r1_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::White, 3, 781, 361,
                              1129, 709);
     static_4.figure2.fillRec("r2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3, 598, 836,
@@ -132,7 +132,7 @@ inline void static4_func() {
 
 inline void static5_func() {
   static rm::device::UICharacter static_5;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_5.character.fillCharacter("fric", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
                                      1600, 762, 30, 5);
     memcpy(static_5.data, "FRIC:", 5);
@@ -145,7 +145,7 @@ inline void static5_func() {
 inline void dynamic1_func() {
   static rm::device::UIFigure2 static_d1;
   static bool added = false;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_d1.figure1.fillFloat("pit", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
                                 static_cast<u16>(77.748), static_cast<u16>(730.583), 25,
                                 globals->gimbal_rx->pitch_rad() * 1000);
@@ -250,7 +250,7 @@ inline void dynamic2_func() {
     if (e_ang > 360) e_ang -= 360;
   }
 
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_d2.figure1.fillLine("l1", device::UIFigure1::Operation::Add, 0, cap_color, 34, 598, 853, 598 + cap_len, 853);
     static_d2.figure2.fillLine("l2", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
@@ -293,7 +293,7 @@ inline void dynamic3_func() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   static rm::device::UIFigure5 static_d3;
   static bool added = false;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_d3.figure1.fillIntegrate("f1_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
                                     1750, 722, 20, static_cast<i32>(wl_debug.fw_raw_rpm_1));
     static_d3.figure2.fillIntegrate("f2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
@@ -318,7 +318,7 @@ inline void dynamic3_func() {
 #else
   static rm::device::UIFigure2 static_d3;
   static bool added = false;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_d3.figure1.fillIntegrate("fL_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
                                     1750, 746, 20, static_cast<i32>(wl_debug.fric_left_rpm));
     static_d3.figure2.fillIntegrate("fR_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
@@ -342,7 +342,7 @@ inline void dynamic3_func() {
 inline void dynamic4_func() {
   static rm::device::UIFigure2 static_d4;
   static bool added = false;
-  if (globals->dr16.right_y() > 300) {
+  if (globals->ui_refresh_key) {
     static_d4.figure1.fillFloat("spd", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
                                 static_cast<u16>(1343.216), static_cast<u16>(644.661), 25,
                                 globals->referee->data().shoot_data.initial_speed);

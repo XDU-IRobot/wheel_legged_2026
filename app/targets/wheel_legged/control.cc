@@ -101,6 +101,7 @@ void ControlLoop() {
   // 阶段 1：硬件反馈采集 + DR16 语义折叠
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
+  globals->ui_refresh_key = tc_state.e_ui_refresh;
 
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
 
@@ -263,7 +264,8 @@ void ControlLoop() {
                                              : ns::shoot::kDefaultCoolingRate;
     globals->shoot.SetHeatParams(heat_limit, cooling_rate);
 
-    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFu;
+    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                             input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm, single_shot);
@@ -672,8 +674,11 @@ void ControlLoop() {
       case wheel_legged::CombatProfile::kAutoAimAmmo:
         aimbot_mode = 1;
         break;
-      case wheel_legged::CombatProfile::kAutoAimFu:
+      case wheel_legged::CombatProfile::kAutoAimFuSmall:
         aimbot_mode = 2;
+        break;
+      case wheel_legged::CombatProfile::kAutoAimFuBig:
+        aimbot_mode = 3;
         break;
       case wheel_legged::CombatProfile::kNormal:
       default:
