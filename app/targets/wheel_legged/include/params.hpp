@@ -946,11 +946,11 @@ constexpr float kIdentTheta[9] = {
     0.01493814f,   // theta_1: I2xx_com
     0.05832193f,   // theta_2: I2yy_com
     -0.03308606f,  // theta_3: m2*l2x 水平前向偏心
-    -0.17656592,  // theta_4: m2*l2z 垂直上向偏心
-    0.23623077,   // theta_5: fv1  yaw 粘滞摩擦
-    0.33683372,   // theta_6: fc1  yaw 库仑摩擦
-    0.61965618,   // theta_7: fv2  pitch 粘滞摩擦
-    0.13903768,   // theta_8: fc2  pitch 库仑摩擦
+    -0.17656592,   // theta_4: m2*l2z 垂直上向偏心
+    0.23623077,    // theta_5: fv1  yaw 粘滞摩擦
+    0.33683372,    // theta_6: fc1  yaw 库仑摩擦
+    0.61965618,    // theta_7: fv2  pitch 粘滞摩擦
+    0.13903768,    // theta_8: fc2  pitch 库仑摩擦
 };
 }  // namespace gimbal
 
