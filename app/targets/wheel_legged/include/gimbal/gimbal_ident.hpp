@@ -82,6 +82,21 @@ class GimbalIdent {
     return point;
   }
 
+  static TrajectoryPoint EvaluateTrajectory(float center, const float (&amplitudes)[ns_ident::kHarmonicCount],
+                                            const float (&phase_offsets)[ns_ident::kHarmonicCount], float t) {
+    TrajectoryPoint point{center, 0.0f, 0.0f};
+    const float wf = 2.0f * ns::common::kPi * ns_ident::kBaseFreqHz;
+    for (size_t i = 0; i < ns_ident::kHarmonicCount; ++i) {
+      const float k = static_cast<float>(i + 1);
+      const float kwf = k * wf;
+      const float phase = kwf * t + phase_offsets[i];
+      point.q += amplitudes[i] * std::sin(phase);
+      point.dq += amplitudes[i] * kwf * std::cos(phase);
+      point.ddq -= amplitudes[i] * kwf * kwf * std::sin(phase);
+    }
+    return point;
+  }
+
   void PrepareCsvData(const Input &input, const Output &output) {
     int len = std::snprintf(tx_buf_, sizeof(tx_buf_), "%lu,", static_cast<unsigned long>(ident_time_s_ * 1000.0f));
     len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.yaw_cmd_tau);
@@ -145,7 +160,8 @@ class GimbalIdent {
     }
 
     const auto yaw_traj = EvaluateTrajectory(ident_yaw_center_, ns_ident::kYawAmp, ident_time_s_);
-    const auto pitch_traj = EvaluateTrajectory(ident_pitch_center_, ns_ident::kPitchAmp, ident_time_s_);
+    const auto pitch_traj =
+        EvaluateTrajectory(ident_pitch_center_, ns_ident::kPitchAmp, ns_ident::kPitchPhase, ident_time_s_);
 
     // yaw 目标过圈处理：将连续轨迹目标映射到编码器当前圈，保证 PID 走最短路径
     float yaw_err = yaw_traj.q - input.yaw_motor_pos_rad;
@@ -186,7 +202,7 @@ class GimbalIdent {
     }
 
     const auto yaw_traj = EvaluateTrajectory(0.0f, ns_ident::kYawAmp, ff_verify_time_s_);
-    const auto pitch_traj = EvaluateTrajectory(0.0f, ns_ident::kPitchAmp, ff_verify_time_s_);
+    const auto pitch_traj = EvaluateTrajectory(0.0f, ns_ident::kPitchAmp, ns_ident::kPitchPhase, ff_verify_time_s_);
     // pitch 加中心偏移，与辨识时编码器坐标系一致
     const float pitch_q = pitch_traj.q + ns_ident::kIdentPitchCenter;
 
