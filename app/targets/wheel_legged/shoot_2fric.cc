@@ -34,12 +34,22 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     controller_.Arm(true);
     controller_.SetArmSpeed(fric_speed_target_rpm);
 
-    const bool effective_fire = fire_flag && !heat_suppressed_;
-    if (effective_fire) {
-      controller_.SetMode(single_shot ? Shoot2Fric::kSingleShot : Shoot2Fric::kFullAuto);
-      controller_.SetShootFrequency(ns::kShootFrequencyHz);
+    if (single_shot) {
+      const bool fire_rising = fire_flag && !prev_fire_flag_;
+      prev_fire_flag_ = fire_flag;
+      if (fire_rising && !heat_suppressed_) {
+        controller_.SetMode(Shoot2Fric::kSingleShot);
+      } else if (controller_.shoot_flag()) {
+        controller_.SetMode(Shoot2Fric::kStop);
+      }
     } else {
-      controller_.SetMode(Shoot2Fric::kStop);
+      prev_fire_flag_ = false;
+      if (fire_flag && !heat_suppressed_) {
+        controller_.SetMode(Shoot2Fric::kFullAuto);
+        controller_.SetShootFrequency(ns::kShootFrequencyHz);
+      } else {
+        controller_.SetMode(Shoot2Fric::kStop);
+      }
     }
     controller_.Fire();
   } else {

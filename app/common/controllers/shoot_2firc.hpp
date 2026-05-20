@@ -9,7 +9,7 @@ class Shoot2Fric {
  public:
   explicit Shoot2Fric(int bullets_per_drum, float reduction_ratio)
       : bullets_per_drum_(bullets_per_drum), loader_reduction_ratio_(reduction_ratio) {
-    pid_.loader_position.SetCircular(true).SetCircularCycle(2.0f * M_PI);
+    pid_.loader_position.SetCircular(false);
   }
 
   /**
@@ -22,7 +22,7 @@ class Shoot2Fric {
     state_.loader_position = loader_position;
 
     position_ = loader_position - target_.loader_position;
-    if (loader_position >= target_.loader_position - 2000.0f) {
+    if (std::fabs(position_) < 1000.f) {
       single_shoot_complete_ = true;
     }
 
@@ -48,8 +48,8 @@ class Shoot2Fric {
     if (!single_shoot_complete_) {
       // 单发模式：位置 - 速度串级
       pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);
-      pid_.loader_speed.Update(pid_.loader_position.out(), state_.loader_speed, dt);
-      output_.loader = pid_.loader_speed.out();
+      pid_.loader_speed.Update(-pid_.loader_position.out(), -state_.loader_speed, dt);
+      output_.loader = -pid_.loader_speed.out();
     } else {
       // 连发模式：速度环
       target_.loader_position = state_.loader_position;
@@ -87,6 +87,9 @@ class Shoot2Fric {
   void SetMode(Mode mode) {
     if (mode != mode_) {
       pid_.loader_speed.Clear();
+    }
+    if (mode != kSingleShot) {
+      single_shoot_complete_ = true;
     }
     mode_ = mode;
   }
