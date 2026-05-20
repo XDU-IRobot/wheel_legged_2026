@@ -8,7 +8,7 @@
 #include "../fsm_common.hpp"
 #include "../params.hpp"
 
-using wheel_legged::params::active::yaw_ff;
+// using wheel_legged::params::active::yaw_ff;
 
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp
@@ -233,6 +233,19 @@ class Gimbal {
       output_.pitch_cmd_torque_nm =
           std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.yaw_cmd_torque_nm =
+      //     std::clamp(ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.pitch_cmd_torque_nm =
+      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+
+      // output_.yaw_cmd_torque_nm =
+      //     std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.pitch_cmd_torque_nm =
+      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
     }
   }
 

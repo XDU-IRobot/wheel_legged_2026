@@ -22,7 +22,7 @@ class Shoot2Fric {
     state_.loader_position = loader_position;
 
     position_ = loader_position - target_.loader_position;
-    if (loader_position <= target_.loader_position - 2000.0f) {
+    if (loader_position >= target_.loader_position - 2000.0f) {
       single_shoot_complete_ = true;
     }
 
@@ -48,7 +48,7 @@ class Shoot2Fric {
     if (!single_shoot_complete_) {
       // 单发模式：位置 - 速度串级
       pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);
-      pid_.loader_speed.Update(-7000.0f, state_.loader_speed, dt);
+      pid_.loader_speed.Update(pid_.loader_position.out(), state_.loader_speed, dt);
       output_.loader = pid_.loader_speed.out();
     } else {
       // 连发模式：速度环
@@ -91,6 +91,8 @@ class Shoot2Fric {
     mode_ = mode;
   }
 
+  Mode mode() const { return mode_; }
+
   /// 设置射频（发/秒）
   void SetShootFrequency(float frequency) {
     calculated_target_loader_speed_ = frequency / static_cast<float>(bullets_per_drum_) * 60.0f;  // rpm
@@ -104,11 +106,17 @@ class Shoot2Fric {
   void Enable(bool enable) { enabled_ = enable; }
 
   auto &pid() { return pid_; }
+  const auto &pid() const { return pid_; }
   auto &state() { return state_; }
+  const auto &state() const { return state_; }
   auto &target() { return target_; }
+  const auto &target() const { return target_; }
   auto &output() { return output_; }
+  const auto &output() const { return output_; }
   auto &shoot_flag() { return single_shoot_complete_; }
+  const auto &shoot_flag() const { return single_shoot_complete_; }
   auto &position() { return position_; }
+  const auto &position() const { return position_; }
 
  private:
   bool enabled_{false};

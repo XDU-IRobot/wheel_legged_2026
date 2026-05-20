@@ -73,34 +73,12 @@ const DmMitSettings kPitchMotorSettings{0x11, 0x01, kPi, 30.f, 10.f, {0.f, 500.f
 const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 }  // namespace gimbal
 
-// ── 云台辨识 ──
-namespace gimbal_ident {
-constexpr float kBaseFreqHz = 0.1f;                    ///< 辨识轨迹基频 [Hz]
+// ── 云台辨识公共常量 ──
+namespace gimbal_ident_common {
 constexpr size_t kHarmonicCount = 5;                   ///< 五次谐波
 constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;  ///< rpm → rad/s
-constexpr float kDmTorqueLimitNm = 10.0f;              ///< DM 电机力矩上限 [Nm]
-constexpr float kDefaultDtS = 0.002f;                  ///< 辨识控制周期 [s]
-
-/// @brief yaw 轴五次谐波幅值 [rad]（sum_abs=6.0，~70%峰值因子下覆盖 ±241°）
-constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};
-/// @brief pitch 轴五次谐波幅值 [rad]（sum_abs=0.091，峰值~±0.07，留余量不触及机械限位 [0.4, 0.54]）
-constexpr float kPitchAmp[kHarmonicCount] = {0.042f, -0.022f, 0.014f, -0.008f, 0.005f};
-
-/// @brief 辨识模式 yaw 位置 PID（单位置环，高增益）
-constexpr PidGains kIdentYawPosPid{50.0f, 0.0f, 0.5f, 10.0f, 0.0f};
-/// @brief 辨识模式 pitch 位置 PID（单位置环）
-constexpr PidGains kIdentPitchPosPid{130.0f, 0.0f, 0.5f, 10.0f, 0.0f};
-
-/// @brief 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
-constexpr float kIdentPitchCenter = 0.47f;
-/// @brief 辨识轨迹 pitch 下限 [rad]
-constexpr float kIdentPitchTopLimit = 0.4f;
-/// @brief 辨识轨迹 pitch 上限 [rad]
-constexpr float kIdentPitchBottomLimit = 0.54f;
-
-constexpr size_t kIdentUartTxBufSize = 128;  ///< 辨识串口发送缓冲区大小 [byte]
-
-}  // namespace gimbal_ident
+constexpr size_t kIdentUartTxBufSize = 128;            ///< 辨识串口发送缓冲区大小 [byte]
+}  // namespace gimbal_ident_common
 
 // ── 执行器公共 ──
 namespace actuators {
@@ -167,6 +145,22 @@ constexpr float kIdentTheta[9] = {
           0.69615303,  0.51871814,  0.69915412,  0.0656076
 };
 }  // namespace gimbal
+
+// ── 云台辨识 ──
+namespace gimbal_ident {
+using namespace common::gimbal_ident_common;
+constexpr float kBaseFreqHz = 0.1f;                                                 ///< 辨识轨迹基频 [Hz]
+constexpr float kDmTorqueLimitNm = 10.0f;                                           ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                                               ///< 辨识控制周期 [s]
+constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};        ///< yaw 轴五次谐波幅值 [rad]
+constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};  ///< pitch 轴五次谐波幅值 [rad]
+constexpr float kPitchPhase[kHarmonicCount] = {};                                    ///< pitch 轴五次谐波相位 [rad]
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};  ///< 辨识模式 yaw 位置 PID（单位置环，高增益）
+constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};  ///< 辨识模式 pitch 位置 PID（单位置环）
+constexpr float kIdentPitchCenter = 1.f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchTopLimit = 0.6f;     ///< 辨识轨迹 pitch 下限 [rad]
+constexpr float kIdentPitchBottomLimit = 1.6f;  ///< 辨识轨迹 pitch 上限 [rad]
+}  // namespace gimbal_ident
 
 // ── 发射机构（Hero：三摩擦轮 + DM 拨盘）──
 namespace shoot {
@@ -578,6 +572,22 @@ constexpr float kIdentTheta[9] = {
 };
 }  // namespace gimbal
 
+// ── 云台辨识 ──
+namespace gimbal_ident {
+using namespace common::gimbal_ident_common;
+constexpr float kBaseFreqHz = 0.1f;                                                 ///< 辨识轨迹基频 [Hz]
+constexpr float kDmTorqueLimitNm = 10.0f;                                           ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                                               ///< 辨识控制周期 [s]
+constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};        ///< yaw 轴五次谐波幅值 [rad]
+constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};  ///< pitch 轴五次谐波幅值 [rad]
+constexpr float kPitchPhase[kHarmonicCount] = {};                                    ///< pitch 轴五次谐波相位 [rad]
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};  ///< 辨识模式 yaw 位置 PID（单位置环，高增益）
+constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 10.0f, 0.0f};  ///< 辨识模式 pitch 位置 PID（单位置环）
+constexpr float kIdentPitchCenter = 1.f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchTopLimit = 0.6f;     ///< 辨识轨迹 pitch 下限 [rad]
+constexpr float kIdentPitchBottomLimit = 1.6f;  ///< 辨识轨迹 pitch 上限 [rad
+}  // namespace gimbal_ident
+
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                            ///< 摩擦轮数量
@@ -942,30 +952,46 @@ constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
 
 constexpr PidGains kYawPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 1.0f};    ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
-constexpr PidGains kPitchPositionPid{20.0f, 0.0f, 0.8f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+constexpr PidGains kPitchPositionPid{23.0f, 0.0f, 0.8f, 10.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
 
 /// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
 constexpr float kIdentTheta[9] = {
     0.01840039f,   // theta_0: I1zz_com
     0.01493814f,   // theta_1: I2xx_com
-    0.03804828f,   // theta_2: I2yy_com
-    -0.10281495f,  // theta_3: m2*l2x 水平前向偏心
-    -0.13614424f,  // theta_4: m2*l2z 垂直上向偏心
-    0.13102762f,   // theta_5: fv1  yaw 粘滞摩擦
-    0.52290111f,   // theta_6: fc1  yaw 库仑摩擦
-    0.89830570f,   // theta_7: fv2  pitch 粘滞摩擦
-    0.04230919f,   // theta_8: fc2  pitch 库仑摩擦
+    0.05832193f,   // theta_2: I2yy_com
+    -0.03308606f,  // theta_3: m2*l2x 水平前向偏心
+    -0.17656592,   // theta_4: m2*l2z 垂直上向偏心
+    0.23623077,    // theta_5: fv1  yaw 粘滞摩擦
+    0.33683372,    // theta_6: fc1  yaw 库仑摩擦
+    0.61965618,    // theta_7: fv2  pitch 粘滞摩擦
+    0.13903768,    // theta_8: fc2  pitch 库仑摩擦
 };
 }  // namespace gimbal
+
+// ── 云台辨识 ──
+namespace gimbal_ident {
+using namespace common::gimbal_ident_common;
+constexpr float kBaseFreqHz = 0.1f;                                           ///< 辨识轨迹基频 [Hz]
+constexpr float kDmTorqueLimitNm = 10.0f;                                     ///< DM 电机力矩上限 [Nm]
+constexpr float kDefaultDtS = 0.002f;                                         ///< 辨识控制周期 [s]
+constexpr float kYawAmp[kHarmonicCount] = {1.0f, -0.6f, 0.4f, -0.35f, 0.1f};  ///< yaw 轴五次谐波幅值 [rad]
+constexpr float kPitchAmp[kHarmonicCount] = {0.2106f, 0.2463f, 0.0804f, 0.0554f, 0.0391f};
+constexpr float kPitchPhase[kHarmonicCount] = {1.2177f, 0.4006f, -0.8970f, 0.1462f, -2.6391f};
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};  ///< 辨识模式 yaw 位置 PID（单位置环，高增益）
+constexpr PidGains kIdentPitchPosPid{70.0f, 0.0f, 0.5f, 10.0f, 0.0f};
+constexpr float kIdentPitchCenter = 0.944f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchTopLimit = 0.6f;     ///< 辨识轨迹 pitch 下限 [rad]
+constexpr float kIdentPitchBottomLimit = 1.6f;  ///< 辨识轨迹 pitch 上限 [rad]
+}  // namespace gimbal_ident
 
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                            ///< 摩擦轮数量
-constexpr float kFricSpeedTargetRpm = 6500.0f;                           ///< 摩擦轮目标转速 [rpm]
+constexpr float kFricSpeedTargetRpm = 6700.0f;                           ///< 摩擦轮目标转速 [rpm]
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID
 constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};  ///< 拨盘速度 PID
-constexpr PidGains kDialPositionPid{5.0f, 0.1f, 0.0f, 1500.0f, 500.0f};  ///< 拨盘位置 PID
+constexpr PidGains kDialPositionPid{5.0f, 0.f, 0.0f, 1500.0f, 500.0f};   ///< 拨盘位置 PID
 constexpr int16_t kDialFireThreshold = -600;                             ///< 发射触发拨轮阈值
 constexpr float kShootFrequencyHz = 3.0f;                                ///< 发射频率 [Hz]
 
@@ -1283,14 +1309,24 @@ using namespace common::main;
 
 // ── 自瞄通信 ──
 namespace aimbot {
-constexpr uint8_t kRobotId = 4U;                                   ///< 机器人 ID
-constexpr float kBulletSpeedMps = 23.0f;                           ///< 弹速 [m/s]
-constexpr PidGains kYawPositionPid{40.0f, 0.f, 1.f, 10.0f, 1.5f};  ///< 自瞄偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};    ///< 自瞄偏航速度 PID
+constexpr uint8_t kRobotId = 4U;          ///< 机器人 ID
+constexpr float kBulletSpeedMps = 23.0f;  ///< 弹速 [m/s]
+// constexpr PidGains kYawPositionPid{30.0f, 0.f, 1.5f, 10.0f, 1.5f};  ///< 自瞄偏航位置 PID
+// constexpr PidGains kYawSpeedPid{0.7f, 0.0f, 0.0f, 8.0f, 0.4f};    ///< 自瞄偏航速度 PID
+// constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 0.4f};  ///< 自瞄俯仰位置 PID
+// constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 8.0f, 0.0f};     ///< 自瞄俯仰速度 PID
+
+// constexpr PidGains kYawPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 1.0f};    ///< 偏航位置 PID
+// constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
+// constexpr PidGains kPitchPositionPid{20.0f, 0.0f, 0.8f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+// constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
+
+constexpr PidGains kYawPositionPid{42.0f, 0.f, 1.5f, 10.0f, 1.5f};  ///< 自瞄偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.4f};     ///< 自瞄偏航速度 PID
 // constexpr PidGains kPitchPositionPid{22.0f, 0.5f, 0.8f, 10.0f, 1.5f};  ///< 自瞄俯仰位置 PID
 // constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 8.0f, 0.0f};       ///< 自瞄俯仰速度 PID
-constexpr PidGains kPitchPositionPid{30.0f, 0.0f, 1.f, 10.0f, 0.4f};  ///< 自瞄俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.65f, 0.0f, 0.0f, 8.0f, 0.0f};     ///< 自瞄俯仰速度 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.f, 0.7f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};    ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
 }  // namespace infantry4

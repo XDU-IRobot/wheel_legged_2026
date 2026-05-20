@@ -336,11 +336,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
           leg_request = wheel_legged::LegProfile::kLow;
           break;
         case rm::device::DR16::SwitchPosition::kMid:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimNoMove;
+          combat_profile = wheel_legged::CombatProfile::kAutoAimAmmo;
           leg_request = wheel_legged::LegProfile::kLow;
           break;
         case rm::device::DR16::SwitchPosition::kUp:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimWithMove;
+          combat_profile = wheel_legged::CombatProfile::kAutoAimFu;
           leg_request = wheel_legged::LegProfile::kLow;
           break;
         default:
@@ -373,8 +373,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.leg_request = leg_request;
 
   // ── 目标来源：自瞄模式优先上位机 ──
-  if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
-      combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFu) {
     request.target_source =
         request.host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc;
   } else {
@@ -387,8 +387,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
-  } else if (combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
-             combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove) {
+  } else if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+             combat_profile == wheel_legged::CombatProfile::kAutoAimFu) {
     // 自瞄模式：仅在切入时锁定当前云台 IMU 位置；后续不更新，由 PID 保持
     if (!semantic_state.gimbal_target_initialized) {
       semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
@@ -577,8 +577,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 3b. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
   if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk && g.aimbot->nuc_start_flag() != 0 &&
-      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove ||
-       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove)) {
+      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFu)) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
     if (g.aimbot->aimbot_target() != 0) {
       input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;

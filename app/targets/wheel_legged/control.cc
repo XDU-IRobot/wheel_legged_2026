@@ -246,13 +246,14 @@ void ControlLoop() {
     if (globals->dial.has_value()) {
       globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
     }
-    const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
+    const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->shoot.dial_linear_pos()) : 0.0f;
     wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
-    const bool fire_flag =
-        (globals->aimbot->aimbot_state() == 0 &&
-         (input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button)) ||
-        ((globals->aimbot->aimbot_state() >> 1) & 1);
+    const bool manual_fire =
+        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+    const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
+                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                            (manual_fire || ((globals->aimbot->aimbot_state() >> 1) & 1)));
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
@@ -262,9 +263,10 @@ void ControlLoop() {
                                              : ns::shoot::kDefaultCoolingRate;
     globals->shoot.SetHeatParams(heat_limit, cooling_rate);
 
+    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFu;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm);
+                              in_combat, tc_state.fric_speed_target_rpm, single_shot);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
     wl_debug.shoot_dial_current = shoot_output.dial_current;
@@ -272,6 +274,17 @@ void ControlLoop() {
     wl_debug.shoot_heat_limit = globals->shoot.heat_limit();
     wl_debug.shoot_cooling_rate = globals->shoot.cooling_rate();
     wl_debug.shoot_heat_suppressed = globals->shoot.heat_over_limit() ? 1U : 0U;
+    wl_debug.shoot_mode = globals->shoot.shoot_mode();
+    wl_debug.shoot_single_complete = globals->shoot.single_complete() ? 1U : 0U;
+    wl_debug.shoot_fire_flag = fire_flag ? 1U : 0U;
+    wl_debug.shoot_effective_fire = (fire_flag && !globals->shoot.heat_over_limit()) ? 1U : 0U;
+    wl_debug.shoot_loader_pos_error = globals->shoot.loader_pos_error();
+    wl_debug.shoot_loader_pos_target = globals->shoot.loader_pos_target();
+    wl_debug.shoot_loader_pos_feedback = dial_encoder;
+    wl_debug.shoot_loader_pos_pid_out = globals->shoot.loader_pos_pid_out();
+    wl_debug.shoot_loader_spd_target = globals->shoot.loader_spd_target();
+    wl_debug.shoot_loader_spd_feedback = dial_rpm;
+    wl_debug.shoot_loader_spd_pid_out = globals->shoot.loader_spd_pid_out();
   }
 #endif
 
@@ -308,11 +321,9 @@ void ControlLoop() {
 
   // ── 底盘输出使能条件 ──
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
-  const bool auto_aim_no_move = chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove;
-  const bool chassis_output_enable =
-      auto_aim_no_move ? false
-                       : (chassis_posture_invalid ? chassis_output.control.enable_dm
-                                                  : chassis_output.control.enable_dm && chassis_startup_ready);
+  const bool chassis_output_enable = chassis_posture_invalid
+                                         ? chassis_output.control.enable_dm
+                                         : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 7：底盘控制
@@ -658,11 +669,11 @@ void ControlLoop() {
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
-      case wheel_legged::CombatProfile::kAutoAimNoMove:
+      case wheel_legged::CombatProfile::kAutoAimAmmo:
         aimbot_mode = 1;
         break;
-      case wheel_legged::CombatProfile::kAutoAimWithMove:
-        aimbot_mode = 1;
+      case wheel_legged::CombatProfile::kAutoAimFu:
+        aimbot_mode = 2;
         break;
       case wheel_legged::CombatProfile::kNormal:
       default:

@@ -2,7 +2,7 @@
 
 namespace rm::device {
 
-AimbotCanCommunicator::AimbotCanCommunicator(rm::hal::CanInterface &can) : CanDevice(can, 0x170) {}
+AimbotCanCommunicator::AimbotCanCommunicator(rm::hal::CanInterface &can) : CanDevice(can, 0x160, 0x170) {}
 
 u8 AimbotCanCommunicator::aimbot_state() const { return aimbot_state_; }
 
