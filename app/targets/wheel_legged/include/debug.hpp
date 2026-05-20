@@ -189,24 +189,24 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
-  uint8_t shoot_enabled;        // 发射使能
-  float fric_speed_target_rpm;  // 摩擦轮目标转速 [rpm]（运行时可调）
-  float fric_left_rpm;          // 左摩擦轮实际转速 [rpm]
-  float fric_right_rpm;         // 右摩擦轮实际转速 [rpm]
-  float dial_encoder_raw;       // 拨盘编码器原始值
-  float shoot_dial_current;     // 拨盘电机输出电流
-  uint32_t shot_count;          // 打弹成功计数
-  uint8_t shoot_mode;             // Shoot2Fric 模式 (0=kStop,1=kFullAuto,2=kSingleShot)
-  uint8_t shoot_single_complete;  // 单发完成标志（拨盘已走完一颗弹）
-  uint8_t shoot_fire_flag;        // 开火标志（未抑制）
-  uint8_t shoot_effective_fire;   // 有效开火（fire_flag && 热量未超限）
-  float shoot_loader_pos_error;   // 拨盘位置误差（目标 - 当前）[编码器单位]
-  float shoot_loader_pos_target;     // 拨盘位置环目标 [编码器单位]
-  float shoot_loader_pos_feedback;   // 拨盘位置环反馈 [编码器单位]（传给控制器的 encoder）
-  float shoot_loader_pos_pid_out;    // 拨盘位置环 PID 输出（串级给速度环）
-  float shoot_loader_spd_target;     // 拨盘速度环目标 [rpm]
-  float shoot_loader_spd_feedback;   // 拨盘速度环反馈 [rpm]
-  float shoot_loader_spd_pid_out;    // 拨盘速度环 PID 输出（最终给电机）
+  uint8_t shoot_enabled;            // 发射使能
+  float fric_speed_target_rpm;      // 摩擦轮目标转速 [rpm]（运行时可调）
+  float fric_left_rpm;              // 左摩擦轮实际转速 [rpm]
+  float fric_right_rpm;             // 右摩擦轮实际转速 [rpm]
+  float dial_encoder_raw;           // 拨盘编码器原始值
+  float shoot_dial_current;         // 拨盘电机输出电流
+  uint32_t shot_count;              // 打弹成功计数
+  uint8_t shoot_mode;               // Shoot2Fric 模式 (0=kStop,1=kFullAuto,2=kSingleShot)
+  uint8_t shoot_single_complete;    // 单发完成标志（拨盘已走完一颗弹）
+  uint8_t shoot_fire_flag;          // 开火标志（未抑制）
+  uint8_t shoot_effective_fire;     // 有效开火（fire_flag && 热量未超限）
+  float shoot_loader_pos_error;     // 拨盘位置误差（目标 - 当前）[编码器单位]
+  float shoot_loader_pos_target;    // 拨盘位置环目标 [编码器单位]
+  float shoot_loader_pos_feedback;  // 拨盘位置环反馈 [编码器单位]（传给控制器的 encoder）
+  float shoot_loader_pos_pid_out;   // 拨盘位置环 PID 输出（串级给速度环）
+  float shoot_loader_spd_target;    // 拨盘速度环目标 [rpm]
+  float shoot_loader_spd_feedback;  // 拨盘速度环反馈 [rpm]
+  float shoot_loader_spd_pid_out;   // 拨盘速度环 PID 输出（最终给电机）
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;  // DM 拨盘位置 (hero)
   float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)

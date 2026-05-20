@@ -246,10 +246,9 @@ void ControlLoop() {
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool manual_fire =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const bool fire_flag =
-        (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
-        (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-         (manual_fire || ((globals->aimbot->aimbot_state() >> 1) & 1)));
+    const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
+                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                            (manual_fire || ((globals->aimbot->aimbot_state() >> 1) & 1)));
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
