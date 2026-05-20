@@ -21,7 +21,7 @@
 namespace gimbal {
 
 namespace ns = wheel_legged::params;
-namespace ns_ident = wheel_legged::params::common::gimbal_ident;
+namespace ns_ident = wheel_legged::params::active::gimbal_ident;
 
 class GimbalIdent {
  public:

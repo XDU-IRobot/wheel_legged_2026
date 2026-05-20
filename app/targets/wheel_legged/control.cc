@@ -258,7 +258,7 @@ void ControlLoop() {
                                              : ns::shoot::kDefaultCoolingRate;
     globals->shoot.SetHeatParams(heat_limit, cooling_rate);
 
-    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimWithMove;
+    const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFu;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm, single_shot);
@@ -316,11 +316,9 @@ void ControlLoop() {
 
   // ── 底盘输出使能条件 ──
   const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
-  const bool auto_aim_no_move = chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimNoMove;
   const bool chassis_output_enable =
-      auto_aim_no_move ? false
-                       : (chassis_posture_invalid ? chassis_output.control.enable_dm
-                                                  : chassis_output.control.enable_dm && chassis_startup_ready);
+      chassis_posture_invalid ? chassis_output.control.enable_dm
+                              : chassis_output.control.enable_dm && chassis_startup_ready;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 7：底盘控制
@@ -666,11 +664,11 @@ void ControlLoop() {
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
-      case wheel_legged::CombatProfile::kAutoAimNoMove:
+      case wheel_legged::CombatProfile::kAutoAimAmmo:
         aimbot_mode = 1;
         break;
-      case wheel_legged::CombatProfile::kAutoAimWithMove:
-        aimbot_mode = 1;
+      case wheel_legged::CombatProfile::kAutoAimFu:
+        aimbot_mode = 2;
         break;
       case wheel_legged::CombatProfile::kNormal:
       default:
