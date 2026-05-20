@@ -55,12 +55,17 @@ class Shoot {
  private:
   bool enabled_{false};
   bool fric_ready_{false};
+  bool prev_fire_flag_{false};
   uint32_t shot_count_{0};
   EncoderCounter dial_encoder_counter_;
-  Shoot2Fric controller_{9, 37.58f};
+  Shoot2Fric controller_{9, 42.75f};
 
   float current_heat_{0.0f};
   uint16_t heat_limit_{240};
   uint16_t cooling_rate_{40};
   bool heat_suppressed_{false};
+
+  // 单发间隔计数器：每周期自增，达到阈值后允许下一发
+  static constexpr uint32_t kSingleShotCycleThreshold = 200;  // 0.4s @ 500Hz
+  uint32_t shoot_cycle_counter_{0};
 };
