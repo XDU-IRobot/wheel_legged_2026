@@ -106,9 +106,13 @@ class Shoot2Fric {
   void Enable(bool enable) { enabled_ = enable; }
 
   auto &pid() { return pid_; }
+  const auto &pid() const { return pid_; }
   auto &state() { return state_; }
+  const auto &state() const { return state_; }
   auto &target() { return target_; }
+  const auto &target() const { return target_; }
   auto &output() { return output_; }
+  const auto &output() const { return output_; }
   auto &shoot_flag() { return single_shoot_complete_; }
   const auto &shoot_flag() const { return single_shoot_complete_; }
   auto &position() { return position_; }
