@@ -4,13 +4,15 @@
 #include "main.h"
 #include <algorithm>
 #include <cmath>
-
+#include "ui.hpp"
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
 float debug_mid_target_theta;
 f32 yaw_motor_tau, pitch_motor_tau;
 float yaw_motor_pos, pitch_motor_pos;
 float yaw_motor_vel, pitch_motor_vel;
+bool init_flag;
+int times=0;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -51,6 +53,7 @@ constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
 constexpr float kLandingDecelThetaGain = ns::control_loop::kLandingDecelThetaGain;
 constexpr float kLandingDecelThetaMaxRad = ns::control_loop::kLandingDecelThetaMaxRad;
+
 constexpr float kLandingDecelThetaRampStepRad = ns::control_loop::kLandingDecelThetaRampStepRad;
 constexpr std::uint32_t kLandingDecelOffGroundMinMs = ns::control_loop::kLandingDecelOffGroundMinMs;
 constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandingDecelStableDurationMs;
@@ -99,9 +102,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
 
-  wl_debug.tc_mid_leg_hold = tc_state.mid_leg_hold ? 1 : 0;
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
-  wl_debug.tc_stair_climb_done = tc_state.stair_climb_done ? 1 : 0;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
@@ -240,14 +241,37 @@ void ControlLoop() {
     const float fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
     const float fric_right_rpm =
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
+    wl_debug.fric_left_rpm = fric_left_rpm;
+    wl_debug.fric_right_rpm = fric_right_rpm;
+    if (globals->dial.has_value()) {
+      globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
+    }
     const float dial_encoder = globals->dial.has_value() ? -static_cast<float>(globals->dial->encoder()) : 0.0f;
+    wl_debug.dial_encoder_raw = static_cast<float>(globals->shoot.dial_linear_pos());
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool fire_flag =
-        input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
+        (globals->aimbot->aimbot_state() == 0 &&
+         (input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button)) ||
+        ((globals->aimbot->aimbot_state() >> 1) & 1);
+
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t heat_limit =
+        ref_online ? globals->referee->data().robot_status.shooter_barrel_heat_limit : ns::shoot::kDefaultHeatLimit;
+    const uint16_t cooling_rate = ref_online ? globals->referee->data().robot_status.shooter_barrel_cooling_value
+                                             : ns::shoot::kDefaultCoolingRate;
+    globals->shoot.SetHeatParams(heat_limit, cooling_rate);
+
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
+    wl_debug.shot_count = globals->shoot.shot_count();
+    wl_debug.shoot_dial_current = shoot_output.dial_current;
+    wl_debug.shoot_local_heat = globals->shoot.current_heat();
+    wl_debug.shoot_heat_limit = globals->shoot.heat_limit();
+    wl_debug.shoot_cooling_rate = globals->shoot.cooling_rate();
+    wl_debug.shoot_heat_suppressed = globals->shoot.heat_over_limit() ? 1U : 0U;
   }
 #endif
 
@@ -616,7 +640,8 @@ void ControlLoop() {
   wl_debug.lqr_err_theta_lr_dot =
       chassis_control_output.current_state.theta_lr_dot - chassis_update_input.expected.theta_lr_dot;
   wl_debug.lqr_err_theta_b = chassis_control_output.current_state.theta_b - chassis_update_input.expected.theta_b;
-  wl_debug.lqr_err_theta_b_dot = chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
+  wl_debug.lqr_err_theta_b_dot =
+      chassis_control_output.current_state.theta_b_dot - chassis_update_input.expected.theta_b_dot;
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
@@ -681,11 +706,9 @@ void ControlLoop() {
     constexpr float kDegToRad = kPi / 180.0f;
     wl_debug.gimbal_euler_yaw_rad = globals->gimbal_rx->euler_yaw_rad() * kDegToRad;
     wl_debug.gimbal_euler_pitch_rad = globals->gimbal_rx->euler_pitch_rad() * kDegToRad;
-    wl_debug.gimbal_euler_roll_rad = globals->gimbal_rx->euler_roll_rad() * kDegToRad;
   } else {
     wl_debug.gimbal_euler_yaw_rad = 0.0f;
     wl_debug.gimbal_euler_pitch_rad = 0.0f;
-    wl_debug.gimbal_euler_roll_rad = 0.0f;
   }
   if (globals->dyp_rx.has_value()) {
     wl_debug.dyp_distance_raw_left = globals->dyp_rx->distance_raw_left();
@@ -705,13 +728,13 @@ void ControlLoop() {
     wl_debug.referee_online = 1U;
     wl_debug.referee_robot_id = globals->referee->data().robot_status.robot_id;
     wl_debug.referee_bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
+    wl_debug.referee_barrel_heat = globals->referee->data().power_heat_data.shooter_17mm_1_barrel_heat;
   } else {
     wl_debug.referee_online = 0U;
     wl_debug.referee_robot_id = 0U;
     wl_debug.referee_bullet_speed_mps = 0.0f;
+    wl_debug.referee_barrel_heat = 0U;
   }
-  wl_debug.dr16_parallel = static_cast<uint8_t>(tc_state.dr16_parallel);
-
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
@@ -750,4 +773,14 @@ void ControlLoop() {
   pitch_motor_tau = globals->pitch_motor->tau();
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
+
+  if (!init_flag) {
+    ui_init();
+    init_flag = true;
+  }
+  times++;
+  if (times % 17 ==0) {
+    schedule.schedule();
+  }
+
 }

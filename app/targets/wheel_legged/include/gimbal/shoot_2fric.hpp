@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "common/controllers/shoot_2firc.hpp"
+#include "common/encoder_counter.hpp"
 
 /**
  * @brief 发射机构控制输出
@@ -26,8 +27,33 @@ class Shoot {
                      bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm);
 
   bool enabled() const { return enabled_; }
+  uint32_t shot_count() const { return shot_count_; }
+  void ResetShotCount() { shot_count_ = 0; }
+  int32_t dial_linear_pos() const { return dial_encoder_counter_.linear_ticks(); }
+  auto &dial_encoder_counter() { return dial_encoder_counter_; }
+
+  void SetHeatParams(uint16_t heat_limit, uint16_t cooling_rate) {
+    if (heat_limit > 0) {
+      heat_limit_ = heat_limit;
+    }
+    if (cooling_rate > 0) {
+      cooling_rate_ = cooling_rate;
+    }
+  }
+  float current_heat() const { return current_heat_; }
+  uint16_t heat_limit() const { return heat_limit_; }
+  uint16_t cooling_rate() const { return cooling_rate_; }
+  bool heat_over_limit() const { return heat_suppressed_; }
 
  private:
   bool enabled_{false};
-  Shoot2Fric controller_{9, 42.75f};
+  bool fric_ready_{false};
+  uint32_t shot_count_{0};
+  EncoderCounter dial_encoder_counter_;
+  Shoot2Fric controller_{9, 37.58f};
+
+  float current_heat_{0.0f};
+  uint16_t heat_limit_{240};
+  uint16_t cooling_rate_{40};
+  bool heat_suppressed_{false};
 };

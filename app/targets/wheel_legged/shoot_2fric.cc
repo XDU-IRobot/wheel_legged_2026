@@ -34,7 +34,8 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     controller_.Arm(true);
     controller_.SetArmSpeed(fric_speed_target_rpm);
 
-    if (fire_flag) {
+    const bool effective_fire = fire_flag && !heat_suppressed_;
+    if (effective_fire) {
       controller_.SetMode(Shoot2Fric::kFullAuto);
       controller_.SetShootFrequency(ns::kShootFrequencyHz);
     } else {
@@ -42,10 +43,51 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     }
     controller_.Fire();
   } else {
-    controller_.Enable(false);
+    controller_.Enable(true);
+    controller_.Arm(true);
+    controller_.SetArmSpeed(0);
   }
 
   controller_.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, dt);
+
+  // 打弹检测：摩擦轮达速后降速超过 200 rpm 记为一发
+  {
+    constexpr float kReadyThresholdRpm = 50.0f;
+    constexpr float kDropThresholdRpm = 200.0f;
+    const float target_abs = std::fabs(fric_speed_target_rpm);
+    const float left_abs = std::fabs(fric_left_rpm);
+    const float right_abs = std::fabs(fric_right_rpm);
+
+    if (target_abs > 0.0f && left_abs >= target_abs - kReadyThresholdRpm &&
+        right_abs >= target_abs - kReadyThresholdRpm) {
+      fric_ready_ = true;
+    }
+
+    if (fric_ready_ && (target_abs - left_abs > kDropThresholdRpm || target_abs - right_abs > kDropThresholdRpm)) {
+      ++shot_count_;
+      current_heat_ += ns::kHeatPerShot;
+      fric_ready_ = false;
+    }
+  }
+
+  // 本地热量闭环：冷却衰减与发射抑制
+  {
+    current_heat_ -= static_cast<float>(cooling_rate_) * dt;
+    if (current_heat_ < 0.0f) {
+      current_heat_ = 0.0f;
+    }
+
+    const float effective_limit = static_cast<float>(heat_limit_);
+    if (effective_limit > ns::kHeatSafetyMargin &&
+        current_heat_ + ns::kHeatPerShot > effective_limit - ns::kHeatSafetyMargin) {
+      heat_suppressed_ = true;
+    } else if (effective_limit > ns::kHeatResumeMargin && current_heat_ < effective_limit - ns::kHeatResumeMargin) {
+      heat_suppressed_ = false;
+    } else if (effective_limit <= ns::kHeatSafetyMargin) {
+      // 裁判系统给的 heat_limit 异常（0 或极小值），强制解除抑制
+      heat_suppressed_ = false;
+    }
+  }
 
   out.fric_left_current = std::clamp(controller_.output().fric_1, -16000.0f, 16000.0f);
   out.fric_right_current = std::clamp(controller_.output().fric_2, -16000.0f, 16000.0f);

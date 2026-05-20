@@ -49,9 +49,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t auto_jump_triggered;      // 自动跳跃触发（DYP 测距）
   uint8_t auto_jump_enabled;        // 自动跳跃当前开关状态
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t tc_mid_leg_hold;          // 图传C键中腿长锁定
   uint8_t tc_high_leg_hold;         // 图传V键高腿长
-  uint8_t tc_stair_climb_done;      // 上台阶完成锁定中腿长
   uint8_t reset_yaw_request;        // R键重置正方向请求
   uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
   int16_t tc_mouse_x;               // 图传鼠标 X 增量
@@ -117,6 +115,12 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float pitch_cmd_torque_nm;              // 俯仰输出力矩
   uint8_t pitch_motor_status;             // 俯仰 DM 状态
 
+  // ── 云台动力学前馈 ──
+  float gimbal_yaw_dq_rad_s;      // 偏航目标角速度
+  float gimbal_pitch_dq_rad_s;    // 俯仰目标角速度
+  float gimbal_yaw_ddq_rad_s2;    // 偏航目标角加速度
+  float gimbal_pitch_ddq_rad_s2;  // 俯仰目标角加速度
+
   // ── 底盘模型状态向量 ──
   float state_s_m;                 // 纵向位置
   float state_s_dot_mps;           // 纵向速度
@@ -168,11 +172,11 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_left_dyn_support_n;       // 左腿动力学补偿
   float chassis_right_dyn_support_n;      // 右腿动力学补偿
   uint8_t chassis_posture_valid;          // 姿态有效
-  uint8_t chassis_off_ground;                  // 离地
-  float expected_theta_ll_rad;                 // LQR 期望左腿摆角
-  float expected_theta_lr_rad;                 // LQR 期望右腿摆角
-  float filtered_theta_ll_dot_rad_s;           // 滤波后左腿摆角速度
-  float filtered_theta_lr_dot_rad_s;           // 滤波后右腿摆角速度
+  uint8_t chassis_off_ground;             // 离地
+  float expected_theta_ll_rad;            // LQR 期望左腿摆角
+  float expected_theta_lr_rad;            // LQR 期望右腿摆角
+  float filtered_theta_ll_dot_rad_s;      // 滤波后左腿摆角速度
+  float filtered_theta_lr_dot_rad_s;      // 滤波后右腿摆角速度
 
   // ── DYP 超声波 ──
   uint16_t dyp_distance_raw_left;        // 左超声波原始读数
@@ -187,17 +191,28 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;        // 发射使能
   float fric_speed_target_rpm;  // 摩擦轮目标转速 [rpm]（运行时可调）
+  float fric_left_rpm;          // 左摩擦轮实际转速 [rpm]
+  float fric_right_rpm;         // 右摩擦轮实际转速 [rpm]
+  float dial_encoder_raw;       // 拨盘编码器原始值
+  float shoot_dial_current;     // 拨盘电机输出电流
+  uint32_t shot_count;          // 打弹成功计数
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;  // DM 拨盘位置 (hero)
   float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)
   float fw_raw_rpm_2;         // 摩擦轮2 RPM (hero)
   float fw_raw_rpm_3;         // 摩擦轮3 RPM (hero)
 
+  // ── 本地热量闭环 ──
+  float shoot_local_heat;         // 本地估算枪口热量
+  uint16_t shoot_heat_limit;      // 当前热量上限
+  uint16_t shoot_cooling_rate;    // 当前冷却速率 [单位/秒]
+  uint8_t shoot_heat_suppressed;  // 热量超限抑制中
+
   // ── 裁判系统 ──
   uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
-  uint8_t dr16_parallel;           // DR16 并行模式是否开启
+  uint16_t referee_barrel_heat;    // 裁判系统上报的枪口热量（可对比 shoot_local_heat）
 
   // ── 超级电容 ──
   uint8_t supercap_enable_dcdc;           // 电容开启标志
@@ -209,7 +224,6 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   // ── 云台 IMU 欧拉角（Frame C: 0x112）──
   float gimbal_euler_yaw_rad;    // 云台 IMU 偏航角
   float gimbal_euler_pitch_rad;  // 云台 IMU 俯仰角
-  float gimbal_euler_roll_rad;   // 云台 IMU 横滚角
 
   // ── 自瞄通信 TX（发给 NUC）──
   uint8_t aimbot_tx_mode;      // 发送的模式 (0=Normal,1=AutoAimNoMove,2=AutoAimWithMove)
@@ -222,7 +236,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float aimbot_rx_yaw_rad;           // NUC 下发的偏航目标
   float aimbot_rx_pitch_rad;         // NUC 下发的俯仰目标
 };
-static_assert(sizeof(DebugSnapshot) <= 512, "DebugSnapshot must fit in 512 bytes for efficient DMA");
+static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 512 bytes for efficient DMA");
 
 extern DebugSnapshot wl_debug;
 
