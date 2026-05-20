@@ -83,6 +83,8 @@ struct SharedResources {
   gimbal::Gimbal gimbal{};             ///< 云台控制器
   gimbal::GimbalIdent gimbal_ident{};  ///< 云台辨识/前馈验证控制器
 
+  bool ui_refresh_key{false};  ///< E 键按下时 UI 刷新使能（由 input 语义折叠设置）
+
   /**
    * @brief 懒加载单例入口
    */
