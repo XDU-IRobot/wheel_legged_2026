@@ -202,10 +202,17 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float fw_raw_rpm_2;         // 摩擦轮2 RPM (hero)
   float fw_raw_rpm_3;         // 摩擦轮3 RPM (hero)
 
+  // ── 本地热量闭环 ──
+  float shoot_local_heat;         // 本地估算枪口热量
+  uint16_t shoot_heat_limit;      // 当前热量上限
+  uint16_t shoot_cooling_rate;    // 当前冷却速率 [单位/秒]
+  uint8_t shoot_heat_suppressed;  // 热量超限抑制中
+
   // ── 裁判系统 ──
   uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
+  uint16_t referee_barrel_heat;    // 裁判系统上报的枪口热量（可对比 shoot_local_heat）
 
   // ── 超级电容 ──
   uint8_t supercap_enable_dcdc;           // 电容开启标志
