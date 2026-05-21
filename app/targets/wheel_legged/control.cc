@@ -665,7 +665,7 @@ void ControlLoop() {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
+    const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -748,11 +748,11 @@ void ControlLoop() {
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
-    wl_debug.supercap_enable_dcdc = 1U;
-    // wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
-    // wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
-    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
-    // wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
+    // wl_debug.supercap_enable_dcdc = 1U;
+    // wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    // wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    // wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
