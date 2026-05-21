@@ -264,8 +264,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  const bool is_recovery_state = (input.fsm_mode == Fsm::State::kRecoveryFallCheck ||
-                                   input.fsm_mode == Fsm::State::kRecoverySelfRight);
+  const bool is_recovery_state =
+      (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight);
 
   // 恢复→正常过渡：强制走起立，收腿+摆角到位后才开轮子
   if (prev_fsm_was_recovery_ && !is_recovery_state) {
@@ -281,7 +281,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   // Phase 2: 起立完成，锁存
   if (!standup_complete_) {
     constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM+0.025f;
+    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.025f;
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
@@ -544,7 +544,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
-}else if (input.recovery_manual_mode) {
+  } else if (input.recovery_manual_mode) {
     // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
     left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);
     right_leg_turn_pid_manual_.Update(input.manual_right_leg_speed, state_output.current.theta_lr_dot);
@@ -552,10 +552,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_force_ = 0.0f;
     right_force_ = 0.0f;
 
-    output_.lb_tau =
-        left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
-    output_.lf_tau =
-        left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
+    output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
+    output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
     output_.rb_tau =
         right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_manual_.out());
     output_.rf_tau =
@@ -577,10 +575,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
       constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
 
-      const bool ll_in_range = (state_output.current.theta_ll >= kThetaLegMin &&
-                                state_output.current.theta_ll <= kThetaLegMax);
-      const bool lr_in_range = (state_output.current.theta_lr >= kThetaLegMin &&
-                                state_output.current.theta_lr <= kThetaLegMax);
+      const bool ll_in_range =
+          (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
+      const bool lr_in_range =
+          (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
 
       float ll_pid_out = 0.0f;
       float lr_pid_out = 0.0f;

@@ -118,9 +118,9 @@ struct TcSemanticState {
   bool ctrl_f_armed{true};           ///< Ctrl+F 组合键上升沿检测
   bool ctrl_g_armed{true};           ///< Ctrl+G 组合键上升沿检测
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
-  bool recovery_manual_mode{false};   ///< 倒地自启手动模式（Z 键长按切换）
-  bool z_recovery_armed{true};        ///< Z 键是否已就绪（长按防抖）
-  float z_hold_ms{0.0f};              ///< Z 键已按住时长 [ms]
+  bool recovery_manual_mode{false};  ///< 倒地自启手动模式（Z 键长按切换）
+  bool z_recovery_armed{true};       ///< Z 键是否已就绪（长按防抖）
+  float z_hold_ms{0.0f};             ///< Z 键已按住时长 [ms]
 };
 
 /**
