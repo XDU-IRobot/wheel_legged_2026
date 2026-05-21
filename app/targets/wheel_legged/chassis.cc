@@ -11,7 +11,7 @@
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
 uint8_t debug_stair_climb_phase_ = 0;
-
+uint8_t debug_posture_valid;
 namespace {
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
@@ -245,6 +245,12 @@ void chassis::Chassis::Update(const UpdateInput &input) {
        state_output.current.theta_lr >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
        state_output.current.theta_lr <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
 
+  // 进入 kDisabled 时复位起立状态，重新上电后重走起立
+  if (input.fsm_mode == Fsm::State::kDisabled) {
+    standup_complete_ = false;
+    standup_phase_ = 0;
+  }
+
   if (!output_.posture_valid) {
     if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
       SafeStop();
@@ -285,7 +291,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   // Phase 2: 起立完成，锁存
   if (!standup_complete_) {
     constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.025f;
+    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.04f;
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
@@ -301,6 +307,16 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       force_low_leg_ = false;
     }
   }
+//  // 起立完成后若摆角再次越界，回退到起立 Phase 0
+//  // 上台阶时腿自然前摆会越界，不应回退，由三段式上台阶流程处理
+//  if (standup_complete_ && input.fsm_mode != Fsm::State::kStairClimb &&input.fsm_mode != Fsm::State::kStairClimbDone) {
+//    constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+//    if (std::fabs(state_output.current.theta_ll) > kThetaThreshold ||
+//        std::fabs(state_output.current.theta_lr) > kThetaThreshold) {
+//      standup_complete_ = false;
+//      standup_phase_ = 0;
+//    }
+//  }
 
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
@@ -443,7 +459,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool off_ground_for_force = off_ground_duration_ticks_ >= kGravityOffDelayTicks;
   const rm::f32 grav_left = off_ground_for_force ? 0.0f : gravity_ff_left;
   const rm::f32 grav_right = off_ground_for_force ? 0.0f : gravity_ff_right;
-
+  debug_posture_valid =output_.posture_valid;
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
