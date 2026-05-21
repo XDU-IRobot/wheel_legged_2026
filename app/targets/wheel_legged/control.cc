@@ -117,6 +117,20 @@ void ControlLoop() {
   }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
+  // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
+  {
+    static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
+    const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+                              chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
+    const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
+                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
+    if (was_recovery && !is_recovery) {
+      tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
+    }
+    prev_chassis_mode_for_recovery = chassis_output.mode;
+  }
+
   // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
   {
     static chassis::Fsm::State prev_chassis_mode_for_stair = chassis::Fsm::State::kDisabled;
@@ -342,6 +356,7 @@ void ControlLoop() {
   chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
   chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
 
@@ -593,11 +608,13 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
-    //    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
-    //    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
-    //      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
+    if (chassis_control_output.mid_leg_dip_active) {
+      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
+      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
+    } else {
+      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
+      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
+    }
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
@@ -760,10 +777,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+     wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+     wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+     wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+     wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;

@@ -27,6 +27,7 @@ class Chassis {
     bool enable_output{false};                     ///< 是否允许输出电机命令
     bool run_chassis_update{false};                ///< 是否执行底盘控制计算
     bool spin_enable{false};                       ///< 是否开启小陀螺
+    bool keyboard_active{false};                   ///< 图传键鼠是否在线
     bool recovery_manual_mode{false};              ///< 倒地自启手动模式
     rm::f32 manual_left_leg_speed{0.0f};           ///< 手动模式左腿摆角速度目标 [rad/s]
     rm::f32 manual_right_leg_speed{0.0f};          ///< 手动模式右腿摆角速度目标 [rad/s]
@@ -157,7 +158,7 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{true};             ///< 起立完成（首次启动默认完成，仅恢复后重走）
+  bool standup_complete_{false};             ///< 起立完成
   uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
   bool prev_fsm_was_recovery_{false};       ///< 上一周期是否在恢复状态
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
@@ -181,6 +182,8 @@ class Chassis {
   rm::modules::PID right_l0_pid_jump_two_{};
   rm::modules::PID left_l0_pid_jump_three_{};
   rm::modules::PID right_l0_pid_jump_three_{};
+  rm::modules::PID left_l0_pid_dip_{};
+  rm::modules::PID right_l0_pid_dip_{};
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};

@@ -135,6 +135,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_yaw_reset_edge = false;
   bool f_jump_edge = false;
   if (tc_remote_active) {
+    // Ctrl 键状态（用于屏蔽 F 跳跃 + G 键中腿长 + Ctrl+F/G 组合键）
+    const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
+
     // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
     if (c_pressed && tc_state.mid_leg_c_armed) {
@@ -207,13 +210,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!r_pressed) tc_state.r_yaw_reset_armed = true;
 
-    // Ctrl 键状态（用于屏蔽 F 跳跃 + Ctrl+F 组合键）
-    const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
-
-    // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽）
+    // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽，仅 G 键中腿长模式有效）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && !ctrl_pressed && tc_state.f_jump_armed) {
+    if (f_pressed && !ctrl_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
       f_jump_edge = true;
+      tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
