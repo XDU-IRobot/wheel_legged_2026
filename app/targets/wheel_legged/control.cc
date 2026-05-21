@@ -483,20 +483,18 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
-  const float forward_speed_base = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
-                                       ? kTargetForwardSpeedMaxHighLegMps
-                                       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
-                                             ? kTargetForwardSpeedMaxMidLegMps
-                                             : kTargetForwardSpeedMaxMps;
-  const float forward_speed_bias = (chassis_output.mode == chassis::Fsm::State::kLowLeg)
-                                       ? kTargetSpeedBiasLowLegMps
-                                       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
-                                             ? kTargetSpeedBiasMidLegGMps
-                                             : (chassis_output.mode == chassis::Fsm::State::kMidLeg)
-                                                   ? kTargetSpeedBiasMidLegMps
-                                                   : (chassis_output.mode == chassis::Fsm::State::kHighLeg)
-                                                         ? kTargetSpeedBiasHighLegMps
-                                                         : 0.0f;
+  const float forward_speed_base =
+      (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetForwardSpeedMaxHighLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+          ? kTargetForwardSpeedMaxMidLegMps
+          : kTargetForwardSpeedMaxMps;
+  const float forward_speed_bias =
+      (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+          ? kTargetSpeedBiasMidLegGMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg)  ? kTargetSpeedBiasMidLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetSpeedBiasHighLegMps
+                                                               : 0.0f;
   const float forward_max_speed = forward_speed_base;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
