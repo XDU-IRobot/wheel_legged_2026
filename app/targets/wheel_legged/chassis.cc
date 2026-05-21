@@ -5,15 +5,13 @@
 #include <cmath>
 
 #include "include/params.hpp"
-bool flag;
-f32 lf_tau, rf_tau, lb_tau, rb_tau, l_t;
-float l_c, r_c;
+
 /**
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
 uint8_t debug_stair_climb_phase_ = 0;
-f32 l_pid;
+
 namespace {
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
@@ -121,6 +119,12 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid = wheel_legged::params::active::chassis::kRightLegTurnPid;
   init_pid(right_leg_turn_pid_, right_leg_turn_pid.kp, right_leg_turn_pid.ki, right_leg_turn_pid.kd,
            right_leg_turn_pid.max_out, right_leg_turn_pid.max_iout);
+  const auto &left_leg_turn_pid_manual = wheel_legged::params::active::chassis::kLeftLegTurnPidManual;
+  init_pid(left_leg_turn_pid_manual_, left_leg_turn_pid_manual.kp, left_leg_turn_pid_manual.ki,
+           left_leg_turn_pid_manual.kd, left_leg_turn_pid_manual.max_out, left_leg_turn_pid_manual.max_iout);
+  const auto &right_leg_turn_pid_manual = wheel_legged::params::active::chassis::kRightLegTurnPidManual;
+  init_pid(right_leg_turn_pid_manual_, right_leg_turn_pid_manual.kp, right_leg_turn_pid_manual.ki,
+           right_leg_turn_pid_manual.kd, right_leg_turn_pid_manual.max_out, right_leg_turn_pid_manual.max_iout);
   // 上台阶腿摆角 PID（位置环），先转腿到目标摆角再收腿
   const auto &stair_climb_theta_pid = wheel_legged::params::active::chassis::kStairClimbThetaPid;
   init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
@@ -213,7 +217,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
   output_.raw_accel_speed_mps = state_output.raw_accel_speed_mps;
   output_.current_speed_mps = state_output.current_speed_mps;
-  output_.off_ground_in_mid_high_leg = false;
 
   CalSupportForce();
   output_.left_support_force_n = left_support_force_est_n_;
@@ -378,7 +381,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   output_.left_l0_pid_out = left_l0_pid_.out();
   output_.right_l0_pid_out = right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
-  l_t = params_.leg_target_length_m;
 
   l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
   r_spring_torque_ = ComputeRightSpringTorque(right_leg_.l0());
@@ -416,6 +418,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // 收腿阶段仅使用腿长 PID + 弹簧补偿
       left_force_ = leg_length_force + l_spring_torque_;
       right_force_ = leg_length_force + r_spring_torque_;
+    } else if (use_stair_climb && stair_climb_phase_ == 1) {
+      left_force_ = left_l0_pid_.out() + l_spring_torque_;
+      right_force_ = right_l0_pid_.out() + r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -461,7 +466,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
       // constexpr float kZeroThreshold =
       // wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr float kZeroThreshold = 1.5f;
+      constexpr float kZeroThreshold =1.1f;
       constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
 
       float theta_target = kThetaTarget;
@@ -514,28 +519,66 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
+}else if (input.recovery_manual_mode) {
+    // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
+    left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);
+    right_leg_turn_pid_manual_.Update(input.manual_right_leg_speed, state_output.current.theta_lr_dot);
 
-    lb_tau = output_.lb_tau;
-    lf_tau = output_.lf_tau;
-    rb_tau = output_.rb_tau;
-    rf_tau = output_.rf_tau;
+    left_force_ = 0.0f;
+    right_force_ = 0.0f;
+
+    output_.lb_tau =
+        left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
+    output_.lf_tau =
+        left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
+    output_.rb_tau =
+        right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_manual_.out());
+    output_.rf_tau =
+        right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_manual_.out());
+
+    output_.lf_tau = -output_.lf_tau;
+    output_.lb_tau = -output_.lb_tau;
+
+    output_.lw_tau = 0.0f;
+    output_.rw_tau = 0.0f;
   } else {
     if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
         imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
-      left_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                                state_output.current.theta_ll_dot);
-      right_leg_turn_pid_.Update(wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                                 state_output.current.theta_lr_dot);
+      // 腿在安全区间内 → PID 输出置零（不发力，随重力自然下落）
+      // 腿在安全区间外 → PID 跟踪恢复速度目标
+      constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
+      constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
+      constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
+
+      const bool ll_in_range = (state_output.current.theta_ll >= kThetaLegMin &&
+                                state_output.current.theta_ll <= kThetaLegMax);
+      const bool lr_in_range = (state_output.current.theta_lr >= kThetaLegMin &&
+                                state_output.current.theta_lr <= kThetaLegMax);
+
+      float ll_pid_out = 0.0f;
+      float lr_pid_out = 0.0f;
+      if (!ll_in_range) {
+        left_leg_turn_pid_.Update(kRecoverVel, state_output.current.theta_ll_dot);
+        ll_pid_out = -left_leg_turn_pid_.out();
+      } else {
+        left_leg_turn_pid_.Clear();
+      }
+      if (!lr_in_range) {
+        right_leg_turn_pid_.Update(kRecoverVel, state_output.current.theta_lr_dot);
+        lr_pid_out = -right_leg_turn_pid_.out();
+      } else {
+        right_leg_turn_pid_.Clear();
+      }
 
       left_force_ = 0.0f;
       right_force_ = 0.0f;
 
-      output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_.out());
-      output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
-      output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_.out());
-      output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_.out());
+      output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
+      output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
+      output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
+      output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;
