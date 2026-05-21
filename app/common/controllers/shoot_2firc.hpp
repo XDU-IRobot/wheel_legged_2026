@@ -39,8 +39,8 @@ class Shoot2Fric {
 
     // 拨盘控制
     if (!enabled_) {
-//      output_.fric_1 = 0.0f;
-//      output_.fric_2 = 0.0f;
+      //      output_.fric_1 = 0.0f;
+      //      output_.fric_2 = 0.0f;
       output_.loader = 0.0f;
       return;
     }
