@@ -27,6 +27,7 @@ class Chassis {
     bool enable_output{false};                     ///< 是否允许输出电机命令
     bool run_chassis_update{false};                ///< 是否执行底盘控制计算
     bool spin_enable{false};                       ///< 是否开启小陀螺
+    bool keyboard_active{false};                   ///< 图传键鼠是否在线
     bool recovery_manual_mode{false};              ///< 倒地自启手动模式
     rm::f32 manual_left_leg_speed{0.0f};           ///< 手动模式左腿摆角速度目标 [rad/s]
     rm::f32 manual_right_leg_speed{0.0f};          ///< 手动模式右腿摆角速度目标 [rad/s]
@@ -73,6 +74,8 @@ class Chassis {
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
+    bool stair_climb_pitch_stable{false};    ///< 上台阶后起立+俯仰稳定完成，可以进入 kHighLeg
+    bool mid_leg_dip_active{false};          ///< 中腿长下压激活中
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
@@ -156,15 +159,20 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{true};                   ///< 起立完成（首次启动默认完成，仅恢复后重走）
-  uint8_t standup_phase_{0};                      ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
-  bool prev_fsm_was_recovery_{false};             ///< 上一周期是否在恢复状态
+  bool standup_complete_{false};            ///< 起立完成
+  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  bool prev_fsm_was_recovery_{false};       ///< 上一周期是否在恢复状态
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};   ///< 当前 Phase 条件连续满足的周期数
   uint16_t off_ground_duration_ticks_{0};  ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};              ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};        ///< 强制低腿长已持续时间
+  bool stair_climb_standup_done_{false};        ///< 上台阶后起立完成
+  uint16_t stair_climb_pitch_stable_ticks_{0};  ///< 上台阶后俯仰稳定计数
+  Fsm::State prev_fsm_mode_{Fsm::State::kDisabled};  ///< 上一周期 FSM 模式（用于边沿检测）
+  bool mid_leg_dip_active_{false};         ///< 中腿长下压激活中
+  uint16_t mid_leg_dip_ticks_{0};          ///< 中腿长下压已持续时间
   bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
   bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
   uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
@@ -178,6 +186,8 @@ class Chassis {
   rm::modules::PID right_l0_pid_jump_two_{};
   rm::modules::PID left_l0_pid_jump_three_{};
   rm::modules::PID right_l0_pid_jump_three_{};
+  rm::modules::PID left_l0_pid_dip_{};
+  rm::modules::PID right_l0_pid_dip_{};
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};

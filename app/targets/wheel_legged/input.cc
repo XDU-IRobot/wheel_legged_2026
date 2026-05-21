@@ -11,7 +11,7 @@
 #include "include/actuators.hpp"
 #include "include/globals.hpp"
 #include "include/params.hpp"
-
+f32 flag;
 namespace wheel_legged::control_loop {
 
 namespace {
@@ -135,6 +135,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_yaw_reset_edge = false;
   bool f_jump_edge = false;
   if (tc_remote_active) {
+    // Ctrl 键状态（用于屏蔽 F 跳跃 + G 键中腿长 + Ctrl+F/G 组合键）
+    const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
+
     // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
     if (c_pressed && tc_state.mid_leg_c_armed) {
@@ -144,9 +147,24 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.stair_climb_done = false;
       tc_state.b_double_mode = false;
       tc_state.b_attempt = 0;
+      tc_state.mid_leg_g = false;
       tc_state.mid_leg_c_armed = false;
     }
     if (!c_pressed) tc_state.mid_leg_c_armed = true;
+
+    // G 键：任意状态按 G → 中腿长（另一套斜坡参数）；已在中腿长则回低腿长
+    const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
+    if (g_pressed && !ctrl_pressed && tc_state.mid_leg_g_armed) {
+      const bool already_mid = tc_state.mid_leg_hold && !tc_state.high_leg_hold && !tc_state.stair_climb_done;
+      tc_state.mid_leg_hold = !already_mid;
+      tc_state.high_leg_hold = false;
+      tc_state.stair_climb_done = false;
+      tc_state.b_double_mode = false;
+      tc_state.b_attempt = 0;
+      tc_state.mid_leg_g = !already_mid;
+      tc_state.mid_leg_g_armed = false;
+    }
+    if (!g_pressed) tc_state.mid_leg_g_armed = true;
 
     // Q 键：工作域循环（kDisabled → kService → kDisabled …）
     const bool q_pressed = (tc_remote.keyboard_value & kRcKeyQ) != 0U;
@@ -162,6 +180,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
       tc_state.stair_climb_done = false;
       tc_state.b_double_mode = false;
       tc_state.b_attempt = 0;
@@ -175,6 +194,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
       tc_state.stair_climb_done = false;
       tc_state.b_double_mode = !already_high;
       tc_state.b_attempt = 0;
@@ -190,29 +210,15 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!r_pressed) tc_state.r_yaw_reset_armed = true;
 
-    // Ctrl 键状态（用于屏蔽 F 跳跃 + Ctrl+F 组合键）
-    const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
-
-    // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽）
+    // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽，仅 G 键中腿长模式有效）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && !ctrl_pressed && tc_state.f_jump_armed) {
+    if (f_pressed && !ctrl_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
       f_jump_edge = true;
+      tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
-
-    // G 键长按 1s：切换 DR16 并行模式（Ctrl 按住时屏蔽，留给 Ctrl+G 组合键）
-    const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
-    if (g_pressed && !ctrl_pressed) {
-      tc_state.g_hold_ms += kControlLoopDtS * 1000.0f;
-      if (tc_state.g_hold_ms >= 1000.0f && tc_state.dr16_parallel_armed) {
-        tc_state.dr16_parallel = !tc_state.dr16_parallel;
-        tc_state.dr16_parallel_armed = false;
-      }
-    } else {
-      tc_state.g_hold_ms = 0.0f;
-      tc_state.dr16_parallel_armed = true;
-    }
 
     // Ctrl+Z 组合键：摩擦轮目标转速 -20 rpm（上升沿）
     const bool z_pressed = (tc_remote.keyboard_value & kRcKeyZ) != 0U;
@@ -461,6 +467,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
 
   request.leg_request = leg_request;
+  request.mid_leg_g = tc_state.mid_leg_g;
 
   // ── 目标来源：自瞄模式优先上位机 ──
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
@@ -472,6 +479,17 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.target_source = wheel_legged::TargetSource::kRc;
   }
   request.combat_profile = combat_profile;
+
+  // ── 自瞄 → 正常模式切出时，重置积分初始标记，避免云台甩到切入自瞄时的角度 ──
+  {
+    const bool is_auto_aim = (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+                              combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                              combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+    if (!is_auto_aim && semantic_state.last_auto_aim) {
+      semantic_state.gimbal_target_initialized = false;
+    }
+    semantic_state.last_auto_aim = is_auto_aim;
+  }
 
   // ── 云台目标积分（优先级同上：tc_remote > DR16）──
   if (!has_any_input || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
@@ -489,8 +507,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
   } else {
     if (!semantic_state.gimbal_target_initialized) {
-      semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
-      semantic_state.rc_target.pitch_rad = 0.0f;
+      semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
+      semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
       semantic_state.gimbal_target_initialized = true;
     }
     float yaw_delta = 0.0f;
@@ -620,6 +638,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     if (prev_domain == wheel_legged::DomainRequest::kDisabled &&
         predicted_domain != wheel_legged::DomainRequest::kDisabled) {
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
       tc_state.high_leg_hold = false;
       tc_state.stair_climb_done = false;
       tc_state.b_double_mode = false;
@@ -681,13 +700,13 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
       input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
     } else {
-      // NUC 无有效目标，目标锁定为当前云台角度，避免切入自瞄时云台甩到默认值
       input.mode_request.host_target.yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
       input.mode_request.host_target.pitch_rad = gimbal_rx_valid ? -g.gimbal_rx->pitch_rad() : 0.0f;
     }
     input.mode_request.host_target_valid = true;
     input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
+  flag = g.aimbot->aimbot_target();
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
@@ -732,6 +751,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .fall_detected_hold_ms = m.fall_detected_hold_ms,
       .upright_stable = m.upright_stable,
       .stair_climb_ready_for_done = chassis_output.stair_climb_ready_for_done,
+      .stair_climb_pitch_stable = chassis_output.stair_climb_pitch_stable,
       .recovery_manual_mode = m.recovery_manual_mode,
       .manual_left_leg_speed = m.manual_left_leg_speed,
       .manual_right_leg_speed = m.manual_right_leg_speed,

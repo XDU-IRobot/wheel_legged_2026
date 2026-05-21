@@ -102,6 +102,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
   globals->ui_refresh_key = tc_state.e_ui_refresh;
+  input.ui_refresh_key = tc_state.e_ui_refresh;
 
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
 
@@ -115,6 +116,20 @@ void ControlLoop() {
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+
+  // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
+  {
+    static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
+    const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+                              chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
+    const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
+                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
+    if (was_recovery && !is_recovery) {
+      tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
+    }
+    prev_chassis_mode_for_recovery = chassis_output.mode;
+  }
 
   // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
   {
@@ -221,13 +236,14 @@ void ControlLoop() {
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold ||
-                              (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3);
+                              (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3)||
+                                input.tc_remote.left_button;
     globals->shoot_controller.Update(shooter_enter, fire_trigger, tc_state.fric_speed_target_rpm);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
-    // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -341,6 +357,7 @@ void ControlLoop() {
   chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
   chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
 
@@ -521,7 +538,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_g);
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
@@ -592,11 +609,13 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
-    //    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg + ctx.landing_theta_bias;
-    //    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg + ctx.landing_theta_bias;
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
-    //      debug_mid_target_theta = chassis_update_input.expected.theta_lr;
+    if (chassis_control_output.mid_leg_dip_active) {
+      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
+      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
+    } else {
+      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
+      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
+    }
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
@@ -758,11 +777,11 @@ void ControlLoop() {
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
-    // wl_debug.supercap_enable_dcdc = 1U;
-    // wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    // wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    // wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    wl_debug.supercap_enable_dcdc = 1U;
+    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;

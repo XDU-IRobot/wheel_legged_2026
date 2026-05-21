@@ -402,7 +402,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kStairClimbDone:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
-      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
+      } else if (request.stair_climb_pitch_stable) {
         next_mode = State::kHighLeg;
       }
       break;

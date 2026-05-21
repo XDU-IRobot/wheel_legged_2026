@@ -11,7 +11,8 @@
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
 uint8_t debug_stair_climb_phase_ = 0;
-
+uint8_t debug_posture_valid;
+f32 left_,right_;
 namespace {
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
@@ -26,6 +27,10 @@ constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelR
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
 constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
+
+constexpr rm::f32 kMidLegDipTriggerLengthM = wheel_legged::params::active::chassis::kMidLegDipTriggerLengthM;
+constexpr rm::f32 kMidLegDipTargetLengthM = wheel_legged::params::active::chassis::kMidLegDipTargetLengthM;
+constexpr uint16_t kMidLegDipHoldTicks = wheel_legged::params::active::chassis::kMidLegDipHoldTicks;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -111,6 +116,11 @@ void chassis::Chassis::Init() {
   const auto &right_l0_jump3 = wheel_legged::params::active::chassis::kRightL0PidJumpThree;
   init_pid(right_l0_pid_jump_three_, right_l0_jump3.kp, right_l0_jump3.ki, right_l0_jump3.kd, right_l0_jump3.max_out,
            right_l0_jump3.max_iout);
+  const auto &left_l0_dip = wheel_legged::params::active::chassis::kLeftL0PidDip;
+  init_pid(left_l0_pid_dip_, left_l0_dip.kp, left_l0_dip.ki, left_l0_dip.kd, left_l0_dip.max_out, left_l0_dip.max_iout);
+  const auto &right_l0_dip = wheel_legged::params::active::chassis::kRightL0PidDip;
+  init_pid(right_l0_pid_dip_, right_l0_dip.kp, right_l0_dip.ki, right_l0_dip.kd, right_l0_dip.max_out,
+           right_l0_dip.max_iout);
   const auto &roll_pid = wheel_legged::params::active::chassis::kRollPid;
   init_pid(roll_pid_, roll_pid.kp, roll_pid.ki, roll_pid.kd, roll_pid.max_out, roll_pid.max_iout);
   const auto &left_leg_turn_pid = wheel_legged::params::active::chassis::kLeftLegTurnPid;
@@ -241,20 +251,45 @@ void chassis::Chassis::Update(const UpdateInput &input) {
        state_output.current.theta_lr >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
        state_output.current.theta_lr <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
 
-  if (!output_.posture_valid) {
-  } else if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
-    SafeStop();
-    prev_enable_output_ = false;
-    standup_complete_ = false;
-    return;
-  }
-
-  // 检测 enable_output 上升沿：关节先出力，轮端等待起立完成再输出
-  if (input.enable_output && !prev_enable_output_) {
+  // 进入 kDisabled 时复位起立状态，重新上电后重走起立
+  if (input.fsm_mode == Fsm::State::kDisabled) {
     standup_complete_ = false;
     standup_phase_ = 0;
   }
-  prev_enable_output_ = input.enable_output;
+
+  if (!output_.posture_valid) {
+    if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
+      SafeStop();
+      prev_enable_output_ = false;
+      return;
+    }
+    prev_enable_output_ = input.enable_output;
+    ComputeActuatorTorque(input, state_output);
+    if (output_.off_ground_in_mid_high_leg) {
+      off_ground_duration_ticks_++;
+    } else {
+      off_ground_duration_ticks_ = 0;
+    }
+    output_.off_ground_gravity_off = off_ground_duration_ticks_ >= 50;  // 0.1s
+    return;
+  }
+
+  if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
+    SafeStop();
+    prev_enable_output_ = false;
+    return;
+  }
+
+  const bool is_recovery_state =
+      (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight);
+
+  // 恢复→正常过渡：强制走起立，收腿+摆角到位后才开轮子
+  if (prev_fsm_was_recovery_ && !is_recovery_state) {
+    standup_complete_ = false;
+    standup_phase_ = 0;
+    force_low_leg_ = true;
+  }
+  prev_fsm_was_recovery_ = is_recovery_state;
 
   // 起立三段式：
   // Phase 0: 收腿到低腿长，仅使用腿长PID + 弹簧补偿
@@ -262,10 +297,10 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   // Phase 2: 起立完成，锁存
   if (!standup_complete_) {
     constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM+0.015f;
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
-      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
       if (left_leg_.l0() < kRetractLenThresholdM && right_leg_.l0() < kRetractLenThresholdM) {
         standup_phase_ = 1;
       }
@@ -275,9 +310,48 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         std::fabs(state_output.current.theta_lr) < kThetaThreshold) {
       standup_complete_ = true;
       standup_phase_ = 2;
+      force_low_leg_ = false;
     }
   }
+  //  // 起立完成后若摆角再次越界，回退到起立 Phase 0
+  //  // 上台阶时腿自然前摆会越界，不应回退，由三段式上台阶流程处理
+  //  if (standup_complete_ && input.fsm_mode != Fsm::State::kStairClimb &&input.fsm_mode !=
+  //  Fsm::State::kStairClimbDone) {
+  //    constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+  //    if (std::fabs(state_output.current.theta_ll) > kThetaThreshold ||
+  //        std::fabs(state_output.current.theta_lr) > kThetaThreshold) {
+  //      standup_complete_ = false;
+  //      standup_phase_ = 0;
+  //    }
+  //  }
 
+  // ── 上台阶 kStairClimbDone：进入后先低腿长起立，再等俯仰稳定 ──
+  if (input.fsm_mode == Fsm::State::kStairClimbDone) {
+    if (prev_fsm_mode_ != Fsm::State::kStairClimbDone) {
+      standup_complete_ = false;
+      standup_phase_ = 0;
+      stair_climb_standup_done_ = false;
+      stair_climb_pitch_stable_ticks_ = 0;
+    }
+    if (!stair_climb_standup_done_ && standup_complete_) {
+      stair_climb_standup_done_ = true;
+    }
+    if (stair_climb_standup_done_) {
+      constexpr uint16_t kPitchStableTicks =
+          wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs / 2U;  // 500Hz
+      stair_climb_pitch_stable_ticks_++;
+      if (stair_climb_pitch_stable_ticks_ >= kPitchStableTicks) {
+        output_.stair_climb_pitch_stable = true;
+      }
+    }
+  } else {
+    stair_climb_standup_done_ = false;
+    stair_climb_pitch_stable_ticks_ = 0;
+    output_.stair_climb_pitch_stable = false;
+  }
+  prev_fsm_mode_ = input.fsm_mode;
+
+  prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
 
   const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
@@ -311,6 +385,29 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       }
     }
   }
+  // 中腿长下压：腿长达到阈值后收腿到目标，维持一段时间再恢复
+  // 键盘控制时离地后永久锁定低腿长（不自动过期），直到切换模式
+  const bool is_mid_leg = (input.fsm_mode == Fsm::State::kMidLeg);
+  if (is_mid_leg) {
+    if (!mid_leg_dip_active_) {
+      if (output_.mean_leg_length_m >= kMidLegDipTriggerLengthM) {
+        mid_leg_dip_active_ = true;
+        mid_leg_dip_ticks_ = 0;
+      }
+    }
+    if (mid_leg_dip_active_) {
+      params_.leg_target_length_m = kMidLegDipTargetLengthM;
+      mid_leg_dip_ticks_++;
+      if (mid_leg_dip_ticks_ >= kMidLegDipHoldTicks) {
+        mid_leg_dip_active_ = false;
+        mid_leg_dip_ticks_ = 0;
+      }
+    }
+  } else {
+    mid_leg_dip_active_ = false;
+    mid_leg_dip_ticks_ = 0;
+  }
+  output_.mid_leg_dip_active = mid_leg_dip_active_;
   ComputeActuatorTorque(input, state_output);
 
   // 离地持续时间计数
@@ -375,12 +472,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   } else {
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
-    // left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
-    // right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
   }
-  output_.left_l0_pid_out = left_l0_pid_.out();
-  output_.right_l0_pid_out = right_l0_pid_.out();
-  const rm::f32 length_force_base = 0.5f * (left_l0_pid_.out() + right_l0_pid_.out());
+  // 下压目标腿长时使用独立 PID（持续 1s）
+  if (mid_leg_dip_active_) {
+    left_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
+    right_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
+  }
+  output_.left_l0_pid_out = mid_leg_dip_active_ ? left_l0_pid_dip_.out() : left_l0_pid_.out();
+  output_.right_l0_pid_out = mid_leg_dip_active_ ? right_l0_pid_dip_.out() : right_l0_pid_.out();
+  const rm::f32 length_force_base = 0.5f * (output_.left_l0_pid_out + output_.right_l0_pid_out);
 
   l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
   r_spring_torque_ = ComputeRightSpringTorque(right_leg_.l0());
@@ -396,7 +496,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool off_ground_for_force = off_ground_duration_ticks_ >= kGravityOffDelayTicks;
   const rm::f32 grav_left = off_ground_for_force ? 0.0f : gravity_ff_left;
   const rm::f32 grav_right = off_ground_for_force ? 0.0f : gravity_ff_right;
-
+  debug_posture_valid = output_.posture_valid;
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
@@ -414,13 +514,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     } else if (use_jump_retract1) {
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
-    } else if (standup_phase_ == 0) {
-      // 收腿阶段仅使用腿长 PID + 弹簧补偿
-      left_force_ = leg_length_force + l_spring_torque_;
-      right_force_ = leg_length_force + r_spring_torque_;
-    } else if (use_stair_climb && stair_climb_phase_ == 1) {
-      left_force_ = left_l0_pid_.out() + l_spring_torque_;
-      right_force_ = right_l0_pid_.out() + r_spring_torque_;
+    } else if (!standup_complete_ && standup_phase_ == 0) {
+      // 起立收腿阶段：仅腿长PID + 弹簧补偿，不用LQR/重力/roll
+      left_force_ = output_.left_l0_pid_out + l_spring_torque_;
+      right_force_ = output_.right_l0_pid_out + r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
@@ -428,13 +525,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
                                         state_output.current.phi_dot * state_output.current.s_dot;
 
-      // left_force_ = leg_length_force + gravity_ff_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
-      // right_force_ = leg_length_force + gravity_ff_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
-      left_force_ = left_l0_pid_.out() + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
-      right_force_ = right_l0_pid_.out() + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
+      left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
+      right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg = !is_jump_state && input.fsm_mode == Fsm::State::kMidLeg &&
+    const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&
+                                            input.fsm_mode == Fsm::State::kMidLeg &&
                                             (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
@@ -511,7 +607,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
     }
-
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
     output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * t_br_cmd;
@@ -519,7 +614,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
-}else if (input.recovery_manual_mode) {
+  } else if (input.recovery_manual_mode) {
     // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
     left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);
     right_leg_turn_pid_manual_.Update(input.manual_right_leg_speed, state_output.current.theta_lr_dot);
@@ -527,10 +622,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_force_ = 0.0f;
     right_force_ = 0.0f;
 
-    output_.lb_tau =
-        left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
-    output_.lf_tau =
-        left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
+    output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
+    output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
     output_.rb_tau =
         right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_manual_.out());
     output_.rf_tau =
@@ -552,10 +645,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
       constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
 
-      const bool ll_in_range = (state_output.current.theta_ll >= kThetaLegMin &&
-                                state_output.current.theta_ll <= kThetaLegMax);
-      const bool lr_in_range = (state_output.current.theta_lr >= kThetaLegMin &&
-                                state_output.current.theta_lr <= kThetaLegMax);
+      const bool ll_in_range =
+          (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
+      const bool lr_in_range =
+          (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
 
       float ll_pid_out = 0.0f;
       float lr_pid_out = 0.0f;
@@ -620,6 +713,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
       output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_.out());
       output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_.out());
+
+      left_ = left_leg_turn_pid_.out();
+      right_ = right_leg_turn_pid_.out();
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;
@@ -724,8 +820,10 @@ void chassis::Chassis::CalSupportForce() {
   const rm::f32 dyn_support_left = effective_mass_left_kg * (body_vertical_acc_limited_mps2 + left_leg_dyn_comp);
   const rm::f32 dyn_support_right = effective_mass_right_kg * (body_vertical_acc_limited_mps2 + right_leg_dyn_comp);
 
-  left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
+  // left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
+  // right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
+  left_support_force_est_n_ = left_F_bh + gravity_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right;
 
   output_.left_F_bh_n = left_F_bh;
   output_.right_F_bh_n = right_F_bh;

@@ -56,6 +56,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   int16_t tc_mouse_y;               // 图传鼠标 Y 增量
   uint8_t tc_left_button;           // 图传鼠标左键
   uint8_t tc_right_button;          // 图传鼠标右键
+  uint8_t tc_ui_refresh_key;        // E 键按下（UI 刷新使能）
   float gimbal_target_yaw_rad;      // 云台偏航目标
   float gimbal_target_pitch_rad;    // 云台俯仰目标
 
