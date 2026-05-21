@@ -307,16 +307,17 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       force_low_leg_ = false;
     }
   }
-//  // 起立完成后若摆角再次越界，回退到起立 Phase 0
-//  // 上台阶时腿自然前摆会越界，不应回退，由三段式上台阶流程处理
-//  if (standup_complete_ && input.fsm_mode != Fsm::State::kStairClimb &&input.fsm_mode != Fsm::State::kStairClimbDone) {
-//    constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-//    if (std::fabs(state_output.current.theta_ll) > kThetaThreshold ||
-//        std::fabs(state_output.current.theta_lr) > kThetaThreshold) {
-//      standup_complete_ = false;
-//      standup_phase_ = 0;
-//    }
-//  }
+  //  // 起立完成后若摆角再次越界，回退到起立 Phase 0
+  //  // 上台阶时腿自然前摆会越界，不应回退，由三段式上台阶流程处理
+  //  if (standup_complete_ && input.fsm_mode != Fsm::State::kStairClimb &&input.fsm_mode !=
+  //  Fsm::State::kStairClimbDone) {
+  //    constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
+  //    if (std::fabs(state_output.current.theta_ll) > kThetaThreshold ||
+  //        std::fabs(state_output.current.theta_lr) > kThetaThreshold) {
+  //      standup_complete_ = false;
+  //      standup_phase_ = 0;
+  //    }
+  //  }
 
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
@@ -459,7 +460,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool off_ground_for_force = off_ground_duration_ticks_ >= kGravityOffDelayTicks;
   const rm::f32 grav_left = off_ground_for_force ? 0.0f : gravity_ff_left;
   const rm::f32 grav_right = off_ground_for_force ? 0.0f : gravity_ff_right;
-  debug_posture_valid =output_.posture_valid;
+  debug_posture_valid = output_.posture_valid;
   if (output_.posture_valid) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
