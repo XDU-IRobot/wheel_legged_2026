@@ -337,6 +337,9 @@ void ControlLoop() {
   chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
+  chassis_update_input.recovery_manual_mode = chassis_input.request.recovery_manual_mode;
+  chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
+  chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
   chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
@@ -691,7 +694,9 @@ void ControlLoop() {
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
     const float bullet_speed =
-        (referee_online && referee_bullet_speed > 0.0f) ? referee_bullet_speed : ns::aimbot::kBulletSpeedMps;
+        (referee_online && referee_bullet_speed >= 20.0f)
+            ? referee_bullet_speed
+            : ((referee_online && referee_bullet_speed > 0.0f) ? 23.0f : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 

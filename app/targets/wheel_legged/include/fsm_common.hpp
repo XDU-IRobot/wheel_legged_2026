@@ -59,10 +59,10 @@ enum class GimbalTestProfile : uint8_t {
  *        通信异常时自动降级为遥控器积分目标。
  */
 enum class CombatProfile : uint8_t {
-  kNormal = 0,   ///< 正常战斗：底盘有力，RC目标
-  kAutoAimAmmo,   ///< 自瞄装甲板：底盘有力，上位机目标
-  kAutoAimFuSmall,     ///< 自瞄打小符：底盘有力，上位机目标
-  kAutoAimFuBig,  ///< 自瞄打大符：底盘有力，上位机目标
+  kNormal = 0,      ///< 正常战斗：底盘有力，RC目标
+  kAutoAimAmmo,     ///< 自瞄装甲板：底盘有力，上位机目标
+  kAutoAimFuSmall,  ///< 自瞄打小符：底盘有力，上位机目标
+  kAutoAimFuBig,    ///< 自瞄打大符：底盘有力，上位机目标
 };
 
 /**
@@ -105,6 +105,10 @@ struct ModeRequest {
   bool fall_detected{false};          ///< 是否检测到倒地 (@todo 未接入 IMU 姿态判断，始终 false)
   uint32_t fall_detected_hold_ms{0};  ///< 倒地持续时间 (@todo 未接入)
   bool upright_stable{false};         ///< 是否已恢复稳定直立 (@todo 未接入，始终 true)
+
+  bool recovery_manual_mode{false};         ///< 倒地自启手动模式
+  float manual_left_leg_speed{0.0f};        ///< 手动模式左腿摆角速度目标 [rad/s]
+  float manual_right_leg_speed{0.0f};       ///< 手动模式右腿摆角速度目标 [rad/s]
 
   uint32_t tick_ms{0};  ///< 当前系统时间戳
 };
@@ -151,6 +155,9 @@ struct ChassisFsmInput {
   bool upright_stable{false};                              ///< 是否已恢复稳定直立
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
   bool stair_climb_ready_for_done{false};                  ///< 上台阶回摆到位，可以进入 kStairClimbDone
+  bool recovery_manual_mode{false};                         ///< 倒地自启手动模式
+  float manual_left_leg_speed{0.0f};                        ///< 手动模式左腿摆角速度目标 [rad/s]
+  float manual_right_leg_speed{0.0f};                       ///< 手动模式右腿摆角速度目标 [rad/s]
   uint32_t tick_ms{0};                                     ///< 当前系统时间戳
 };
 
