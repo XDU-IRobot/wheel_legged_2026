@@ -502,10 +502,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg =
-        !is_jump_state && !mid_leg_dip_active_ && input.fsm_mode == Fsm::State::kMidLeg &&
-        (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-         right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+    const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&
+                                            input.fsm_mode == Fsm::State::kMidLeg &&
+                                            (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                             right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
     // 离地时支持力限幅
@@ -800,8 +800,8 @@ void chassis::Chassis::CalSupportForce() {
 
   // left_support_force_est_n_ = left_F_bh + gravity_support_left + dyn_support_left;
   // right_support_force_est_n_ = right_F_bh + gravity_support_right + dyn_support_right;
-  left_support_force_est_n_ = left_F_bh + gravity_support_left ;
-  right_support_force_est_n_ = right_F_bh + gravity_support_right ;
+  left_support_force_est_n_ = left_F_bh + gravity_support_left;
+  right_support_force_est_n_ = right_F_bh + gravity_support_right;
 
   output_.left_F_bh_n = left_F_bh;
   output_.right_F_bh_n = right_F_bh;
