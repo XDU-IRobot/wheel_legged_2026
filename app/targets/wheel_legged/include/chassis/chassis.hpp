@@ -73,7 +73,7 @@ class Chassis {
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
-    bool mid_leg_dip_active{false};  ///< 中腿长下压激活中
+    bool mid_leg_dip_active{false};          ///< 中腿长下压激活中
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
