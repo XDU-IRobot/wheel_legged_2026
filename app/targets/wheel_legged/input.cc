@@ -446,6 +446,17 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
   request.combat_profile = combat_profile;
 
+  // ── 自瞄 → 正常模式切出时，重置积分初始标记，避免云台甩到切入自瞄时的角度 ──
+  {
+    const bool is_auto_aim = (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+                              combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                              combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+    if (!is_auto_aim && semantic_state.last_auto_aim) {
+      semantic_state.gimbal_target_initialized = false;
+    }
+    semantic_state.last_auto_aim = is_auto_aim;
+  }
+
   // ── 云台目标积分（优先级同上：tc_remote > DR16）──
   if (!has_any_input || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
@@ -462,8 +473,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
   } else {
     if (!semantic_state.gimbal_target_initialized) {
-      semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
-      semantic_state.rc_target.pitch_rad = 0.0f;
+      semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
+      semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
       semantic_state.gimbal_target_initialized = true;
     }
     float yaw_delta = 0.0f;
@@ -651,7 +662,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
       input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
     } else {
-      // NUC 无有效目标，目标锁定为当前云台角度，避免切入自瞄时云台甩到默认值
       input.mode_request.host_target.yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
       input.mode_request.host_target.pitch_rad = gimbal_rx_valid ? -g.gimbal_rx->pitch_rad() : 0.0f;
     }

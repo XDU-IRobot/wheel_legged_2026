@@ -87,6 +87,7 @@ struct InputSnapshot {
 struct Dr16SemanticState {
   bool wheel_action_armed{true};           ///< 拨轮动作是否已就绪（防重复触发）
   bool gimbal_target_initialized{false};   ///< 云台积分目标是否已初始化
+  bool last_auto_aim{false};               ///< 上一周期是否处于自瞄模式
   wheel_legged::GimbalTarget rc_target{};  ///< RC 积分目标角
 };
 
