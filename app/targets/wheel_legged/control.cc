@@ -102,6 +102,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
   globals->ui_refresh_key = tc_state.e_ui_refresh;
+  input.ui_refresh_key = tc_state.e_ui_refresh;
 
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
 
@@ -521,7 +522,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode);
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_g);
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
@@ -759,10 +760,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    // wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
-    // wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
-    // wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
-    // wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
+    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;

@@ -75,6 +75,7 @@ struct InputSnapshot {
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_enabled{false};                          ///< 自动跳跃当前是否已开启
+  bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
   float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）
@@ -96,6 +97,8 @@ struct Dr16SemanticState {
  */
 struct TcSemanticState {
   bool mid_leg_c_armed{true};         ///< C 键是否已就绪（上升沿检测）
+  bool mid_leg_g_armed{true};         ///< G 键是否已就绪（上升沿检测）
+  bool mid_leg_g{false};              ///< G 键触发的中腿长（区分斜坡参数）
   bool mid_leg_hold{false};           ///< 是否保持中腿长
   bool q_domain_armed{true};          ///< Q 键是否已就绪（上升沿检测）
   uint8_t domain_state{0};            ///< Q 键工作域循环：0=kDisabled, 1=kService
@@ -107,8 +110,6 @@ struct TcSemanticState {
   bool b_double_mode{false};          ///< B 模式：需完成两次上台阶
   uint8_t b_attempt{0};               ///< B 模式已完成上台阶次数
   bool stair_climb_done{false};       ///< 上台阶完成后锁定低腿长
-  bool dr16_parallel_armed{true};     ///< G 键长按触发防抖
-  float g_hold_ms{0.0f};              ///< G 键已按住时长 (ms)
   bool dr16_parallel{false};          ///< DR16 是否并行生效
   bool z_fric_dec_armed{true};        ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
   bool x_fric_inc_armed{true};        ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）

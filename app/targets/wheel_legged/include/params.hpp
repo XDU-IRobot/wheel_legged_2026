@@ -420,6 +420,7 @@ constexpr float kExpectedThetaBBiasRad = -0.087f;         ///< 期望机体俯�
 // ==== 速度斜坡参数（按腿长档位分级）====
 constexpr SdotRampParams kSdotRampLowLeg{0.008f, 0.008f};   ///< 低腿长速度斜坡（加速/制动步长）
 constexpr SdotRampParams kSdotRampMidLeg{0.008f, 0.008f};   ///< 中腿长速度斜坡
+constexpr SdotRampParams kSdotRampMidLegG{0.006f, 0.006f};  ///< 中腿长速度斜坡（G 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.008f, 0.005f};  ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====
@@ -841,6 +842,7 @@ constexpr float kExpectedThetaBBiasRad = 0.f;            ///< 期望机体俯仰
 // ==== 速度斜坡参数 ====
 constexpr SdotRampParams kSdotRampLowLeg{0.0065f, 0.0065f};  ///< 低腿长速度斜坡
 constexpr SdotRampParams kSdotRampMidLeg{0.008f, 0.008f};    ///< 中腿长速度斜坡
+constexpr SdotRampParams kSdotRampMidLegG{0.006f, 0.006f};   ///< 中腿长速度斜坡（G 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.005f, 0.005f};   ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====
@@ -1239,6 +1241,7 @@ constexpr float kExpectedThetaBBiasRad = 0.024f;         ///< 期望机体俯仰
 // ==== 速度斜坡参数 ====
 constexpr SdotRampParams kSdotRampLowLeg{0.01f, 0.008f};    ///< 低腿长速度斜坡
 constexpr SdotRampParams kSdotRampMidLeg{0.008f, 0.008f};   ///< 中腿长速度斜坡
+constexpr SdotRampParams kSdotRampMidLegG{0.003f, 0.003f};  ///< 中腿长速度斜坡（G 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.005f, 0.005f};  ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====

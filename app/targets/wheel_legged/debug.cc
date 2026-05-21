@@ -40,6 +40,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.tc_mouse_y = input.tc_remote.mouse_y;
   wl_debug.tc_left_button = static_cast<uint8_t>(input.tc_remote.left_button);
   wl_debug.tc_right_button = static_cast<uint8_t>(input.tc_remote.right_button);
+  wl_debug.tc_ui_refresh_key = static_cast<uint8_t>(input.ui_refresh_key);
 
   wl_debug.dr16_left_x_raw = input.dr16.left_x;
   wl_debug.dr16_left_y_raw = input.dr16.left_y;

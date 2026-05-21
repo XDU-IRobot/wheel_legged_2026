@@ -86,6 +86,7 @@ struct ModeRequest {
   ServiceProfile service_profile{
       ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
+  bool mid_leg_g{false};                      ///< G 键触发的中腿长（区分斜坡参数）
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求

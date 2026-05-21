@@ -152,5 +152,6 @@ bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_
  * @return 对应该模式的 SdotRampParams
  */
 SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode);
+SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_g);
 
 }  // namespace wheel_legged::control_loop
