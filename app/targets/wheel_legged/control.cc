@@ -30,6 +30,11 @@ constexpr float kControlLoopDtS = ns::control_loop::kControlLoopDtS;
 constexpr float kPi = ns::kPi;
 constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpeedMaxMps;
 constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
+constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
+constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
+constexpr float kTargetSpeedBiasMidLegMps = ns::control_loop::kTargetSpeedBiasMidLegMps;
+constexpr float kTargetSpeedBiasMidLegGMps = ns::control_loop::kTargetSpeedBiasMidLegGMps;
+constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasHighLegMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
@@ -478,9 +483,21 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
-  const float forward_max_speed = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
-                                      ? kTargetForwardSpeedMaxHighLegMps
-                                      : kTargetForwardSpeedMaxMps;
+  const float forward_speed_base = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
+                                       ? kTargetForwardSpeedMaxHighLegMps
+                                       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+                                             ? kTargetForwardSpeedMaxMidLegMps
+                                             : kTargetForwardSpeedMaxMps;
+  const float forward_speed_bias = (chassis_output.mode == chassis::Fsm::State::kLowLeg)
+                                       ? kTargetSpeedBiasLowLegMps
+                                       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+                                             ? kTargetSpeedBiasMidLegGMps
+                                             : (chassis_output.mode == chassis::Fsm::State::kMidLeg)
+                                                   ? kTargetSpeedBiasMidLegMps
+                                                   : (chassis_output.mode == chassis::Fsm::State::kHighLeg)
+                                                         ? kTargetSpeedBiasHighLegMps
+                                                         : 0.0f;
+  const float forward_max_speed = forward_speed_base;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -494,6 +511,7 @@ void ControlLoop() {
   } else if (side_input_active) {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
+  target_s_dot += forward_speed_bias;
   if (!chassis_output_enable) {
     target_s_dot = 0.0f;
   }
@@ -776,11 +794,11 @@ void ControlLoop() {
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
-    wl_debug.supercap_enable_dcdc = 1U;
-     wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-     wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-     wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-     wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    // wl_debug.supercap_enable_dcdc = 1U;
+    //  wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    //  wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    //  wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    //  wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
