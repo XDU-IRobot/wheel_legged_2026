@@ -73,6 +73,7 @@ class Chassis {
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
+    bool mid_leg_dip_active{false};  ///< 中腿长下压激活中
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
@@ -165,6 +166,8 @@ class Chassis {
   uint16_t off_ground_duration_ticks_{0};  ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};              ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};        ///< 强制低腿长已持续时间
+  bool mid_leg_dip_active_{false};         ///< 中腿长下压激活中
+  uint16_t mid_leg_dip_ticks_{0};          ///< 中腿长下压已持续时间
   bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
   bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
   uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间

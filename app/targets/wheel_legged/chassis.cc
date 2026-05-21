@@ -27,6 +27,10 @@ constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
 constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
 
+constexpr rm::f32 kMidLegDipTriggerLengthM = wheel_legged::params::active::chassis::kMidLegDipTriggerLengthM;
+constexpr rm::f32 kMidLegDipTargetLengthM = wheel_legged::params::active::chassis::kMidLegDipTargetLengthM;
+constexpr uint16_t kMidLegDipHoldTicks = wheel_legged::params::active::chassis::kMidLegDipHoldTicks;
+
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
 constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEtaLookupLwM;
@@ -332,6 +336,28 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       }
     }
   }
+  // 中腿长下压：腿长达到阈值后收腿到目标，维持一段时间再恢复
+  const bool is_mid_leg = (input.fsm_mode == Fsm::State::kMidLeg);
+  if (is_mid_leg) {
+    if (!mid_leg_dip_active_) {
+      if (output_.mean_leg_length_m >= kMidLegDipTriggerLengthM) {
+        mid_leg_dip_active_ = true;
+        mid_leg_dip_ticks_ = 0;
+      }
+    }
+    if (mid_leg_dip_active_) {
+      params_.leg_target_length_m = kMidLegDipTargetLengthM;
+      mid_leg_dip_ticks_++;
+      if (mid_leg_dip_ticks_ >= kMidLegDipHoldTicks) {
+        mid_leg_dip_active_ = false;
+        mid_leg_dip_ticks_ = 0;
+      }
+    }
+  } else {
+    mid_leg_dip_active_ = false;
+    mid_leg_dip_ticks_ = 0;
+  }
+  output_.mid_leg_dip_active = mid_leg_dip_active_;
   ComputeActuatorTorque(input, state_output);
 
   // 离地持续时间计数
