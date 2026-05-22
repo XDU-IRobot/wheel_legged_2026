@@ -598,7 +598,7 @@ constexpr float kFricSpeedStepRpm = 20.0f;  ///< Z/X 键每次调整摩擦轮转
 // ── 本地热量闭环 ──
 constexpr float kHeatPerShot = 10.0f;       ///< 每发子弹热量增量 [热量单位]
 constexpr float kHeatSafetyMargin = 20.0f;  ///< 停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
-constexpr float kHeatResumeMargin = 80.0f;  ///< 恢复余量：heat < limit - margin 时恢复，与停火线构成迟滞
+constexpr float kHeatResumeMargin = 20.0f;  ///< 恢复余量：heat < limit - margin 时恢复，与停火线构成迟滞
 constexpr uint16_t kDefaultHeatLimit = 240;   ///< 裁判系统离线时默认热量上限
 constexpr uint16_t kDefaultCoolingRate = 40;  ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
 }  // namespace shoot
@@ -1004,7 +1004,7 @@ constexpr float kIdentPitchBottomLimit = 1.6f;  ///< 辨识轨迹 pitch 上限 [
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                             ///< 摩擦轮数量
-constexpr float kFricSpeedTargetRpm = 7500.0f;                            ///< 摩擦轮目标转速 [rpm]
+constexpr float kFricSpeedTargetRpm = 6000.0f;                            ///< 摩擦轮目标转速 [rpm]
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};   ///< 摩擦轮速度 PID
 constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};   ///< 拨盘速度 PID
 constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.01f, 30000.0f, 500.0f};  ///< 拨盘位置 PID
@@ -1015,7 +1015,7 @@ constexpr float kFricSpeedStepRpm = 20.0f;  ///< Z/X 键每次调整摩擦轮转
 // ── 本地热量闭环 ──
 constexpr float kHeatPerShot = 10.0f;       ///< 每发子弹热量增量 [热量单位]
 constexpr float kHeatSafetyMargin = 20.0f;  ///< 停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
-constexpr float kHeatResumeMargin = 80.0f;  ///< 恢复余量：heat < limit - margin 时恢复，与停火线构成迟滞
+constexpr float kHeatResumeMargin = 20.0f;  ///< 恢复余量：heat < limit - margin 时恢复，与停火线构成迟滞
 constexpr uint16_t kDefaultHeatLimit = 240;   ///< 裁判系统离线时默认热量上限
 constexpr uint16_t kDefaultCoolingRate = 40;  ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
 }  // namespace shoot
