@@ -1004,7 +1004,7 @@ constexpr float kIdentPitchBottomLimit = 1.6f;  ///< 辨识轨迹 pitch 上限 [
 // ── 发射机构（双摩擦轮 + M3508 拨盘）──
 namespace shoot {
 inline constexpr int kFrictionWheelCount = 2;                             ///< 摩擦轮数量
-constexpr float kFricSpeedTargetRpm = 6000.0f;                            ///< 摩擦轮目标转速 [rpm]
+constexpr float kFricSpeedTargetRpm = 7500.0f;                            ///< 摩擦轮目标转速 [rpm]
 constexpr PidGains kFricSpeedPid{20.0f, 1.0f, 0.0f, 16000.0f, 2000.0f};   ///< 摩擦轮速度 PID
 constexpr PidGains kDialSpeedPid{10.0f, 0.5f, 0.0f, 16000.0f, 1000.0f};   ///< 拨盘速度 PID
 constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.01f, 30000.0f, 500.0f};  ///< 拨盘位置 PID
