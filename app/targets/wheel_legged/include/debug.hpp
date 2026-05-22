@@ -190,7 +190,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t dyp_frame_count;              // 接收帧计数
 
   // ── 发射机构（双摩擦变体）──
-  uint8_t shoot_enabled;            // 发射使能
+  uint8_t shoot_enabled;            // 发射使能（云台处于 Combat）
+  uint8_t shoot_fric_ready;         // 摩擦轮达速标志（转速达到目标±阈值）
+  uint8_t shoot_single_shot_mode;   // 单发模式（打符：仅上升沿触发一发）
+  uint8_t shoot_manual_fire;        // 手动开火触发（拨轮超阈值 或 左键按下）
   float fric_speed_target_rpm;      // 摩擦轮目标转速 [rpm]（运行时可调）
   float fric_left_rpm;              // 左摩擦轮实际转速 [rpm]
   float fric_right_rpm;             // 右摩擦轮实际转速 [rpm]
@@ -199,7 +202,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t shot_count;              // 打弹成功计数
   uint8_t shoot_mode;               // Shoot2Fric 模式 (0=kStop,1=kFullAuto,2=kSingleShot)
   uint8_t shoot_single_complete;    // 单发完成标志（拨盘已走完一颗弹）
-  uint8_t shoot_fire_flag;          // 开火标志（未抑制）
+  uint8_t shoot_fire_flag;          // 开火标志（手动触发 或 NUC允许，热量抑制前）
   uint8_t shoot_effective_fire;     // 有效开火（fire_flag && 热量未超限）
   float shoot_loader_pos_error;     // 拨盘位置误差（目标 - 当前）[编码器单位]
   float shoot_loader_pos_target;    // 拨盘位置环目标 [编码器单位]
@@ -213,6 +216,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)
   float fw_raw_rpm_2;         // 摩擦轮2 RPM (hero)
   float fw_raw_rpm_3;         // 摩擦轮3 RPM (hero)
+  uint8_t shoot_hero_state;       // Hero ShootController 状态机 (0=kStop,1=kInit,2=kReady,3=kShooting,4=kCooling)
+  uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
+  uint8_t shoot_hero_enter;         // Hero 进入射击模式
+  int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）
 
   // ── 本地热量闭环 ──
   float shoot_local_heat;         // 本地估算枪口热量

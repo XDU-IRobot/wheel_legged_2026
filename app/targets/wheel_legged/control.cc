@@ -247,6 +247,10 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
+    wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
+    wl_debug.shoot_hero_fire_trigger = fire_trigger ? 1U : 0U;
+    wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
+    wl_debug.shoot_hero_heat_delta = globals->shoot_controller.heat_delta();
     // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
@@ -264,6 +268,7 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     wl_debug.fric_left_rpm = fric_left_rpm;
     wl_debug.fric_right_rpm = fric_right_rpm;
+    wl_debug.shoot_fric_ready = globals->shoot.fric_ready() ? 1U : 0U;
     if (globals->dial.has_value()) {
       globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
     }
@@ -272,9 +277,11 @@ void ControlLoop() {
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool manual_fire =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
-                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                            (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    const bool fire_flag =
+        manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                        globals->aimbot->aimbot_target());
+
+    wl_debug.shoot_manual_fire = manual_fire ? 1U : 0U;
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
@@ -286,6 +293,7 @@ void ControlLoop() {
 
     const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
                              input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
+    wl_debug.shoot_single_shot_mode = single_shot ? 1U : 0U;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm, single_shot);

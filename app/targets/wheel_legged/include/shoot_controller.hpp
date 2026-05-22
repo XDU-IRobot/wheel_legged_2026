@@ -219,6 +219,7 @@ class ShootController {
 
   [[nodiscard]] State state() const { return state_; }
   [[nodiscard]] float booster_pos() const { return booster_pos_; }
+  [[nodiscard]] int32_t heat_delta() const { return heat_delta_; }
 
  private:
   State state_{State::kStop};
