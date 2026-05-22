@@ -212,11 +212,11 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float shoot_loader_spd_feedback;  // 拨盘速度环反馈 [rpm]
   float shoot_loader_spd_pid_out;   // 拨盘速度环 PID 输出（最终给电机）
   // ── 发射机构（三摩擦变体 hero）──
-  float booster_raw_pos_rad;  // DM 拨盘位置 (hero)
-  float fw_raw_rpm_1;         // 摩擦轮1 RPM (hero)
-  float fw_raw_rpm_2;         // 摩擦轮2 RPM (hero)
-  float fw_raw_rpm_3;         // 摩擦轮3 RPM (hero)
-  uint8_t shoot_hero_state;       // Hero ShootController 状态机 (0=kStop,1=kInit,2=kReady,3=kShooting,4=kCooling)
+  float booster_raw_pos_rad;        // DM 拨盘位置 (hero)
+  float fw_raw_rpm_1;               // 摩擦轮1 RPM (hero)
+  float fw_raw_rpm_2;               // 摩擦轮2 RPM (hero)
+  float fw_raw_rpm_3;               // 摩擦轮3 RPM (hero)
+  uint8_t shoot_hero_state;         // Hero ShootController 状态机 (0=kStop,1=kInit,2=kReady,3=kShooting,4=kCooling)
   uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
   uint8_t shoot_hero_enter;         // Hero 进入射击模式
   int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）

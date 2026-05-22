@@ -233,7 +233,6 @@ class Actuators {
     }
   }
 
-
   static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
     g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
