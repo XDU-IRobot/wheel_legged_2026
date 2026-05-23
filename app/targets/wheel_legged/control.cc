@@ -881,8 +881,7 @@ void ControlLoop() {
     ui_snapshot.fric_left_rpm = 0.0f;
     ui_snapshot.fric_right_rpm = 0.0f;
 #else
-    ui_snapshot.fric_left_rpm =
-        globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
+    ui_snapshot.fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
     ui_snapshot.fric_right_rpm =
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     ui_snapshot.fw_raw_rpm_1 = 0.0f;

@@ -160,22 +160,22 @@ inline void static_status_func() {
 
   const u8 sender = robot_id();
 
-  status_line.character.fillCharacter("st1", device::UIFigure1::Operation::Add, 0,
-                                      device::UIFigure1::Color::Yellow, 2, 10, 748, 20, 22);
+  status_line.character.fillCharacter("st1", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 2,
+                                      10, 748, 20, 22);
   memset(status_line.data, 0, sizeof(status_line.data));
   memcpy(status_line.data, "DISABLE STANDBY ENABLE", 22);
   u8 len = rm::device::Referee0x301Prepare(info, 0, status_line, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(info, len, 10);
 
-  status_line.character.fillCharacter("st2", device::UIFigure1::Operation::Add, 0,
-                                      device::UIFigure1::Color::Yellow, 2, 10, 708, 20, 10);
+  status_line.character.fillCharacter("st2", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 2,
+                                      10, 708, 20, 10);
   memset(status_line.data, 0, sizeof(status_line.data));
   memcpy(status_line.data, "SPIN CROSS", 10);
   len = rm::device::Referee0x301Prepare(info, 0, status_line, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(info, len, 10);
 
-  status_line.character.fillCharacter("st3", device::UIFigure1::Operation::Add, 0,
-                                      device::UIFigure1::Color::Yellow, 2, 10, 668, 20, 16);
+  status_line.character.fillCharacter("st3", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 2,
+                                      10, 668, 20, 16);
   memset(status_line.data, 0, sizeof(status_line.data));
   memcpy(status_line.data, "NORMAL SMALL BIG", 16);
   len = rm::device::Referee0x301Prepare(info, 0, status_line, sender, static_cast<u16>(sender) + 256);
@@ -353,14 +353,12 @@ inline void dynamic_status_func() {
   };
 
   auto fill_rect = [](rm::device::UIFigure1 &figure, const char *name, device::UIFigure1::Operation op, u16 x1, u16 y1,
-                      u16 x2, u16 y2) {
-    figure.fillRec(name, op, 0, device::UIFigure1::Color::White, 2, x1, y1, x2, y2);
-  };
+                      u16 x2,
+                      u16 y2) { figure.fillRec(name, op, 0, device::UIFigure1::Color::White, 2, x1, y1, x2, y2); };
 
   const auto op = globals->ui_refresh_key ? device::UIFigure1::Operation::Add : device::UIFigure1::Operation::Edit;
-  const bool disabled =
-      ui_snapshot.domain_request == static_cast<u8>(wheel_legged::DomainRequest::kDisabled) ||
-      ui_snapshot.chassis_fsm_state == static_cast<u8>(chassis::Fsm::State::kDisabled);
+  const bool disabled = ui_snapshot.domain_request == static_cast<u8>(wheel_legged::DomainRequest::kDisabled) ||
+                        ui_snapshot.chassis_fsm_state == static_cast<u8>(chassis::Fsm::State::kDisabled);
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {
@@ -465,9 +463,9 @@ inline void dynamic4_func() {
     static_d4.figure1.fillFloat("spd", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
                                 static_cast<u16>(1343.216), static_cast<u16>(644.661), 25,
                                 ui_snapshot.bullet_speed_mps);
-    static_d4.figure2.fillIntegrate(
-        "amm", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3, static_cast<u16>(1346.347),
-        static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
+    static_d4.figure2.fillIntegrate("amm", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
+                                    static_cast<u16>(1346.347), static_cast<u16>(472.9), 25,
+                                    static_cast<i32>(ui_snapshot.projectile_allowance));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -476,9 +474,9 @@ inline void dynamic4_func() {
     static_d4.figure1.fillFloat("spd", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Green, 3,
                                 static_cast<u16>(1343.216), static_cast<u16>(644.661), 25,
                                 ui_snapshot.bullet_speed_mps);
-    static_d4.figure2.fillIntegrate(
-        "amm", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Green, 3, static_cast<u16>(1346.347),
-        static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
+    static_d4.figure2.fillIntegrate("amm", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Green, 3,
+                                    static_cast<u16>(1346.347), static_cast<u16>(472.9), 25,
+                                    static_cast<i32>(ui_snapshot.projectile_allowance));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
