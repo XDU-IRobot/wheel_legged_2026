@@ -550,8 +550,7 @@ void ControlLoop() {
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
   //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
   const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                 !now_is_standby &&
-                                 chassis_output.mode != chassis::Fsm::State::kSpin;
+                                 !now_is_standby && chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
   if (!can_hold_position || driver_command_active) {
     ctx.integrate_position = false;

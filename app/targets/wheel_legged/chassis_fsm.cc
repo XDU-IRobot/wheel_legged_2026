@@ -438,9 +438,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
   Transit(next_mode);
 
-  if (!IsJumpState(mode_) &&
-      (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin ||
-       mode_ == State::kStandby)) {
+  if (!IsJumpState(mode_) && (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg ||
+                              mode_ == State::kSpin || mode_ == State::kStandby)) {
     output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_);
   }
 
