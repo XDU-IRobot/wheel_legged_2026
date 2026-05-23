@@ -71,6 +71,11 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     } else if ((keys & kRcKeyS) != 0U) {
       out.forward = -1.0f;
     }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
+    }
     // 并行模式（键盘空闲）或 DR16 回退：键鼠无输入时降级到 DR16 右摇杆
     if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online &&
         out.forward == 0.0f && out.side == 0.0f) {
@@ -84,6 +89,11 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
       out.forward = 1.0f;
     } else if ((keys & kRcKeyS) != 0U) {
       out.forward = -1.0f;
+    }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
     }
     // 键盘无输入时降级到摇杆
     if (out.forward == 0.0f && out.side == 0.0f) {
@@ -166,10 +176,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!g_pressed) tc_state.mid_leg_g_armed = true;
 
-    // Q 键：工作域循环（kDisabled → kService → kDisabled …）
+    // Q: disabled -> standby -> enabled -> disabled.
     const bool q_pressed = (tc_remote.keyboard_value & kRcKeyQ) != 0U;
     if (q_pressed && tc_state.q_domain_armed) {
-      tc_state.domain_state = (tc_state.domain_state + 1) % 2;
+      tc_state.domain_state = (tc_state.domain_state + 1) % 3;
       tc_state.q_domain_armed = false;
     }
     if (!q_pressed) tc_state.q_domain_armed = true;
@@ -208,8 +218,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
     if (f_pressed && !ctrl_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
       f_jump_edge = true;
-      tc_state.mid_leg_hold = false;
-      tc_state.mid_leg_g = false;
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
@@ -311,6 +319,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         request.domain_request = wheel_legged::DomainRequest::kDisabled;
         break;
       case 1:
+        request.domain_request = wheel_legged::DomainRequest::kCombat;
+        request.standby = true;
+        break;
+      case 2:
       default:
         request.domain_request = wheel_legged::DomainRequest::kCombat;
         break;
@@ -462,6 +474,13 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   request.leg_request = leg_request;
   request.mid_leg_g = tc_state.mid_leg_g;
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
+    request.standby = true;
+  }
+  if (request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    request.standby = false;
+  }
 
   // ── 目标来源：自瞄模式优先上位机 ──
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
@@ -624,7 +643,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
     if (tc_active) {
       predicted_domain =
-          (tc_state.domain_state == 1) ? wheel_legged::DomainRequest::kService : wheel_legged::DomainRequest::kDisabled;
+          (tc_state.domain_state != 0) ? wheel_legged::DomainRequest::kCombat : wheel_legged::DomainRequest::kDisabled;
     } else if (dr16.online) {
       predicted_domain = ResolveDomainRequest(dr16.switch_l);
     }
@@ -736,6 +755,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .domain_request = m.domain_request,
       .leg_request = m.leg_request,
       .combat_profile = m.combat_profile,
+      .standby = m.standby,
       .spin_hold = m.spin_hold,
       .jump_trigger = m.jump_trigger,
       .current_leg_length_m = chassis_output.mean_leg_length_m,

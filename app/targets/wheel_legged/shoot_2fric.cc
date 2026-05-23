@@ -7,6 +7,8 @@
 #include "common/controllers/shoot_2firc.hpp"
 #include "include/params.hpp"
 
+int flag1 = 0;
+
 namespace ns = wheel_legged::params::active::shoot;
 
 void Shoot::Init() {
@@ -45,9 +47,12 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     } else {
       prev_fire_flag_ = false;
       if (fire_flag && !heat_suppressed_) {
+        // if (fire_flag) {
+        flag1 = 1;
         controller_.SetMode(Shoot2Fric::kFullAuto);
         controller_.SetShootFrequency(ns::kShootFrequencyHz);
       } else {
+        flag1 = 0;
         controller_.SetMode(Shoot2Fric::kStop);
       }
     }
@@ -88,13 +93,11 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     }
 
     const float effective_limit = static_cast<float>(heat_limit_);
-    if (effective_limit > ns::kHeatSafetyMargin &&
-        current_heat_ + ns::kHeatPerShot > effective_limit - ns::kHeatSafetyMargin) {
+    if (current_heat_ > effective_limit - ns::kHeatSafetyMargin) {
       heat_suppressed_ = true;
-    } else if (effective_limit > ns::kHeatResumeMargin && current_heat_ < effective_limit - ns::kHeatResumeMargin) {
+    } else if (effective_limit > ns::kHeatSafetyMargin && current_heat_ < effective_limit - ns::kHeatResumeMargin) {
       heat_suppressed_ = false;
-    } else if (effective_limit <= ns::kHeatSafetyMargin) {
-      // 裁判系统给的 heat_limit 异常（0 或极小值），强制解除抑制
+    } else {
       heat_suppressed_ = false;
     }
   }

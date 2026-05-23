@@ -101,7 +101,7 @@ struct TcSemanticState {
   bool mid_leg_g{false};              ///< G 键触发的中腿长（区分斜坡参数）
   bool mid_leg_hold{false};           ///< 是否保持中腿长
   bool q_domain_armed{true};          ///< Q 键是否已就绪（上升沿检测）
-  uint8_t domain_state{0};            ///< Q 键工作域循环：0=kDisabled, 1=kService
+  uint8_t domain_state{0};            ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
   bool v_high_leg_armed{true};        ///< V 键是否已就绪（上升沿检测）
   bool b_high_leg_armed{true};        ///< B 键是否已就绪（上升沿检测）
   bool f_jump_armed{true};            ///< F 键是否已就绪（上升沿检测）

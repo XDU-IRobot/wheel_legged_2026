@@ -31,6 +31,7 @@ class Fsm {
     kRecoverySelfRight,
     kStairClimb,
     kStairClimbDone,
+    kStandby,
   };
 
   /**

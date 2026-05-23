@@ -13,13 +13,6 @@ float yaw_motor_pos, pitch_motor_pos;
 float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
 int times = 0;
-float t1=0,t2=0;
-float last_rpm,now_rpm;
-f32 heat;
-bool f1,f2,f3;
-f32 state;
-float y_t,p_t;
-f32 bullet_speed111;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -50,6 +43,7 @@ constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinExitYawAlignThresholdRad = ns::control_loop::kSpinExitYawAlignThresholdRad;
+constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
@@ -239,7 +233,7 @@ void ControlLoop() {
     supercap_tx.feedback_referee_energy_buffer = globals->referee->data().power_heat_data.buffer_energy;
     globals->supercap->Update(supercap_tx);
   }
-  // globals->referee->data().shoot_data.
+
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
@@ -257,11 +251,7 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
-    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
-    heat = globals->referee->data().power_heat_data.shooter_42mm_barrel_heat;
-    f1 = (input.dr16.dial < ns::shoot::kFireDialThreshold);
-    f2 = (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3);
-    f3 = input.tc_remote.left_button;
+    // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -278,6 +268,7 @@ void ControlLoop() {
         globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
     wl_debug.fric_left_rpm = fric_left_rpm;
     wl_debug.fric_right_rpm = fric_right_rpm;
+    wl_debug.shoot_fric_ready = globals->shoot.fric_ready() ? 1U : 0U;
     if (globals->dial.has_value()) {
       globals->shoot.dial_encoder_counter().Update(globals->dial->encoder());
     }
@@ -286,9 +277,11 @@ void ControlLoop() {
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool manual_fire =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
-                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                            (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    const bool fire_flag =
+        manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                        globals->aimbot->aimbot_target());
+
+    wl_debug.shoot_manual_fire = manual_fire ? 1U : 0U;
 
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
@@ -300,6 +293,7 @@ void ControlLoop() {
 
     const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
                              input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
+    wl_debug.shoot_single_shot_mode = single_shot ? 1U : 0U;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
                               in_combat, tc_state.fric_speed_target_rpm, single_shot);
@@ -387,6 +381,7 @@ void ControlLoop() {
   };
   const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
   const bool now_is_spin = is_spin_like(chassis_output.mode);
+  const bool now_is_standby = chassis_output.mode == chassis::Fsm::State::kStandby;
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
@@ -475,7 +470,7 @@ void ControlLoop() {
       chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
-  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
+  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && !now_is_standby &&
                                           chassis_output_enable && chassis_output.control.run_chassis_update &&
                                           gimbal_output.control.gimbal_enable;
   if (!spin_control_enabled && !ctx.yaw_follow_drive_ready) {
@@ -513,8 +508,13 @@ void ControlLoop() {
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
-    // 小陀螺模式：目标速度恒为 0，不进行全向平移。
-    spin_target_s_dot = 0.0f;
+    // 小陀螺平移：把云台系速度指令投影到底盘当前纵向轴，底盘自旋一圈后的平均位移沿云台指令方向。
+    const float vx_gimbal = forward_input_active ? forward_max_speed * forward_input_norm : 0.0f;
+    const float vy_gimbal = side_input_active ? forward_max_speed * side_input_norm : 0.0f;
+    const float spin_phase_rad =
+        rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+    spin_target_s_dot =
+        kSpinTranslationGain * (vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
@@ -524,7 +524,7 @@ void ControlLoop() {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
   target_s_dot += forward_speed_bias;
-  if (!chassis_output_enable) {
+  if (!chassis_output_enable || now_is_standby) {
     target_s_dot = 0.0f;
   }
 
@@ -549,7 +549,7 @@ void ControlLoop() {
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
   //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
   const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                 chassis_output.mode != chassis::Fsm::State::kSpin;
+                                 !now_is_standby && chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
   if (!can_hold_position || driver_command_active) {
     ctx.integrate_position = false;
@@ -718,7 +718,9 @@ void ControlLoop() {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
+    // todo: hero和infantry不同？？
     const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
+    // const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -747,7 +749,6 @@ void ControlLoop() {
             : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
-    bullet_speed111 = bullet_speed;
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;
@@ -842,6 +843,66 @@ void ControlLoop() {
   pitch_motor_vel = globals->pitch_motor->vel();
   pitch_motor_tau = globals->pitch_motor->tau();
 
+  {
+    const bool referee_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    ui_snapshot.referee_online = referee_online;
+    ui_snapshot.referee_robot_id = globals->referee.has_value() ? globals->referee->data().robot_status.robot_id : 0U;
+
+    if (globals->gimbal_rx.has_value()) {
+      ui_snapshot.gimbal_pitch_rad = globals->gimbal_rx->pitch_rad();
+      ui_snapshot.gimbal_yaw_rad = globals->gimbal_rx->yaw_rad();
+    } else {
+      ui_snapshot.gimbal_pitch_rad = 0.0f;
+      ui_snapshot.gimbal_yaw_rad = 0.0f;
+    }
+    ui_snapshot.yaw_motor_raw_pos_rad = input.estimator_input.yaw_motor_rad;
+
+    const auto &ui_chassis_state = chassis_control_output.current_state;
+    ui_snapshot.left_leg_length_m = ui_chassis_state.l_l;
+    ui_snapshot.right_leg_length_m = ui_chassis_state.l_r;
+    ui_snapshot.left_leg_theta_rad = ui_chassis_state.theta_ll;
+    ui_snapshot.right_leg_theta_rad = ui_chassis_state.theta_lr;
+    ui_snapshot.leg_view_flip =
+        (ctx.yaw_follow_align_mode == YawFollowAlignMode::kForward && ctx.yaw_follow_target.drive_sign < 0.0f) ||
+        (ctx.yaw_follow_align_mode == YawFollowAlignMode::kSidePositive);
+
+    ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
+    ui_snapshot.domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
+    ui_snapshot.combat_profile = static_cast<uint8_t>(input.mode_request.combat_profile);
+    ui_snapshot.standby = chassis_output.mode == chassis::Fsm::State::kStandby;
+    ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
+                              chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.cross_active = input.mode_request.mid_leg_g;
+
+    ui_snapshot.supercap_cap_energy = 0.0f;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    ui_snapshot.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
+    ui_snapshot.fric_left_rpm = 0.0f;
+    ui_snapshot.fric_right_rpm = 0.0f;
+#else
+    ui_snapshot.fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
+    ui_snapshot.fric_right_rpm =
+        globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_1 = 0.0f;
+    ui_snapshot.fw_raw_rpm_2 = 0.0f;
+    ui_snapshot.fw_raw_rpm_3 = 0.0f;
+#endif
+    if (referee_online) {
+      ui_snapshot.bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      ui_snapshot.projectile_allowance = globals->referee->data().projectile_allowance.projectile_allowance_42mm;
+#else
+      ui_snapshot.projectile_allowance = globals->referee->data().projectile_allowance.projectile_allowance_17mm;
+#endif
+    } else {
+      ui_snapshot.bullet_speed_mps = 0.0f;
+      ui_snapshot.projectile_allowance = 0U;
+    }
+  }
+
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 
   if (!init_flag) {
@@ -852,15 +913,4 @@ void ControlLoop() {
   if (times % 17 == 0) {
     schedule.schedule();
   }
-
-  if (globals->aimbot->aimbot_state() == 3) {
-    t1 = 1;
-  }else {
-    t1 = 0;
-  }
-  last_rpm = globals->fw_motor_1.value().rpm();
-
-  y_t=globals->gimbal.GetOutput().yaw_target_rad;
-  p_t=globals->gimbal.GetOutput().pitch_target_rad;
-
 }

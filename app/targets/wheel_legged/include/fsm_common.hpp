@@ -87,6 +87,7 @@ struct ModeRequest {
       ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
   bool mid_leg_g{false};                       ///< G 键触发的中腿长（区分斜坡参数）
+  bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
@@ -145,6 +146,7 @@ struct ChassisFsmInput {
   DomainRequest domain_request{DomainRequest::kDisabled};  ///< 整车工作域
   LegProfile leg_request{LegProfile::kLow};                ///< 腿长档位请求
   CombatProfile combat_profile{CombatProfile::kNormal};    ///< 战斗域子模式
+  bool standby{false};                                     ///< Standby: low-leg posture with wheel torque disabled
   bool spin_hold{false};                                   ///< 小陀螺保持请求
   bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
