@@ -455,6 +455,12 @@ void ControlLoop() {
     ctx.yaw_follow_pid.Clear();
   }
 
+  // R 键云台转 180°：翻转底盘驱动方向
+  if (input.mode_request.flip_180_request) {
+    ctx.yaw_follow_target.drive_sign = -ctx.yaw_follow_target.drive_sign;
+    ctx.yaw_follow_pid.Clear();
+  }
+
   if (!ctx.yaw_follow_target_initialized) {
     ctx.yaw_follow_target =
         SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
@@ -659,7 +665,7 @@ void ControlLoop() {
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   if (spin_control_enabled) {
     ctx.spin_exit_recovery = false;
-    RampYawDotToTarget(kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
+    RampYawDotToTarget(input.mode_request.spin_dir * kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
   } else if (!yaw_follow_enabled) {
     ctx.spin_exit_recovery = false;

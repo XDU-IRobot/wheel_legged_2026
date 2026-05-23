@@ -116,8 +116,8 @@ struct TcSemanticState {
   bool e_ui_refresh{false};           ///< E 键是否按下（UI 刷新控制）
   bool auto_aim_hold{false};          ///< 鼠标右键按住时自瞄模式（电平有效）
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
-  bool r_aim_armed{true};            ///< R 键 aim_mode 循环切换上升沿检测
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
+  bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
   bool recovery_manual_mode{false};  ///< 倒地自启手动模式（Z 键长按切换）
   bool z_recovery_armed{true};       ///< Z 键是否已就绪（长按防抖）
   float z_hold_ms{0.0f};             ///< Z 键已按住时长 [ms]

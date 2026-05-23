@@ -143,6 +143,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
+  bool r_flip_180_edge = false;
   bool f_jump_edge = false;
   if (tc_remote_active) {
     // Ctrl 键状态（用于 Ctrl+Z/X 摩擦轮调速组合键）
@@ -215,13 +216,28 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
 
-    // F 键：跳跃（上升沿，一次性请求，仅 G 键中腿长模式有效）
+    // F 键（上升沿）：mid_leg_g 模式下优先小跳；否则循环切换 aim_mode
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
-      f_jump_edge = true;
+    if (f_pressed && tc_state.f_jump_armed) {
+      if (tc_state.mid_leg_g) {
+        f_jump_edge = true;
+      } else {
+        tc_state.aim_mode = static_cast<TcSemanticState::AimMode>(
+            (static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
+      }
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
+
+    // R 键（上升沿）：云台转 180° + 底盘正方向切换
+    const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
+    if (r_pressed && tc_state.r_flip_armed) {
+      semantic_state.rc_target.yaw_rad =
+          rm::modules::Wrap(semantic_state.rc_target.yaw_rad + params::active::kPi, -params::active::kPi, params::active::kPi);
+      r_flip_180_edge = true;
+      tc_state.r_flip_armed = false;
+    }
+    if (!r_pressed) tc_state.r_flip_armed = true;
 
     // Ctrl+Z 组合键：摩擦轮目标转速 -20 rpm（上升沿）
     const bool z_pressed = (tc_remote.keyboard_value & kRcKeyZ) != 0U;
@@ -241,15 +257,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
     // E 键：UI 刷新使能（电平有效，按住时为 true）
     tc_state.e_ui_refresh = (tc_remote.keyboard_value & kRcKeyE) != 0U;
-
-    // R 键：aim_mode 循环切换 kAmmo → kFuSmall → kFuBig → kAmmo（上升沿）
-    const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
-    if (r_pressed && tc_state.r_aim_armed) {
-      tc_state.aim_mode = static_cast<TcSemanticState::AimMode>(
-          (static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
-      tc_state.r_aim_armed = false;
-    }
-    if (!r_pressed) tc_state.r_aim_armed = true;
 
     // Z 键长按 1s：切换倒地自启自动/手动模式
     if (z_pressed) {
@@ -281,6 +288,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.input_valid = has_any_input;
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalSafe;
   request.reset_yaw_request = r_yaw_reset_edge;
+  request.flip_180_request = r_flip_180_edge;
 
   wheel_legged::CombatProfile combat_profile = wheel_legged::CombatProfile::kNormal;
   wheel_legged::LegProfile leg_request = wheel_legged::LegProfile::kLow;
@@ -348,17 +356,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         leg_request = ResolveLegProfile(dr16.switch_r);
       }
       if (!request.spin_hold) {
-        request.spin_hold = dr16.dial >= kWheelSpinThreshold;
-      }
-      if (!request.jump_trigger) {
-        if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
-          semantic_state.wheel_action_armed = true;
+        if (dr16.dial >= kWheelSpinThreshold) {
+          request.spin_hold = true;
+        } else if (dr16.dial <= -kWheelActionThreshold) {
+          request.spin_hold = true;
+          request.spin_dir = -1.0f;
         }
-        const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
-        if (wheel_action_trigger) {
-          semantic_state.wheel_action_armed = false;
-        }
-        request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
       }
     }
 
@@ -443,18 +446,14 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       }
     }
 
-    // 小陀螺 / 跳跃：辨识/验证模式下不响应拨轮
+    // 小陀螺正/反转：辨识/验证模式下不响应拨轮
     if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
-      request.spin_hold = dr16.dial >= kWheelSpinThreshold;
-
-      if (std::abs(dr16.dial) <= kWheelCenterThreshold) {
-        semantic_state.wheel_action_armed = true;
+      if (dr16.dial >= kWheelSpinThreshold) {
+        request.spin_hold = true;
+      } else if (dr16.dial <= -kWheelActionThreshold) {
+        request.spin_hold = true;
+        request.spin_dir = -1.0f;
       }
-      const bool wheel_action_trigger = semantic_state.wheel_action_armed && (dr16.dial <= -kWheelActionThreshold);
-      if (wheel_action_trigger) {
-        semantic_state.wheel_action_armed = false;
-      }
-      request.jump_trigger = wheel_action_trigger && request.domain_request != wheel_legged::DomainRequest::kCombat;
     }
 
   } else {
@@ -748,6 +747,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .combat_profile = m.combat_profile,
       .standby = m.standby,
       .spin_hold = m.spin_hold,
+      .spin_dir = m.spin_dir,
       .jump_trigger = m.jump_trigger,
       .current_leg_length_m = chassis_output.mean_leg_length_m,
       .theta_ll_rad = chassis_output.current_state.theta_ll,
