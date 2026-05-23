@@ -85,15 +85,12 @@
 
 | 键位 | 触发方式 | 功能 |
 |------|----------|------|
-| Ctrl+F | 上升沿 | `kAmmo <-> kFuSmall` |
-| Ctrl+G | 上升沿 | `kAmmo <-> kFuBig` |
+| R | 上升沿 | `kAmmo → kFuSmall → kFuBig → kAmmo` 循环切换 |
 
 具体逻辑：
 
-- 当前是 `kFuSmall` 时按 `Ctrl+F` 回到 `kAmmo`，否则切到 `kFuSmall`。
-- 当前是 `kFuBig` 时按 `Ctrl+G` 回到 `kAmmo`，否则切到 `kFuBig`。
-- `Ctrl+G` 会屏蔽普通 `G` 中腿长切换。
-- `Ctrl+F` 会屏蔽普通 `F` 跳跃触发。
+- 每按一次 `R`，`aim_mode` 按 `kAmmo → kFuSmall → kFuBig → kAmmo` 循环递增。
+- 无力→有力（domain 使能）时自动重置为 `kAmmo`。
 
 ### 1.7 摩擦轮和发射相关
 

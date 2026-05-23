@@ -44,6 +44,7 @@ constexpr uint16_t kRcKeyShift = 0x0010;
 constexpr uint16_t kRcKeyCtrl = 0x0020;
 constexpr uint16_t kRcKeyQ = 0x0040;
 constexpr uint16_t kRcKeyE = 0x0080;
+constexpr uint16_t kRcKeyR = 0x0100;
 constexpr uint16_t kRcKeyF = 0x0200;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
@@ -144,7 +145,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_yaw_reset_edge = false;
   bool f_jump_edge = false;
   if (tc_remote_active) {
-    // Ctrl 键状态（用于屏蔽 F 跳跃 + G 键中腿长 + Ctrl+F/G 组合键）
+    // Ctrl 键状态（用于 Ctrl+Z/X 摩擦轮调速组合键）
     const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
 
     // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长（同时重置底盘正方向）
@@ -164,7 +165,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
     // G 键：任意状态按 G → 中腿长（另一套斜坡参数）；已在中腿长则回低腿长
     const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
-    if (g_pressed && !ctrl_pressed && tc_state.mid_leg_g_armed) {
+    if (g_pressed && tc_state.mid_leg_g_armed) {
       const bool already_mid = tc_state.mid_leg_hold && !tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.mid_leg_hold = !already_mid;
       tc_state.high_leg_hold = false;
@@ -214,9 +215,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
 
-    // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽，仅 G 键中腿长模式有效）
+    // F 键：跳跃（上升沿，一次性请求，仅 G 键中腿长模式有效）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && !ctrl_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
+    if (f_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
       f_jump_edge = true;
       tc_state.f_jump_armed = false;
     }
@@ -241,24 +242,14 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // E 键：UI 刷新使能（电平有效，按住时为 true）
     tc_state.e_ui_refresh = (tc_remote.keyboard_value & kRcKeyE) != 0U;
 
-    // Ctrl+F 组合键：kAmmo ↔ kFuSmall（上升沿 toggle）
-    const bool f_pressed_combo = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (ctrl_pressed && f_pressed_combo && tc_state.ctrl_f_armed) {
-      tc_state.aim_mode = (tc_state.aim_mode == TcSemanticState::AimMode::kFuSmall)
-                              ? TcSemanticState::AimMode::kAmmo
-                              : TcSemanticState::AimMode::kFuSmall;
-      tc_state.ctrl_f_armed = false;
+    // R 键：aim_mode 循环切换 kAmmo → kFuSmall → kFuBig → kAmmo（上升沿）
+    const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
+    if (r_pressed && tc_state.r_aim_armed) {
+      tc_state.aim_mode = static_cast<TcSemanticState::AimMode>(
+          (static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
+      tc_state.r_aim_armed = false;
     }
-    if (!ctrl_pressed || !f_pressed_combo) tc_state.ctrl_f_armed = true;
-
-    // Ctrl+G 组合键：kAmmo ↔ kFuBig（上升沿 toggle）
-    const bool g_pressed_combo = (tc_remote.keyboard_value & kRcKeyG) != 0U;
-    if (ctrl_pressed && g_pressed_combo && tc_state.ctrl_g_armed) {
-      tc_state.aim_mode = (tc_state.aim_mode == TcSemanticState::AimMode::kFuBig) ? TcSemanticState::AimMode::kAmmo
-                                                                                  : TcSemanticState::AimMode::kFuBig;
-      tc_state.ctrl_g_armed = false;
-    }
-    if (!ctrl_pressed || !g_pressed_combo) tc_state.ctrl_g_armed = true;
+    if (!r_pressed) tc_state.r_aim_armed = true;
 
     // Z 键长按 1s：切换倒地自启自动/手动模式
     if (z_pressed) {
