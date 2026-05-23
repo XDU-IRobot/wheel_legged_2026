@@ -251,7 +251,7 @@ void ControlLoop() {
     wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
     wl_debug.shoot_hero_fire_trigger = fire_trigger ? 1U : 0U;
     wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
-    wl_debug.shoot_hero_heat_delta = globals->shoot_controller.heat_delta();
+    // wl_debug.shoot_hero_heat_delta = globals->shoot_controller.heat_delta();
     // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
@@ -840,6 +840,67 @@ void ControlLoop() {
   pitch_motor_pos = globals->pitch_motor->pos();
   pitch_motor_vel = globals->pitch_motor->vel();
   pitch_motor_tau = globals->pitch_motor->tau();
+
+  {
+    const bool referee_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    ui_snapshot.referee_online = referee_online;
+    ui_snapshot.referee_robot_id = globals->referee.has_value() ? globals->referee->data().robot_status.robot_id : 0U;
+
+    if (globals->gimbal_rx.has_value()) {
+      ui_snapshot.gimbal_pitch_rad = globals->gimbal_rx->pitch_rad();
+      ui_snapshot.gimbal_yaw_rad = globals->gimbal_rx->yaw_rad();
+    } else {
+      ui_snapshot.gimbal_pitch_rad = 0.0f;
+      ui_snapshot.gimbal_yaw_rad = 0.0f;
+    }
+    ui_snapshot.yaw_motor_raw_pos_rad = input.estimator_input.yaw_motor_rad;
+
+    const auto &ui_chassis_state = chassis_control_output.current_state;
+    ui_snapshot.left_leg_length_m = ui_chassis_state.l_l;
+    ui_snapshot.right_leg_length_m = ui_chassis_state.l_r;
+    ui_snapshot.left_leg_theta_rad = ui_chassis_state.theta_ll;
+    ui_snapshot.right_leg_theta_rad = ui_chassis_state.theta_lr;
+    ui_snapshot.leg_view_flip =
+        (ctx.yaw_follow_align_mode == YawFollowAlignMode::kForward && ctx.yaw_follow_target.drive_sign < 0.0f) ||
+        (ctx.yaw_follow_align_mode == YawFollowAlignMode::kSidePositive);
+
+    ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
+    ui_snapshot.domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
+    ui_snapshot.combat_profile = static_cast<uint8_t>(input.mode_request.combat_profile);
+    ui_snapshot.standby = false;
+    ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
+                              chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.cross_active = input.mode_request.mid_leg_g;
+
+    ui_snapshot.supercap_cap_energy = 0.0f;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    ui_snapshot.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
+    ui_snapshot.fric_left_rpm = 0.0f;
+    ui_snapshot.fric_right_rpm = 0.0f;
+#else
+    ui_snapshot.fric_left_rpm =
+        globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
+    ui_snapshot.fric_right_rpm =
+        globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
+    ui_snapshot.fw_raw_rpm_1 = 0.0f;
+    ui_snapshot.fw_raw_rpm_2 = 0.0f;
+    ui_snapshot.fw_raw_rpm_3 = 0.0f;
+#endif
+    if (referee_online) {
+      ui_snapshot.bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      ui_snapshot.projectile_allowance = globals->referee->data().projectile_allowance.projectile_allowance_42mm;
+#else
+      ui_snapshot.projectile_allowance = globals->referee->data().projectile_allowance.projectile_allowance_17mm;
+#endif
+    } else {
+      ui_snapshot.bullet_speed_mps = 0.0f;
+      ui_snapshot.projectile_allowance = 0U;
+    }
+  }
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
 
