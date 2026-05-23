@@ -71,6 +71,11 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     } else if ((keys & kRcKeyS) != 0U) {
       out.forward = -1.0f;
     }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
+    }
     // 并行模式（键盘空闲）或 DR16 回退：键鼠无输入时降级到 DR16 右摇杆
     if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online &&
         out.forward == 0.0f && out.side == 0.0f) {
@@ -84,6 +89,11 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
       out.forward = 1.0f;
     } else if ((keys & kRcKeyS) != 0U) {
       out.forward = -1.0f;
+    }
+    if ((keys & kRcKeyD) != 0U) {
+      out.side = 1.0f;
+    } else if ((keys & kRcKeyA) != 0U) {
+      out.side = -1.0f;
     }
     // 键盘无输入时降级到摇杆
     if (out.forward == 0.0f && out.side == 0.0f) {

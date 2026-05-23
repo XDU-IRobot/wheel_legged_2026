@@ -43,6 +43,7 @@ constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
 constexpr float kSpinExitYawAlignThresholdRad = ns::control_loop::kSpinExitYawAlignThresholdRad;
+constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
@@ -507,8 +508,13 @@ void ControlLoop() {
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
-    // 小陀螺模式：目标速度恒为 0，不进行全向平移。
-    spin_target_s_dot = 0.0f;
+    // 小陀螺平移：把云台系速度指令投影到底盘当前纵向轴，底盘自旋一圈后的平均位移沿云台指令方向。
+    const float vx_gimbal = forward_input_active ? forward_max_speed * forward_input_norm : 0.0f;
+    const float vy_gimbal = side_input_active ? forward_max_speed * side_input_norm : 0.0f;
+    const float spin_phase_rad =
+        rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+    spin_target_s_dot =
+        kSpinTranslationGain * (vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
