@@ -55,8 +55,9 @@ class ShootController {
    * @param enter_shoot  true = 进入射击模式
    * @param fire_trigger true = 触发发射（dial > 阈值）
    * @param fric_speed_target_rpm 摩擦轮目标转速 [rpm]（运行时可调）
+   * @param curHeatDelta 当前热量
    */
-  void Update(bool enter_shoot, bool fire_trigger, float fric_speed_target_rpm) {
+  void Update(bool enter_shoot, bool fire_trigger, float fric_speed_target_rpm, int curHeatDelta) {
     booster_pos_ = booster_->pos();
 
     switch (state_) {
@@ -107,7 +108,7 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else if (fire_trigger) {
+        } else if (fire_trigger && curHeatDelta >= 100) {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
@@ -174,7 +175,8 @@ class ShootController {
     } else if (booster_disable_) {
       booster_->SendInstruction(rm::device::DmMotorInstructions::kDisable);
       booster_disable_ = false;
-    } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
+    // } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
+    } else if (state_ == State::kReady ||state_ == State::kCooling ||state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
     }
   }
@@ -182,8 +184,9 @@ class ShootController {
   [[nodiscard]] State state() const { return state_; }
   [[nodiscard]] float booster_pos() const { return booster_pos_; }
 
- private:
+
   State state_{State::kStop};
+private:
   bool booster_enable_{false};
   bool booster_disable_{false};
 

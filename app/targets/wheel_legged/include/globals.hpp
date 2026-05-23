@@ -57,7 +57,7 @@ struct SharedResources {
   std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
-  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口w
   std::optional<rm::device::GkSupercap> supercap{};                                     ///< 超级电容 (wheel_can)
   std::optional<DypCanRxBridge> dyp_rx{};                                               ///< DYP 测距 CAN 接收
 

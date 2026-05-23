@@ -13,6 +13,13 @@ float yaw_motor_pos, pitch_motor_pos;
 float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
 int times = 0;
+float t1=0,t2=0;
+float last_rpm,now_rpm;
+f32 heat;
+bool f1,f2,f3;
+f32 state;
+float y_t,p_t;
+f32 bullet_speed111;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -30,6 +37,11 @@ constexpr float kControlLoopDtS = ns::control_loop::kControlLoopDtS;
 constexpr float kPi = ns::kPi;
 constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpeedMaxMps;
 constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
+constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
+constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
+constexpr float kTargetSpeedBiasMidLegMps = ns::control_loop::kTargetSpeedBiasMidLegMps;
+constexpr float kTargetSpeedBiasMidLegGMps = ns::control_loop::kTargetSpeedBiasMidLegGMps;
+constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasHighLegMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
@@ -227,7 +239,7 @@ void ControlLoop() {
     supercap_tx.feedback_referee_energy_buffer = globals->referee->data().power_heat_data.buffer_energy;
     globals->supercap->Update(supercap_tx);
   }
-
+  // globals->referee->data().shoot_data.
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
@@ -235,15 +247,21 @@ void ControlLoop() {
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
-    const bool fire_trigger = input.dr16.dial < ns::shoot::kFireDialThreshold ||
-                              (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3)||
-                                input.tc_remote.left_button;
-    globals->shoot_controller.Update(shooter_enter, fire_trigger, tc_state.fric_speed_target_rpm);
+    const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
+    // const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
+    const bool fire_flag = (manual_fire) ||
+                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                            (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm, globals->referee->data().robot_status.shooter_barrel_heat_limit - globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+    heat = globals->referee->data().power_heat_data.shooter_42mm_barrel_heat;
+    f1 = (input.dr16.dial < ns::shoot::kFireDialThreshold);
+    f2 = (shooter_enter && globals->aimbot.has_value() && globals->aimbot->aimbot_state() == 3);
+    f3 = input.tc_remote.left_button;
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -479,9 +497,19 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
-  const float forward_max_speed = (chassis_output.mode == chassis::Fsm::State::kHighLeg)
-                                      ? kTargetForwardSpeedMaxHighLegMps
-                                      : kTargetForwardSpeedMaxMps;
+  const float forward_speed_base =
+      (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetForwardSpeedMaxHighLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+          ? kTargetForwardSpeedMaxMidLegMps
+          : kTargetForwardSpeedMaxMps;
+  const float forward_speed_bias =
+      (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+          ? kTargetSpeedBiasMidLegGMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg)  ? kTargetSpeedBiasMidLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetSpeedBiasHighLegMps
+                                                               : 0.0f;
+  const float forward_max_speed = forward_speed_base;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -495,6 +523,7 @@ void ControlLoop() {
   } else if (side_input_active) {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
+  target_s_dot += forward_speed_bias;
   if (!chassis_output_enable) {
     target_s_dot = 0.0f;
   }
@@ -713,11 +742,12 @@ void ControlLoop() {
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
     const float bullet_speed =
-        (referee_online && referee_bullet_speed >= 20.0f)
+        (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)
             ? referee_bullet_speed
-            : ((referee_online && referee_bullet_speed > 0.0f) ? 23.0f : ns::aimbot::kBulletSpeedMps);
+            : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
+    bullet_speed111 = bullet_speed;
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;
@@ -777,11 +807,11 @@ void ControlLoop() {
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
-    wl_debug.supercap_enable_dcdc = 1U;
-    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    // wl_debug.supercap_enable_dcdc = 1U;
+    //  wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    //  wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    //  wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    //  wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
@@ -822,4 +852,15 @@ void ControlLoop() {
   if (times % 17 == 0) {
     schedule.schedule();
   }
+
+  if (globals->aimbot->aimbot_state() == 3) {
+    t1 = 1;
+  }else {
+    t1 = 0;
+  }
+  last_rpm = globals->fw_motor_1.value().rpm();
+
+  y_t=globals->gimbal.GetOutput().yaw_target_rad;
+  p_t=globals->gimbal.GetOutput().pitch_target_rad;
+
 }

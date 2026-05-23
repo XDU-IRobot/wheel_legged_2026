@@ -44,7 +44,6 @@ constexpr uint16_t kRcKeyShift = 0x0010;
 constexpr uint16_t kRcKeyCtrl = 0x0020;
 constexpr uint16_t kRcKeyQ = 0x0040;
 constexpr uint16_t kRcKeyE = 0x0080;
-constexpr uint16_t kRcKeyR = 0x0100;
 constexpr uint16_t kRcKeyF = 0x0200;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
@@ -138,9 +137,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // Ctrl 键状态（用于屏蔽 F 跳跃 + G 键中腿长 + Ctrl+F/G 组合键）
     const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
 
-    // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长
+    // C 键：任意状态按 C → 中腿长；已在中腿长则回低腿长（同时重置底盘正方向）
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
     if (c_pressed && tc_state.mid_leg_c_armed) {
+      r_yaw_reset_edge = true;
       const bool already_mid = tc_state.mid_leg_hold && !tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.mid_leg_hold = !already_mid;
       tc_state.high_leg_hold = false;
@@ -174,9 +174,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!q_pressed) tc_state.q_domain_armed = true;
 
-    // V 键：任意状态按 V → 高腿长（1 次上台阶）；已在高腿长则回低腿长
+    // V 键：任意状态按 V → 高腿长（1 次上台阶）；已在高腿长则回低腿长（同时重置底盘正方向）
     const bool v_pressed = (tc_remote.keyboard_value & kRcKeyV) != 0U;
     if (v_pressed && tc_state.v_high_leg_armed) {
+      r_yaw_reset_edge = true;
       const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
@@ -188,9 +189,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!v_pressed) tc_state.v_high_leg_armed = true;
 
-    // B 键：任意状态按 B → 高腿长（2 次上台阶）；已在高腿长则回低腿长
+    // B 键：任意状态按 B → 高腿长（2 次上台阶）；已在高腿长则回低腿长（同时重置底盘正方向）
     const bool b_pressed = (tc_remote.keyboard_value & kRcKeyB) != 0U;
     if (b_pressed && tc_state.b_high_leg_armed) {
+      r_yaw_reset_edge = true;
       const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
       tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
@@ -201,14 +203,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
-
-    // R 键：重置底盘正方向（上升沿，一次性请求）
-    const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
-    if (r_pressed && tc_state.r_yaw_reset_armed) {
-      r_yaw_reset_edge = true;
-      tc_state.r_yaw_reset_armed = false;
-    }
-    if (!r_pressed) tc_state.r_yaw_reset_armed = true;
 
     // F 键：跳跃（上升沿，一次性请求，Ctrl 按住时屏蔽，仅 G 键中腿长模式有效）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
