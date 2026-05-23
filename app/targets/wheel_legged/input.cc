@@ -218,8 +218,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
     if (f_pressed && !ctrl_pressed && tc_state.mid_leg_g && tc_state.f_jump_armed) {
       f_jump_edge = true;
-      tc_state.mid_leg_hold = false;
-      tc_state.mid_leg_g = false;
       tc_state.f_jump_armed = false;
     }
     if (!f_pressed) tc_state.f_jump_armed = true;
