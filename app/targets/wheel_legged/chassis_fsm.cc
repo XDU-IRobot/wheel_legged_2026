@@ -98,6 +98,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       break;
 
     case chassis::Fsm::State::kLowLeg:
+    case chassis::Fsm::State::kStandby:
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = false;
@@ -264,7 +265,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   }
 
   const uint32_t elapsed_ms = request.tick_ms - state_enter_tick_ms_;
-  const State requested_normal_state = ResolveRequestedNormalState(requested_leg_profile_);
+  const State requested_normal_state =
+      request.standby ? State::kStandby : ResolveRequestedNormalState(requested_leg_profile_);
 
   State next_mode = mode_;
 
@@ -274,9 +276,19 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       next_mode = requested_normal_state;
       break;
 
+    case State::kStandby:
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (!request.standby) {
+        next_mode = requested_normal_state;
+      }
+      break;
+
     case State::kLowLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       }
       // 暂时关闭低腿长跳跃
       // else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kLow) {
@@ -293,6 +305,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kMidLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
@@ -306,6 +320,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kHighLeg:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (request.spin_hold) {
         next_mode = State::kSpin;
       } else if (request.theta_ll_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad &&
@@ -319,6 +335,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kSpin:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (!request.spin_hold) {
         next_mode = State::kSpinExitPending;
       }
@@ -327,6 +345,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kSpinExitPending:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (request.spin_hold) {
         next_mode = State::kSpin;
       } else if (request.spin_exit_yaw_aligned ||
@@ -367,9 +387,9 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
                                           : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverMinMs;
       // 最低维持时间结束后，落地（非离地）时退出回收阶段，超时作为保底
       if (elapsed_ms >= recover_min_ms && !request.off_ground) {
-        next_mode = State::kLowLeg;
+        next_mode = requested_normal_state;
       } else if (elapsed_ms >= recover_ms) {
-        next_mode = State::kLowLeg;
+        next_mode = requested_normal_state;
       }
       break;
     }
@@ -378,7 +398,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       if (request.fall_detected_hold_ms >= wheel_legged::params::active::chassis_fsm::kRecoveryFallConfirmMs) {
         next_mode = State::kRecoverySelfRight;
       } else if (!request.fall_detected) {
-        next_mode = State::kLowLeg;
+        next_mode = requested_normal_state;
       }
       break;
 
@@ -386,13 +406,15 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kRecoverySelfRightTimeoutMs) {
         next_mode = State::kDisabled;
       } else if (request.upright_stable) {
-        next_mode = State::kLowLeg;
+        next_mode = requested_normal_state;
       }
       break;
 
     case State::kStairClimb:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (IsStairClimbReadyToDone(request) ||
                  elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
         next_mode = State::kStairClimbDone;
@@ -402,6 +424,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kStairClimbDone:
       if (request.fall_detected) {
         next_mode = State::kRecoveryFallCheck;
+      } else if (request.standby) {
+        next_mode = State::kStandby;
       } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
         next_mode = State::kHighLeg;
       }
@@ -415,7 +439,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   Transit(next_mode);
 
   if (!IsJumpState(mode_) &&
-      (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin)) {
+      (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin ||
+       mode_ == State::kStandby)) {
     output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_);
   }
 

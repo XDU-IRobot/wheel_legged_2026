@@ -382,6 +382,7 @@ void ControlLoop() {
   };
   const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
   const bool now_is_spin = is_spin_like(chassis_output.mode);
+  const bool now_is_standby = chassis_output.mode == chassis::Fsm::State::kStandby;
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
@@ -470,7 +471,7 @@ void ControlLoop() {
       chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
-  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled &&
+  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && !now_is_standby &&
                                           chassis_output_enable && chassis_output.control.run_chassis_update &&
                                           gimbal_output.control.gimbal_enable;
   if (!spin_control_enabled && !ctx.yaw_follow_drive_ready) {
@@ -524,7 +525,7 @@ void ControlLoop() {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
   target_s_dot += forward_speed_bias;
-  if (!chassis_output_enable) {
+  if (!chassis_output_enable || now_is_standby) {
     target_s_dot = 0.0f;
   }
 
@@ -549,6 +550,7 @@ void ControlLoop() {
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
   //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
   const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
+                                 !now_is_standby &&
                                  chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
   if (!can_hold_position || driver_command_active) {
@@ -868,7 +870,7 @@ void ControlLoop() {
     ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
     ui_snapshot.domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
     ui_snapshot.combat_profile = static_cast<uint8_t>(input.mode_request.combat_profile);
-    ui_snapshot.standby = false;
+    ui_snapshot.standby = chassis_output.mode == chassis::Fsm::State::kStandby;
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_g;

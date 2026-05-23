@@ -176,10 +176,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!g_pressed) tc_state.mid_leg_g_armed = true;
 
-    // Q 键：工作域循环（kDisabled → kService → kDisabled …）
+    // Q: disabled -> standby -> enabled -> disabled.
     const bool q_pressed = (tc_remote.keyboard_value & kRcKeyQ) != 0U;
     if (q_pressed && tc_state.q_domain_armed) {
-      tc_state.domain_state = (tc_state.domain_state + 1) % 2;
+      tc_state.domain_state = (tc_state.domain_state + 1) % 3;
       tc_state.q_domain_armed = false;
     }
     if (!q_pressed) tc_state.q_domain_armed = true;
@@ -321,6 +321,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         request.domain_request = wheel_legged::DomainRequest::kDisabled;
         break;
       case 1:
+        request.domain_request = wheel_legged::DomainRequest::kCombat;
+        request.standby = true;
+        break;
+      case 2:
       default:
         request.domain_request = wheel_legged::DomainRequest::kCombat;
         break;
@@ -510,6 +514,13 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   request.leg_request = leg_request;
   request.mid_leg_g = tc_state.mid_leg_g;
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
+    request.standby = true;
+  }
+  if (request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    request.standby = false;
+  }
 
   // ── 目标来源：自瞄模式优先上位机 ──
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
@@ -672,7 +683,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
     if (tc_active) {
       predicted_domain =
-          (tc_state.domain_state == 1) ? wheel_legged::DomainRequest::kService : wheel_legged::DomainRequest::kDisabled;
+          (tc_state.domain_state != 0) ? wheel_legged::DomainRequest::kCombat : wheel_legged::DomainRequest::kDisabled;
     } else if (dr16.online) {
       predicted_domain = ResolveDomainRequest(dr16.switch_l);
     }
@@ -783,6 +794,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .domain_request = m.domain_request,
       .leg_request = m.leg_request,
       .combat_profile = m.combat_profile,
+      .standby = m.standby,
       .spin_hold = m.spin_hold,
       .jump_trigger = m.jump_trigger,
       .current_leg_length_m = chassis_output.mean_leg_length_m,

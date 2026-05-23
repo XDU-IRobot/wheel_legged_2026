@@ -86,6 +86,8 @@ rm::f32 ComputeRightSpringTorque(const rm::f32 leg_length_m) {
  */
 bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
 
+bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kStandby; }
+
 }  // namespace
 
 /**
@@ -327,7 +329,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
 
-  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kMidLeg ||
+  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kStandby ||
+                             input.fsm_mode == Fsm::State::kMidLeg ||
                              input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kSpin);
   if (ramp_enabled) {
     const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
@@ -515,7 +518,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
-    if (use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb || !standup_complete_) {
+    if (IsStandbyMode(input.fsm_mode) || use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb ||
+        !standup_complete_) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {
