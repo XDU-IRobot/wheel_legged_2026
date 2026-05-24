@@ -46,8 +46,8 @@ class Shoot2Fric {
     }
     if (!single_shoot_complete_) {
       // 单发模式：位置 - 速度串级
-      pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);
-      pid_.loader_speed.Update(-pid_.loader_position.out(), -state_.loader_speed, dt);
+      //      pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);
+      pid_.loader_speed.Update(-1000, -state_.loader_speed, dt);
       output_.loader = -pid_.loader_speed.out();
     } else {
       // 连发模式：速度环
