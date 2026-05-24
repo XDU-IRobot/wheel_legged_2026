@@ -59,6 +59,7 @@ class Chassis {
     rm::f32 left_dyn_support_n{0.0f};       ///< 左腿动力学补偿分量
     rm::f32 right_dyn_support_n{0.0f};      ///< 右腿动力学补偿分量
     rm::f32 mean_leg_length_m{0.0f};        ///< 平均腿长
+    rm::f32 leg_target_length_m{0.0f};      ///< 斜坡平滑后的腿长目标
     rm::f32 left_l0_dot_mps{0.0f};          ///< 左腿腿长变化率
     rm::f32 right_l0_dot_mps{0.0f};         ///< 右腿腿长变化率
     rm::f32 left_l0_ddot_mps2{0.0f};        ///< 左腿腿长加速度
@@ -163,6 +164,8 @@ class Chassis {
   bool theta_dot_filter_initialized_{false};
 
   rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
+  rm::f32 last_ramp_target_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 上一次斜坡目标值(检测变化)
+  rm::f32 ramp_step_per_tick_m_{0.0f};                                                      ///< 当前斜坡每周期步长
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};

@@ -176,6 +176,8 @@ void chassis::Chassis::Init() {
   state_estimator_.Init(cfg);
   SafeStop();
   smoothed_leg_target_length_m_ = params_.leg_target_length_m;
+  last_ramp_target_m_ = params_.leg_target_length_m;
+  ramp_step_per_tick_m_ = 0.0f;
 }
 
 /**
@@ -396,24 +398,23 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
 
-  const bool ramp_enabled = (input.fsm_mode == Fsm::State::kLowLeg || input.fsm_mode == Fsm::State::kStandby ||
-                             input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg ||
-                             input.fsm_mode == Fsm::State::kSpin);
-  if (ramp_enabled) {
-    const float ramp_rate = (wheel_legged::params::active::chassis_fsm::kHighLegLengthM -
-                             wheel_legged::params::active::chassis_fsm::kLowLegLengthM) /
-                            wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS;
-    const float max_step = ramp_rate * kControlDtS;
+  {
+    // 目标变化时重新计算斜坡步长，保证每次腿长切换都走完 kLegLengthRampTimeS
+    if (input.target_leg_length_m != last_ramp_target_m_) {
+      const float initial_error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+      constexpr float kRampTotalTicks =
+          wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
+      ramp_step_per_tick_m_ = std::fabs(initial_error) / kRampTotalTicks;
+      last_ramp_target_m_ = input.target_leg_length_m;
+    }
     const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
-    if (std::fabs(error) <= max_step) {
+    if (std::fabs(error) <= ramp_step_per_tick_m_ || ramp_step_per_tick_m_ == 0.0f) {
       smoothed_leg_target_length_m_ = input.target_leg_length_m;
+      ramp_step_per_tick_m_ = 0.0f;
     } else {
-      smoothed_leg_target_length_m_ += (error > 0.0f ? max_step : -max_step);
+      smoothed_leg_target_length_m_ += (error > 0.0f ? ramp_step_per_tick_m_ : -ramp_step_per_tick_m_);
     }
     params_.leg_target_length_m = smoothed_leg_target_length_m_;
-  } else {
-    smoothed_leg_target_length_m_ = input.target_leg_length_m;
-    params_.leg_target_length_m = input.target_leg_length_m;
   }
   if (force_low_leg_) {
     constexpr uint16_t kLowLegHoldTicks = 50;  // 4s @ 500Hz
@@ -428,14 +429,19 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       }
     }
   }
-  // 中腿长下压：腿长达到阈值后收腿到目标，维持一段时间再恢复
+  // 中腿长下压：斜坡到位后，腿长再度超过阈值时收腿到目标，维持一段时间再恢复
   // 键盘控制时离地后永久锁定低腿长（不自动过期），直到切换模式
   const bool is_mid_leg = (input.fsm_mode == Fsm::State::kMidLeg);
   if (is_mid_leg) {
     if (!mid_leg_dip_active_) {
-      if (output_.mean_leg_length_m >= kMidLegDipTriggerLengthM) {
+      // 斜坡未到位时不触发下压，防止从高腿长切中腿长时直接跳变
+      const bool ramp_done =
+          std::fabs(smoothed_leg_target_length_m_ -
+                    wheel_legged::params::active::chassis_fsm::kMidLegLengthM) <= 0.005f;
+      if (output_.mean_leg_length_m >= kMidLegDipTriggerLengthM && ramp_done) {
         mid_leg_dip_active_ = true;
         mid_leg_dip_ticks_ = 0;
+        last_ramp_target_m_ = kMidLegDipTargetLengthM;
       }
     }
     if (mid_leg_dip_active_) {
@@ -444,6 +450,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       if (mid_leg_dip_ticks_ >= kMidLegDipHoldTicks) {
         mid_leg_dip_active_ = false;
         mid_leg_dip_ticks_ = 0;
+        last_ramp_target_m_ = input.target_leg_length_m;
       }
     }
   } else {
@@ -451,6 +458,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     mid_leg_dip_ticks_ = 0;
   }
   output_.mid_leg_dip_active = mid_leg_dip_active_;
+  output_.leg_target_length_m = params_.leg_target_length_m;
   ComputeActuatorTorque(input, state_output);
 
   // 离地持续时间计数

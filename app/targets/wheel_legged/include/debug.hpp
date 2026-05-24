@@ -152,6 +152,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float lqr_err_theta_b_dot;   // theta_b_dot 误差
 
   // ── 底盘状态 ──
+  float chassis_leg_target_length_m;      // 斜坡平滑后的腿长目标
   float chassis_mean_leg_length_m;        // 平均腿长
   float chassis_left_leg_length_m;        // 左腿长度
   float chassis_right_leg_length_m;       // 右腿长度
