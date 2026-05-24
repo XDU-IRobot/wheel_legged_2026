@@ -90,7 +90,7 @@ struct ModeRequest {
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
 
   bool spin_hold{false};             ///< 小陀螺保持请求
-  float spin_dir{1.0f};             ///< 小陀螺方向（+1 正转，-1 反转）
+  float spin_dir{1.0f};              ///< 小陀螺方向（+1 正转，-1 反转）
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
   bool reset_yaw_request{false};     ///< R 键重置底盘正方向
   bool flip_180_request{false};      ///< R 键云台转 180° + 底盘正方向切换
