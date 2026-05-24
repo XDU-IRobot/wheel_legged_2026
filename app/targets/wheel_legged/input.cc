@@ -494,14 +494,16 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
 
   // ── 云台目标积分（优先级同上：tc_remote > DR16）──
+  const bool is_auto_aim = (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+                            combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                            combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+  const bool host_controls_gimbal = is_auto_aim && request.target_source == wheel_legged::TargetSource::kHost;
   if (!has_any_input || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     semantic_state.rc_target.yaw_rad = yaw_motor_pos_rad;
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
-  } else if (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
-             combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
-             combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
-    // 自瞄模式：仅在切入时锁定当前云台 IMU 位置；后续不更新，由 PID 保持
+  } else if (host_controls_gimbal) {
+    // 自瞄 + NUC 有目标：仅在切入时锁定当前云台 IMU 位置；后续不更新，由 PID 保持
     if (!semantic_state.gimbal_target_initialized) {
       semantic_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
       semantic_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
@@ -701,12 +703,9 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     if (g.aimbot->aimbot_target() != 0) {
       input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
       input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
-    } else {
-      input.mode_request.host_target.yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
-      input.mode_request.host_target.pitch_rad = gimbal_rx_valid ? -g.gimbal_rx->pitch_rad() : 0.0f;
+      input.mode_request.host_target_valid = true;
+      input.mode_request.target_source = wheel_legged::TargetSource::kHost;
     }
-    input.mode_request.host_target_valid = true;
-    input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
   flag = g.aimbot->aimbot_target();
 

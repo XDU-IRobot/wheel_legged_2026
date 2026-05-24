@@ -281,7 +281,7 @@ void ControlLoop() {
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                        globals->aimbot->aimbot_target());
+                        globals->aimbot->aimbot_state()>>1 & 1);
 
     wl_debug.shoot_manual_fire = manual_fire ? 1U : 0U;
 
@@ -519,12 +519,13 @@ void ControlLoop() {
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
     // 小陀螺平移：把云台系速度指令投影到底盘当前纵向轴，底盘自旋一圈后的平均位移沿云台指令方向。
-    const float vx_gimbal = forward_input_active ? forward_max_speed * forward_input_norm : 0.0f;
-    const float vy_gimbal = side_input_active ? forward_max_speed * side_input_norm : 0.0f;
+    const float vx_gimbal = side_input_active ? forward_max_speed * side_input_norm : 0.0f;
+    const float vy_gimbal = forward_input_active ? forward_max_speed * forward_input_norm : 0.0f;
+
     const float spin_phase_rad =
         rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
     spin_target_s_dot =
-        kSpinTranslationGain * (vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
+        kSpinTranslationGain * (-vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;

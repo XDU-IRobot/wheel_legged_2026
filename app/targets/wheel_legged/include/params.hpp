@@ -1468,7 +1468,7 @@ constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.005f};  ///< 高腿长速度
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.05f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
 constexpr float kSpinExitYawRampStepRadS = 0.15f;       ///< 小陀螺退出偏航角速度斜坡步长 [(rad/s)/周期]
-constexpr float kSpinTargetYawDotRadS = 6.5f;           ///< 小陀螺目标自旋角速度 [rad/s]
+constexpr float kSpinTargetYawDotRadS = 8.f;           ///< 小陀螺目标自旋角速度 [rad/s]
 constexpr float kSpinExitYawAlignThresholdRad = 0.15f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
 constexpr float kSpinTranslationGain = 0.5f;            ///< 小陀螺平移增益
 constexpr float kSpinThetaLlBiasRad = 0.02f;            ///< 小陀螺时左腿摆角偏置 [rad]
