@@ -281,7 +281,7 @@ void ControlLoop() {
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                        globals->aimbot->aimbot_state()>>1 & 1);
+                        globals->aimbot->aimbot_state() >> 1 & 1);
 
     wl_debug.shoot_manual_fire = manual_fire ? 1U : 0U;
 
