@@ -433,8 +433,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     // 目标变化时重新计算斜坡步长，保证每次腿长切换都走完 kLegLengthRampTimeS
     if (input.target_leg_length_m != last_ramp_target_m_) {
       const float initial_error = input.target_leg_length_m - smoothed_leg_target_length_m_;
-      constexpr float kRampTotalTicks =
-          wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
+      constexpr float kRampTotalTicks = wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
       ramp_step_per_tick_m_ = std::fabs(initial_error) / kRampTotalTicks;
       last_ramp_target_m_ = input.target_leg_length_m;
     }

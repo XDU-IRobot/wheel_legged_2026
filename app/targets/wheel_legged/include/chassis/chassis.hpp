@@ -164,8 +164,9 @@ class Chassis {
   bool theta_dot_filter_initialized_{false};
 
   rm::f32 smoothed_leg_target_length_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};
-  rm::f32 last_ramp_target_m_{wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 上一次斜坡目标值(检测变化)
-  rm::f32 ramp_step_per_tick_m_{0.0f};                                                      ///< 当前斜坡每周期步长
+  rm::f32 last_ramp_target_m_{
+      wheel_legged::params::active::chassis_fsm::kLowLegLengthM};  ///< 上一次斜坡目标值(检测变化)
+  rm::f32 ramp_step_per_tick_m_{0.0f};                             ///< 当前斜坡每周期步长
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};

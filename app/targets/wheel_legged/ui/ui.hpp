@@ -1,4 +1,4 @@
-      
+
 #include "protocol_user.hpp"
 #include "referee_user.hpp"
 #include "TaskScheduler.hpp"
@@ -165,18 +165,18 @@ inline void static_status_func() {
   memset(status_line.data, 0, sizeof(status_line.data));
   switch (status_line_index) {
     case 0:
-      status_line.character.fillCharacter("st1", device::UIFigure1::Operation::Add, 0,
-                                          device::UIFigure1::Color::Yellow, 2, 10, 748, 20, 22);
+      status_line.character.fillCharacter("st1", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow,
+                                          2, 10, 748, 20, 22);
       memcpy(status_line.data, "DISABLE STANDBY ENABLE", 22);
       break;
     case 1:
-      status_line.character.fillCharacter("st2", device::UIFigure1::Operation::Add, 0,
-                                          device::UIFigure1::Color::Yellow, 2, 10, 708, 20, 10);
+      status_line.character.fillCharacter("st2", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow,
+                                          2, 10, 708, 20, 10);
       memcpy(status_line.data, "SPIN CROSS", 10);
       break;
     default:
-      status_line.character.fillCharacter("st3", device::UIFigure1::Operation::Add, 0,
-                                          device::UIFigure1::Color::Yellow, 2, 10, 668, 20, 16);
+      status_line.character.fillCharacter("st3", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow,
+                                          2, 10, 668, 20, 16);
       memcpy(status_line.data, "NORMAL SMALL BIG", 16);
       break;
   }
@@ -236,7 +236,7 @@ inline void dynamic2_func() {
   int cap_len = 718 * ui_snapshot.supercap_cap_energy / 255;
   // int cap_len = 718;
   rm::device::UIFigure1::Color cap_color;
-  if (ui_snapshot.supercap_cap_energy/255 < 0.4f) {
+  if (ui_snapshot.supercap_cap_energy / 255 < 0.4f) {
     cap_color = device::UIFigure1::Color::Pink;
   } else {
     cap_color = device::UIFigure1::Color::Green;
@@ -301,8 +301,8 @@ inline void dynamic2_func() {
   }
 
   {
-    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad ) * 57.3 - 30);
-    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad ) * 57.3 + 30);
+    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 - 30);
+    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 + 30);
     if (s_ang < 0) s_ang += 360;
     if (e_ang < 0) e_ang += 360;
     if (s_ang > 360) s_ang -= 360;
@@ -486,5 +486,3 @@ inline void dynamic4_func() {
     globals_no_dtcm.referee_uart.Write(info, len, 10);
   }
 }
-
-    
