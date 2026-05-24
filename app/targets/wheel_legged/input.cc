@@ -222,8 +222,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       if (tc_state.mid_leg_g) {
         f_jump_edge = true;
       } else {
-        tc_state.aim_mode = static_cast<TcSemanticState::AimMode>(
-            (static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
+        tc_state.aim_mode = static_cast<TcSemanticState::AimMode>((static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
       }
       tc_state.f_jump_armed = false;
     }
@@ -232,8 +231,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // R 键（上升沿）：云台转 180° + 底盘正方向切换
     const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
     if (r_pressed && tc_state.r_flip_armed) {
-      semantic_state.rc_target.yaw_rad =
-          rm::modules::Wrap(semantic_state.rc_target.yaw_rad + params::active::kPi, -params::active::kPi, params::active::kPi);
+      semantic_state.rc_target.yaw_rad = rm::modules::Wrap(semantic_state.rc_target.yaw_rad + params::active::kPi,
+                                                           -params::active::kPi, params::active::kPi);
       r_flip_180_edge = true;
       tc_state.r_flip_armed = false;
     }
