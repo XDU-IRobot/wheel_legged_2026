@@ -235,10 +235,10 @@ class Actuators {
 
   static void SendDmMitCommand(SharedResources &g, float lf_tau, float lb_tau, float rf_tau, float rb_tau) {
     // 关关节
-//     g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//     g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//     g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
-//     g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //     g.dm_lb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //     g.dm_lf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //     g.dm_rb->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+    //     g.dm_rf->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
 
     // 开关节
     g.dm_lb->SetMitCommand(0.0f, 0.0f, lb_tau, 0.0f, 0.0f);
@@ -249,8 +249,8 @@ class Actuators {
 
   static void SendWheelCurrent(SharedResources &g, float left_current, float right_current) {
     // 关轮子
-//     g.left_wheel->SetCurrent(ClampToI16(0));
-//     g.right_wheel->SetCurrent(ClampToI16(0));
+    //     g.left_wheel->SetCurrent(ClampToI16(0));
+    //     g.right_wheel->SetCurrent(ClampToI16(0));
 
     // 开轮子
     g.left_wheel->SetCurrent(ClampToI16(left_current));

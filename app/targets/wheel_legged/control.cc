@@ -708,7 +708,7 @@ void ControlLoop() {
         adj_target += 2.0f * kPi;
       }
     }
-    ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad,ctx.filtered_yaw_dot,kControlLoopDtS);
+    ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad, ctx.filtered_yaw_dot, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
     const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
