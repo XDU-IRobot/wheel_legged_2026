@@ -226,7 +226,8 @@ class SpeedEstimator {
     if (accel_bias_count_ < static_cast<int>(wheel_legged::params::active::state_estimator::kAccelBiasInitSamples)) {
       accel_bias_sum_ += accel_forward;
       ++accel_bias_count_;
-      accel_bias_ = accel_bias_sum_ / static_cast<rm::f32>(accel_bias_count_);
+      // accel_bias_ = accel_bias_sum_ / static_cast<rm::f32>(accel_bias_count_);
+      accel_bias_ = 0.f;
     }
 
     accel_forward -= accel_bias_;

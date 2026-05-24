@@ -57,9 +57,8 @@ class Actuators {
 
     if (enable_dm) {
       EnableDmIfNeeded(g);
-    } else {
-      DisableDmIfNeeded(g);
     }
+    // DM 电机始终保持使能，不失能
 
     const float lf_tau = enable_dm ? output.lf_tau : 0.0f;
     const float lb_tau = enable_dm ? output.lb_tau : 0.0f;
