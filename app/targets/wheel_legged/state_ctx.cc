@@ -39,6 +39,8 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   landing_theta_bias = 0.0f;
   landing_stable_ticks = 0U;
   off_ground_duration_ticks = 0U;
+  flip_180_in_progress = false;
+  flip_180_ticks = 0U;
 }
 
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {

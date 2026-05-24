@@ -4,6 +4,7 @@
 #include "fsm.hpp"
 #include "lqr.hpp"
 #include "../params.hpp"
+#include "../fsm_common.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/chassis.hpp
@@ -100,6 +101,12 @@ class Chassis {
    */
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
+  /**
+   * @brief 更新 LQR 多项式系数矩阵
+   * @param coeff_matrix 40x6 多项式系数矩阵
+   */
+  void UpdateLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix);
+
  private:
   /**
    * @brief 计算六个执行器最终力矩
@@ -171,6 +178,7 @@ class Chassis {
   bool stair_climb_standup_done_{false};             ///< 上台阶后起立完成
   uint16_t stair_climb_pitch_stable_ticks_{0};       ///< 上台阶后俯仰稳定计数
   Fsm::State prev_fsm_mode_{Fsm::State::kDisabled};  ///< 上一周期 FSM 模式（用于边沿检测）
+  wheel_legged::LegProfile current_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 当前腿长档位
   bool mid_leg_dip_active_{false};                   ///< 中腿长下压激活中
   uint16_t mid_leg_dip_ticks_{0};                    ///< 中腿长下压已持续时间
   bool leg_was_high_{false};                         ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）

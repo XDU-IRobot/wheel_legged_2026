@@ -380,12 +380,15 @@ class ChassisStateEstimator {
     const rm::f32 left_wheel_vel = input.wheel.left_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
     const rm::f32 right_wheel_vel = input.wheel.right_rad_s * config_.wheel_reduction_ratio * config_.wheel_radius_m;
 
-    const rm::f32 left_speed = left_wheel_vel +
-                               output_.current.l_l * output_.current.theta_ll_dot * std::cos(output_.current.theta_ll) +
-                               left_leg_.l0_dot() * std::sin(output_.current.theta_ll);
+    // const rm::f32 left_speed = left_wheel_vel +
+    //                            output_.current.l_l * output_.current.theta_ll_dot * std::cos(output_.current.theta_ll) +
+    //                            left_leg_.l0_dot() * std::sin(output_.current.theta_ll);
+    // const rm::f32 right_speed =
+    //     right_wheel_vel + output_.current.l_r * output_.current.theta_lr_dot * std::cos(output_.current.theta_lr) +
+    //     right_leg_.l0_dot() * std::sin(output_.current.theta_lr);
+    const rm::f32 left_speed = left_wheel_vel ;
     const rm::f32 right_speed =
-        right_wheel_vel + output_.current.l_r * output_.current.theta_lr_dot * std::cos(output_.current.theta_lr) +
-        right_leg_.l0_dot() * std::sin(output_.current.theta_lr);
+        right_wheel_vel ;
 
     output_.wheel_speed_mps = 0.5f * (left_speed + right_speed);
 

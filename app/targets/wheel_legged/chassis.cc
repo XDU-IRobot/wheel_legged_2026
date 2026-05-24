@@ -36,7 +36,17 @@ constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chass
 
 constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEtaLookupLwM;
 
-constexpr const auto &kCtrlP = wheel_legged::params::active::chassis::kCtrlP;
+constexpr const auto &kCtrlPLow = wheel_legged::params::active::chassis::kCtrlPLow;
+constexpr const auto &kCtrlPMid = wheel_legged::params::active::chassis::kCtrlPMid;
+constexpr const auto &kCtrlPHigh = wheel_legged::params::active::chassis::kCtrlPHigh;
+
+std::array<std::array<rm::f32, 6>, 40> ToCoeffMatrix(const std::array<float, 240> &flat) {
+  std::array<std::array<rm::f32, 6>, 40> result{};
+  for (int i = 0; i < 40; ++i) {
+    std::copy(&flat[i * 6], &flat[i * 6 + 6], result[i].begin());
+  }
+  return result;
+}
 
 /**
  * @brief 根据腿长插值估算腿部等效质心系数
@@ -149,11 +159,8 @@ void chassis::Chassis::Init() {
   left_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
   right_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
 
-  std::array<std::array<rm::f32, 6>, 40> coeff_vec{};
-  for (int i = 0; i < 40; ++i) {
-    std::copy(&kCtrlP[i * 6], &kCtrlP[i * 6 + 6], coeff_vec[i].begin());
-  }
-  lqr_controller_.SetLqrCoefficients(coeff_vec);
+  lqr_controller_.SetLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
+  current_leg_profile_ = wheel_legged::LegProfile::kLow;
 
   left_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
                                             wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
@@ -182,6 +189,10 @@ void chassis::Chassis::SafeStop() {
   output_.rw_tau = 0.0f;
 }
 
+void chassis::Chassis::UpdateLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) {
+  lqr_controller_.SetLqrCoefficients(coeff_matrix);
+}
+
 /**
  * @brief 底盘控制单步更新入口
  * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
@@ -197,6 +208,32 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   state_estimator_.Update(estimator_input);
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
+
+  // 检测腿长档位变化，切换 LQR 系数矩阵
+  {
+    wheel_legged::LegProfile new_profile = current_leg_profile_;
+    if (input.fsm_mode == Fsm::State::kLowLeg) {
+      new_profile = wheel_legged::LegProfile::kLow;
+    } else if (input.fsm_mode == Fsm::State::kMidLeg) {
+      new_profile = wheel_legged::LegProfile::kMid;
+    } else if (input.fsm_mode == Fsm::State::kHighLeg) {
+      new_profile = wheel_legged::LegProfile::kHigh;
+    }
+    if (new_profile != current_leg_profile_) {
+      current_leg_profile_ = new_profile;
+      switch (current_leg_profile_) {
+        case wheel_legged::LegProfile::kLow:
+          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
+          break;
+        case wheel_legged::LegProfile::kMid:
+          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPMid));
+          break;
+        case wheel_legged::LegProfile::kHigh:
+          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPHigh));
+          break;
+      }
+    }
+  }
 
   const CalibratedLegKinematicsInput &leg_input = state_output.calibrated_leg_input;
   // 控制器内部复用估计器已标定的腿部角度，避免二次做零位/符号转换。

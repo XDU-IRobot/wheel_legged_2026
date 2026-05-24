@@ -455,10 +455,12 @@ void ControlLoop() {
     ctx.yaw_follow_pid.Clear();
   }
 
-  // R 键云台转 180°：翻转底盘驱动方向
+  // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成
   if (input.mode_request.flip_180_request) {
     ctx.yaw_follow_target.drive_sign = -ctx.yaw_follow_target.drive_sign;
     ctx.yaw_follow_pid.Clear();
+    ctx.flip_180_in_progress = true;
+    ctx.flip_180_ticks = 0U;
   }
 
   if (!ctx.yaw_follow_target_initialized) {
@@ -665,10 +667,31 @@ void ControlLoop() {
   const bool yaw_follow_enabled = yaw_follow_control_enabled && !spin_control_enabled;
   if (spin_control_enabled) {
     ctx.spin_exit_recovery = false;
+    ctx.flip_180_in_progress = false;
     RampYawDotToTarget(input.mode_request.spin_dir * kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
+  } else if (ctx.flip_180_in_progress) {
+    // R 键云台 180° 旋转中：抑制偏航跟随，等待云台旋转完成
+    ctx.filtered_yaw_dot = 0.0f;
+    ctx.yaw_follow_pid.Clear();
+    chassis_update_input.expected.phi_dot = 0.0f;
+    ++ctx.flip_180_ticks;
+    // 最短等待 100 tick (200ms)，之后检测偏航电机速度归零
+    constexpr uint32_t kFlip180MinTicks = 100U;
+    if (ctx.flip_180_ticks >= kFlip180MinTicks) {
+      const bool yaw_motor_ready = globals->yaw_motor.has_value();
+      const float yaw_motor_vel_rad_s = yaw_motor_ready ? globals->yaw_motor->vel() : 0.0f;
+      if (yaw_motor_ready && std::fabs(yaw_motor_vel_rad_s) < ns::control_loop::kGimbalStartupYawAlignVelRadS) {
+        ctx.flip_180_in_progress = false;
+        // 云台旋转完成，基于当前偏航电机位置重新选择跟随目标
+        ctx.yaw_follow_target = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad,
+                                                       YawFollowTargetOffset(ctx.yaw_follow_align_mode));
+        ctx.yaw_follow_target_initialized = true;
+      }
+    }
   } else if (!yaw_follow_enabled) {
     ctx.spin_exit_recovery = false;
+    ctx.flip_180_in_progress = false;
     ctx.filtered_yaw_dot = 0.0f;
     ctx.yaw_follow_pid.Clear();
   } else {
