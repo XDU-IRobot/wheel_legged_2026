@@ -39,6 +39,7 @@ constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEt
 constexpr const auto &kCtrlPLow = wheel_legged::params::active::chassis::kCtrlPLow;
 constexpr const auto &kCtrlPMid = wheel_legged::params::active::chassis::kCtrlPMid;
 constexpr const auto &kCtrlPHigh = wheel_legged::params::active::chassis::kCtrlPHigh;
+constexpr const auto &kCtrlPSpin = wheel_legged::params::active::chassis::kCtrlPSpin;
 
 std::array<std::array<rm::f32, 6>, 40> ToCoeffMatrix(const std::array<float, 240> &flat) {
   std::array<std::array<rm::f32, 6>, 40> result{};
@@ -219,7 +220,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else if (input.fsm_mode == Fsm::State::kHighLeg) {
       new_profile = wheel_legged::LegProfile::kHigh;
     }
-    if (new_profile != current_leg_profile_) {
+    if (input.fsm_mode == Fsm::State::kSpin) {
+      UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPSpin));
+    } else if (new_profile != current_leg_profile_) {
       current_leg_profile_ = new_profile;
       switch (current_leg_profile_) {
         case wheel_legged::LegProfile::kLow:

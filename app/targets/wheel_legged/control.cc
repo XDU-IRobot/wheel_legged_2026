@@ -841,11 +841,11 @@ void ControlLoop() {
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
-    // wl_debug.supercap_enable_dcdc = 1U;
-    //  wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    //  wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    //  wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    //  wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    wl_debug.supercap_enable_dcdc = 1U;
+     wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+     wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+     wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+     wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
@@ -908,7 +908,8 @@ void ControlLoop() {
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_g;
 
-    ui_snapshot.supercap_cap_energy = 0.0f;
+    ui_snapshot.supercap_cap_energy =
+        globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
     ui_snapshot.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     ui_snapshot.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
