@@ -243,10 +243,12 @@ void ControlLoop() {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
     // const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
-    const bool fire_flag = (manual_fire) ||
-                           (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                            (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm, globals->referee->data().robot_status.shooter_barrel_heat_limit - globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
+    const bool fire_flag =
+        (manual_fire) || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                          (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm,
+                                     globals->referee->data().robot_status.shooter_barrel_heat_limit -
+                                         globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
@@ -746,7 +748,8 @@ void ControlLoop() {
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)
             ? referee_bullet_speed
-            : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps : ns::aimbot::kBulletSpeedMps);
+            : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps
+                                                               : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 

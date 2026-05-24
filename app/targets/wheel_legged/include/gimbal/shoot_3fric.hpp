@@ -175,8 +175,8 @@ class ShootController {
     } else if (booster_disable_) {
       booster_->SendInstruction(rm::device::DmMotorInstructions::kDisable);
       booster_disable_ = false;
-    // } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
-    } else if (state_ == State::kReady ||state_ == State::kCooling ||state_ == State::kShooting) {
+      // } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
+    } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
     }
   }
@@ -184,9 +184,9 @@ class ShootController {
   [[nodiscard]] State state() const { return state_; }
   [[nodiscard]] float booster_pos() const { return booster_pos_; }
 
-
   State state_{State::kStop};
-private:
+
+ private:
   bool booster_enable_{false};
   bool booster_disable_{false};
 

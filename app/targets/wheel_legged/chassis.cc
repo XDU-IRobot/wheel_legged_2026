@@ -12,7 +12,7 @@
  */
 uint8_t debug_stair_climb_phase_ = 0;
 uint8_t debug_posture_valid;
-f32 left_,right_;
+f32 left_, right_;
 namespace {
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
@@ -299,7 +299,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   // Phase 2: 起立完成，锁存
   if (!standup_complete_) {
     constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM+0.015f;
+    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.015f;
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
@@ -566,7 +566,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
       // constexpr float kZeroThreshold =
       // wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr float kZeroThreshold =1.1f;
+      constexpr float kZeroThreshold = 1.1f;
       constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
 
       float theta_target = kThetaTarget;
