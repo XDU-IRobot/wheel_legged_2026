@@ -226,7 +226,7 @@ void ControlLoop() {
   // 超级电容 TX：每周期从裁判系统读取功率上限和缓冲能量，下发给超级电容
   if (globals->supercap.has_value() && globals->referee.has_value()) {
     rm::device::GkSupercap::TxData supercap_tx{};
-    supercap_tx.enable_dcdc = 0;
+    supercap_tx.enable_dcdc = 1;
     supercap_tx.system_restart = 0;
     supercap_tx.resv0 = 0;
     supercap_tx.feedback_referee_power_limit = globals->referee->data().robot_status.chassis_power_limit;
@@ -708,7 +708,7 @@ void ControlLoop() {
         adj_target += 2.0f * kPi;
       }
     }
-    ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad,ctx.filtered_yaw_dot,kControlLoopDtS);
+    ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad, ctx.filtered_yaw_dot, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
     const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);

@@ -370,9 +370,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
-//      if (left_leg_.l0() < kRetractLenThresholdM && right_leg_.l0() < kRetractLenThresholdM)
-        if (left_leg_.l0()  +right_leg_.l0() < 2*kRetractLenThresholdM)
-        {
+      //      if (left_leg_.l0() < kRetractLenThresholdM && right_leg_.l0() < kRetractLenThresholdM)
+      if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
         standup_phase_ = 1;
       }
     }
@@ -445,7 +444,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     params_.leg_target_length_m = input.target_leg_length_m;
   }
   if (force_low_leg_) {
-    constexpr uint16_t kLowLegHoldTicks = 50;  // 4s @ 500Hz
+    constexpr uint16_t kLowLegHoldTicks = 100;  // 4s @ 500Hz
     params_.leg_target_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
     if (standup_phase_ == 0) {
       force_low_leg_ticks_ = 0;  // 起立收腿阶段不自动过期
@@ -616,12 +615,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 离地时支持力限幅
     if (off_ground_in_mid_high_leg) {
-        left_force_ = left_l0_pid_.out() +roll_pid_.out()  +0.3f* l_spring_torque_;
-        right_force_ = right_l0_pid_.out() + roll_pid_.out()+ 0.3f*r_spring_torque_;
-//        left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-//        right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-//      left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
-//      right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        left_force_ = std::clamp(left_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
+        right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
     }
 
     // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
@@ -692,10 +687,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_br_cmd = -base_torque_.t_br;
     }
 
-    if(standup_phase_ ==0)
-    {
-      t_bl_cmd =0;
-      t_br_cmd =0;
+    if (standup_phase_ == 0) {
+      t_bl_cmd = 0;
+      t_br_cmd = 0;
     }
 
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
@@ -867,8 +861,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         prox_recovering = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
         const float scaled_target = ApplyRecoveryDecel(kTarget, prox_recovering, kMinSpeedRadS);
         RampToTarget(scaled_target, ramped_recovery_theta_dot_left_, kRecoveryRampStep);
-        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_,
-                                  state_output.current.theta_ll_dot);
+        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_, state_output.current.theta_ll_dot);
         left_leg_turn_pid_out = -left_leg_turn_pid_.out();
         right_leg_turn_pid_out = 0;
         ramped_recovery_theta_dot_right_ = 0.0f;
