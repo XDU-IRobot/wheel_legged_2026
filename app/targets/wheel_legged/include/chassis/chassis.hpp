@@ -179,12 +179,12 @@ class Chassis {
   uint16_t stair_climb_pitch_stable_ticks_{0};       ///< 上台阶后俯仰稳定计数
   Fsm::State prev_fsm_mode_{Fsm::State::kDisabled};  ///< 上一周期 FSM 模式（用于边沿检测）
   wheel_legged::LegProfile current_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 当前腿长档位
-  bool mid_leg_dip_active_{false};                   ///< 中腿长下压激活中
-  uint16_t mid_leg_dip_ticks_{0};                    ///< 中腿长下压已持续时间
-  bool leg_was_high_{false};                         ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
-  bool off_ground_kd_active_{false};                 ///< 着地边沿后 Kd 增大锁存
-  uint16_t kd_active_ticks_{0};                      ///< Kd 增大已持续时间
-  bool was_off_ground_{false};                       ///< 上一周期离地状态（用于检测着地边沿）
+  bool mid_leg_dip_active_{false};                                                ///< 中腿长下压激活中
+  uint16_t mid_leg_dip_ticks_{0};                                                 ///< 中腿长下压已持续时间
+  bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
+  bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
+  bool was_off_ground_{false};             ///< 上一周期离地状态（用于检测着地边沿）
   float spring_compensation_scale_{1.0f};  ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
   bool off_ground_200ms_reached_{false};   ///< 离地已持续 200ms（落地后触发强制低腿长）
 
