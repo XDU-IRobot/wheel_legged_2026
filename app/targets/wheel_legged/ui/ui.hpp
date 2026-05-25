@@ -16,7 +16,7 @@ inline f32 xx, yy;
 inline rm::u8 info[256];
 void static1_func();
 void static2_func();
-void static3_func();
+void dynamic3_crosshair_func();
 void static4_func();
 void static5_func();
 void static_status_func();
@@ -25,10 +25,11 @@ void dynamic2_func();
 void dynamic3_func();
 void dynamic4_func();
 void dynamic_status_func();
+void dynamic_aimbot_box_func();
 inline auto schedule = rm::device::UITaskScheduler(30);
 inline auto UI_static1 = rm::device::UITask(static1_func, 0.5);
 inline auto UI_static2 = rm::device::UITask(static2_func, 0.5);
-inline auto UI_static3 = rm::device::UITask(static3_func, 0.5);
+inline auto UI_static3 = rm::device::UITask(dynamic3_crosshair_func, 1.5);
 inline auto UI_static4 = rm::device::UITask(static4_func, 0.5);
 inline auto UI_static5 = rm::device::UITask(static5_func, 0.5);
 inline auto UI_static_status = rm::device::UITask(static_status_func, 3);
@@ -37,6 +38,7 @@ inline auto UI_dynamic2 = rm::device::UITask(dynamic2_func, 3);
 inline auto UI_dynamic3 = rm::device::UITask(dynamic3_func, 3);
 inline auto UI_dynamic4 = rm::device::UITask(dynamic4_func, 3);
 inline auto UI_dynamic_status = rm::device::UITask(dynamic_status_func, 3);
+inline auto UI_dynamic_aimbot_box = rm::device::UITask(dynamic_aimbot_box_func, 3);
 
 inline u8 robot_id() { return ui_snapshot.referee_robot_id; }
 
@@ -80,7 +82,6 @@ inline void ui_init() {
   schedule.addTask(&UI_static_status);
 #endif
   schedule.addTask(&UI_static2);
-  schedule.addTask(&UI_static3);
   schedule.addTask(&UI_static4);
   schedule.addTask(&UI_static5);
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
@@ -89,8 +90,10 @@ inline void ui_init() {
   schedule.addTask(&UI_dynamic_status);
 #endif
   schedule.addTask(&UI_dynamic2);
+  schedule.addTask(&UI_static3);
   schedule.addTask(&UI_dynamic3);
   schedule.addTask(&UI_dynamic4);
+  schedule.addTask(&UI_dynamic_aimbot_box);
 }
 
 inline void static1_func() {
@@ -108,37 +111,78 @@ inline void static1_func() {
 inline void static2_func() {
   static rm::device::UICharacter static_2;
   if (globals->ui_refresh_key) {
-    static_2.character.fillCharacter("leg", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
-                                     static_cast<u16>(1600.849), static_cast<u16>(862.595), 30, 10);
-    memcpy(static_2.data, "LEG: L M H", 10);
+    static_2.character.fillCharacter("leg", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
+                                     static_cast<u16>(1748), static_cast<u16>(748), 30, 5);
+    memcpy(static_2.data, "L M H", 10);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_2, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
   }
 }
 
-inline void static3_func() {
-  static rm::device::UIFigure2 static_3;
+inline void dynamic3_crosshair_func() {
+  static rm::device::UIFigure2 crosshair;
+  static bool added = false;
+
+  constexpr float kPitchMin = 0.f;
+  constexpr float kPitchMax = 0.3f;
+  constexpr u16 kEndYAtMinPitch = 290;
+  constexpr u16 kEndYAtMaxPitch = 480;
+
+  float pitch = ui_snapshot.gimbal_pitch_rad;
+  if (pitch < kPitchMin) pitch = kPitchMin;
+  if (pitch > kPitchMax) pitch = kPitchMax;
+  const u16 end_y = static_cast<u16>(kEndYAtMinPitch +
+      (pitch - kPitchMin) / (kPitchMax - kPitchMin) * (kEndYAtMaxPitch - kEndYAtMinPitch));
+
   if (globals->ui_refresh_key) {
-    static_3.figure1.fillLine("ll", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, 547, 86,
-                              722, 516);
-    static_3.figure2.fillLine("rl", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, 1378,
-                              86, 1173, 516);
+    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 547,
+                               86, 732, end_y);
+    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 1378,
+                               86, 1170, end_y);
     u8 sender = robot_id();
-    u8 len = rm::device::Referee0x301Prepare(info, 0, static_3, sender, static_cast<u16>(sender) + 256);
+    u8 len = rm::device::Referee0x301Prepare(info, 0, crosshair, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  } else if (added) {
+    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 547,
+                               86, 732, end_y);
+    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 1378,
+                               86, 1170, end_y);
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, crosshair, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
   }
 }
 
 inline void static4_func() {
-  static rm::device::UIFigure2 static_4;
+  static rm::device::UIFigure1 static_4;
   if (globals->ui_refresh_key) {
-    static_4.figure1.fillRec("r1_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::White, 3, 781, 361,
-                             1129, 709);
-    static_4.figure2.fillRec("r2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3, 598, 836,
-                             1315, 870);
+    static_4.fillRec("r2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3, 598, 836,
+                     1315, 870);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_4, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+  }
+}
+
+inline void dynamic_aimbot_box_func() {
+  static rm::device::UIFigure1 box;
+  static bool added = false;
+
+  const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+  const auto color = has_target ? device::UIFigure1::Color::Green : device::UIFigure1::Color::White;
+
+  if (globals->ui_refresh_key) {
+    box.fillRec("r1_", device::UIFigure1::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  } else if (added) {
+    box.fillRec("r1_", device::UIFigure1::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
   }
 }
@@ -147,8 +191,8 @@ inline void static5_func() {
   static rm::device::UICharacter static_5;
   if (globals->ui_refresh_key) {
     static_5.character.fillCharacter("fric", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
-                                     1600, 762, 30, 5);
-    memcpy(static_5.data, "FRIC:", 5);
+                                     1600, 562, 30, 5);
+    //memcpy(static_5.data, "FRIC:", 5);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_5, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -311,18 +355,18 @@ inline void dynamic2_func() {
 
   if (globals->ui_refresh_key) {
     static_d2.figure1.fillLine("l1", device::UIFigure1::Operation::Add, 0, cap_color, 34, 598, 853, 598 + cap_len, 853);
-    static_d2.figure2.fillLine("l2", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, lb_x1,
+    static_d2.figure2.fillLine("l2", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
-    static_d2.figure3.fillLine("l3", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, lm_x1,
+    static_d2.figure3.fillLine("l3", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, lm_x1,
                                lm_y1, lm_x2, lm_y2);
-    static_d2.figure4.fillLine("l4", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, rb_x1,
+    static_d2.figure4.fillLine("l4", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, rb_x1,
                                rb_y1, rb_x2, rb_y2);
-    static_d2.figure5.fillLine("l5", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::RedBlue, 5, rm_x1,
+    static_d2.figure5.fillLine("l5", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, rm_x1,
                                rm_y1, rm_x2, rm_y2);
     static_d2.figure6.fillArc("a1", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 5, 957, 538,
                               s_ang, e_ang, 77, 77);
     static_d2.figure7.fillRec("r1", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::White, 2,
-                              rec_x_start, 810, rec_x_end, 880);
+                              rec_x_start, 700, rec_x_end, 770);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d2, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 50);
@@ -330,18 +374,18 @@ inline void dynamic2_func() {
   } else if (added) {
     static_d2.figure1.fillLine("l1", device::UIFigure1::Operation::Edit, 0, cap_color, 34, 598, 853, 598 + cap_len,
                                853);
-    static_d2.figure2.fillLine("l2", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::RedBlue, 5, lb_x1,
+    static_d2.figure2.fillLine("l2", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
-    static_d2.figure3.fillLine("l3", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::RedBlue, 5, lm_x1,
+    static_d2.figure3.fillLine("l3", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, lm_x1,
                                lm_y1, lm_x2, lm_y2);
-    static_d2.figure4.fillLine("l4", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::RedBlue, 5, rb_x1,
+    static_d2.figure4.fillLine("l4", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, rb_x1,
                                rb_y1, rb_x2, rb_y2);
-    static_d2.figure5.fillLine("l5", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::RedBlue, 5, rm_x1,
+    static_d2.figure5.fillLine("l5", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, rm_x1,
                                rm_y1, rm_x2, rm_y2);
     static_d2.figure6.fillArc("a1", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Yellow, 5, 957,
                               538, s_ang, e_ang, 77, 77);
     static_d2.figure7.fillRec("r1", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::White, 2,
-                              rec_x_start, 810, rec_x_end, 880);
+                              rec_x_start, 700, rec_x_end, 770);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d2, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 50);
@@ -441,18 +485,18 @@ inline void dynamic3_func() {
   static bool added = false;
   if (globals->ui_refresh_key) {
     static_d3.figure1.fillIntegrate("fL_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
-                                    1750, 746, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
+                                    1750, 646, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
     static_d3.figure2.fillIntegrate("fR_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Green, 3,
-                                    1750, 776, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
+                                    1750, 676, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
     static_d3.figure1.fillIntegrate("fL_", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Green, 3,
-                                    1750, 746, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
+                                    1750, 646, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
     static_d3.figure2.fillIntegrate("fR_", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Green, 3,
-                                    1750, 776, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
+                                    1750, 676, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
