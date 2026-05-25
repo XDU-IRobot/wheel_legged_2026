@@ -45,11 +45,11 @@ constexpr uint16_t kRcKeyCtrl = 0x0020;
 constexpr uint16_t kRcKeyQ = 0x0040;
 constexpr uint16_t kRcKeyE = 0x0080;
 constexpr uint16_t kRcKeyR = 0x0100;
-constexpr uint16_t kRcKeyF = 0x0200;
+constexpr uint16_t kRcKeyF = 0x0400;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
-constexpr uint16_t kRcKeyG = 0x0400;
+constexpr uint16_t kRcKeyG = 0x0200;
 constexpr uint16_t kRcKeyZ = 0x0800;
 constexpr uint16_t kRcKeyX = 0x1000;
 

@@ -177,6 +177,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_right_dyn_support_n;      // 右腿动力学补偿
   uint8_t chassis_posture_valid;          // 姿态有效
   uint8_t chassis_off_ground;             // 离地
+  uint8_t dm_enabled_latched;             // DM 电机使能锁存
   float expected_theta_ll_rad;            // LQR 期望左腿摆角
   float expected_theta_lr_rad;            // LQR 期望右腿摆角
   float filtered_theta_ll_dot_rad_s;      // 滤波后左腿摆角速度

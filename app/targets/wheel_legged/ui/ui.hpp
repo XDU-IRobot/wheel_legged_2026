@@ -427,20 +427,21 @@ inline void dynamic_status_func() {
     fill_hidden(status_frame.figure2, "mv_", op);
   }
 
-  switch (static_cast<wheel_legged::CombatProfile>(ui_snapshot.combat_profile)) {
-    case wheel_legged::CombatProfile::kAutoAimAmmo:
-      fill_rect(status_frame.figure3, "am_", op, 6, 638, 158, 678);
-      break;
-    case wheel_legged::CombatProfile::kAutoAimFuSmall:
-      fill_rect(status_frame.figure3, "am_", op, 166, 638, 296, 678);
-      break;
-    case wheel_legged::CombatProfile::kAutoAimFuBig:
-      fill_rect(status_frame.figure3, "am_", op, 304, 638, 390, 678);
-      break;
-    case wheel_legged::CombatProfile::kNormal:
-    default:
-      fill_hidden(status_frame.figure3, "am_", op);
-      break;
+  {
+    const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+    device::UIFigure1::Color am_color;
+    if (ui_snapshot.auto_aim_hold) {
+      am_color = has_target ? device::UIFigure1::Color::Green : device::UIFigure1::Color::Yellow;
+    } else {
+      am_color = device::UIFigure1::Color::White;
+    }
+    u16 x1 = 0, y1 = 638, x2 = 0, y2 = 678;
+    switch (ui_snapshot.aim_mode) {
+      case 1:  x1 = 146; x2 = 246; break;  // kFuSmall
+      case 2:  x1 = 264; x2 = 330; break;  // kFuBig
+      default: x1 = 6;   x2 = 128; break;  // kAmmo
+    }
+    status_frame.figure3.fillRec("am_", op, 0, am_color, 2, x1, y1, x2, y2);
   }
 
   fill_hidden(status_frame.figure4, "u4_", op);

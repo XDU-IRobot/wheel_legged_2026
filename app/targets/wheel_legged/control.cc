@@ -913,6 +913,8 @@ void ControlLoop() {
     ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
     ui_snapshot.domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
     ui_snapshot.combat_profile = static_cast<uint8_t>(input.mode_request.combat_profile);
+    ui_snapshot.aim_mode = static_cast<uint8_t>(tc_state.aim_mode);
+    ui_snapshot.auto_aim_hold = tc_state.auto_aim_hold;
     ui_snapshot.standby = chassis_output.mode == chassis::Fsm::State::kStandby;
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;

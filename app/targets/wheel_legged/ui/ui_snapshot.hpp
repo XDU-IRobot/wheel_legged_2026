@@ -19,6 +19,8 @@ struct UiSnapshot {
   uint8_t chassis_fsm_state{0};
   uint8_t domain_request{0};
   uint8_t combat_profile{0};
+  uint8_t aim_mode{0};              ///< 0=kAmmo, 1=kFuSmall, 2=kFuBig
+  bool auto_aim_hold{false};        ///< 右键是否按下
   bool standby{false};
   bool spin_active{false};
   bool cross_active{false};
