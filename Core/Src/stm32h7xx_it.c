@@ -52,6 +52,19 @@
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+static void ClearDypUartRxError(UART_HandleTypeDef *huart)
+{
+  if ((__HAL_UART_GET_FLAG(huart, UART_FLAG_PE) != RESET) ||
+      (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET) ||
+      (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE) != RESET) ||
+      (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET))
+  {
+    __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_OREF);
+    __HAL_UART_SEND_REQ(huart, UART_RXDATA_FLUSH_REQUEST);
+    huart->ErrorCode = HAL_UART_ERROR_NONE;
+  }
+}
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -524,6 +537,8 @@ void UART8_IRQHandler(void)
 {
   /* USER CODE BEGIN UART8_IRQn 0 */
 
+  ClearDypUartRxError(&huart8);
+
   /* USER CODE END UART8_IRQn 0 */
   HAL_UART_IRQHandler(&huart8);
   /* USER CODE BEGIN UART8_IRQn 1 */
@@ -537,6 +552,8 @@ void UART8_IRQHandler(void)
 void UART9_IRQHandler(void)
 {
   /* USER CODE BEGIN UART9_IRQn 0 */
+
+  ClearDypUartRxError(&huart9);
 
   /* USER CODE END UART9_IRQn 0 */
   HAL_UART_IRQHandler(&huart9);
