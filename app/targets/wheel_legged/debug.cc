@@ -48,6 +48,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.dr16_right_y_raw = input.dr16.right_y;
 
   // ── 底盘状态 ──
+  wl_debug.chassis_leg_target_length_m = chassis_control_output.leg_target_length_m;
   wl_debug.chassis_mean_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_debug.chassis_speed_mps = chassis_control_output.speed_mps;
   wl_debug.chassis_raw_wheel_speed_mps = chassis_control_output.raw_wheel_speed_mps;
