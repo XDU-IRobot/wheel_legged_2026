@@ -132,23 +132,23 @@ inline void dynamic3_crosshair_func() {
   float pitch = ui_snapshot.gimbal_pitch_rad;
   if (pitch < kPitchMin) pitch = kPitchMin;
   if (pitch > kPitchMax) pitch = kPitchMax;
-  const u16 end_y = static_cast<u16>(kEndYAtMinPitch +
-      (pitch - kPitchMin) / (kPitchMax - kPitchMin) * (kEndYAtMaxPitch - kEndYAtMinPitch));
+  const u16 end_y = static_cast<u16>(kEndYAtMinPitch + (pitch - kPitchMin) / (kPitchMax - kPitchMin) *
+                                                           (kEndYAtMaxPitch - kEndYAtMinPitch));
 
   if (globals->ui_refresh_key) {
-    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 547,
-                               86, 732, end_y);
-    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 1378,
-                               86, 1170, end_y);
+    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 547, 86,
+                               732, end_y);
+    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Cyan, 5, 1378, 86,
+                               1170, end_y);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, crosshair, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
-    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 547,
-                               86, 732, end_y);
-    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 1378,
-                               86, 1170, end_y);
+    crosshair.figure1.fillLine("ll", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 547, 86,
+                               732, end_y);
+    crosshair.figure2.fillLine("rl", device::UIFigure1::Operation::Edit, 0, device::UIFigure1::Color::Cyan, 5, 1378, 86,
+                               1170, end_y);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, crosshair, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -158,8 +158,8 @@ inline void dynamic3_crosshair_func() {
 inline void static4_func() {
   static rm::device::UIFigure1 static_4;
   if (globals->ui_refresh_key) {
-    static_4.fillRec("r2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3, 598, 836,
-                     1315, 870);
+    static_4.fillRec("r2_", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3, 598, 836, 1315,
+                     870);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -192,7 +192,7 @@ inline void static5_func() {
   if (globals->ui_refresh_key) {
     static_5.character.fillCharacter("fric", device::UIFigure1::Operation::Add, 0, device::UIFigure1::Color::Yellow, 3,
                                      1600, 562, 30, 5);
-    //memcpy(static_5.data, "FRIC:", 5);
+    // memcpy(static_5.data, "FRIC:", 5);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_5, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
