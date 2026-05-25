@@ -60,7 +60,6 @@ static void ClearDypUartRxError(UART_HandleTypeDef *huart)
       (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET))
   {
     __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_OREF);
-    __HAL_UART_SEND_REQ(huart, UART_RXDATA_FLUSH_REQUEST);
     huart->ErrorCode = HAL_UART_ERROR_NONE;
   }
 }
