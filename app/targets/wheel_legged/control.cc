@@ -644,7 +644,7 @@ void ControlLoop() {
   } else if (jump_control_enabled) {
     chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
-    chassis_update_input.expected.theta_lr = 0.0f;
+    chassis_update_input.expected.theta_b = 0.0f;
   } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg) {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;

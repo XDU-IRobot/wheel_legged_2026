@@ -49,6 +49,7 @@ struct TcRemoteInput {
   bool valid{false};           ///< 键鼠数据是否有效
   int16_t mouse_x{0};          ///< 鼠标 X 增量
   int16_t mouse_y{0};          ///< 鼠标 Y 增量
+  int16_t mouse_z{0};          ///< 鼠标滚轮
   bool left_button{false};     ///< 鼠标左键
   bool right_button{false};    ///< 鼠标右键
   uint16_t keyboard_value{0};  ///< 键盘按键位掩码
