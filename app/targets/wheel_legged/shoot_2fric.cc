@@ -95,7 +95,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     const float effective_limit = static_cast<float>(heat_limit_);
     if (current_heat_ > effective_limit - ns::kHeatSafetyMargin) {
       heat_suppressed_ = true;
-    }  else {
+    } else {
       heat_suppressed_ = false;
     }
   }
