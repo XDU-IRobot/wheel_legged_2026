@@ -100,21 +100,9 @@ bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fs
 
 bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kStandby; }
 
-constexpr float kRecoveryRampStep =
-    wheel_legged::params::active::chassis::kLegRecoverThetaDotRampStep;  ///< 恢复摆角速度斜坡步长
 constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecoveryDecelZoneRad;
 constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
-
-inline void RampToTarget(const float target, float &value, const float step) {
-  if (value < target) {
-    value += step;
-    if (value > target) value = target;
-  } else if (value > target) {
-    value -= step;
-    if (value < target) value = target;
-  }
-}
 
 /// 计算恢复减速比例：1.0=全速，接近目标边界时线性衰减到 0
 inline float RecoveryProximityScale(const float current_angle, const float target_boundary, const float decel_zone) {
@@ -748,23 +736,19 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
         prox_left = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
         const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox_left, kMinSpeedRadS);
-        RampToTarget(scaled_vel, ramped_recovery_theta_dot_left_, kRecoveryRampStep);
-        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_, state_output.current.theta_ll_dot);
+        left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
         ll_pid_out = -left_leg_turn_pid_.out();
       } else {
         left_leg_turn_pid_.Clear();
-        ramped_recovery_theta_dot_left_ = 0.0f;
       }
       if (!lr_in_range) {
         const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
         prox_right = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
         const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox_right, kMinSpeedRadS);
-        RampToTarget(scaled_vel, ramped_recovery_theta_dot_right_, kRecoveryRampStep);
-        right_leg_turn_pid_.Update(ramped_recovery_theta_dot_right_, state_output.current.theta_lr_dot);
+        right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
         lr_pid_out = -right_leg_turn_pid_.out();
       } else {
         right_leg_turn_pid_.Clear();
-        ramped_recovery_theta_dot_right_ = 0.0f;
       }
 
       const float grav_scale = kGravityRampScale * (1.0f - std::min(prox_left, prox_right));
@@ -800,29 +784,17 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const bool l_in = (lw >= tgt_min && lw <= tgt_max);
       const bool r_in = (rw >= tgt_min && rw <= tgt_max);
 
-      const float boundary = (dir < 0.0f) ? tgt_max : tgt_min;
-      const float prox_left = l_in ? 0.0f : RecoveryProximityScale(lw, boundary, kDecelZoneRad);
-      const float prox_right = r_in ? 0.0f : RecoveryProximityScale(rw, boundary, kDecelZoneRad);
-
       if (l_in && r_in) {
-        const float scaled_dir = ApplyRecoveryDecel(dir, std::min(prox_left, prox_right), kMinSpeedRadS);
-        RampToTarget(scaled_dir, ramped_recovery_theta_dot_left_, kRecoveryRampStep);
-        RampToTarget(scaled_dir, ramped_recovery_theta_dot_right_, kRecoveryRampStep);
-        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(ramped_recovery_theta_dot_right_, state_output.current.theta_lr_dot);
+        left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
+        right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
       } else {
         const rm::f32 lv = l_in ? 0.0f : dir;
         const rm::f32 rv = r_in ? 0.0f : dir;
-        const float scaled_lv = (lv == 0.0f) ? 0.0f : ApplyRecoveryDecel(lv, prox_left, kMinSpeedRadS);
-        const float scaled_rv = (rv == 0.0f) ? 0.0f : ApplyRecoveryDecel(rv, prox_right, kMinSpeedRadS);
-        RampToTarget(scaled_lv, ramped_recovery_theta_dot_left_, kRecoveryRampStep);
-        RampToTarget(scaled_rv, ramped_recovery_theta_dot_right_, kRecoveryRampStep);
-        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(ramped_recovery_theta_dot_right_, state_output.current.theta_lr_dot);
+        left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
+        right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
       }
-      const float grav_scale = kGravityRampScale * (1.0f - std::min(prox_left, prox_right));
-      left_force_ = effective_mass_left_kg * kGravityMps2 * grav_scale;
-      right_force_ = effective_mass_right_kg * kGravityMps2 * grav_scale;
+      left_force_ = 0.0f;
+      right_force_ = 0.0f;
 
       output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_.out());
       output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_.out());
@@ -844,37 +816,20 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       f32 left_leg_turn_pid_out = 0.0f;
       f32 right_leg_turn_pid_out = 0.0f;
 
-      float prox_recovering = 1.0f;
       if (imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMaxRad) {
-        constexpr float kTarget = 1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
-        constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
-        constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
-        const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-        prox_recovering = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
-        const float scaled_target = ApplyRecoveryDecel(kTarget, prox_recovering, kMinSpeedRadS);
-        RampToTarget(scaled_target, ramped_recovery_theta_dot_right_, kRecoveryRampStep);
-        right_leg_turn_pid_.Update(ramped_recovery_theta_dot_right_,
+        right_leg_turn_pid_.Update(1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
                                    state_output.current.theta_lr_dot);
         left_leg_turn_pid_out = 0;
         right_leg_turn_pid_out = -right_leg_turn_pid_.out();
-        ramped_recovery_theta_dot_left_ = 0.0f;
       } else if (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad) {
-        constexpr float kTarget = 1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
-        constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
-        constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
-        const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-        prox_recovering = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
-        const float scaled_target = ApplyRecoveryDecel(kTarget, prox_recovering, kMinSpeedRadS);
-        RampToTarget(scaled_target, ramped_recovery_theta_dot_left_, kRecoveryRampStep);
-        left_leg_turn_pid_.Update(ramped_recovery_theta_dot_left_, state_output.current.theta_ll_dot);
+        left_leg_turn_pid_.Update(1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
+                                  state_output.current.theta_ll_dot);
         left_leg_turn_pid_out = -left_leg_turn_pid_.out();
         right_leg_turn_pid_out = 0;
-        ramped_recovery_theta_dot_right_ = 0.0f;
       }
 
-      const float grav_scale = kGravityRampScale * (1.0f - prox_recovering);
-      left_force_ = effective_mass_left_kg * kGravityMps2 * grav_scale;
-      right_force_ = effective_mass_right_kg * kGravityMps2 * grav_scale;
+      left_force_ = 0.0f;
+      right_force_ = 0.0f;
 
       output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * left_leg_turn_pid_out;
       output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * left_leg_turn_pid_out;

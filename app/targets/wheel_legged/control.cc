@@ -852,10 +852,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+//    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+//    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+//    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+//    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;

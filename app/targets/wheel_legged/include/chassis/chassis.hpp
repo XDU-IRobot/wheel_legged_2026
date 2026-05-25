@@ -173,8 +173,6 @@ class Chassis {
   bool standup_complete_{false};                 ///< 起立完成
   uint8_t standup_phase_{0};                     ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
   bool prev_fsm_was_recovery_{false};            ///< 上一周期是否在恢复状态
-  float ramped_recovery_theta_dot_left_{0.0f};   ///< 左腿恢复摆角速度斜坡值
-  float ramped_recovery_theta_dot_right_{0.0f};  ///< 右腿恢复摆角速度斜坡值
   uint16_t standup_phase_stable_ticks_{0};       ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};             ///< 当前 Phase 条件连续满足的周期数
