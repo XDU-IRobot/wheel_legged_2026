@@ -140,23 +140,6 @@ struct SharedResources {
 
     prepare_uart_tx_dma(huart1, USART1_IRQn, DMA2_Stream1_IRQn);
 
-    const auto start_dyp_rx = [](rm::device::DypA22 &dyp, UART_HandleTypeDef &huart, const IRQn_Type uart_irqn) {
-      // Keep startup line errors from re-entering ReceiveToIdle before DMA setup returns.
-      HAL_NVIC_DisableIRQ(uart_irqn);
-      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_PEF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_OREF);
-      __HAL_UART_SEND_REQ(&huart, UART_RXDATA_FLUSH_REQUEST);
-      huart.ErrorCode = HAL_UART_ERROR_NONE;
-      HAL_NVIC_ClearPendingIRQ(uart_irqn);
-
-      dyp.Start();
-
-      __HAL_UART_CLEAR_FLAG(&huart, UART_CLEAR_PEF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_OREF);
-      __HAL_UART_SEND_REQ(&huart, UART_RXDATA_FLUSH_REQUEST);
-      huart.ErrorCode = HAL_UART_ERROR_NONE;
-      HAL_NVIC_ClearPendingIRQ(uart_irqn);
-      HAL_NVIC_EnableIRQ(uart_irqn);
-    };
-
     dr16.Begin();
 
     if (!joint_can.has_value()) {
@@ -194,11 +177,11 @@ struct SharedResources {
     }
     if (!dyp_left.has_value()) {
       dyp_left.emplace(no_dtcm->dyp_left_uart);
-      start_dyp_rx(*dyp_left, huart8, UART8_IRQn);
+      dyp_left->Start();
     }
     if (!dyp_right.has_value()) {
       dyp_right.emplace(no_dtcm->dyp_right_uart);
-      start_dyp_rx(*dyp_right, huart9, UART9_IRQn);
+      dyp_right->Start();
     }
 
     if (!dm_lf.has_value()) {
