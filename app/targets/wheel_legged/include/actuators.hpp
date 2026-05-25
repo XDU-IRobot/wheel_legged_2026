@@ -95,7 +95,7 @@ class Actuators {
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
     if (g.fric_left.has_value()) {
       g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-//       g.fric_left->SetCurrent(static_cast<int16_t>(0));
+      //       g.fric_left->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.fric_right.has_value()) {
       g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
