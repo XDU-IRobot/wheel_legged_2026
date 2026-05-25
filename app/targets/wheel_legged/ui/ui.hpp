@@ -437,9 +437,18 @@ inline void dynamic_status_func() {
     }
     u16 x1 = 0, y1 = 638, x2 = 0, y2 = 678;
     switch (ui_snapshot.aim_mode) {
-      case 1:  x1 = 146; x2 = 246; break;  // kFuSmall
-      case 2:  x1 = 264; x2 = 330; break;  // kFuBig
-      default: x1 = 6;   x2 = 128; break;  // kAmmo
+      case 1:
+        x1 = 146;
+        x2 = 246;
+        break;  // kFuSmall
+      case 2:
+        x1 = 264;
+        x2 = 330;
+        break;  // kFuBig
+      default:
+        x1 = 6;
+        x2 = 128;
+        break;  // kAmmo
     }
     status_frame.figure3.fillRec("am_", op, 0, am_color, 2, x1, y1, x2, y2);
   }
