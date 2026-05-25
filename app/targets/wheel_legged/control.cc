@@ -723,6 +723,16 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 
+  // ── 中腿长下压退出：下降沿清除中腿长保持，走斜坡到低腿长 ──
+  {
+    static bool prev_dip_active = false;
+    if (prev_dip_active && !chassis_control_output.mid_leg_dip_active) {
+      tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_g = false;
+    }
+    prev_dip_active = chassis_control_output.mid_leg_dip_active;
+  }
+
   // ── LQR 状态误差调试 ──
   wl_debug.lqr_err_s = chassis_control_output.current_state.s - chassis_update_input.expected.s;
   wl_debug.lqr_err_s_dot = chassis_control_output.current_state.s_dot - chassis_update_input.expected.s_dot;
