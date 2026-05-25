@@ -170,10 +170,10 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{false};                 ///< 起立完成
-  uint8_t standup_phase_{0};                     ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
-  bool prev_fsm_was_recovery_{false};            ///< 上一周期是否在恢复状态
-  uint16_t standup_phase_stable_ticks_{0};       ///< 起立阶段切换所需的连续满足周期数
+  bool standup_complete_{false};            ///< 起立完成
+  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  bool prev_fsm_was_recovery_{false};       ///< 上一周期是否在恢复状态
+  uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
   uint16_t stair_climb_stable_ticks_{0};             ///< 当前 Phase 条件连续满足的周期数
   uint16_t off_ground_duration_ticks_{0};            ///< 离地持续时间（用于衰减气弹簧补偿）
@@ -184,8 +184,8 @@ class Chassis {
   Fsm::State prev_fsm_mode_{Fsm::State::kDisabled};  ///< 上一周期 FSM 模式（用于边沿检测）
   wheel_legged::LegProfile current_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 当前腿长档位
   bool mid_leg_dip_active_{false};                                                ///< 中腿长下压激活中
-  bool mid_leg_dip_armed_{false};                                                 ///< 中腿长下压待命（腿先低于阈值才可触发）
-  uint16_t mid_leg_dip_ticks_{0};                                                 ///< 中腿长下压已持续时间
+  bool mid_leg_dip_armed_{false};          ///< 中腿长下压待命（腿先低于阈值才可触发）
+  uint16_t mid_leg_dip_ticks_{0};          ///< 中腿长下压已持续时间
   bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
   bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
   uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
