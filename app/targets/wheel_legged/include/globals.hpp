@@ -14,7 +14,7 @@
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
 #include "gimbal_can_bridge.hpp"
-#include "utils/dyp_can.hpp"
+#include "utils/dyp_a22.hpp"
 #include "utils/aimbot_can.hpp"
 #include "librm/device/supercap/gk_supercap.hpp"
 #include "librm/device/referee/referee.hpp"
@@ -59,7 +59,8 @@ struct SharedResources {
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口w
   std::optional<rm::device::GkSupercap> supercap{};                                     ///< 超级电容 (wheel_can)
-  std::optional<DypCanRxBridge> dyp_rx{};                                               ///< DYP 测距 CAN 接收
+  std::optional<rm::device::DypA22> dyp_left{};                                          ///< DYP 左超声波 (UART8)
+  std::optional<rm::device::DypA22> dyp_right{};                                        ///< DYP 右超声波 (UART9)
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -124,6 +125,8 @@ struct SharedResources {
     prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
     prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart7, UART7_IRQn, DMA1_Stream3_IRQn);
+    prepare_uart_rx_to_idle_dma(huart8, UART8_IRQn, DMA2_Stream3_IRQn);
+    prepare_uart_rx_to_idle_dma(huart9, UART9_IRQn, DMA2_Stream2_IRQn);
 
     const auto prepare_uart_tx_dma = [](UART_HandleTypeDef &huart, const IRQn_Type uart_irqn,
                                         const IRQn_Type dma_tx_irqn) {
@@ -172,8 +175,13 @@ struct SharedResources {
     if (!supercap.has_value()) {
       supercap.emplace(*wheel_can);
     }
-    if (!dyp_rx.has_value()) {
-      dyp_rx.emplace(*gimbal_can);
+    if (!dyp_left.has_value()) {
+      dyp_left.emplace(no_dtcm->dyp_left_uart);
+      dyp_left->Start();
+    }
+    if (!dyp_right.has_value()) {
+      dyp_right.emplace(no_dtcm->dyp_right_uart);
+      dyp_right->Start();
     }
 
     if (!dm_lf.has_value()) {

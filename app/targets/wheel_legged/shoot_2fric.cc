@@ -68,7 +68,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
   // 打弹检测：摩擦轮达速后降速超过 200 rpm 记为一发
   {
     constexpr float kReadyThresholdRpm = 50.0f;
-    constexpr float kDropThresholdRpm = 200.0f;
+    constexpr float kDropThresholdRpm = 140.0f;
     const float target_abs = std::fabs(fric_speed_target_rpm);
     const float left_abs = std::fabs(fric_left_rpm);
     const float right_abs = std::fabs(fric_right_rpm);
@@ -95,9 +95,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     const float effective_limit = static_cast<float>(heat_limit_);
     if (current_heat_ > effective_limit - ns::kHeatSafetyMargin) {
       heat_suppressed_ = true;
-    } else if (effective_limit > ns::kHeatSafetyMargin && current_heat_ < effective_limit - ns::kHeatResumeMargin) {
-      heat_suppressed_ = false;
-    } else {
+    }  else {
       heat_suppressed_ = false;
     }
   }
