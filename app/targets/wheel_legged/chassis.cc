@@ -583,19 +583,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     rm::f32 t_bl_cmd;
     rm::f32 t_br_cmd;
-    if (use_stair_target) {
-      left_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_ll_rad, state_output.current.theta_ll,
-                                          state_output.current.theta_ll_dot);
-      right_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_lr_rad, state_output.current.theta_lr,
-                                           state_output.current.theta_lr_dot);
-      output_.theta_ll_target_rad = input.motion_target.theta_ll_rad;
-      output_.theta_lr_target_rad = input.motion_target.theta_lr_rad;
-      t_bl_cmd = -left_stair_theta_pid_.out();
-      t_br_cmd = -right_stair_theta_pid_.out();
-    } else {
+
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
-    }
 
     if (standup_phase_ == 0) {
       t_bl_cmd = 0;
