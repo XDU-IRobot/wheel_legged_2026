@@ -14,8 +14,8 @@
 /**
  * @brief 云台→底盘 CAN 接收桥
  * @note  与云台端 GimbalToChassisTxBridge 协议一致：
- *        - 0x110: [0]vt03_online [1]reserved [2-3]gyro_z [4-5]gyro_x [6-7]reserved
- *        - 0x111: [0-1]mouse_x [2-3]mouse_y [4]left_button [5]right_button [6-7]keyboard_value
+ *        - 0x110: [0..1]vt03_online [2..3]gyro_z [4..5]gyro_x [6]mouse_left [7]mouse_right
+ *        - 0x111: [0..1]mouse_x [2..3]mouse_y [4..5]mouse_z [6..7]keyboard_key
  *        - 0x112: [0-1]quat_w [2-3]quat_x [4-5]quat_y [6-7]quat_z  (int16, scale 32767)
  */
 class GimbalToChassisRxBridge final : public rm::device::CanDevice {
@@ -38,13 +38,14 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       vt03_online_ = (msg->data[0] != 0);
       gyro_z_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[2]));
       gyro_x_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[4]));
+      left_button_ = (msg->data[6] != 0);
+      right_button_ = (msg->data[7] != 0);
       frame_count_++;
       ReportStatus(kOk);
     } else if (msg->rx_std_id == kRxStdIdB && msg->dlc >= kPayloadSizeB) {
       mouse_x_ = UnpackI16(&msg->data[0]);
       mouse_y_ = UnpackI16(&msg->data[2]);
-      left_button_ = (msg->data[4] != 0);
-      right_button_ = (msg->data[5] != 0);
+      mouse_z_ = UnpackI16(&msg->data[4]);
       keyboard_value_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       kbd_frame_count_++;
@@ -80,6 +81,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] rm::f32 euler_roll_rad() const { return euler_roll_rad_; }
   [[nodiscard]] rm::i16 mouse_x() const { return mouse_x_; }
   [[nodiscard]] rm::i16 mouse_y() const { return mouse_y_; }
+  [[nodiscard]] rm::i16 mouse_z() const { return mouse_z_; }
   [[nodiscard]] bool left_button() const { return left_button_; }
   [[nodiscard]] bool right_button() const { return right_button_; }
   [[nodiscard]] rm::u16 keyboard_value() const { return keyboard_value_; }
@@ -112,6 +114,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   rm::f32 euler_roll_rad_{0.0f};
   rm::i16 mouse_x_{0};
   rm::i16 mouse_y_{0};
+  rm::i16 mouse_z_{0};
   bool left_button_{false};
   bool right_button_{false};
   rm::u16 keyboard_value_{0};

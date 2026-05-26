@@ -370,8 +370,16 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 小陀螺：Shift 键
     request.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
 
-    // 跳跃：F 键
-    request.jump_trigger = f_jump_edge;
+    // 跳跃：F 键（中腿）或鼠标滚轮下滚 < -70（低腿）
+    // 鼠标滚轮边沿检测：下滚<-70触发后，须回到>=0才重新就绪，防止同一轮滚动重复触发
+    {
+      static bool s_mouse_z_armed = true;
+      const bool mouse_z_trigger = (leg_request == wheel_legged::LegProfile::kLow && tc_remote.mouse_z < -70);
+      const bool mouse_z_edge = mouse_z_trigger && s_mouse_z_armed;
+      if (mouse_z_trigger) s_mouse_z_armed = false;
+      if (tc_remote.mouse_z >= 0) s_mouse_z_armed = true;
+      request.jump_trigger = f_jump_edge || mouse_z_edge;
+    }
 
     // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
     const bool keyboard_idle = (tc_remote.keyboard_value == 0);
@@ -643,6 +651,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     tc_remote.valid = true;
     tc_remote.mouse_x = g.gimbal_rx->mouse_x();
     tc_remote.mouse_y = g.gimbal_rx->mouse_y();
+    tc_remote.mouse_z = g.gimbal_rx->mouse_z();
     tc_remote.left_button = g.gimbal_rx->left_button();
     tc_remote.right_button = g.gimbal_rx->right_button();
     tc_remote.keyboard_value = g.gimbal_rx->keyboard_value();

@@ -289,13 +289,10 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
-      }
-      // 暂时关闭低腿长跳跃
-      // else if (request.jump_trigger && request.leg_request == wheel_legged::LegProfile::kLow) {
-      //   jump_leg_profile_ = wheel_legged::LegProfile::kLow;
-      //   next_mode = State::kJumpPrep;
-      // }
-      else if (request.spin_hold) {
+      } else if (request.jump_trigger) {
+        jump_leg_profile_ = wheel_legged::LegProfile::kLow;
+        next_mode = State::kJumpPrep;
+      } else if (request.spin_hold) {
         next_mode = State::kSpin;
       } else {
         next_mode = requested_normal_state;
