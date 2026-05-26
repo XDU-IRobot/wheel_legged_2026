@@ -545,11 +545,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = kJumpPushForceN + roll_pid_.out();
       right_force_ = kJumpPushForceN - roll_pid_.out();
     } else if (use_jump_retract2) {
-      left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
-      right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
-      leg_length_force = 0.5f * (left_l0_pid_jump_three_.out() + right_l0_pid_jump_three_.out());
-      left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
-      right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
+      left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+      right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
+      const float left_leg_length_force = left_l0_pid_jump_three_.out();
+      const float right_leg_length_force = right_l0_pid_jump_three_.out();
+      left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
+      right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
+      // left_force_ = -100.f + roll_pid_.out() + l_spring_torque_;
+      // right_force_ = -100.f - roll_pid_.out() + r_spring_torque_;
     } else if (use_jump_retract1) {
       left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
@@ -592,17 +595,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     rm::f32 t_bl_cmd;
     rm::f32 t_br_cmd;
-    if (use_stair_target) {
-      left_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_ll_rad, state_output.current.theta_ll,
-                                          state_output.current.theta_ll_dot);
-      right_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_lr_rad, state_output.current.theta_lr,
-                                           state_output.current.theta_lr_dot);
-      t_bl_cmd = -left_stair_theta_pid_.out();
-      t_br_cmd = -right_stair_theta_pid_.out();
-    } else {
+
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
-    }
 
     if (standup_phase_ == 0) {
       t_bl_cmd = 0;
@@ -616,6 +611,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
+    //if (use_jump_extend) {
+    //   output_.lb_tau = 45.f;
+    //   output_.lf_tau = -45.f;
+    //   output_.rb_tau = -45.f;
+    //   output_.rf_tau = 45.f;
+    // }
   } else if (input.recovery_manual_mode) {
     // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
     left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);

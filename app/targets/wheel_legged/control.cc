@@ -183,7 +183,7 @@ void ControlLoop() {
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
-      tc_state.mid_leg_g = false;
+      tc_state.auto_small_jump_enabled = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
   }
@@ -792,7 +792,7 @@ void ControlLoop() {
     static bool prev_dip_active = false;
     if (prev_dip_active && !chassis_control_output.mid_leg_dip_active) {
       tc_state.mid_leg_hold = false;
-      tc_state.mid_leg_g = false;
+      tc_state.auto_small_jump_enabled = false;
     }
     prev_dip_active = chassis_control_output.mid_leg_dip_active;
   }

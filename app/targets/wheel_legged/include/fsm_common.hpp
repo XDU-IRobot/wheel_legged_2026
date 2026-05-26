@@ -200,6 +200,7 @@ struct ChassisFsmInput {
   float spin_dir{1.0f};                                    ///< 小陀螺方向（+1 正转，-1 反转）
   bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
+  bool auto_jump_triggered{false};                         ///< 自动跳跃触发（DYP 测距）
   float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
   float theta_ll_rad{0.0f};                                ///< 当前左腿摆角
   float theta_lr_rad{0.0f};                                ///< 当前右腿摆角

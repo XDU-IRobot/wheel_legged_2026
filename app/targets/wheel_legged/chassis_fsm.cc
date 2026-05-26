@@ -147,7 +147,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.safe_output_required = false;
       control.leg_profile = jump_leg_profile;
       control.target_leg_length_m = is_low_jump ? wheel_legged::params::active::chassis_fsm::kJumpLowPrepLegLengthM
-                                                : wheel_legged::params::active::chassis_fsm::kJumpMidPrepLegLengthM;
+                                                : wheel_legged::params::active::chassis_fsm::kJumpAutoPrepLegLengthM;
       control.jump_phase = 1U;
       break;
 
@@ -159,7 +159,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.safe_output_required = false;
       control.leg_profile = jump_leg_profile;
       control.target_leg_length_m = is_low_jump ? wheel_legged::params::active::chassis_fsm::kJumpLowPushLegLengthM
-                                                : wheel_legged::params::active::chassis_fsm::kJumpMidPushLegLengthM;
+                                                : wheel_legged::params::active::chassis_fsm::kJumpAutoPushLegLengthM;
       control.jump_phase = 2U;
       break;
 
@@ -171,7 +171,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.safe_output_required = false;
       control.leg_profile = jump_leg_profile;
       control.target_leg_length_m = is_low_jump ? wheel_legged::params::active::chassis_fsm::kJumpLowRecoverLegLengthM
-                                                : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverLegLengthM;
+                                                : wheel_legged::params::active::chassis_fsm::kJumpAutoRecoverLegLengthM;
       control.jump_phase = 3U;
       break;
 
@@ -264,6 +264,9 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStandby;
       } else if (request.stair_task_active) {
         next_mode = State::kStairTask;
+      } else if (request.auto_jump_triggered) {
+        jump_leg_profile_ = wheel_legged::LegProfile::kMid;
+        next_mode = State::kJumpPrep;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kLow;
         next_mode = State::kJumpPrep;
@@ -331,7 +334,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kJumpPrep: {
       const uint32_t prep_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                    ? wheel_legged::params::active::chassis_fsm::kJumpLowPrepMs
-                                   : wheel_legged::params::active::chassis_fsm::kJumpMidPrepMs;
+                                   : wheel_legged::params::active::chassis_fsm::kJumpAutoPrepMs;
       if (elapsed_ms >= prep_ms) {
         next_mode = State::kJumpPush;
       }
@@ -341,10 +344,10 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kJumpPush: {
       const float reached_m = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                   ? wheel_legged::params::active::chassis_fsm::kJumpLowPushReachedLegLengthM
-                                  : wheel_legged::params::active::chassis_fsm::kJumpMidPushReachedLegLengthM;
+                                  : wheel_legged::params::active::chassis_fsm::kJumpAutoPushReachedLegLengthM;
       const uint32_t push_max_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                        ? wheel_legged::params::active::chassis_fsm::kJumpLowPushMaxMs
-                                       : wheel_legged::params::active::chassis_fsm::kJumpMidPushMaxMs;
+                                       : wheel_legged::params::active::chassis_fsm::kJumpAutoPushMaxMs;
       if (request.current_leg_length_m >= reached_m || elapsed_ms >= push_max_ms) {
         next_mode = State::kJumpRecover;
       }
@@ -354,10 +357,10 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     case State::kJumpRecover: {
       const uint32_t recover_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                       ? wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMs
-                                      : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverMs;
+                                      : wheel_legged::params::active::chassis_fsm::kJumpAutoRecoverMs;
       const uint32_t recover_min_ms = (jump_leg_profile_ == wheel_legged::LegProfile::kLow)
                                           ? wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMinMs
-                                          : wheel_legged::params::active::chassis_fsm::kJumpMidRecoverMinMs;
+                                          : wheel_legged::params::active::chassis_fsm::kJumpAutoRecoverMinMs;
       // 最低维持时间结束后，落地（非离地）时退出回收阶段，超时作为保底
       if (elapsed_ms >= recover_min_ms && !request.off_ground) {
         next_mode = requested_normal_state;

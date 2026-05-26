@@ -76,6 +76,7 @@ struct InputSnapshot {
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_enabled{false};                          ///< 自动跳跃当前是否已开启
+  bool auto_small_jump_triggered{false};                  ///< 自动小跳已触发（锁存，供调试观察）
   bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
@@ -98,8 +99,8 @@ struct Dr16SemanticState {
  */
 struct TcSemanticState {
   bool mid_leg_c_armed{true};         ///< C 键是否已就绪（上升沿检测）
-  bool mid_leg_g_armed{true};         ///< G 键是否已就绪（上升沿检测）
-  bool mid_leg_g{false};              ///< G 键触发的中腿长（区分斜坡参数）
+  bool auto_small_jump_armed{true};   ///< G 键是否已就绪（上升沿检测，自动小跳模式切换）
+  bool auto_small_jump_enabled{false};  ///< G 键触发的自动小跳模式（低腿长下超声波触发跳跃）
   bool mid_leg_hold{false};           ///< 是否保持中腿长
   bool q_domain_armed{true};          ///< Q 键是否已就绪（上升沿检测）
   uint8_t domain_state{0};            ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
