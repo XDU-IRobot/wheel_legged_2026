@@ -169,8 +169,6 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
 
   // ── 底盘状态 ──
   float chassis_leg_target_length_m;      // 斜坡平滑后的腿长目标
-  float chassis_theta_ll_target_rad;      // 最终左腿 theta 目标
-  float chassis_theta_lr_target_rad;      // 最终右腿 theta 目标
   float chassis_mean_leg_length_m;        // 平均腿长
   float chassis_left_leg_length_m;        // 左腿长度
   float chassis_right_leg_length_m;       // 右腿长度
