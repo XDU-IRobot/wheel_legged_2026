@@ -88,7 +88,8 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
           break;
         }
         case wheel_legged::StairPhase::kSettle: {
-          // const bool settled = std::fabs(input.theta_ll_rad - kParams.settle_theta_target_rad) <= kParams.settle_theta_tolerance_rad &&
+          // const bool settled = std::fabs(input.theta_ll_rad - kParams.settle_theta_target_rad) <=
+          // kParams.settle_theta_tolerance_rad &&
           //     std::fabs(input.theta_lr_rad - kParams.settle_theta_target_rad) <= kParams.settle_theta_tolerance_rad;
           const bool settled = true;
           if (StableFor(settled, kParams.settle_stable_ms, input.tick_ms)) {
