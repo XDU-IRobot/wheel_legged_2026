@@ -3,6 +3,8 @@
 #include <cstdint>
 
 #include "chassis/chassis.hpp"
+#include "chassis/stair_climb_sequence.hpp"
+#include "chassis/stair_task_coordinator.hpp"
 #include "gimbal/gimbal.hpp"
 #include "input.hpp"
 
@@ -49,7 +51,21 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t auto_jump_triggered;      // 自动跳跃触发（DYP 测距）
   uint8_t auto_jump_enabled;        // 自动跳跃当前开关状态
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t tc_high_leg_hold;         // 图传V键高腿长
+  uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
+  uint8_t stair_task_request;       // Stair command parsed this cycle
+  uint8_t stair_task_mode;          // Stair coordinator state
+  uint8_t stair_requested_attempts;
+  uint8_t stair_completed_attempts;
+  uint8_t stair_phase;              // Active sequence phase
+  uint8_t stair_abort_reason;
+  float stair_target_leg_length_m;
+  float stair_target_theta_ll_rad;
+  float stair_target_theta_lr_rad;
+  float stair_theta_ll_error_rad;
+  float stair_theta_lr_error_rad;
+  float stair_leg_length_error_m;
+  uint32_t stair_phase_elapsed_ms;
+  uint32_t stair_stable_elapsed_ms;
   uint8_t reset_yaw_request;        // R键重置正方向请求
   uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
   int16_t tc_mouse_x;               // 图传鼠标 X 增量
@@ -286,4 +302,6 @@ extern DebugSnapshot wl_debug;
 void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
-                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output);
+                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
+                         const chassis::StairTaskCoordinator::Output &stair_task_output,
+                         const chassis::StairClimbSequence::Output &stair_sequence_output);

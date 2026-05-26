@@ -1642,10 +1642,10 @@
 			<member name="modif_last_addr" type="uint32">0x0</member>
 		</object>
 		<object name="ObjId0323" type="CVariable">
-			<member name="name" type="string">debug_stair_climb_phase_</member>
+			<member name="name" type="string">wl_debug.stair_phase</member>
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
-			<member name="address" type="string">debug_stair_climb_phase_</member>
+			<member name="address" type="string">wl_debug.stair_phase</member>
 			<member name="last_addr" type="uint32">0x200007D0</member>
 			<member name="byte_size" type="sint32">1</member>
 			<member name="description" type="string"/>

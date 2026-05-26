@@ -123,6 +123,7 @@ SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
     case chassis::Fsm::State::kLowLeg:
       return kSdotRampLowLeg;
     case chassis::Fsm::State::kHighLeg:
+    case chassis::Fsm::State::kStairTask:
       return kSdotRampHighLeg;
     case chassis::Fsm::State::kMidLeg:
     case chassis::Fsm::State::kJumpPrep:

@@ -176,6 +176,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_yaw_reset_edge = false;
   bool r_flip_180_edge = false;
   bool f_jump_edge = false;
+  wheel_legged::StairTaskRequest stair_task_request = wheel_legged::StairTaskRequest::kNone;
   if (tc_remote_active) {
     // Ctrl 键状态（用于 Ctrl+Z/X 摩擦轮调速组合键）
     const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
@@ -184,13 +185,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
     if (c_pressed && tc_state.mid_leg_c_armed) {
       r_yaw_reset_edge = true;
-      const bool already_mid = tc_state.mid_leg_hold && !tc_state.high_leg_hold && !tc_state.stair_climb_done;
+      const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
-      tc_state.high_leg_hold = false;
-      tc_state.stair_climb_done = false;
-      tc_state.b_double_mode = false;
-      tc_state.b_attempt = 0;
       tc_state.mid_leg_g = false;
+      stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_c_armed = false;
     }
     if (!c_pressed) tc_state.mid_leg_c_armed = true;
@@ -198,13 +196,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // G 键：任意状态按 G → 中腿长（另一套斜坡参数）；已在中腿长则回低腿长
     const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
     if (g_pressed && tc_state.mid_leg_g_armed) {
-      const bool already_mid = tc_state.mid_leg_hold && !tc_state.high_leg_hold && !tc_state.stair_climb_done;
+      const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
-      tc_state.high_leg_hold = false;
-      tc_state.stair_climb_done = false;
-      tc_state.b_double_mode = false;
-      tc_state.b_attempt = 0;
       tc_state.mid_leg_g = !already_mid;
+      stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_g_armed = false;
     }
     if (!g_pressed) tc_state.mid_leg_g_armed = true;
@@ -217,32 +212,24 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!q_pressed) tc_state.q_domain_armed = true;
 
-    // V 键：任意状态按 V → 高腿长（1 次上台阶）；已在高腿长则回低腿长（同时重置底盘正方向）
+    // V 键：启动/取消单台阶任务；待命期间由任务协调器保持高腿长。
     const bool v_pressed = (tc_remote.keyboard_value & kRcKeyV) != 0U;
     if (v_pressed && tc_state.v_high_leg_armed) {
       r_yaw_reset_edge = true;
-      const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
-      tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_g = false;
-      tc_state.stair_climb_done = false;
-      tc_state.b_double_mode = false;
-      tc_state.b_attempt = 0;
+      stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
       tc_state.v_high_leg_armed = false;
     }
     if (!v_pressed) tc_state.v_high_leg_armed = true;
 
-    // B 键：任意状态按 B → 高腿长（2 次上台阶）；已在高腿长则回低腿长（同时重置底盘正方向）
+    // B 键：启动/取消双台阶任务；第一次成功后自动回到高腿待命。
     const bool b_pressed = (tc_remote.keyboard_value & kRcKeyB) != 0U;
     if (b_pressed && tc_state.b_high_leg_armed) {
       r_yaw_reset_edge = true;
-      const bool already_high = tc_state.high_leg_hold && !tc_state.stair_climb_done;
-      tc_state.high_leg_hold = !already_high;
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_g = false;
-      tc_state.stair_climb_done = false;
-      tc_state.b_double_mode = !already_high;
-      tc_state.b_attempt = 0;
+      stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
@@ -319,6 +306,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.service_profile = wheel_legged::ServiceProfile::kChassisAndGimbalSafe;
   request.reset_yaw_request = r_yaw_reset_edge;
   request.flip_180_request = r_flip_180_edge;
+  request.stair_task_request = stair_task_request;
 
   wheel_legged::CombatProfile combat_profile = wheel_legged::CombatProfile::kNormal;
   wheel_legged::LegProfile leg_request = wheel_legged::LegProfile::kLow;
@@ -357,12 +345,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         break;
     }
 
-    // 腿长：上台阶完成锁定低腿长 > V 键高腿长 > C 键中腿长 > 低腿长
-    if (tc_state.stair_climb_done) {
-      leg_request = wheel_legged::LegProfile::kLow;
-    } else if (tc_state.high_leg_hold) {
-      leg_request = wheel_legged::LegProfile::kHigh;
-    } else if (tc_state.mid_leg_hold) {
+    // 台阶任务的高腿待命由协调器输出覆盖；输入层仅保留普通中/低腿请求。
+    if (tc_state.mid_leg_hold) {
       leg_request = wheel_legged::LegProfile::kMid;
     } else {
       leg_request = wheel_legged::LegProfile::kLow;
@@ -501,6 +485,11 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
 
   request.leg_request = leg_request;
+  if (leg_request == wheel_legged::LegProfile::kHigh &&
+      request.stair_task_request == wheel_legged::StairTaskRequest::kNone) {
+    // DR16 高腿档保持自动台阶待命，松开档位后协调器会自动取消。
+    request.stair_task_request = wheel_legged::StairTaskRequest::kArmContinuous;
+  }
   request.mid_leg_g = tc_state.mid_leg_g;
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
       combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
@@ -683,10 +672,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
         predicted_domain != wheel_legged::DomainRequest::kDisabled) {
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_g = false;
-      tc_state.high_leg_hold = false;
-      tc_state.stair_climb_done = false;
-      tc_state.b_double_mode = false;
-      tc_state.b_attempt = 0;
       tc_state.aim_mode = TcSemanticState::AimMode::kAmmo;
     }
     prev_domain = predicted_domain;
@@ -790,11 +775,9 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .current_leg_length_m = chassis_output.mean_leg_length_m,
       .theta_ll_rad = chassis_output.current_state.theta_ll,
       .theta_lr_rad = chassis_output.current_state.theta_lr,
-      .fall_detected = m.fall_detected,
-      .fall_detected_hold_ms = m.fall_detected_hold_ms,
-      .upright_stable = m.upright_stable,
-      .stair_climb_ready_for_done = chassis_output.stair_climb_ready_for_done,
-      .stair_climb_pitch_stable = chassis_output.stair_climb_pitch_stable,
+      .fall_detected = fall_detected,
+      .fall_detected_hold_ms = fall_detected_hold_ms,
+      .upright_stable = upright_stable,
       .recovery_manual_mode = m.recovery_manual_mode,
       .manual_left_leg_speed = m.manual_left_leg_speed,
       .manual_right_leg_speed = m.manual_right_leg_speed,

@@ -157,7 +157,7 @@ spin_target_s_dot = kSpinTranslationGain * s_dot_cmd           // 增益缩放
 expected.theta_ll = kSpinThetaLlBiasRad    // 0.0 (Hero) / 0.01 (Inf)
 expected.theta_lr = 0.0
 ```
-普通模式使用 FSM 下发的 `theta_leg_target_rad` 或默认值。小陀螺强制左右不对称偏置（左腿略大），用于补偿旋转离心力导致的腿受力不均。
+普通模式使用腿型默认偏置；台阶序列通过 `motion_target` 独立下发摆角目标。小陀螺强制左右不对称偏置（左腿略大），用于补偿旋转离心力导致的腿受力不均。
 
 ### 3.5 小陀螺期间的连锁状态重置
 

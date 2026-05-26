@@ -35,6 +35,53 @@ enum class LegProfile : uint8_t {
   kHigh,     ///< 高腿长
 };
 
+enum class StairTaskRequest : uint8_t {
+  kNone = 0,
+  kArmSingle,
+  kArmDouble,
+  kArmContinuous,
+  kCancel,
+};
+
+enum class StairTaskMode : uint8_t {
+  kIdle = 0,
+  kArmed,
+  kExecuting,
+  kBetweenSteps,
+  kSucceeded,
+  kAborted,
+};
+
+enum class StairPhase : uint8_t {
+  kIdle = 0,
+  kHook,
+  kRetract,
+  kReturn,
+  kSettle,
+  kSucceeded,
+  kAborted,
+};
+
+enum class StairAbortReason : uint8_t {
+  kNone = 0,
+  kCancelled,
+  kPostureInvalid,
+  kOutputDisabled,
+  kHookTimeout,
+  kRetractTimeout,
+  kReturnTimeout,
+  kSettleTimeout,
+};
+
+struct ChassisMotionTarget {
+  float leg_length_m{0.0f};
+  float theta_ll_rad{0.0f};
+  float theta_lr_rad{0.0f};
+  float theta_b_rad{0.0f};
+  bool disable_wheel_torque{false};
+  bool use_stair_theta_controller{false};
+};
+
 /**
  * @brief 云台目标来源
  */
@@ -88,6 +135,7 @@ struct ModeRequest {
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
   bool mid_leg_g{false};                       ///< G 键触发的中腿长（区分斜坡参数）
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
+  StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
   bool spin_hold{false};             ///< 小陀螺保持请求
   float spin_dir{1.0f};              ///< 小陀螺方向（+1 正转，-1 反转）
@@ -106,9 +154,9 @@ struct ModeRequest {
   bool host_target_valid{false};                         ///< 上位机目标是否有效 (NUC 启动且在线)
   GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};  ///< 云台测试子模式
 
-  bool fall_detected{false};          ///< 是否检测到倒地 (@todo 未接入 IMU 姿态判断，始终 false)
-  uint32_t fall_detected_hold_ms{0};  ///< 倒地持续时间 (@todo 未接入)
-  bool upright_stable{false};         ///< 是否已恢复稳定直立 (@todo 未接入，始终 true)
+  bool fall_detected{false};          ///< 是否检测到姿态异常
+  uint32_t fall_detected_hold_ms{0};  ///< 姿态异常持续时间
+  bool upright_stable{false};         ///< 是否已恢复稳定直立
 
   bool recovery_manual_mode{false};    ///< 倒地自启手动模式
   float manual_left_leg_speed{0.0f};   ///< 手动模式左腿摆角速度目标 [rad/s]
@@ -132,7 +180,7 @@ struct ModeRequest {
  * - → kSpin: spin_hold == true 且不在跳台阶流程中
  * - → kJumpPrep: jump_trigger == true 且 domain_request != kCombat（战斗域下拨轮用于发射）
  * - → kRecoveryFallCheck: fall_detected == true（俯仰或横滚越界）
- * - → kStairClimb: 当前为 kHighLeg 且 theta_ll/lr > 阈值
+ * - → kStairTask: 台阶任务协调器已处于活动状态
  * - kJumpPrep → kJumpPush: 计时到达 kJumpPrepMs
  * - kJumpPush → kJumpRecover: 腿长到达 kJumpPushReachedLegLengthM 或超时
  * - kJumpRecover → kLowLeg: 计时到达 kJumpRecoverMs
@@ -140,8 +188,7 @@ struct ModeRequest {
  * - kRecoveryFallCheck → kLowLeg: 倒地恢复（未持续到确认时间）
  * - kRecoverySelfRight → kLowLeg: upright_stable == true
  * - kRecoverySelfRight → kDisabled: 超时 kRecoverySelfRightTimeoutMs
- * - kStairClimb → kStairClimbDone: 腿到位 + kStairClimbDurationMs 到
- * - kStairClimbDone → kHighLeg: pitch 稳定 kStairClimbPitchStableMs
+ * - kStairTask → kLowLeg: 台阶任务成功或受控终止
  */
 struct ChassisFsmInput {
   bool input_valid{false};                                 ///< 输入源是否在线且可信
@@ -160,8 +207,8 @@ struct ChassisFsmInput {
   uint32_t fall_detected_hold_ms{0};                       ///< 倒地持续时间
   bool upright_stable{false};                              ///< 是否已恢复稳定直立
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
-  bool stair_climb_ready_for_done{false};                  ///< 上台阶回摆到位，可以进入 kStairClimbDone
-  bool stair_climb_pitch_stable{false};  ///< 上台阶后起立+俯仰稳定完成，可以进入 kHighLeg
+  bool stair_task_active{false};                           ///< 上台阶任务处于待命或执行中
+  bool stair_task_recovery_required{false};                ///< 台阶任务姿态异常，立即进入恢复
   bool recovery_manual_mode{false};      ///< 倒地自启手动模式
   float manual_left_leg_speed{0.0f};     ///< 手动模式左腿摆角速度目标 [rad/s]
   float manual_right_leg_speed{0.0f};    ///< 手动模式右腿摆角速度目标 [rad/s]

@@ -106,10 +106,6 @@ struct TcSemanticState {
   bool v_high_leg_armed{true};        ///< V 键是否已就绪（上升沿检测）
   bool b_high_leg_armed{true};        ///< B 键是否已就绪（上升沿检测）
   bool f_jump_armed{true};            ///< F 键是否已就绪（上升沿检测）
-  bool high_leg_hold{false};          ///< 是否保持高腿长
-  bool b_double_mode{false};          ///< B 模式：需完成两次上台阶
-  uint8_t b_attempt{0};               ///< B 模式已完成上台阶次数
-  bool stair_climb_done{false};       ///< 上台阶完成后锁定低腿长
   bool dr16_parallel{false};          ///< DR16 是否并行生效
   bool z_fric_dec_armed{true};        ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
   bool x_fric_inc_armed{true};        ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）

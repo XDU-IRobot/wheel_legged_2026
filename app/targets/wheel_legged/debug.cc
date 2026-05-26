@@ -8,7 +8,9 @@
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
-                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output) {
+                         const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
+                         const chassis::StairTaskCoordinator::Output &stair_task_output,
+                         const chassis::StairClimbSequence::Output &stair_sequence_output) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
   wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
@@ -41,6 +43,21 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.tc_left_button = static_cast<uint8_t>(input.tc_remote.left_button);
   wl_debug.tc_right_button = static_cast<uint8_t>(input.tc_remote.right_button);
   wl_debug.tc_ui_refresh_key = static_cast<uint8_t>(input.ui_refresh_key);
+  wl_debug.stair_task_request = static_cast<uint8_t>(input.mode_request.stair_task_request);
+  wl_debug.stair_high_leg_request = static_cast<uint8_t>(stair_task_output.request_high_leg);
+  wl_debug.stair_task_mode = static_cast<uint8_t>(stair_task_output.mode);
+  wl_debug.stair_requested_attempts = stair_task_output.requested_attempts;
+  wl_debug.stair_completed_attempts = stair_task_output.completed_attempts;
+  wl_debug.stair_phase = static_cast<uint8_t>(stair_sequence_output.phase);
+  wl_debug.stair_abort_reason = static_cast<uint8_t>(stair_sequence_output.abort_reason);
+  wl_debug.stair_target_leg_length_m = stair_sequence_output.target.leg_length_m;
+  wl_debug.stair_target_theta_ll_rad = stair_sequence_output.target.theta_ll_rad;
+  wl_debug.stair_target_theta_lr_rad = stair_sequence_output.target.theta_lr_rad;
+  wl_debug.stair_theta_ll_error_rad = stair_sequence_output.theta_ll_error_rad;
+  wl_debug.stair_theta_lr_error_rad = stair_sequence_output.theta_lr_error_rad;
+  wl_debug.stair_leg_length_error_m = stair_sequence_output.leg_length_error_m;
+  wl_debug.stair_phase_elapsed_ms = stair_sequence_output.phase_elapsed_ms;
+  wl_debug.stair_stable_elapsed_ms = stair_sequence_output.stable_elapsed_ms;
 
   wl_debug.dr16_left_x_raw = input.dr16.left_x;
   wl_debug.dr16_left_y_raw = input.dr16.left_y;

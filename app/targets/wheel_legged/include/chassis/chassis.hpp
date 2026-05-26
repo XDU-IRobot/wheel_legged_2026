@@ -32,7 +32,7 @@ class Chassis {
     bool recovery_manual_mode{false};              ///< 倒地自启手动模式
     rm::f32 manual_left_leg_speed{0.0f};           ///< 手动模式左腿摆角速度目标 [rad/s]
     rm::f32 manual_right_leg_speed{0.0f};          ///< 手动模式右腿摆角速度目标 [rad/s]
-    rm::f32 target_leg_length_m{wheel_legged::params::active::chassis_fsm::kMidLegLengthM};  ///< 目标腿长
+    wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
   };
 
   /**
@@ -75,8 +75,6 @@ class Chassis {
     bool off_ground_gravity_off{false};      ///< 离地 > 0.1s 重力补偿已关闭
     bool posture_valid{true};                ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};            ///< 起立完成：双腿 theta 均小于阈值后置 true
-    bool stair_climb_ready_for_done{false};  ///< 上台阶回摆到位，可以进入 kStairClimbDone
-    bool stair_climb_pitch_stable{false};    ///< 上台阶后起立+俯仰稳定完成，可以进入 kHighLeg
     bool mid_leg_dip_active{false};          ///< 中腿长下压激活中
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
@@ -174,14 +172,9 @@ class Chassis {
   uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
   bool prev_fsm_was_recovery_{false};       ///< 上一周期是否在恢复状态
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
-  uint8_t stair_climb_phase_{0};  ///< 上台阶子阶段：0=转腿到目标摆角, 1=收腿压低车身, 2=回摆到0
-  uint16_t stair_climb_stable_ticks_{0};             ///< 当前 Phase 条件连续满足的周期数
   uint16_t off_ground_duration_ticks_{0};            ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};                        ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};                  ///< 强制低腿长已持续时间
-  bool stair_climb_standup_done_{false};             ///< 上台阶后起立完成
-  uint16_t stair_climb_pitch_stable_ticks_{0};       ///< 上台阶后俯仰稳定计数
-  Fsm::State prev_fsm_mode_{Fsm::State::kDisabled};  ///< 上一周期 FSM 模式（用于边沿检测）
   wheel_legged::LegProfile current_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 当前腿长档位
   bool mid_leg_dip_active_{false};                                                ///< 中腿长下压激活中
   bool mid_leg_dip_armed_{false};          ///< 中腿长下压待命（腿先低于阈值才可触发）
@@ -206,8 +199,8 @@ class Chassis {
   rm::modules::PID right_leg_turn_pid_{};
   rm::modules::PID left_leg_turn_pid_manual_{};
   rm::modules::PID right_leg_turn_pid_manual_{};
-  rm::modules::PID left_stair_climb_theta_pid_{};   ///< 上台阶左腿摆角 PID（位置环）
-  rm::modules::PID right_stair_climb_theta_pid_{};  ///< 上台阶右腿摆角 PID（位置环）
+  rm::modules::PID left_stair_theta_pid_{};   ///< 台阶序列左腿摆角 PID
+  rm::modules::PID right_stair_theta_pid_{};  ///< 台阶序列右腿摆角 PID
 
   UpdateOutput output_{};
 };

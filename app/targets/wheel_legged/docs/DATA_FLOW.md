@@ -96,7 +96,7 @@
 
 ```
 ModeRequest {
-  input_valid, domain_request, service_profile, leg_request
+  input_valid, domain_request, service_profile, leg_request, stair_task_request
   spin_hold, jump_trigger
   current_leg_length_m, theta_ll_rad, theta_lr_rad  ← 回灌自上周期
   combat_profile, target_source
@@ -109,10 +109,10 @@ ModeRequest {
 ### @todo 项（尚未接入）
 
 - `service_profile` 硬编码为 `kChassisAndGimbalSafe`
-- `fall_detected` 始终为 false（IMU 倒地检测未接入）
 
 ### 已部分接入
 
+- `fall_detected` 已由底盘姿态有效性反馈生成，用于台阶异常和普通倒地恢复。
 - `host_target` / `host_target_valid`：自瞄 CAN 通信已工作（`input_resolver.cc:259-268`），NUC 启动后 `host_target_valid` 置 true，云台在 AutoAim 模式下可切换为上位机目标。尚未与 NUC 实车联调验证。
 
 ---
@@ -130,6 +130,7 @@ input_valid, domain_request, leg_request, combat_profile
 spin_hold, jump_trigger
 current_leg_length_m, theta_ll_rad, theta_lr_rad  ← 从上周期底盘输出回灌
 fall_detected, fall_detected_hold_ms, upright_stable
+stair_task_active, stair_task_recovery_required
 tick_ms
 ```
 
@@ -142,7 +143,7 @@ chassis_recovery_active  ← 从底盘 FSM 输出派生
 startup_align_complete   ← 从 control_loop 内部判稳派生
 ```
 
-### 底盘状态机转移（12 状态）
+### 底盘状态机主要转移
 
 ```
 kDisabled ──▶ kLowLeg / kMidLeg / kHighLeg  (domain != disabled)
@@ -150,15 +151,15 @@ kLowLeg   ──▶ kSpin              (spin_hold)
           ──▶ kJumpPrep          (jump_trigger, non-combat)
           ──▶ kRecoveryFallCheck (fall_detected)
 kMidLeg   ──▶ kSpin / kRecoveryFallCheck / normal
-kHighLeg  ──▶ kSpin / kRecoveryFallCheck / kStairClimb (theta 超阈值)
+kHighLeg  ──▶ kSpin / kRecoveryFallCheck / kStairTask (任务激活)
 kSpin     ──▶ normal / kRecoveryFallCheck
 kJumpPrep ──▶ kJumpPush          (计时到)
 kJumpPush ──▶ kJumpRecover       (腿长到或超时)
 kJumpRecover ─▶ kLowLeg          (计时到)
 kRecoveryFallCheck ─▶ kRecoverySelfRight (倒地确认) / kLowLeg (恢复)
 kRecoverySelfRight ─▶ kLowLeg (upright_stable) / kDisabled (超时)
-kStairClimb ──▶ kStairClimbDone  (腿到位+计时) / kRecoveryFallCheck
-kStairClimbDone ─▶ kHighLeg      (pitch 稳定计时到)
+kStairTask ──▶ kLowLeg           (任务成功或受控终止)
+           ──▶ kRecoveryFallCheck (姿态异常)
 ```
 
 ### 云台状态机转移（6 状态）
@@ -177,7 +178,7 @@ kRecoveryAlign ─▶ normal mode    (恢复结束)
 **chassis::Fsm::Output::ControlOutput:**
 ```
 enable_dm, run_chassis_update, spin_enable
-leg_profile, target_leg_length_m, theta_leg_target_rad
+leg_profile, target_leg_length_m
 recovery_enable, safe_output_required, jump_phase
 ```
 
@@ -277,7 +278,7 @@ kCooling ─▶ kReady (继续) / kStop (退出)
 
 ```
 estimator_input, expected（期望状态向量）, fsm_mode
-enable_output, run_chassis_update, spin_enable, target_leg_length_m
+enable_output, run_chassis_update, spin_enable, motion_target
 ```
 
 ---

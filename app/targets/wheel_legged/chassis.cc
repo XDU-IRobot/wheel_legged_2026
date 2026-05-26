@@ -10,7 +10,6 @@
  * @file  targets/wheel_legged/chassis.cc
  * @brief 搴曠洏鎺у埗瀹炵幇锛氱姸鎬佷及璁°€丩QR銆佽ˉ鍋夸笌鍔涚煩杈撳嚭
  */
-uint8_t debug_stair_climb_phase_ = 0;
 uint8_t debug_posture_valid;
 f32 left_, right_;
 namespace {
@@ -166,17 +165,16 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid_manual = wheel_legged::params::active::chassis::kRightLegTurnPidManual;
   init_pid(right_leg_turn_pid_manual_, right_leg_turn_pid_manual.kp, right_leg_turn_pid_manual.ki,
            right_leg_turn_pid_manual.kd, right_leg_turn_pid_manual.max_out, right_leg_turn_pid_manual.max_iout);
-  // 上台阶腿摆角 PID（位置环），先转腿到目标摆角再收腿
-  const auto &stair_climb_theta_pid = wheel_legged::params::active::chassis::kStairClimbThetaPid;
-  init_pid(left_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
-           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
-  init_pid(right_stair_climb_theta_pid_, stair_climb_theta_pid.kp, stair_climb_theta_pid.ki, stair_climb_theta_pid.kd,
-           stair_climb_theta_pid.max_out, stair_climb_theta_pid.max_iout);
+  const auto &stair_theta_pid = wheel_legged::params::active::chassis_fsm::kStairClimb.theta_pid;
+  init_pid(left_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd, stair_theta_pid.max_out,
+           stair_theta_pid.max_iout);
+  init_pid(right_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd,
+           stair_theta_pid.max_out, stair_theta_pid.max_iout);
 
-  left_stair_climb_theta_pid_.SetCircular(true);
-  right_stair_climb_theta_pid_.SetCircular(true);
-  left_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
-  right_stair_climb_theta_pid_.SetCircularCycle(2.f * M_PI);
+  left_stair_theta_pid_.SetCircular(true);
+  right_stair_theta_pid_.SetCircular(true);
+  left_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
+  right_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
 
   lqr_controller_.SetLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
   current_leg_profile_ = wheel_legged::LegProfile::kLow;
@@ -237,7 +235,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       new_profile = wheel_legged::LegProfile::kLow;
     } else if (input.fsm_mode == Fsm::State::kMidLeg) {
       new_profile = wheel_legged::LegProfile::kMid;
-    } else if (input.fsm_mode == Fsm::State::kHighLeg) {
+    } else if (input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kStairTask) {
       new_profile = wheel_legged::LegProfile::kHigh;
     }
     if (input.fsm_mode == Fsm::State::kSpin) {
@@ -376,58 +374,20 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       force_low_leg_ = false;
     }
   }
-  //  // 起立完成后若摆角再次越界，回退到起立 Phase 0
-  //  // 上台阶时腿自然前摆会越界，不应回退，由三段式上台阶流程处理
-  //  if (standup_complete_ && input.fsm_mode != Fsm::State::kStairClimb &&input.fsm_mode !=
-  //  Fsm::State::kStairClimbDone) {
-  //    constexpr float kThetaThreshold = wheel_legged::params::active::chassis::kStandupThetaThresholdRad;
-  //    if (std::fabs(state_output.current.theta_ll) > kThetaThreshold ||
-  //        std::fabs(state_output.current.theta_lr) > kThetaThreshold) {
-  //      standup_complete_ = false;
-  //      standup_phase_ = 0;
-  //    }
-  //  }
-
-  // ── 上台阶 kStairClimbDone：进入后先低腿长起立，再等俯仰稳定 ──
-  if (input.fsm_mode == Fsm::State::kStairClimbDone) {
-    if (prev_fsm_mode_ != Fsm::State::kStairClimbDone) {
-      standup_complete_ = false;
-      standup_phase_ = 0;
-      stair_climb_standup_done_ = false;
-      stair_climb_pitch_stable_ticks_ = 0;
-    }
-    if (!stair_climb_standup_done_ && standup_complete_) {
-      stair_climb_standup_done_ = true;
-    }
-    if (stair_climb_standup_done_) {
-      constexpr uint16_t kPitchStableTicks =
-          wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs / 2U;  // 500Hz
-      stair_climb_pitch_stable_ticks_++;
-      if (stair_climb_pitch_stable_ticks_ >= kPitchStableTicks) {
-        output_.stair_climb_pitch_stable = true;
-      }
-    }
-  } else {
-    stair_climb_standup_done_ = false;
-    stair_climb_pitch_stable_ticks_ = 0;
-    output_.stair_climb_pitch_stable = false;
-  }
-  prev_fsm_mode_ = input.fsm_mode;
-
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
 
   {
     // 目标变化时重新计算斜坡步长，保证每次腿长切换都走完 kLegLengthRampTimeS
-    if (input.target_leg_length_m != last_ramp_target_m_) {
-      const float initial_error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+    if (input.motion_target.leg_length_m != last_ramp_target_m_) {
+      const float initial_error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
       constexpr float kRampTotalTicks = wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
       ramp_step_per_tick_m_ = std::fabs(initial_error) / kRampTotalTicks;
-      last_ramp_target_m_ = input.target_leg_length_m;
+      last_ramp_target_m_ = input.motion_target.leg_length_m;
     }
-    const float error = input.target_leg_length_m - smoothed_leg_target_length_m_;
+    const float error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
     if (std::fabs(error) <= ramp_step_per_tick_m_ || ramp_step_per_tick_m_ == 0.0f) {
-      smoothed_leg_target_length_m_ = input.target_leg_length_m;
+      smoothed_leg_target_length_m_ = input.motion_target.leg_length_m;
       ramp_step_per_tick_m_ = 0.0f;
     } else {
       smoothed_leg_target_length_m_ += (error > 0.0f ? ramp_step_per_tick_m_ : -ramp_step_per_tick_m_);
@@ -469,7 +429,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       if (mid_leg_dip_ticks_ >= kMidLegDipHoldTicks) {
         mid_leg_dip_active_ = false;
         mid_leg_dip_ticks_ = 0;
-        last_ramp_target_m_ = input.target_leg_length_m;
+        last_ramp_target_m_ = input.motion_target.leg_length_m;
       }
     }
   } else {
@@ -495,7 +455,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
  */
 void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              const ChassisStateEstimatorOutput &state_output) {
-  static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
   output_.off_ground_in_mid_high_leg = false;
 
   const auto set_all_zero = [this]() {
@@ -559,7 +518,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
-  const bool use_stair_climb = (input.fsm_mode == Fsm::State::kStairClimb);
+  const bool use_stair_target = input.motion_target.use_stair_theta_controller;
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
   // 离地 > 0.1s 后去掉重力补偿
@@ -612,9 +571,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       right_force_ = std::clamp(right_force_, -kOffGroundSupportForceClampN, kOffGroundSupportForceClampN);
     }
 
-    // 离地、跳跃回收、上台阶或起立未完成时关闭轮端力矩。
-    if (IsStandbyMode(input.fsm_mode) || use_jump_retract2 || off_ground_in_mid_high_leg || use_stair_climb ||
-        !standup_complete_) {
+    // 动作序列、跳跃回收、离地或起立未完成时关闭轮端力矩。
+    if (IsStandbyMode(input.fsm_mode) || use_jump_retract2 || off_ground_in_mid_high_leg ||
+        input.motion_target.disable_wheel_torque || !standup_complete_) {
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
     } else {
@@ -622,60 +581,16 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.rw_tau = base_torque_.t_wr;
     }
 
-    // 上台阶：Phase 0=转腿到目标, Phase 1=收腿, Phase 2=回摆到0
     rm::f32 t_bl_cmd;
     rm::f32 t_br_cmd;
-    if (use_stair_climb) {
-      constexpr float kThetaTarget = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
-      constexpr float kThetaTol = wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr float kPhase0LegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbPhase0LegLengthM;
-      constexpr float kRetractLegTarget = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
-      constexpr float kLegLengthTol =
-          wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM;
-      // constexpr float kZeroThreshold =
-      // wheel_legged::params::active::chassis_fsm::kStairClimbThetaNearZeroThresholdRad;
-      constexpr float kZeroThreshold = 1.1f;
-      constexpr uint16_t kPhaseStableTicks = 90;  // 500ms @ 500Hz
-
-      float theta_target = kThetaTarget;
-      bool cond_met = false;
-      debug_stair_climb_phase_ = stair_climb_phase_;
-      if (stair_climb_phase_ == 0) {
-        params_.leg_target_length_m = kPhase0LegTarget;  // 转腿时拉长腿长
-        cond_met = (std::fabs(state_output.current.theta_ll - kThetaTarget) < kThetaTol &&
-                    std::fabs(state_output.current.theta_lr - kThetaTarget) < kThetaTol);
-      } else if (stair_climb_phase_ == 1) {
-        cond_met = (std::fabs(avg_leg_length_m - kRetractLegTarget) < kLegLengthTol);
-      } else {
-        theta_target = 0.0f;  // 回摆到0
-        cond_met = (std::fabs(state_output.current.theta_ll) < kZeroThreshold &&
-                    std::fabs(state_output.current.theta_lr) < kZeroThreshold);
-      }
-
-      // 通用延时切换：条件连续满足 kPhaseStableTicks 个周期后才切 Phase
-      // Phase 2 不再自增，稳定计数直接控制 stair_climb_ready_for_done
-      if (cond_met) {
-        stair_climb_stable_ticks_++;
-        if (stair_climb_phase_ < 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks) {
-          stair_climb_phase_++;
-          stair_climb_stable_ticks_ = 0;
-        }
-      } else {
-        stair_climb_stable_ticks_ = 0;
-      }
-
-      left_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_ll,
-                                                state_output.current.theta_ll_dot);
-      right_stair_climb_theta_pid_.UpdateExtDiff(theta_target, state_output.current.theta_lr,
-                                                 state_output.current.theta_lr_dot);
-      t_bl_cmd = -left_stair_climb_theta_pid_.out();
-      t_br_cmd = -right_stair_climb_theta_pid_.out();
-
-      output_.stair_climb_ready_for_done = (stair_climb_phase_ == 2 && stair_climb_stable_ticks_ >= kPhaseStableTicks);
+    if (use_stair_target) {
+      left_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_ll_rad, state_output.current.theta_ll,
+                                          state_output.current.theta_ll_dot);
+      right_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_lr_rad, state_output.current.theta_lr,
+                                           state_output.current.theta_lr_dot);
+      t_bl_cmd = -left_stair_theta_pid_.out();
+      t_br_cmd = -right_stair_theta_pid_.out();
     } else {
-      stair_climb_phase_ = 0;
-      stair_climb_stable_ticks_ = 0;
-      output_.stair_climb_ready_for_done = false;
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;
     }

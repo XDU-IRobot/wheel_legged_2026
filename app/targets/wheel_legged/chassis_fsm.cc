@@ -1,6 +1,5 @@
 #include "include/chassis/fsm.hpp"
 #include "include/params.hpp"
-#include <cmath>
 
 /**
  * @file  targets/wheel_legged/chassis_fsm.cc
@@ -15,19 +14,6 @@ namespace {
 bool IsJumpState(const chassis::Fsm::State state) {
   return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
          state == chassis::Fsm::State::kJumpRecover;
-}
-
-/**
- * @brief 上台阶完成判定：只检查腿长是否到达目标。
- *
- * 摆角先到位再收腿的时序由 chassis 内部 stair_climb_phase_ 保证，
- * 此处腿长到位意味着两个子阶段均已完成，无需再检查摆角。
- */
-bool IsStairClimbReadyToDone(const wheel_legged::ChassisFsmInput &request) {
-  const float leg_length_error =
-      std::fabs(request.current_leg_length_m - wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM);
-  return leg_length_error <= wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthNearTargetToleranceM &&
-         request.stair_climb_ready_for_done;
 }
 
 /**
@@ -201,27 +187,14 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.jump_phase = 0U;
       break;
 
-    case chassis::Fsm::State::kStairClimb:
+    case chassis::Fsm::State::kStairTask:
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = false;
       control.recovery_enable = false;
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kHigh;
-      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
-      control.theta_leg_target_rad = wheel_legged::params::active::chassis_fsm::kStairClimbThetaTargetRad;
-      control.jump_phase = 0U;
-      break;
-
-    case chassis::Fsm::State::kStairClimbDone:
-      control.enable_dm = true;
-      control.run_chassis_update = true;
-      control.spin_enable = false;
-      control.recovery_enable = false;
-      control.safe_output_required = false;
-      control.leg_profile = wheel_legged::LegProfile::kHigh;
-      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimbLegLengthM;
-      control.theta_leg_target_rad = 0.0f;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairClimb.high_leg_length_m;
       control.jump_phase = 0U;
       break;
   }
@@ -273,7 +246,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   // 状态机只处理模式时序；具体力矩由 Chassis 根据输出的 ControlOutput 计算。
   switch (mode_) {
     case State::kDisabled:
-      next_mode = requested_normal_state;
+      next_mode = request.stair_task_active ? State::kStairTask : requested_normal_state;
       break;
 
     case State::kStandby:
@@ -289,6 +262,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
+      } else if (request.stair_task_active) {
+        next_mode = State::kStairTask;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kLow;
         next_mode = State::kJumpPrep;
@@ -304,6 +279,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
+      } else if (request.stair_task_active) {
+        next_mode = State::kStairTask;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
@@ -319,11 +296,10 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
+      } else if (request.stair_task_active) {
+        next_mode = State::kStairTask;
       } else if (request.spin_hold) {
         next_mode = State::kSpin;
-      } else if (request.theta_ll_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad &&
-                 request.theta_lr_rad > wheel_legged::params::active::chassis_fsm::kStairClimbThetaThresholdRad) {
-        next_mode = State::kStairClimb;
       } else {
         next_mode = requested_normal_state;
       }
@@ -407,26 +383,13 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       }
       break;
 
-    case State::kStairClimb:
-      if (request.fall_detected) {
+    case State::kStairTask:
+      if (request.fall_detected || request.stair_task_recovery_required) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
-      } else if (IsStairClimbReadyToDone(request) ||
-                 elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbDurationMs) {
-        next_mode = State::kStairClimbDone;
-      }
-      break;
-
-    case State::kStairClimbDone:
-      if (request.fall_detected) {
-        next_mode = State::kRecoveryFallCheck;
-      } else if (request.standby) {
-        next_mode = State::kStandby;
-      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
-        next_mode = State::kHighLeg;
-      } else if (request.stair_climb_pitch_stable) {
-        next_mode = State::kHighLeg;
+      } else if (!request.stair_task_active) {
+        next_mode = requested_normal_state;
       }
       break;
   }
@@ -438,7 +401,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   Transit(next_mode);
 
   if (!IsJumpState(mode_) && (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg ||
-                              mode_ == State::kSpin || mode_ == State::kStandby)) {
+                              mode_ == State::kSpin || mode_ == State::kStandby || mode_ == State::kStairTask)) {
     output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_);
   }
 

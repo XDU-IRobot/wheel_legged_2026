@@ -1,5 +1,7 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
+#include "include/chassis/stair_climb_sequence.hpp"
+#include "include/chassis/stair_task_coordinator.hpp"
 #include "include/debug.hpp"
 #include "main.h"
 #include <algorithm>
@@ -67,6 +69,8 @@ constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollo
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
 
 chassis_runtime::Actuators g_actuators{};
+chassis::StairTaskCoordinator g_stair_task_coordinator{};
+chassis::StairClimbSequence g_stair_sequence{};
 
 }  // namespace
 
@@ -109,15 +113,61 @@ void ControlLoop() {
   globals->ui_refresh_key = tc_state.e_ui_refresh;
   input.ui_refresh_key = tc_state.e_ui_refresh;
 
-  wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
-
   wl_debug.motor_reenable_chassis_trig = 0U;
   wl_debug.motor_reenable_gimbal_trig = 0U;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
+  const auto &stair_params = ns::chassis_fsm::kStairClimb;
+  const bool stair_output_enabled =
+      input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled &&
+      !input.mode_request.standby;
+  const bool stair_contact_detected =
+      chassis_control_output.current_state.theta_ll > stair_params.contact_theta_threshold_rad &&
+      chassis_control_output.current_state.theta_lr > stair_params.contact_theta_threshold_rad;
+  const bool stair_high_leg_ready =
+      std::fabs(chassis_control_output.mean_leg_length_m - stair_params.high_leg_length_m) <=
+      stair_params.leg_length_tolerance_m;
+  const auto &previous_sequence_output = g_stair_sequence.output();
+  const auto &stair_task_output = g_stair_task_coordinator.Update({
+      .request = input.mode_request.stair_task_request,
+      .contact_detected = stair_contact_detected,
+      .high_leg_ready = stair_high_leg_ready,
+      .posture_valid = chassis_control_output.posture_valid,
+      .output_enabled = stair_output_enabled,
+      .sequence_succeeded = previous_sequence_output.succeeded,
+      .sequence_aborted = previous_sequence_output.aborted,
+      .sequence_abort_reason = previous_sequence_output.abort_reason,
+  });
+  if (stair_task_output.reset_sequence) {
+    g_stair_sequence.Reset();
+  }
+  const auto &stair_sequence_output = g_stair_sequence.Update({
+      .start = stair_task_output.start_sequence,
+      .cancel = stair_task_output.cancel_sequence,
+      .output_enabled = stair_output_enabled,
+      .posture_valid = chassis_control_output.posture_valid,
+      .mean_leg_length_m = chassis_control_output.mean_leg_length_m,
+      .theta_ll_rad = chassis_control_output.current_state.theta_ll,
+      .theta_lr_rad = chassis_control_output.current_state.theta_lr,
+      .theta_ll_dot_rad_s = chassis_control_output.current_state.theta_ll_dot,
+      .theta_lr_dot_rad_s = chassis_control_output.current_state.theta_lr_dot,
+      .theta_b_rad = chassis_control_output.current_state.theta_b,
+      .theta_b_dot_rad_s = chassis_control_output.current_state.theta_b_dot,
+      .roll_rad = input.estimator_input.imu.roll_rad,
+      .tick_ms = now_ms,
+  });
+
   auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  if (stair_task_output.request_high_leg) {
+    chassis_input.request.leg_request = wheel_legged::LegProfile::kHigh;
+  }
+  if (stair_task_output.force_low_leg) {
+    chassis_input.request.leg_request = wheel_legged::LegProfile::kLow;
+  }
+  chassis_input.request.stair_task_active = stair_task_output.task_active;
+  chassis_input.request.stair_task_recovery_required = stair_task_output.recovery_required;
   {
     const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
@@ -137,28 +187,6 @@ void ControlLoop() {
       tc_state.mid_leg_g = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
-  }
-
-  // ── 上台阶完成检测：从 kStairClimb/kStairClimbDone 切换到 kHighLeg ──
-  {
-    static chassis::Fsm::State prev_chassis_mode_for_stair = chassis::Fsm::State::kDisabled;
-    const bool entered_high_leg = (chassis_output.mode == chassis::Fsm::State::kHighLeg);
-    const bool was_stair_climb = (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimb) ||
-                                 (prev_chassis_mode_for_stair == chassis::Fsm::State::kStairClimbDone);
-    if (entered_high_leg && was_stair_climb) {
-      if (tc_state.b_double_mode && tc_state.b_attempt == 0) {
-        // B 模式第 1 次完成 → 等 FSM kStairClimbDone 稳定后自动再上一次
-        tc_state.b_attempt = 1;
-        tc_state.high_leg_hold = true;
-      } else {
-        // V 模式或 B 模式第 2 次完成 → 锁定低腿长
-        tc_state.stair_climb_done = true;
-        tc_state.high_leg_hold = false;
-        tc_state.b_double_mode = false;
-        tc_state.b_attempt = 0;
-      }
-    }
-    prev_chassis_mode_for_stair = chassis_output.mode;
   }
 
   const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
@@ -396,7 +424,10 @@ void ControlLoop() {
   chassis_update_input.recovery_manual_mode = chassis_input.request.recovery_manual_mode;
   chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
   chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
-  chassis_update_input.target_leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
+  if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
+    chassis_update_input.motion_target = stair_sequence_output.target;
+  }
   chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
@@ -529,7 +560,8 @@ void ControlLoop() {
 
   // ── 7h. 目标纵向速度 ──
   const float forward_speed_base =
-      (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetForwardSpeedMaxHighLegMps
+      (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
+          ? kTargetForwardSpeedMaxHighLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
           ? kTargetForwardSpeedMaxMidLegMps
           : kTargetForwardSpeedMaxMps;
@@ -538,8 +570,9 @@ void ControlLoop() {
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
           ? kTargetSpeedBiasMidLegGMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg)  ? kTargetSpeedBiasMidLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kHighLeg) ? kTargetSpeedBiasHighLegMps
-                                                               : 0.0f;
+      : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
+          ? kTargetSpeedBiasHighLegMps
+          : 0.0f;
   const float forward_max_speed = forward_speed_base;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
@@ -670,7 +703,12 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
     chassis_update_input.expected.theta_b = 0.0f;
-  } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg) {
+  } else if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
+    chassis_update_input.expected.theta_ll = stair_sequence_output.target.theta_ll_rad;
+    chassis_update_input.expected.theta_lr = stair_sequence_output.target.theta_lr_rad;
+    chassis_update_input.expected.theta_b = stair_sequence_output.target.theta_b_rad;
+  } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg ||
+             chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
   } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
@@ -685,7 +723,8 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
   }
-  if (!spin_control_enabled) {
+  if (!spin_control_enabled &&
+      !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
     chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
   }
 
@@ -1012,7 +1051,8 @@ void ControlLoop() {
     }
   }
 
-  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output);
+  UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output,
+                      stair_task_output, stair_sequence_output);
 
   if (!init_flag) {
     ui_init();

@@ -269,7 +269,7 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 |------|----------|----------|
 | 上位机自瞄目标 | 已部分接入（aimbot CAN 通信已工作） | `input_resolver.cc:259-268` |
 | 维护域策略细分 | 硬编码 kChassisAndGimbalSafe | `input_resolver.cc` — 需附加 DR16 通道 |
-| 倒地自起 | 执行端已接入，触发端未实现 | `chassis.cc` 自起立力矩已就位；`input_resolver.cc` 中 `fall_detected` 恒 false，需接入 IMU 俯仰/横滚阈值判断 |
+| 倒地自起 | 已接入姿态触发 | `BuildChassisFsmInput()` 使用 `posture_valid` 生成 `fall_detected`，姿态异常可进入恢复 |
 | 跳跃阶段控制 | 已接入 | `chassis.cc` — ComputeActuatorTorque() 三阶段跳跃力矩 |
 
 ---
