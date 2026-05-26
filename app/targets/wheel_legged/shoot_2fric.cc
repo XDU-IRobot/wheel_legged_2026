@@ -106,12 +106,11 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
 
     const float effective_limit = static_cast<float>(heat_limit_);
     const float safety_margin = low_heat_mode ? ns::kLowHeatSafetyMargin : ns::kHeatSafetyMargin;
-    if ( effective_heat > effective_limit - safety_margin) {
+    if (effective_heat > effective_limit - safety_margin) {
       heat_suppressed_ = true;
-    }else {
+    } else {
       heat_suppressed_ = false;
     }
-
   }
 
   out.fric_left_current = std::clamp(controller_.output().fric_1, -16000.0f, 16000.0f);
