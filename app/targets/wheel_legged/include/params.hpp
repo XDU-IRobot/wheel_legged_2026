@@ -27,20 +27,20 @@ struct StairClimbParams {
   float settle_leg_length_m;
   float contact_theta_threshold_rad;
   float hook_theta_target_rad;
+  float retract_theta_target_rad;
   float hook_theta_tolerance_rad;
-  float return_theta_tolerance_rad;
   float leg_length_tolerance_m;
   float theta_dot_tolerance_rad_s;
+  float settle_theta_tolerance_rad;
+  float settle_theta_target_rad;
   float settle_pitch_tolerance_rad;
   float settle_pitch_dot_tolerance_rad_s;
   float settle_roll_tolerance_rad;
   std::uint32_t hook_stable_ms;
   std::uint32_t retract_stable_ms;
-  std::uint32_t return_stable_ms;
   std::uint32_t settle_stable_ms;
   std::uint32_t hook_timeout_ms;
   std::uint32_t retract_timeout_ms;
-  std::uint32_t return_timeout_ms;
   std::uint32_t settle_timeout_ms;
   PidGains theta_pid;
 };
@@ -225,20 +225,20 @@ constexpr StairClimbParams kStairClimb{
     .settle_leg_length_m = 0.13f,
     .contact_theta_threshold_rad = 0.40f,
     .hook_theta_target_rad = 1.35f,
+    .retract_theta_target_rad = 1.3f,
     .hook_theta_tolerance_rad = 0.20f,
-    .return_theta_tolerance_rad = 0.20f,
     .leg_length_tolerance_m = 0.01f,
     .theta_dot_tolerance_rad_s = 0.50f,
+    .settle_theta_tolerance_rad  = 0.3f,
+    .settle_theta_target_rad = 0.f,
     .settle_pitch_tolerance_rad = 0.20f,
     .settle_pitch_dot_tolerance_rad_s = 0.50f,
     .settle_roll_tolerance_rad = 0.20f,
     .hook_stable_ms = 180U,
     .retract_stable_ms = 180U,
-    .return_stable_ms = 180U,
     .settle_stable_ms = 1000U,
     .hook_timeout_ms = 1200U,
     .retract_timeout_ms = 1200U,
-    .return_timeout_ms = 1200U,
     .settle_timeout_ms = 2000U,
     .theta_pid = {15.0f, 0.0f, 5.0f, 15.0f, 0.0f},
 };
@@ -726,26 +726,26 @@ namespace chassis_fsm {
 
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .hook_leg_length_m = 0.3f,
     .retract_leg_length_m = 0.18f,
-    .settle_leg_length_m = 0.14f,
+    .settle_leg_length_m = 0.15f,
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 0.85f,
-    .hook_theta_tolerance_rad = 0.12f,
-    .return_theta_tolerance_rad = 0.12f,
-    .leg_length_tolerance_m = 0.03f,
+    .retract_theta_target_rad = 1.3f,
+    .hook_theta_tolerance_rad = 0.2f,
+    .leg_length_tolerance_m = 0.05f,
     .theta_dot_tolerance_rad_s = 0.50f,
+    .settle_theta_tolerance_rad  = 0.3f,
+    .settle_theta_target_rad = 0.f,
     .settle_pitch_tolerance_rad = 0.18f,
     .settle_pitch_dot_tolerance_rad_s = 0.50f,
     .settle_roll_tolerance_rad = 0.25f,
-    .hook_stable_ms = 180U,
-    .retract_stable_ms = 180U,
-    .return_stable_ms = 180U,
-    .settle_stable_ms = 450U,
-    .hook_timeout_ms = 1200U,
-    .retract_timeout_ms = 1200U,
-    .return_timeout_ms = 1200U,
-    .settle_timeout_ms = 1500U,
+    .hook_stable_ms = 1000U,
+    .retract_stable_ms = 500U,
+    .settle_stable_ms = 500U,
+    .hook_timeout_ms = 3000U,
+    .retract_timeout_ms = 3000U,
+    .settle_timeout_ms = 3000U,
     .theta_pid = {40.0f, 0.0f, 8.0f, 60.0f, 30.0f},
 };
 
@@ -1238,20 +1238,20 @@ constexpr StairClimbParams kStairClimb{
     .settle_leg_length_m = 0.16f,
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 0.80f,
+    .retract_theta_target_rad = 1.f,
     .hook_theta_tolerance_rad = 0.10f,
-    .return_theta_tolerance_rad = 0.10f,
     .leg_length_tolerance_m = 0.02f,
     .theta_dot_tolerance_rad_s = 0.50f,
+    .settle_theta_tolerance_rad  = 0.3f,
+    .settle_theta_target_rad = 0.f,
     .settle_pitch_tolerance_rad = 0.18f,
     .settle_pitch_dot_tolerance_rad_s = 0.50f,
     .settle_roll_tolerance_rad = 0.25f,
     .hook_stable_ms = 20U,
     .retract_stable_ms = 50U,
-    .return_stable_ms = 50U,
     .settle_stable_ms = 100U,
     .hook_timeout_ms = 1200U,
     .retract_timeout_ms = 1200U,
-    .return_timeout_ms = 1200U,
     .settle_timeout_ms = 1500U,
     .theta_pid = {6.0f, 0.0f, 1.5f, 15.0f, 0.0f},
 };

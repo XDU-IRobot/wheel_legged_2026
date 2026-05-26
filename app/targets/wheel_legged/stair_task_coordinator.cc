@@ -4,7 +4,7 @@ namespace chassis {
 
 bool StairTaskCoordinator::IsActive() const {
   return mode_ == wheel_legged::StairTaskMode::kArmed || mode_ == wheel_legged::StairTaskMode::kExecuting ||
-         mode_ == wheel_legged::StairTaskMode::kBetweenSteps;
+         mode_ == wheel_legged::StairTaskMode::kBetweenSteps || mode_ == wheel_legged::StairTaskMode::kSucceeded;
 }
 
 void StairTaskCoordinator::Reset() {
@@ -107,6 +107,7 @@ const StairTaskCoordinator::Output &StairTaskCoordinator::Update(const Input &in
       }
       break;
     case wheel_legged::StairTaskMode::kSucceeded:
+      break;
     case wheel_legged::StairTaskMode::kAborted:
       mode_ = wheel_legged::StairTaskMode::kIdle;
       continuous_ = false;

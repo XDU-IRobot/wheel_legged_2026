@@ -60,6 +60,8 @@ class Chassis {
     rm::f32 right_dyn_support_n{0.0f};      ///< 右腿动力学补偿分量
     rm::f32 mean_leg_length_m{0.0f};        ///< 平均腿长
     rm::f32 leg_target_length_m{0.0f};      ///< 斜坡平滑后的腿长目标
+    rm::f32 theta_ll_target_rad{0.0f};      ///< 最终左腿 theta 目标
+    rm::f32 theta_lr_target_rad{0.0f};      ///< 最终右腿 theta 目标
     rm::f32 left_l0_dot_mps{0.0f};          ///< 左腿腿长变化率
     rm::f32 right_l0_dot_mps{0.0f};         ///< 右腿腿长变化率
     rm::f32 left_l0_ddot_mps2{0.0f};        ///< 左腿腿长加速度

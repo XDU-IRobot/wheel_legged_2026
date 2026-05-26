@@ -11,7 +11,7 @@ const auto &kParams = wheel_legged::params::active::chassis_fsm::kStairClimb;
 
 bool IsRunningPhase(const wheel_legged::StairPhase phase) {
   return phase == wheel_legged::StairPhase::kHook || phase == wheel_legged::StairPhase::kRetract ||
-         phase == wheel_legged::StairPhase::kReturn || phase == wheel_legged::StairPhase::kSettle;
+         phase == wheel_legged::StairPhase::kSettle;
 }
 }  // namespace
 
@@ -65,14 +65,11 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
       Abort(wheel_legged::StairAbortReason::kCancelled, input.tick_ms);
     } else {
       const uint32_t elapsed_ms = input.tick_ms - phase_enter_tick_ms_;
-      const bool theta_stable = std::fabs(input.theta_ll_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s &&
-                                std::fabs(input.theta_lr_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s;
       switch (phase_) {
         case wheel_legged::StairPhase::kHook: {
           const bool at_target =
-              std::fabs(input.theta_ll_rad - kParams.hook_theta_target_rad) <= kParams.hook_theta_tolerance_rad &&
-              std::fabs(input.theta_lr_rad - kParams.hook_theta_target_rad) <= kParams.hook_theta_tolerance_rad &&
-              theta_stable;
+              (input.theta_ll_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad &&
+              (input.theta_lr_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad;
           if (StableFor(at_target, kParams.hook_stable_ms, input.tick_ms)) {
             EnterPhase(wheel_legged::StairPhase::kRetract, input.tick_ms);
           } else if (elapsed_ms >= kParams.hook_timeout_ms) {
@@ -84,26 +81,16 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
           const bool at_target =
               std::fabs(input.mean_leg_length_m - kParams.retract_leg_length_m) <= kParams.leg_length_tolerance_m;
           if (StableFor(at_target, kParams.retract_stable_ms, input.tick_ms)) {
-            EnterPhase(wheel_legged::StairPhase::kReturn, input.tick_ms);
+            EnterPhase(wheel_legged::StairPhase::kSettle, input.tick_ms);
           } else if (elapsed_ms >= kParams.retract_timeout_ms) {
             Abort(wheel_legged::StairAbortReason::kRetractTimeout, input.tick_ms);
           }
           break;
         }
-        case wheel_legged::StairPhase::kReturn: {
-          const bool returned = std::fabs(input.theta_ll_rad) <= kParams.return_theta_tolerance_rad &&
-                                std::fabs(input.theta_lr_rad) <= kParams.return_theta_tolerance_rad && theta_stable;
-          if (StableFor(returned, kParams.return_stable_ms, input.tick_ms)) {
-            EnterPhase(wheel_legged::StairPhase::kSettle, input.tick_ms);
-          } else if (elapsed_ms >= kParams.return_timeout_ms) {
-            Abort(wheel_legged::StairAbortReason::kReturnTimeout, input.tick_ms);
-          }
-          break;
-        }
         case wheel_legged::StairPhase::kSettle: {
-          const bool settled = std::fabs(input.theta_b_rad) <= kParams.settle_pitch_tolerance_rad &&
-                               std::fabs(input.theta_b_dot_rad_s) <= kParams.settle_pitch_dot_tolerance_rad_s &&
-                               std::fabs(input.roll_rad) <= kParams.settle_roll_tolerance_rad;
+          // const bool settled = std::fabs(input.theta_ll_rad - kParams.settle_theta_target_rad) <= kParams.settle_theta_tolerance_rad &&
+          //     std::fabs(input.theta_lr_rad - kParams.settle_theta_target_rad) <= kParams.settle_theta_tolerance_rad;
+          const bool settled = true;
           if (StableFor(settled, kParams.settle_stable_ms, input.tick_ms)) {
             EnterPhase(wheel_legged::StairPhase::kSucceeded, input.tick_ms);
           } else if (elapsed_ms >= kParams.settle_timeout_ms) {
@@ -130,7 +117,7 @@ void StairClimbSequence::UpdateOutput(const Input &input) {
   output_.aborted = phase_ == wheel_legged::StairPhase::kAborted;
   output_.controls_motion = output_.running || output_.succeeded || output_.aborted;
   output_.target = {};
-  output_.target.disable_wheel_torque = output_.controls_motion;
+  output_.target.disable_wheel_torque = output_.running;
   output_.target.use_stair_theta_controller = output_.controls_motion;
 
   switch (phase_) {
@@ -141,16 +128,23 @@ void StairClimbSequence::UpdateOutput(const Input &input) {
       break;
     case wheel_legged::StairPhase::kRetract:
       output_.target.leg_length_m = kParams.retract_leg_length_m;
-      output_.target.theta_ll_rad = kParams.hook_theta_target_rad;
-      output_.target.theta_lr_rad = kParams.hook_theta_target_rad;
-      break;
-    case wheel_legged::StairPhase::kReturn:
-      output_.target.leg_length_m = kParams.retract_leg_length_m;
+      output_.target.theta_ll_rad = kParams.retract_theta_target_rad;
+      output_.target.theta_lr_rad = kParams.retract_theta_target_rad;
       break;
     case wheel_legged::StairPhase::kSettle:
+      output_.target.leg_length_m = kParams.settle_leg_length_m;
+      output_.target.theta_ll_rad = kParams.settle_theta_target_rad;
+      output_.target.theta_lr_rad = kParams.settle_theta_target_rad;
+      break;
     case wheel_legged::StairPhase::kSucceeded:
+      output_.target.leg_length_m = kParams.settle_leg_length_m;
+      output_.target.theta_ll_rad = kParams.settle_theta_target_rad;
+      output_.target.theta_lr_rad = kParams.settle_theta_target_rad;
+      break;
     case wheel_legged::StairPhase::kAborted:
       output_.target.leg_length_m = kParams.settle_leg_length_m;
+      output_.target.theta_ll_rad = kParams.settle_theta_target_rad;
+      output_.target.theta_lr_rad = kParams.settle_theta_target_rad;
       break;
     case wheel_legged::StairPhase::kIdle:
     default:

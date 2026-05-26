@@ -588,6 +588,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                           state_output.current.theta_ll_dot);
       right_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_lr_rad, state_output.current.theta_lr,
                                            state_output.current.theta_lr_dot);
+      output_.theta_ll_target_rad = input.motion_target.theta_ll_rad;
+      output_.theta_lr_target_rad = input.motion_target.theta_lr_rad;
       t_bl_cmd = -left_stair_theta_pid_.out();
       t_br_cmd = -right_stair_theta_pid_.out();
     } else {

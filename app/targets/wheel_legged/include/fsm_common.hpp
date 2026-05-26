@@ -56,7 +56,6 @@ enum class StairPhase : uint8_t {
   kIdle = 0,
   kHook,
   kRetract,
-  kReturn,
   kSettle,
   kSucceeded,
   kAborted,
@@ -69,7 +68,6 @@ enum class StairAbortReason : uint8_t {
   kOutputDisabled,
   kHookTimeout,
   kRetractTimeout,
-  kReturnTimeout,
   kSettleTimeout,
 };
 
