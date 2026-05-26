@@ -178,6 +178,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_posture_valid;          // 姿态有效
   uint8_t chassis_off_ground;             // 离地
   uint8_t dm_enabled_latched;             // DM 电机使能锁存
+  uint8_t gimbal_motors_enabled_latched;   // 云台电机使能锁存
+  uint8_t motor_reenable_chassis_trig;     // 底盘电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t motor_reenable_gimbal_trig;      // 云台电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t dm_lf_online;                    // 左前 DM 电机在线状态 (Device::online_status)
+  uint8_t dm_lb_online;                    // 左后 DM 电机在线状态
+  uint8_t dm_rf_online;                    // 右前 DM 电机在线状态
+  uint8_t dm_rb_online;                    // 右后 DM 电机在线状态
+  uint8_t yaw_motor_online;                // 偏航电机在线状态
+  uint8_t pitch_motor_online;              // 俯仰电机在线状态
   float expected_theta_ll_rad;            // LQR 期望左腿摆角
   float expected_theta_lr_rad;            // LQR 期望右腿摆角
   float filtered_theta_ll_dot_rad_s;      // 滤波后左腿摆角速度
@@ -236,6 +245,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t referee_robot_id;        // 裁判系统上报的机器人 ID
   float referee_bullet_speed_mps;  // 最近一发弹丸初速度 [m/s]
   uint16_t referee_barrel_heat;    // 裁判系统上报的枪口热量（可对比 shoot_local_heat）
+  uint8_t referee_power_chassis;   // 裁判系统电源管理：底盘供电状态
+  uint8_t referee_power_gimbal;    // 裁判系统电源管理：云台供电状态
 
   // ── 超级电容 ──
   uint8_t supercap_enable_dcdc;           // 电容开启标志

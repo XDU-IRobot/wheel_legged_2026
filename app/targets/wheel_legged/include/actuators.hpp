@@ -110,7 +110,10 @@ class Actuators {
   }
 #endif
 
+  void ResetDmMotorsLatch() { dm_enabled_latched_ = false; }
   void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
+  bool dm_enabled_latched() const { return dm_enabled_latched_; }
+  bool gimbal_motors_enabled_latched() const { return gimbal_motors_enabled_latched_; }
 
   // ---------- 发射机构使能/失能 ----------
 

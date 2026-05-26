@@ -38,7 +38,6 @@ constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasH
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
-constexpr float kPositionFreezeSpeedThresholdMps = ns::control_loop::kPositionFreezeSpeedThresholdMps;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
@@ -111,6 +110,9 @@ void ControlLoop() {
   input.ui_refresh_key = tc_state.e_ui_refresh;
 
   wl_debug.tc_high_leg_hold = tc_state.high_leg_hold ? 1 : 0;
+
+  wl_debug.motor_reenable_chassis_trig = 0U;
+  wl_debug.motor_reenable_gimbal_trig = 0U;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
@@ -216,6 +218,28 @@ void ControlLoop() {
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
+  wl_debug.gimbal_motors_enabled_latched = g_actuators.gimbal_motors_enabled_latched() ? 1U : 0U;
+
+  // 云台电机心跳检测：全部 offline→online 边沿触发重使能
+  {
+    static bool prev_all_ok = false;
+    const bool yaw_ok = globals->yaw_motor.has_value() && globals->yaw_motor->online_status() == rm::device::Device::kOk;
+    const bool pitch_ok =
+        globals->pitch_motor.has_value() && globals->pitch_motor->online_status() == rm::device::Device::kOk;
+    const bool cur_all_ok = yaw_ok && pitch_ok;
+
+    wl_debug.yaw_motor_online = yaw_ok ? 1U : 0U;
+    wl_debug.pitch_motor_online = pitch_ok ? 1U : 0U;
+
+    if (cur_all_ok && !prev_all_ok && gimbal_control_output.gimbal_enabled) {
+      g_actuators.ResetGimbalMotorsLatch();
+      ctx.gimbal_startup_align_complete = false;
+      ctx.gimbal_startup_align_was_active = false;
+      ctx.gimbal_startup_align_stable_ticks = 0U;
+      wl_debug.motor_reenable_gimbal_trig = 1U;
+    }
+    prev_all_ok = cur_all_ok;
+  }
 
   // 辨识模式串口数据发送
   if (gimbal_control_output.ident_data_pending && gimbal_control_output.ident_tx_data != nullptr) {
@@ -560,7 +584,7 @@ void ControlLoop() {
   // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
   // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
   // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
-  //          filtered_s_dot 归零后 expected_s 冻结为位置锚点（I 项自然生效）。
+  //          filtered_s_dot 归零后保留轨迹终点为位置锚点，超出位移由 LQR 拉回。
   const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                  !now_is_standby && chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
@@ -570,9 +594,8 @@ void ControlLoop() {
   } else if (ctx.filtered_s_dot != 0.0f) {
     ctx.integrate_position = true;
     ctx.expected_s += ctx.filtered_s_dot * kControlLoopDtS;
-  } else if (ctx.integrate_position && std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps) {
-    // 速度斜坡刚走完，snap 锚点到实际停住的位置，然后冻结
-    ctx.expected_s = current_state.s;
+  } else if (ctx.integrate_position) {
+    // 速度斜坡已经结束，冻结减速轨迹终点而不是接受实际滑行位置。
     ctx.integrate_position = false;
   }
 
@@ -617,7 +640,7 @@ void ControlLoop() {
   // }
   //
   // if (ctx.landing_decel_active) {
-  //   const bool speed_low = std::fabs(current_state.s_dot) < kPositionFreezeSpeedThresholdMps;
+  //   const bool speed_low = std::fabs(current_state.s_dot) < ns::control_loop::kPositionFreezeSpeedThresholdMps;
   //   if (speed_low) {
   //     ctx.landing_stable_ticks++;
   //   } else {
@@ -754,6 +777,28 @@ void ControlLoop() {
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
+  wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
+
+  // 底盘电机心跳检测：全部 offline→online 边沿触发重使能
+  {
+    static bool prev_all_ok = false;
+    const bool lf_ok = globals->dm_lf.has_value() && globals->dm_lf->online_status() == rm::device::Device::kOk;
+    const bool lb_ok = globals->dm_lb.has_value() && globals->dm_lb->online_status() == rm::device::Device::kOk;
+    const bool rf_ok = globals->dm_rf.has_value() && globals->dm_rf->online_status() == rm::device::Device::kOk;
+    const bool rb_ok = globals->dm_rb.has_value() && globals->dm_rb->online_status() == rm::device::Device::kOk;
+    const bool cur_all_ok = lf_ok && lb_ok && rf_ok && rb_ok;
+
+    wl_debug.dm_lf_online = lf_ok ? 1U : 0U;
+    wl_debug.dm_lb_online = lb_ok ? 1U : 0U;
+    wl_debug.dm_rf_online = rf_ok ? 1U : 0U;
+    wl_debug.dm_rb_online = rb_ok ? 1U : 0U;
+
+    if (cur_all_ok && !prev_all_ok && chassis_output_enable) {
+      g_actuators.ResetDmMotorsLatch();
+      wl_debug.motor_reenable_chassis_trig = 1U;
+    }
+    prev_all_ok = cur_all_ok;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 8：自瞄通信 — 云台 IMU 欧拉角→CAN 转发
@@ -855,11 +900,17 @@ void ControlLoop() {
     wl_debug.referee_robot_id = globals->referee->data().robot_status.robot_id;
     wl_debug.referee_bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;
     wl_debug.referee_barrel_heat = globals->referee->data().power_heat_data.shooter_17mm_1_barrel_heat;
+    wl_debug.referee_power_chassis =
+        static_cast<uint8_t>(globals->referee->data().robot_status.power_management_chassis_output);
+    wl_debug.referee_power_gimbal =
+        static_cast<uint8_t>(globals->referee->data().robot_status.power_management_gimbal_output);
   } else {
     wl_debug.referee_online = 0U;
     wl_debug.referee_robot_id = 0U;
     wl_debug.referee_bullet_speed_mps = 0.0f;
     wl_debug.referee_barrel_heat = 0U;
+    wl_debug.referee_power_chassis = 0U;
+    wl_debug.referee_power_gimbal = 0U;
   }
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
