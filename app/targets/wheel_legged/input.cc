@@ -61,46 +61,75 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
   return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(axis_max_abs), -1.0f, 1.0f);
 }
 
+// 键盘输入斜坡：每周期向目标值步进，模拟摇杆的渐变效果
+// 0→1.0 约需 0.5s（500Hz 下 250 个周期）
+constexpr float kKeyboardRampStep = 0.004f;
+
+void RampToTarget(float target, float &current) {
+  if (current < target) {
+    current += kKeyboardRampStep;
+    if (current > target) current = target;
+  } else if (current > target) {
+    current -= kKeyboardRampStep;
+    if (current < target) current = target;
+  }
+}
+
+float ResolveKeyboardAxis(uint16_t keys, uint16_t key_pos, uint16_t key_neg, float &ramp_state) {
+  float target = 0.0f;
+  if ((keys & key_pos) != 0U) {
+    target = 1.0f;
+  } else if ((keys & key_neg) != 0U) {
+    target = -1.0f;
+  }
+  RampToTarget(target, ramp_state);
+  return ramp_state;
+}
+
 DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, bool dr16_parallel) {
   DriveInputNorm out{};
+  static float keyboard_forward = 0.0f;
+  static float keyboard_side = 0.0f;
 
   // VT03 键鼠 > DR16 键盘 > DR16 摇杆
   if (tc_remote.valid) {
     const uint16_t keys = tc_remote.keyboard_value;
-    if ((keys & kRcKeyW) != 0U) {
-      out.forward = 1.0f;
-    } else if ((keys & kRcKeyS) != 0U) {
-      out.forward = -1.0f;
-    }
-    if ((keys & kRcKeyD) != 0U) {
-      out.side = 1.0f;
-    } else if ((keys & kRcKeyA) != 0U) {
-      out.side = -1.0f;
-    }
-    // 并行模式（键盘空闲）或 DR16 回退：键鼠无输入时降级到 DR16 右摇杆
-    if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online &&
-        out.forward == 0.0f && out.side == 0.0f) {
-      out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-      out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+    out.forward = ResolveKeyboardAxis(keys, kRcKeyW, kRcKeyS, keyboard_forward);
+    out.side = ResolveKeyboardAxis(keys, kRcKeyD, kRcKeyA, keyboard_side);
+
+    // 键盘有输入时，斜坡生效；无输入时斜坡归零后才降级到摇杆
+    const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
+    if (!keyboard_active) {
+      // 等斜坡归零后再降级到摇杆，避免跳变
+      if (std::fabs(keyboard_forward) < kKeyboardRampStep && std::fabs(keyboard_side) < kKeyboardRampStep) {
+        keyboard_forward = 0.0f;
+        keyboard_side = 0.0f;
+        if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online) {
+          out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+          out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+        }
+      }
     }
   } else if (dr16.online) {
     // DR16 键盘 WASD
     const uint16_t keys = dr16.keyboard;
-    if ((keys & kRcKeyW) != 0U) {
-      out.forward = 1.0f;
-    } else if ((keys & kRcKeyS) != 0U) {
-      out.forward = -1.0f;
+    out.forward = ResolveKeyboardAxis(keys, kRcKeyW, kRcKeyS, keyboard_forward);
+    out.side = ResolveKeyboardAxis(keys, kRcKeyD, kRcKeyA, keyboard_side);
+
+    // 键盘无输入且斜坡归零后降级到摇杆
+    const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
+    if (!keyboard_active) {
+      if (std::fabs(keyboard_forward) < kKeyboardRampStep && std::fabs(keyboard_side) < kKeyboardRampStep) {
+        keyboard_forward = 0.0f;
+        keyboard_side = 0.0f;
+        out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+        out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+      }
     }
-    if ((keys & kRcKeyD) != 0U) {
-      out.side = 1.0f;
-    } else if ((keys & kRcKeyA) != 0U) {
-      out.side = -1.0f;
-    }
-    // 键盘无输入时降级到摇杆
-    if (out.forward == 0.0f && out.side == 0.0f) {
-      out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-      out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
-    }
+  } else {
+    // 无输入，重置斜坡状态
+    keyboard_forward = 0.0f;
+    keyboard_side = 0.0f;
   }
   return out;
 }
