@@ -424,6 +424,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.standby) {
         next_mode = State::kStandby;
       } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kStairClimbPitchStableMs) {
+        next_mode = State::kHighLeg;
       } else if (request.stair_climb_pitch_stable) {
         next_mode = State::kHighLeg;
       }
