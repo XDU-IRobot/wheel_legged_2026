@@ -62,8 +62,7 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
 }
 
 // 键盘输入斜坡：每周期向目标值步进，模拟摇杆的渐变效果
-// 0→1.0 约需 0.5s（500Hz 下 250 个周期）
-constexpr float kKeyboardRampStep = 0.004f;
+constexpr float kKeyboardRampStep = params::active::control_loop::kKeyboardRampStep;
 
 void RampToTarget(float target, float &current) {
   if (current < target) {
