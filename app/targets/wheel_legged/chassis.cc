@@ -102,6 +102,7 @@ bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm
 constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecoveryDecelZoneRad;
 constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
+constexpr float kJumpPushForceN = wheel_legged::params::active::chassis::kJumpPushForceN;
 
 /// 计算恢复减速比例：1.0=全速，接近目标边界时线性衰减到 0
 inline float RecoveryProximityScale(const float current_angle, const float target_boundary, const float decel_zone) {
@@ -377,7 +378,15 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
 
-  {
+  const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
+                              input.fsm_mode == Fsm::State::kJumpRecover);
+  if (is_jump_state) {
+    // Jump phase targets are commands and bypass normal leg-length ramping.
+    params_.leg_target_length_m = input.motion_target.leg_length_m;
+    smoothed_leg_target_length_m_ = input.motion_target.leg_length_m;
+    last_ramp_target_m_ = input.motion_target.leg_length_m;
+    ramp_step_per_tick_m_ = 0.0f;
+  } else {
     // 目标变化时重新计算斜坡步长，保证每次腿长切换都走完 kLegLengthRampTimeS
     if (input.motion_target.leg_length_m != last_ramp_target_m_) {
       const float initial_error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
@@ -533,8 +542,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
-      left_force_ = 250.0f + roll_pid_.out();
-      right_force_ = 250.0f - roll_pid_.out();
+      left_force_ = kJumpPushForceN + roll_pid_.out();
+      right_force_ = kJumpPushForceN - roll_pid_.out();
     } else if (use_jump_retract2) {
       left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
       right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);

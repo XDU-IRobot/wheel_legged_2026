@@ -445,6 +445,7 @@ constexpr PidGains kRightL0Pid{2500.0f, 0.f, 200.0f, 130.0f, 0.0f};  ///< 右腿
 constexpr PidGains kRollPid{1000.0f, 0.1f, 20.0f, 100.0f, 40.0f};    ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
+constexpr float kJumpPushForceN = 250.0f;  ///< 蹬伸阶段单腿基础支撑力 [N]
 constexpr PidGains kLeftL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};    ///< 左腿蹬伸 PID（JumpPush）
 constexpr PidGains kRightL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};   ///< 右腿蹬伸 PID（JumpPush）
 constexpr PidGains kLeftL0PidJumpThree{4000.0f, 0.f, 60.0f, 120.0f, 0.0f};   ///< 左腿回收 PID（JumpRecover）
@@ -952,6 +953,7 @@ constexpr PidGains kRightL0Pid{3000.0f, 0.f, 180.0f, 170.0f, 10.0f};  ///< 右�
 constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 180.0f, 0.0f};      ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
+constexpr float kJumpPushForceN = 200.0f;  ///< 蹬伸阶段单腿基础支撑力 [N]
 constexpr PidGains kLeftL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 250.0f, 0.0f};     ///< 左腿蹬伸 PID
 constexpr PidGains kRightL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 250.0f, 0.0f};    ///< 右腿蹬伸 PID
 constexpr PidGains kLeftL0PidJumpThree{2000.0f, 0.f, 100.0f, 170.0f, 30.0f};   ///< 左腿回收 PID
@@ -1461,6 +1463,7 @@ constexpr PidGains kRightL0Pid{2500.0f, 0.f, 200.0f, 170.0f, 30.0f};  ///< 右�
 constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 80.0f, 0.0f};       ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
+constexpr float kJumpPushForceN = 200.0f;  ///< 蹬伸阶段单腿基础支撑力 [N]
 constexpr PidGains kLeftL0PidJumpTwo{3500.0f, 0.0f, 300.0f, 180.0f, 0.0f};       ///< 左腿蹬伸 PID
 constexpr PidGains kRightL0PidJumpTwo{3000.0f, 0.0f, 300.0f, 180.0f, 0.0f};      ///< 右腿蹬伸 PID
 constexpr PidGains kLeftL0PidJumpThree{4000.0f, 0.15f, 400.0f, 170.0f, 30.0f};   ///< 左腿回收 PID
