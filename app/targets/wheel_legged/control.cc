@@ -251,7 +251,8 @@ void ControlLoop() {
   // 云台电机心跳检测：全部 offline→online 边沿触发重使能
   {
     static bool prev_all_ok = false;
-    const bool yaw_ok = globals->yaw_motor.has_value() && globals->yaw_motor->online_status() == rm::device::Device::kOk;
+    const bool yaw_ok =
+        globals->yaw_motor.has_value() && globals->yaw_motor->online_status() == rm::device::Device::kOk;
     const bool pitch_ok =
         globals->pitch_motor.has_value() && globals->pitch_motor->online_status() == rm::device::Device::kOk;
     const bool cur_all_ok = yaw_ok && pitch_ok;

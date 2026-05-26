@@ -194,15 +194,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_posture_valid;          // 姿态有效
   uint8_t chassis_off_ground;             // 离地
   uint8_t dm_enabled_latched;             // DM 电机使能锁存
-  uint8_t gimbal_motors_enabled_latched;   // 云台电机使能锁存
-  uint8_t motor_reenable_chassis_trig;     // 底盘电机重使能触发（心跳恢复脉冲，单周期）
-  uint8_t motor_reenable_gimbal_trig;      // 云台电机重使能触发（心跳恢复脉冲，单周期）
-  uint8_t dm_lf_online;                    // 左前 DM 电机在线状态 (Device::online_status)
-  uint8_t dm_lb_online;                    // 左后 DM 电机在线状态
-  uint8_t dm_rf_online;                    // 右前 DM 电机在线状态
-  uint8_t dm_rb_online;                    // 右后 DM 电机在线状态
-  uint8_t yaw_motor_online;                // 偏航电机在线状态
-  uint8_t pitch_motor_online;              // 俯仰电机在线状态
+  uint8_t gimbal_motors_enabled_latched;  // 云台电机使能锁存
+  uint8_t motor_reenable_chassis_trig;    // 底盘电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t motor_reenable_gimbal_trig;     // 云台电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t dm_lf_online;                   // 左前 DM 电机在线状态 (Device::online_status)
+  uint8_t dm_lb_online;                   // 左后 DM 电机在线状态
+  uint8_t dm_rf_online;                   // 右前 DM 电机在线状态
+  uint8_t dm_rb_online;                   // 右后 DM 电机在线状态
+  uint8_t yaw_motor_online;               // 偏航电机在线状态
+  uint8_t pitch_motor_online;             // 俯仰电机在线状态
   float expected_theta_ll_rad;            // LQR 期望左腿摆角
   float expected_theta_lr_rad;            // LQR 期望右腿摆角
   float filtered_theta_ll_dot_rad_s;      // 滤波后左腿摆角速度
