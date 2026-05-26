@@ -56,7 +56,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t stair_task_mode;          // Stair coordinator state
   uint8_t stair_requested_attempts;
   uint8_t stair_completed_attempts;
-  uint8_t stair_phase;              // Active sequence phase
+  uint8_t stair_phase;  // Active sequence phase
   uint8_t stair_abort_reason;
   float stair_target_leg_length_m;
   float stair_target_theta_ll_rad;
@@ -66,15 +66,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float stair_leg_length_error_m;
   uint32_t stair_phase_elapsed_ms;
   uint32_t stair_stable_elapsed_ms;
-  uint8_t reset_yaw_request;        // R键重置正方向请求
-  uint16_t tc_keyboard_value;       // 图传键盘按键位掩码
-  int16_t tc_mouse_x;               // 图传鼠标 X 增量
-  int16_t tc_mouse_y;               // 图传鼠标 Y 增量
-  uint8_t tc_left_button;           // 图传鼠标左键
-  uint8_t tc_right_button;          // 图传鼠标右键
-  uint8_t tc_ui_refresh_key;        // E 键按下（UI 刷新使能）
-  float gimbal_target_yaw_rad;      // 云台偏航目标
-  float gimbal_target_pitch_rad;    // 云台俯仰目标
+  uint8_t reset_yaw_request;      // R键重置正方向请求
+  uint16_t tc_keyboard_value;     // 图传键盘按键位掩码
+  int16_t tc_mouse_x;             // 图传鼠标 X 增量
+  int16_t tc_mouse_y;             // 图传鼠标 Y 增量
+  uint8_t tc_left_button;         // 图传鼠标左键
+  uint8_t tc_right_button;        // 图传鼠标右键
+  uint8_t tc_ui_refresh_key;      // E 键按下（UI 刷新使能）
+  float gimbal_target_yaw_rad;    // 云台偏航目标
+  float gimbal_target_pitch_rad;  // 云台俯仰目标
 
   // ── 关节电机原始反馈 ──
   float motor_raw_lf_pos_rad;    // 左前腿位置

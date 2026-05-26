@@ -120,15 +120,14 @@ void ControlLoop() {
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
   const auto &stair_params = ns::chassis_fsm::kStairClimb;
-  const bool stair_output_enabled =
-      input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled &&
-      !input.mode_request.standby;
+  const bool stair_output_enabled = input.mode_request.input_valid &&
+                                    input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled &&
+                                    !input.mode_request.standby;
   const bool stair_contact_detected =
       chassis_control_output.current_state.theta_ll > stair_params.contact_theta_threshold_rad &&
       chassis_control_output.current_state.theta_lr > stair_params.contact_theta_threshold_rad;
-  const bool stair_high_leg_ready =
-      std::fabs(chassis_control_output.mean_leg_length_m - stair_params.high_leg_length_m) <=
-      stair_params.leg_length_tolerance_m;
+  const bool stair_high_leg_ready = std::fabs(chassis_control_output.mean_leg_length_m -
+                                              stair_params.high_leg_length_m) <= stair_params.leg_length_tolerance_m;
   const auto &previous_sequence_output = g_stair_sequence.output();
   const auto &stair_task_output = g_stair_task_coordinator.Update({
       .request = input.mode_request.stair_task_request,
@@ -570,7 +569,7 @@ void ControlLoop() {
       (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
           ? kTargetSpeedBiasMidLegGMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg)  ? kTargetSpeedBiasMidLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kTargetSpeedBiasMidLegMps
       : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetSpeedBiasHighLegMps
           : 0.0f;

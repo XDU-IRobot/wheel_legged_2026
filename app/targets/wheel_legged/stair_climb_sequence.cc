@@ -65,9 +65,8 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
       Abort(wheel_legged::StairAbortReason::kCancelled, input.tick_ms);
     } else {
       const uint32_t elapsed_ms = input.tick_ms - phase_enter_tick_ms_;
-      const bool theta_stable =
-          std::fabs(input.theta_ll_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s &&
-          std::fabs(input.theta_lr_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s;
+      const bool theta_stable = std::fabs(input.theta_ll_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s &&
+                                std::fabs(input.theta_lr_dot_rad_s) <= kParams.theta_dot_tolerance_rad_s;
       switch (phase_) {
         case wheel_legged::StairPhase::kHook: {
           const bool at_target =

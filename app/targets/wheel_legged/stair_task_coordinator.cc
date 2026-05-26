@@ -88,7 +88,8 @@ const StairTaskCoordinator::Output &StairTaskCoordinator::Update(const Input &in
       break;
     case wheel_legged::StairTaskMode::kExecuting:
       if (input.sequence_aborted) {
-        Abort(input.sequence_abort_reason, input.sequence_abort_reason == wheel_legged::StairAbortReason::kPostureInvalid);
+        Abort(input.sequence_abort_reason,
+              input.sequence_abort_reason == wheel_legged::StairAbortReason::kPostureInvalid);
       } else if (input.sequence_succeeded) {
         ++completed_attempts_;
         output_.reset_sequence = true;

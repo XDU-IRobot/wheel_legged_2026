@@ -209,10 +209,10 @@ struct ChassisFsmInput {
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
   bool stair_task_active{false};                           ///< 上台阶任务处于待命或执行中
   bool stair_task_recovery_required{false};                ///< 台阶任务姿态异常，立即进入恢复
-  bool recovery_manual_mode{false};      ///< 倒地自启手动模式
-  float manual_left_leg_speed{0.0f};     ///< 手动模式左腿摆角速度目标 [rad/s]
-  float manual_right_leg_speed{0.0f};    ///< 手动模式右腿摆角速度目标 [rad/s]
-  uint32_t tick_ms{0};                   ///< 当前系统时间戳
+  bool recovery_manual_mode{false};                        ///< 倒地自启手动模式
+  float manual_left_leg_speed{0.0f};                       ///< 手动模式左腿摆角速度目标 [rad/s]
+  float manual_right_leg_speed{0.0f};                      ///< 手动模式右腿摆角速度目标 [rad/s]
+  uint32_t tick_ms{0};                                     ///< 当前系统时间戳
 };
 
 /**
