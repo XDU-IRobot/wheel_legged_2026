@@ -24,7 +24,8 @@ class Shoot {
   void Enable();
   void Disable();
   ShootOutput Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot = false);
+                     bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot = false,
+                     uint16_t referee_barrel_heat = 0);
 
   bool enabled() const { return enabled_; }
   uint32_t shot_count() const { return shot_count_; }

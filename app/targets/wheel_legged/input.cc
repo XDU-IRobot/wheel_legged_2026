@@ -61,15 +61,18 @@ float NormalizeDr16Axis(const int16_t axis, const int16_t axis_max_abs) {
   return rm::modules::Clamp(static_cast<float>(axis) / static_cast<float>(axis_max_abs), -1.0f, 1.0f);
 }
 
-// 键盘输入斜坡：每周期向目标值步进，模拟摇杆的渐变效果
-constexpr float kKeyboardRampStep = params::active::control_loop::kKeyboardRampStep;
+// 键盘输入斜坡：加速/减速使用不同步进
+constexpr float kKeyboardAccelRampStep = params::active::control_loop::kKeyboardAccelRampStep;
+constexpr float kKeyboardBrakeRampStep = params::active::control_loop::kKeyboardBrakeRampStep;
 
 void RampToTarget(float target, float &current) {
+  const bool magnitude_increasing = std::fabs(target) > std::fabs(current);
+  const float step = magnitude_increasing ? kKeyboardAccelRampStep : kKeyboardBrakeRampStep;
   if (current < target) {
-    current += kKeyboardRampStep;
+    current += step;
     if (current > target) current = target;
   } else if (current > target) {
-    current -= kKeyboardRampStep;
+    current -= step;
     if (current < target) current = target;
   }
 }
@@ -100,7 +103,7 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
     if (!keyboard_active) {
       // 等斜坡归零后再降级到摇杆，避免跳变
-      if (std::fabs(keyboard_forward) < kKeyboardRampStep && std::fabs(keyboard_side) < kKeyboardRampStep) {
+      if (std::fabs(keyboard_forward) < kKeyboardBrakeRampStep && std::fabs(keyboard_side) < kKeyboardBrakeRampStep) {
         keyboard_forward = 0.0f;
         keyboard_side = 0.0f;
         if (((dr16_parallel && tc_remote.keyboard_value == 0) || tc_remote.tc_from_dr16) && dr16.online) {
@@ -118,7 +121,7 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
     // 键盘无输入且斜坡归零后降级到摇杆
     const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
     if (!keyboard_active) {
-      if (std::fabs(keyboard_forward) < kKeyboardRampStep && std::fabs(keyboard_side) < kKeyboardRampStep) {
+      if (std::fabs(keyboard_forward) < kKeyboardBrakeRampStep && std::fabs(keyboard_side) < kKeyboardBrakeRampStep) {
         keyboard_forward = 0.0f;
         keyboard_side = 0.0f;
         out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);

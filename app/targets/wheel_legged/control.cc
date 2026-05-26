@@ -296,9 +296,11 @@ void ControlLoop() {
     const bool single_shot = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
                              input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
     wl_debug.shoot_single_shot_mode = single_shot ? 1U : 0U;
+    const uint16_t ref_barrel_heat =
+        ref_online ? globals->referee->data().power_heat_data.shooter_17mm_1_barrel_heat : 0U;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm, single_shot);
+                              in_combat, tc_state.fric_speed_target_rpm, single_shot, ref_barrel_heat);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
     wl_debug.shoot_dial_current = shoot_output.dial_current;

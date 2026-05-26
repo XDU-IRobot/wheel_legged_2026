@@ -28,8 +28,11 @@ void Shoot::Enable() { enabled_ = true; }
 void Shoot::Disable() { enabled_ = false; }
 
 ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_encoder, float dial_rpm, float dt,
-                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot) {
+                          bool fire_flag, bool shoot_enabled, float fric_speed_target_rpm, bool single_shot,
+                          uint16_t referee_barrel_heat) {
   ShootOutput out{};
+
+  const bool low_heat_mode = heat_limit_ < ns::kLowHeatLimitThreshold;
 
   if (shoot_enabled) {
     controller_.Enable(true);
@@ -50,7 +53,7 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
         // if (fire_flag) {
         flag1 = 1;
         controller_.SetMode(Shoot2Fric::kFullAuto);
-        controller_.SetShootFrequency(ns::kShootFrequencyHz);
+        controller_.SetShootFrequency(low_heat_mode ? ns::kLowHeatShootFrequencyHz : ns::kNormalShootFrequencyHz);
       } else {
         flag1 = 0;
         controller_.SetMode(Shoot2Fric::kStop);
@@ -80,24 +83,35 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
 
     if (fric_ready_ && (target_abs - left_abs > kDropThresholdRpm || target_abs - right_abs > kDropThresholdRpm)) {
       ++shot_count_;
-      current_heat_ += ns::kHeatPerShot;
+      if (low_heat_mode) {
+        current_heat_ += ns::kHeatPerShot;
+      }
       fric_ready_ = false;
     }
   }
 
-  // 本地热量闭环：冷却衰减与发射抑制
+  // 热量闭环：低热量上限时用本地计算，否则用裁判系统枪口热量
   {
-    current_heat_ -= static_cast<float>(cooling_rate_) * dt;
-    if (current_heat_ < 0.0f) {
-      current_heat_ = 0.0f;
+    float effective_heat;
+    if (low_heat_mode) {
+      // 本地热量闭环：冷却衰减
+      current_heat_ -= static_cast<float>(cooling_rate_) * dt;
+      if (current_heat_ < 0.0f) {
+        current_heat_ = 0.0f;
+      }
+      effective_heat = current_heat_;
+    } else {
+      effective_heat = static_cast<float>(referee_barrel_heat);
     }
 
     const float effective_limit = static_cast<float>(heat_limit_);
-    if (current_heat_ > effective_limit - ns::kHeatSafetyMargin) {
+    const float safety_margin = low_heat_mode ? ns::kLowHeatSafetyMargin : ns::kHeatSafetyMargin;
+    if ( effective_heat > effective_limit - safety_margin) {
       heat_suppressed_ = true;
-    } else {
+    }else {
       heat_suppressed_ = false;
     }
+
   }
 
   out.fric_left_current = std::clamp(controller_.output().fric_1, -16000.0f, 16000.0f);
