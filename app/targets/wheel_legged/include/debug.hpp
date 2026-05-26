@@ -40,21 +40,21 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint16_t dr16_keyboard;     // DR16 键盘按键位掩码
 
   // ── 遥控器/图传语义请求 ──
-  uint8_t input_domain_request;     // 解析后的工作域
-  uint8_t input_leg_profile;        // 腿长档位
-  uint8_t input_combat_profile;     // 战斗域子模式
-  uint8_t input_target_source;      // 目标来源
-  uint8_t input_host_target_valid;  // 上位机目标有效
-  uint8_t dr16_enable_request;      // 使能请求
-  uint8_t dr16_spin_request;        // 小陀螺请求
-  uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
-  uint8_t auto_jump_triggered;      // 自动跳跃触发（DYP 测距）
-  uint8_t auto_jump_enabled;        // 自动跳跃当前开关状态
+  uint8_t input_domain_request;       // 解析后的工作域
+  uint8_t input_leg_profile;          // 腿长档位
+  uint8_t input_combat_profile;       // 战斗域子模式
+  uint8_t input_target_source;        // 目标来源
+  uint8_t input_host_target_valid;    // 上位机目标有效
+  uint8_t dr16_enable_request;        // 使能请求
+  uint8_t dr16_spin_request;          // 小陀螺请求
+  uint8_t dr16_jump_trigger_edge;     // 跳跃触发边沿
+  uint8_t auto_jump_triggered;        // 自动跳跃触发（DYP 测距）
+  uint8_t auto_jump_enabled;          // 自动跳跃当前开关状态
   uint8_t auto_small_jump_triggered;  // 自动小跳已触发（锁存标志，G 键重置）
-  uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
-  uint8_t stair_task_request;       // Stair command parsed this cycle
-  uint8_t stair_task_mode;          // Stair coordinator state
+  uint8_t tc_remote_valid;            // 图传键鼠链路活跃（收到键盘帧）
+  uint8_t stair_high_leg_request;     // Stair coordinator requests high-leg standby
+  uint8_t stair_task_request;         // Stair command parsed this cycle
+  uint8_t stair_task_mode;            // Stair coordinator state
   uint8_t stair_requested_attempts;
   uint8_t stair_completed_attempts;
   uint8_t stair_phase;  // Active sequence phase

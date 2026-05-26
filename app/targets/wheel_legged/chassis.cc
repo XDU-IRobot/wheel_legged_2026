@@ -596,8 +596,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     rm::f32 t_bl_cmd;
     rm::f32 t_br_cmd;
 
-      t_bl_cmd = -base_torque_.t_bl;
-      t_br_cmd = -base_torque_.t_br;
+    t_bl_cmd = -base_torque_.t_bl;
+    t_br_cmd = -base_torque_.t_br;
 
     if (standup_phase_ == 0) {
       t_bl_cmd = 0;
@@ -611,12 +611,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
-    //if (use_jump_extend) {
-    //   output_.lb_tau = 45.f;
-    //   output_.lf_tau = -45.f;
-    //   output_.rb_tau = -45.f;
-    //   output_.rf_tau = 45.f;
-    // }
+    // if (use_jump_extend) {
+    //    output_.lb_tau = 45.f;
+    //    output_.lf_tau = -45.f;
+    //    output_.rb_tau = -45.f;
+    //    output_.rf_tau = 45.f;
+    //  }
   } else if (input.recovery_manual_mode) {
     // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
     left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);
