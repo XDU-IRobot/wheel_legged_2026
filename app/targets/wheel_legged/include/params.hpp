@@ -1148,8 +1148,12 @@ constexpr uint8_t kRobotId = 3U;                                     ///< 机器
 constexpr float kBulletSpeedMps = 23.0f;                             ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;                       ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 20.f;                      ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{50.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID
+// constexpr PidGains kYawPositionPid{50.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID
+// constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID
+// constexpr PidGains kPitchPositionPid{40.0f, 0.f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
+// constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID
+constexpr PidGains kYawPositionPid{30.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.45f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID
 constexpr PidGains kPitchPositionPid{40.0f, 0.f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID
 }  // namespace aimbot

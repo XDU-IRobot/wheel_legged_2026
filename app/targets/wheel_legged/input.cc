@@ -615,6 +615,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
                                        Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
+  const bool previous_host_target_active =
+      input.mode_request.target_source == wheel_legged::TargetSource::kHost && input.mode_request.host_target_valid;
+
   // 1. 从执行器采集关节/轮毂/IMU 反馈
   actuators.FillEstimatorInput(g, input.estimator_input);
 
@@ -732,17 +735,25 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   }
 
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
-  if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk && g.aimbot->nuc_start_flag() != 0 &&
-      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
-       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
-       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig)) {
+  const bool auto_aim_active = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+                               input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                               input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
+  const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
+                                     g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
+                                     g.aimbot->aimbot_target() != 0;
+  if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
+    // Host -> RC handover: take over from the current pose instead of returning to a stale manual target.
+    semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
+    semantic_state.rc_target.pitch_rad = -g.gimbal_rx->pitch_rad();
+    semantic_state.gimbal_target_initialized = true;
+    input.mode_request.rc_target = semantic_state.rc_target;
+  }
+  if (host_target_available) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    if (g.aimbot->aimbot_target() != 0) {
-      input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
-      input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
-      input.mode_request.host_target_valid = true;
-      input.mode_request.target_source = wheel_legged::TargetSource::kHost;
-    }
+    input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+    input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+    input.mode_request.host_target_valid = true;
+    input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
   flag = g.aimbot->aimbot_target();
 
