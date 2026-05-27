@@ -35,7 +35,7 @@ constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForw
 constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
 constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
 constexpr float kTargetSpeedBiasMidLegMps = ns::control_loop::kTargetSpeedBiasMidLegMps;
-constexpr float kTargetSpeedBiasMidLegGMps = ns::control_loop::kTargetSpeedBiasMidLegGMps;
+constexpr float kTargetSpeedBiasMidLegFMps = ns::control_loop::kTargetSpeedBiasMidLegFMps;
 constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasHighLegMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
@@ -562,13 +562,13 @@ void ControlLoop() {
   const float forward_speed_base =
       (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
           : kTargetForwardSpeedMaxMps;
   const float forward_speed_bias =
       (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_g)
-          ? kTargetSpeedBiasMidLegGMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
+          ? kTargetSpeedBiasMidLegFMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kTargetSpeedBiasMidLegMps
       : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetSpeedBiasHighLegMps
@@ -636,7 +636,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_g);
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
@@ -1020,7 +1020,7 @@ void ControlLoop() {
     ui_snapshot.standby = chassis_output.mode == chassis::Fsm::State::kStandby;
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
-    ui_snapshot.cross_active = input.mode_request.mid_leg_g;
+    ui_snapshot.cross_active = input.mode_request.mid_leg_f;
 
     ui_snapshot.supercap_cap_energy =
         globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;

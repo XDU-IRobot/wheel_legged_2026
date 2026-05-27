@@ -133,7 +133,7 @@ struct ModeRequest {
   ServiceProfile service_profile{
       ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
-  bool mid_leg_g{false};                       ///< G 键触发的中腿长（区分斜坡参数）
+  bool mid_leg_f{false};                       ///< F 键触发的 mid_leg_f 中腿长（慢速斜坡参数）
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 

@@ -45,11 +45,11 @@ constexpr uint16_t kRcKeyCtrl = 0x0020;
 constexpr uint16_t kRcKeyQ = 0x0040;
 constexpr uint16_t kRcKeyE = 0x0080;
 constexpr uint16_t kRcKeyR = 0x0100;
-constexpr uint16_t kRcKeyF = 0x0400;
+constexpr uint16_t kRcKeyF = 0x0200;
 constexpr uint16_t kRcKeyV = 0x4000;
 constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
-constexpr uint16_t kRcKeyG = 0x0200;
+constexpr uint16_t kRcKeyG = 0x0400;
 constexpr uint16_t kRcKeyZ = 0x0800;
 constexpr uint16_t kRcKeyX = 0x1000;
 
@@ -186,22 +186,20 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       r_yaw_reset_edge = true;
       const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
+      tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_c_armed = false;
     }
     if (!c_pressed) tc_state.mid_leg_c_armed = true;
 
-    // G 键：低腿长下切换自动小跳模式（超声波测距触发小跳）
-    const bool g_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    flag = g_pressed;
-    if (g_pressed && tc_state.auto_small_jump_armed) {
-      if (!tc_state.mid_leg_hold) {  // 仅在低腿长下允许切换
-        tc_state.auto_small_jump_enabled = !tc_state.auto_small_jump_enabled;
-      }
-      tc_state.auto_small_jump_armed = false;
+    // G 键（上升沿）：循环切换 aim_mode
+    const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
+    if (g_pressed && tc_state.g_aim_armed) {
+      tc_state.aim_mode = static_cast<TcSemanticState::AimMode>((static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
+      tc_state.g_aim_armed = false;
     }
-    if (!g_pressed) tc_state.auto_small_jump_armed = true;
+    if (!g_pressed) tc_state.g_aim_armed = true;
 
     // Q: disabled -> standby -> enabled -> disabled.
     const bool q_pressed = (tc_remote.keyboard_value & kRcKeyQ) != 0U;
@@ -216,6 +214,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (v_pressed && tc_state.v_high_leg_armed) {
       r_yaw_reset_edge = true;
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
       tc_state.v_high_leg_armed = false;
@@ -227,19 +226,22 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (b_pressed && tc_state.b_high_leg_armed) {
       r_yaw_reset_edge = true;
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
 
-    // F 键（上升沿）：循环切换 aim_mode
+    // F 键（上升沿）：切换 mid_leg_f 中腿长模式（慢速中腿长）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && tc_state.f_jump_armed) {
-      tc_state.aim_mode = static_cast<TcSemanticState::AimMode>((static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
-      tc_state.f_jump_armed = false;
+    if (f_pressed && tc_state.f_slow_armed) {
+      tc_state.mid_leg_f = !tc_state.mid_leg_f;
+      tc_state.mid_leg_hold = tc_state.mid_leg_f;
+      tc_state.auto_small_jump_enabled = false;
+      tc_state.f_slow_armed = false;
     }
-    if (!f_pressed) tc_state.f_jump_armed = true;
+    if (!f_pressed) tc_state.f_slow_armed = true;
 
     // R 键（上升沿）：云台转 180° + 底盘正方向切换
     const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
@@ -375,7 +377,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       if (!request.spin_hold) {
         if (dr16.dial >= kWheelSpinThreshold) {
           request.spin_hold = true;
-        } else if (dr16.dial <= -kWheelActionThreshold) {
+        } else if (dr16.dial <= -kWheelActionThreshold &&
+                   request.domain_request != wheel_legged::DomainRequest::kCombat) {
           request.spin_hold = true;
           request.spin_dir = -1.0f;
         }
@@ -463,11 +466,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       }
     }
 
-    // 小陀螺正/反转：辨识/验证模式下不响应拨轮
+    // 小陀螺正/反转：辨识/验证模式下不响应拨轮；战斗模式下禁用反转
     if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
       if (dr16.dial >= kWheelSpinThreshold) {
         request.spin_hold = true;
-      } else if (dr16.dial <= -kWheelActionThreshold) {
+      } else if (dr16.dial <= -kWheelActionThreshold &&
+                 request.domain_request != wheel_legged::DomainRequest::kCombat) {
         request.spin_hold = true;
         request.spin_dir = -1.0f;
       }
@@ -485,7 +489,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // DR16 高腿档保持自动台阶待命，松开档位后协调器会自动取消。
     request.stair_task_request = wheel_legged::StairTaskRequest::kArmContinuous;
   }
-  request.mid_leg_g = false;  // G 键已改为自动小跳模式，不再触发中腿长
+  request.mid_leg_f = tc_state.mid_leg_f;
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
       combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
     request.standby = true;
@@ -666,6 +670,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     if (prev_domain == wheel_legged::DomainRequest::kDisabled &&
         predicted_domain != wheel_legged::DomainRequest::kDisabled) {
       tc_state.mid_leg_hold = false;
+      tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       tc_state.aim_mode = TcSemanticState::AimMode::kAmmo;
     }

@@ -23,7 +23,7 @@ constexpr float kYawFollowDriveReadyErrorRad = params::active::control_loop::kYa
 constexpr float kYawFollowDriveReadyVelRadS = params::active::control_loop::kYawFollowDriveReadyVelRadS;
 constexpr SdotRampParams kSdotRampLowLeg = params::active::control_loop::kSdotRampLowLeg;
 constexpr SdotRampParams kSdotRampMidLeg = params::active::control_loop::kSdotRampMidLeg;
-constexpr SdotRampParams kSdotRampMidLegG = params::active::control_loop::kSdotRampMidLegG;
+constexpr SdotRampParams kSdotRampMidLegF = params::active::control_loop::kSdotRampMidLegF;
 constexpr SdotRampParams kSdotRampHighLeg = params::active::control_loop::kSdotRampHighLeg;
 
 }  // namespace
@@ -134,9 +134,9 @@ SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
   }
 }
 
-SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool mid_leg_g) {
-  if (mode == chassis::Fsm::State::kMidLeg && mid_leg_g) {
-    return kSdotRampMidLegG;
+SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool mid_leg_f) {
+  if (mode == chassis::Fsm::State::kMidLeg && mid_leg_f) {
+    return kSdotRampMidLegF;
   }
   return ResolveSdotRampParams(mode);
 }

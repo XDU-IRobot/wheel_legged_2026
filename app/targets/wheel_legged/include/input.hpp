@@ -99,14 +99,15 @@ struct Dr16SemanticState {
  */
 struct TcSemanticState {
   bool mid_leg_c_armed{true};         ///< C 键是否已就绪（上升沿检测）
-  bool auto_small_jump_armed{true};   ///< G 键是否已就绪（上升沿检测，自动小跳模式切换）
-  bool auto_small_jump_enabled{false};  ///< G 键触发的自动小跳模式（低腿长下超声波触发跳跃）
+  bool g_aim_armed{true};             ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
+  bool auto_small_jump_enabled{false};  ///< 自动小跳模式（低腿长下超声波触发跳跃）
   bool mid_leg_hold{false};           ///< 是否保持中腿长
+  bool mid_leg_f{false};              ///< F 键触发的 mid_leg_f 中腿长模式（慢速斜坡参数）
   bool q_domain_armed{true};          ///< Q 键是否已就绪（上升沿检测）
   uint8_t domain_state{0};            ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
   bool v_high_leg_armed{true};        ///< V 键是否已就绪（上升沿检测）
   bool b_high_leg_armed{true};        ///< B 键是否已就绪（上升沿检测）
-  bool f_jump_armed{true};            ///< F 键是否已就绪（上升沿检测）
+  bool f_slow_armed{true};            ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）
   bool dr16_parallel{false};          ///< DR16 是否并行生效
   bool z_fric_dec_armed{true};        ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
   bool x_fric_inc_armed{true};        ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）
