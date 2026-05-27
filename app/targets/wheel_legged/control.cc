@@ -104,6 +104,7 @@ void ControlLoop() {
   // 云台 C 板通信断开时强制退出中腿长保持
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
     tc_state.mid_leg_hold = false;
+    tc_state.stair_descend_hold = false;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -183,6 +184,7 @@ void ControlLoop() {
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
+      tc_state.stair_descend_hold = false;
       tc_state.auto_small_jump_enabled = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
@@ -615,21 +617,31 @@ void ControlLoop() {
   // }
 
   // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
-  // 正常行驶：expected_s 跟随 current_s，位移误差恒为零，仅速度 P 控制生效。
-  // 摇杆归中：expected_s 沿速度斜坡积分，平滑构建减速轨迹；
-  //          filtered_s_dot 归零后保留轨迹终点为位置锚点，超出位移由 LQR 拉回。
+  // 优先级从高到低：
+  //   1. 不可保持 / 驾驶员推杆 / 斜坡未走完 → 复位计数器，跟随 current_s（无位置误差）
+  //   2. 已锚定 → 保持冻结（跳过后续判断）
+  //   3. 斜坡归零但车速超阈值 → 递增超时计数器，超时强冻，否则继续跟随
+  //   4. 斜坡归零 且 车速低于阈值 → 正常冻结锚点
   const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
                                  !now_is_standby && chassis_output.mode != chassis::Fsm::State::kSpin;
   const bool driver_command_active = forward_input_active || side_input_active;
-  if (!can_hold_position || driver_command_active) {
+  if (!can_hold_position || driver_command_active || ctx.filtered_s_dot != 0.0f) {
+    ctx.position_hold_timeout_ticks = 0U;
     ctx.integrate_position = false;
     ctx.expected_s = current_state.s;
-  } else if (ctx.filtered_s_dot != 0.0f) {
-    ctx.integrate_position = true;
-    ctx.expected_s += ctx.filtered_s_dot * kControlLoopDtS;
   } else if (ctx.integrate_position) {
-    // 速度斜坡已经结束，冻结减速轨迹终点而不是接受实际滑行位置。
-    ctx.integrate_position = false;
+    // 已锚定（正常冻结或超时强冻）：保持不动
+  } else if (std::fabs(current_state.s_dot) > ns::control_loop::kPositionFreezeSpeedThresholdMps) {
+    // 斜坡归零但车速仍超标：等待物理静止或超时兜底
+    ctx.position_hold_timeout_ticks++;
+    if (ctx.position_hold_timeout_ticks >= ns::control_loop::kPositionHoldTimeoutTicks) {
+      ctx.integrate_position = true;  // 超时强冻
+    } else {
+      ctx.expected_s = current_state.s;  // 继续跟随，等待静止
+    }
+  } else {
+    ctx.position_hold_timeout_ticks = 0U;
+    ctx.integrate_position = true;  // 正常冻结：车速已低于阈值
   }
 
   // ── 7j. 纵向速度斜坡 ──
@@ -954,10 +966,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    //    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    //    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    //    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    //    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
+    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
+    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
+    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;

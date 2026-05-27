@@ -31,6 +31,7 @@ class Fsm {
     kRecoverySelfRight,
     kStairTask,
     kStandby,
+    kStairDescend,
   };
 
   /**
@@ -86,6 +87,7 @@ class Fsm {
   State mode_{State::kDisabled};
   wheel_legged::LegProfile requested_leg_profile_{wheel_legged::LegProfile::kLow};
   wheel_legged::LegProfile jump_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 触发跳跃时的腿长档位
+  bool stair_descend_retracted_{false};  ///< Hold minimum leg length after the edge is detected.
   uint32_t state_enter_tick_ms_{0};
   Output output_{};
 };

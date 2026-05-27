@@ -187,6 +187,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
       tc_state.mid_leg_f = false;
+      tc_state.stair_descend_hold = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_c_armed = false;
@@ -217,6 +218,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
+      tc_state.stair_descend_hold = false;
       tc_state.v_high_leg_armed = false;
     }
     if (!v_pressed) tc_state.v_high_leg_armed = true;
@@ -229,6 +231,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
+      tc_state.stair_descend_hold = false;
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
@@ -238,6 +241,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (f_pressed && tc_state.f_slow_armed) {
       tc_state.mid_leg_f = !tc_state.mid_leg_f;
       tc_state.mid_leg_hold = tc_state.mid_leg_f;
+      tc_state.stair_descend_hold = false;
       tc_state.auto_small_jump_enabled = false;
       tc_state.f_slow_armed = false;
     }
@@ -354,6 +358,25 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 小陀螺：Shift 键
     request.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
 
+    // Mouse wheel up toggles stair-descend mode. Entry uses the existing forward-reset path.
+    {
+      const bool mouse_z_trigger = tc_remote.mouse_z > 70;
+      const bool mouse_z_edge = mouse_z_trigger && tc_state.stair_descend_armed;
+      if (mouse_z_edge) {
+        const bool entering = !tc_state.stair_descend_hold;
+        tc_state.stair_descend_hold = entering;
+        if (entering) {
+          tc_state.mid_leg_hold = false;
+          tc_state.mid_leg_f = false;
+          tc_state.auto_small_jump_enabled = false;
+          request.stair_task_request = wheel_legged::StairTaskRequest::kCancel;
+          request.reset_yaw_request = true;
+        }
+      }
+      if (mouse_z_trigger) tc_state.stair_descend_armed = false;
+      if (tc_remote.mouse_z <= 0) tc_state.stair_descend_armed = true;
+    }
+
     // 跳跃：F 键（中腿）或鼠标滚轮下滚 < -70（低腿）
     // 鼠标滚轮边沿检测：下滚<-70触发后，须回到>=0才重新就绪，防止同一轮滚动重复触发
     {
@@ -362,7 +385,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool mouse_z_edge = mouse_z_trigger && s_mouse_z_armed;
       if (mouse_z_trigger) s_mouse_z_armed = false;
       if (tc_remote.mouse_z >= 0) s_mouse_z_armed = true;
-      request.jump_trigger = mouse_z_edge;
+      request.jump_trigger = mouse_z_edge && !tc_state.stair_descend_hold;
     }
 
     // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
@@ -483,6 +506,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.jump_trigger = false;
   }
 
+  request.stair_descend_active = tc_state.stair_descend_hold;
   request.leg_request = leg_request;
   if (leg_request == wheel_legged::LegProfile::kHigh &&
       request.stair_task_request == wheel_legged::StairTaskRequest::kNone) {
@@ -752,6 +776,8 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
   fsm_input.request = {
+      .stair_descend_active = m.stair_descend_active,
+      .theta_b_rad = chassis_output.current_state.theta_b,
       .input_valid = m.input_valid,
       .domain_request = m.domain_request,
       .leg_request = m.leg_request,
