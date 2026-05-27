@@ -28,7 +28,7 @@
 #ifndef LIBRM_DEVICE_REFEREE_USER_HPP
 #define LIBRM_DEVICE_REFEREE_USER_HPP
 
-#include "targets/wheel_legged/ui/protocol_user.hpp"
+#include "protocol_user.hpp"
 #include <librm.hpp>
 
 #include <cstring>
@@ -72,8 +72,7 @@ class RefereeUser final : public Device {
 
 namespace rm::device {
 template <typename T>
-[[nodiscard]] inline u8 Referee0x301Prepare(u8 *data, const u16 start_index, T &info, const u16 sender,
-                                            const u16 receiver) {
+[[nodiscard]] inline u8 Referee0x301Prepare(u8 *data, const u16 start_index, T &info, const u16 sender, const u16 receiver) {
   static u8 seq_ = 0;
   u16 index_ = start_index;
   data[index_++] = kRefProtocolHeaderSof;
