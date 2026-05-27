@@ -98,22 +98,22 @@ struct Dr16SemanticState {
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};         ///< C 键是否已就绪（上升沿检测）
-  bool g_aim_armed{true};             ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
+  bool mid_leg_c_armed{true};           ///< C 键是否已就绪（上升沿检测）
+  bool g_aim_armed{true};               ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
   bool auto_small_jump_enabled{false};  ///< 自动小跳模式（低腿长下超声波触发跳跃）
-  bool mid_leg_hold{false};           ///< 是否保持中腿长
-  bool mid_leg_f{false};              ///< F 键触发的 mid_leg_f 中腿长模式（慢速斜坡参数）
-  bool q_domain_armed{true};          ///< Q 键是否已就绪（上升沿检测）
-  uint8_t domain_state{0};            ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
-  bool v_high_leg_armed{true};        ///< V 键是否已就绪（上升沿检测）
-  bool b_high_leg_armed{true};        ///< B 键是否已就绪（上升沿检测）
-  bool f_slow_armed{true};            ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）
-  bool dr16_parallel{false};          ///< DR16 是否并行生效
-  bool z_fric_dec_armed{true};        ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
-  bool x_fric_inc_armed{true};        ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）
-  float fric_speed_target_rpm{0.0f};  ///< 摩擦轮目标转速 [rpm]（运行时可调，0 表示未初始化）
-  bool e_ui_refresh{false};           ///< E 键是否按下（UI 刷新控制）
-  bool auto_aim_hold{false};          ///< 鼠标右键按住时自瞄模式（电平有效）
+  bool mid_leg_hold{false};             ///< 是否保持中腿长
+  bool mid_leg_f{false};                ///< F 键触发的 mid_leg_f 中腿长模式（慢速斜坡参数）
+  bool q_domain_armed{true};            ///< Q 键是否已就绪（上升沿检测）
+  uint8_t domain_state{0};              ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
+  bool v_high_leg_armed{true};          ///< V 键是否已就绪（上升沿检测）
+  bool b_high_leg_armed{true};          ///< B 键是否已就绪（上升沿检测）
+  bool f_slow_armed{true};              ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）
+  bool dr16_parallel{false};            ///< DR16 是否并行生效
+  bool z_fric_dec_armed{true};          ///< Ctrl+Z 组合键是否已就绪（上升沿检测，摩擦轮减速）
+  bool x_fric_inc_armed{true};          ///< Ctrl+X 组合键是否已就绪（上升沿检测，摩擦轮升速）
+  float fric_speed_target_rpm{0.0f};    ///< 摩擦轮目标转速 [rpm]（运行时可调，0 表示未初始化）
+  bool e_ui_refresh{false};             ///< E 键是否按下（UI 刷新控制）
+  bool auto_aim_hold{false};            ///< 鼠标右键按住时自瞄模式（电平有效）
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
