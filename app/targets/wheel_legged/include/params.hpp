@@ -115,9 +115,13 @@ namespace remote_control_can_bridge {
 constexpr std::uint16_t kRxStdIdA = 0x110;  ///< CAN 帧 A 标准 ID（键鼠/云台 IMU 数据）
 constexpr std::uint16_t kRxStdIdB = 0x111;  ///< CAN 帧 B 标准 ID
 constexpr std::uint16_t kRxStdIdC = 0x112;  ///< CAN 帧 C 标准 ID（欧拉角）
+constexpr std::uint16_t kRxStdIdD = 0x113;  ///< CAN 帧 D 标准 ID（机器人血量）
+constexpr std::uint16_t kRxStdIdE = 0x114;  ///< CAN 帧 E 标准 ID（哨兵血量）
 constexpr std::size_t kPayloadSizeA = 8U;   ///< 帧 A 数据长度 [byte]
 constexpr std::size_t kPayloadSizeB = 8U;   ///< 帧 B 数据长度 [byte]
 constexpr std::size_t kPayloadSizeC = 8U;   ///< 帧 C 数据长度 [byte]
+constexpr std::size_t kPayloadSizeD = 8U;   ///< 帧 D 数据长度 [byte]
+constexpr std::size_t kPayloadSizeE = 2U;   ///< 帧 E 数据长度 [byte]
 }  // namespace remote_control_can_bridge
 
 }  // namespace common

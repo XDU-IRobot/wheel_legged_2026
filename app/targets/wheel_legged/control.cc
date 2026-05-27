@@ -1049,6 +1049,42 @@ void ControlLoop() {
       ui_snapshot.bullet_speed_mps = 0.0f;
       ui_snapshot.projectile_allowance = 0U;
     }
+
+    if (globals->gimbal_rx.has_value()) {
+      const auto &hp = globals->gimbal_rx->robot_hp();
+      ui_snapshot.hero_1_HP = hp.hero_1_HP;
+      ui_snapshot.engineer_2_HP = hp.engineer_2_HP;
+      ui_snapshot.standard_3_HP = hp.standard_3_HP;
+      ui_snapshot.standard_4_HP = hp.standard_4_HP;
+      ui_snapshot.sentry_7_HP = hp.sentry_7_HP;
+    } else {
+      ui_snapshot.hero_1_HP = 0;
+      ui_snapshot.engineer_2_HP = 0;
+      ui_snapshot.standard_3_HP = 0;
+      ui_snapshot.standard_4_HP = 0;
+      ui_snapshot.sentry_7_HP = 0;
+    }
+
+    if (globals->subReferee.has_value()) {
+      const auto &gold = globals->subReferee->data().enemy_gold_coin_RFID;
+      ui_snapshot.enemy_gold_remaining = gold.enemy_gold_remaining;
+      ui_snapshot.enemy_gold_total = gold.enemy_gold_total;
+
+      const auto &allow = globals->subReferee->data().enemy_robot_projectile_allowance;
+      ui_snapshot.enemy_hero_1_allowance = allow.hero_1_projectile_allowance;
+      ui_snapshot.enemy_standard_3_allowance = allow.standard_3_projectile_allowance;
+      ui_snapshot.enemy_standard_4_allowance = allow.standard_4_projectile_allowance;
+      ui_snapshot.enemy_drone_6_allowance = allow.drone_6_projectile_allowance;
+      ui_snapshot.enemy_sentry_7_allowance = allow.sentry_7_projectile_allowance;
+    } else {
+      ui_snapshot.enemy_gold_remaining = 0;
+      ui_snapshot.enemy_gold_total = 0;
+      ui_snapshot.enemy_hero_1_allowance = 0;
+      ui_snapshot.enemy_standard_3_allowance = 0;
+      ui_snapshot.enemy_standard_4_allowance = 0;
+      ui_snapshot.enemy_drone_6_allowance = 0;
+      ui_snapshot.enemy_sentry_7_allowance = 0;
+    }
   }
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output,

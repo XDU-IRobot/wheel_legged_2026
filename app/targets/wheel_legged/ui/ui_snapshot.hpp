@@ -33,6 +33,21 @@ struct UiSnapshot {
   float fw_raw_rpm_3{0.0f};
   float bullet_speed_mps{0.0f};
   uint16_t projectile_allowance{0};
+
+  uint16_t hero_1_HP{0};
+  uint16_t engineer_2_HP{0};
+  uint16_t standard_3_HP{0};
+  uint16_t standard_4_HP{0};
+  uint16_t sentry_7_HP{0};
+
+  uint16_t enemy_gold_remaining{0};
+  uint16_t enemy_gold_total{0};
+
+  uint16_t enemy_hero_1_allowance{0};
+  uint16_t enemy_standard_3_allowance{0};
+  uint16_t enemy_standard_4_allowance{0};
+  uint16_t enemy_drone_6_allowance{0};
+  uint16_t enemy_sentry_7_allowance{0};
 };
 
 inline UiSnapshot ui_snapshot{};
