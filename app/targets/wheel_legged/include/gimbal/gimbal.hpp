@@ -195,10 +195,14 @@ class Gimbal {
       float yaw_dq = 0.0f, pitch_dq = 0.0f;
       float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
       if (input.aimbot_mode) {
-        yaw_dq = -input.aimbot_yaw_vel;
-        pitch_dq = input.aimbot_pitch_vel;
-        yaw_ddq = -input.aimbot_yaw_acc;
-        pitch_ddq = input.aimbot_pitch_acc;
+        // yaw_dq = -input.aimbot_yaw_vel;
+        // pitch_dq = input.aimbot_pitch_vel;
+        // yaw_ddq = -input.aimbot_yaw_acc;
+        // pitch_ddq = input.aimbot_pitch_acc;
+        yaw_dq = 0.f;
+        pitch_dq = 0.f;
+        yaw_ddq = 0.f;
+        pitch_ddq = 0.f;
         ff_ready_ = false;
       } else {
         if (ff_ready_) {
@@ -224,16 +228,24 @@ class Gimbal {
       const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
       // const float pitch_q_enc = output_.pitch_target_rad ;
       const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
+      // const auto ff =
+      //     dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
       const auto ff =
           dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
 
       // 开前馈
+      // output_.yaw_cmd_torque_nm =
+      //     std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm =
           std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.pitch_cmd_torque_nm =
+      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 
       // 关前馈
       // output_.yaw_cmd_torque_nm =

@@ -98,6 +98,8 @@ struct Dr16SemanticState {
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
+  bool stair_descend_hold{false};       ///< Mouse-wheel-up toggled stair-descend mode.
+  bool stair_descend_armed{true};       ///< Mouse-wheel-up edge detector armed state.
   bool mid_leg_c_armed{true};           ///< C 键是否已就绪（上升沿检测）
   bool g_aim_armed{true};               ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
   bool auto_small_jump_enabled{false};  ///< 自动小跳模式（低腿长下超声波触发跳跃）

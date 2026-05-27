@@ -187,6 +187,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
       tc_state.mid_leg_f = false;
+      tc_state.stair_descend_hold = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_c_armed = false;
@@ -217,6 +218,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
+      tc_state.stair_descend_hold = false;
       tc_state.v_high_leg_armed = false;
     }
     if (!v_pressed) tc_state.v_high_leg_armed = true;
@@ -229,6 +231,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.mid_leg_f = false;
       tc_state.auto_small_jump_enabled = false;
       stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
+      tc_state.stair_descend_hold = false;
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
@@ -238,6 +241,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     if (f_pressed && tc_state.f_slow_armed) {
       tc_state.mid_leg_f = !tc_state.mid_leg_f;
       tc_state.mid_leg_hold = tc_state.mid_leg_f;
+      tc_state.stair_descend_hold = false;
       tc_state.auto_small_jump_enabled = false;
       tc_state.f_slow_armed = false;
     }
@@ -354,6 +358,25 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     // 小陀螺：Shift 键
     request.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
 
+    // Mouse wheel up toggles stair-descend mode. Entry uses the existing forward-reset path.
+    {
+      const bool mouse_z_trigger = tc_remote.mouse_z > 70;
+      const bool mouse_z_edge = mouse_z_trigger && tc_state.stair_descend_armed;
+      if (mouse_z_edge) {
+        const bool entering = !tc_state.stair_descend_hold;
+        tc_state.stair_descend_hold = entering;
+        if (entering) {
+          tc_state.mid_leg_hold = false;
+          tc_state.mid_leg_f = false;
+          tc_state.auto_small_jump_enabled = false;
+          request.stair_task_request = wheel_legged::StairTaskRequest::kCancel;
+          request.reset_yaw_request = true;
+        }
+      }
+      if (mouse_z_trigger) tc_state.stair_descend_armed = false;
+      if (tc_remote.mouse_z <= 0) tc_state.stair_descend_armed = true;
+    }
+
     // 跳跃：F 键（中腿）或鼠标滚轮下滚 < -70（低腿）
     // 鼠标滚轮边沿检测：下滚<-70触发后，须回到>=0才重新就绪，防止同一轮滚动重复触发
     {
@@ -362,7 +385,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool mouse_z_edge = mouse_z_trigger && s_mouse_z_armed;
       if (mouse_z_trigger) s_mouse_z_armed = false;
       if (tc_remote.mouse_z >= 0) s_mouse_z_armed = true;
-      request.jump_trigger = mouse_z_edge;
+      request.jump_trigger = mouse_z_edge && !tc_state.stair_descend_hold;
     }
 
     // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
@@ -483,6 +506,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.jump_trigger = false;
   }
 
+  request.stair_descend_active = tc_state.stair_descend_hold;
   request.leg_request = leg_request;
   if (leg_request == wheel_legged::LegProfile::kHigh &&
       request.stair_task_request == wheel_legged::StairTaskRequest::kNone) {
@@ -591,6 +615,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
                                        Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
+  const bool previous_host_target_active =
+      input.mode_request.target_source == wheel_legged::TargetSource::kHost && input.mode_request.host_target_valid;
+
   // 1. 从执行器采集关节/轮毂/IMU 反馈
   actuators.FillEstimatorInput(g, input.estimator_input);
 
@@ -708,17 +735,25 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   }
 
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
-  if (g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk && g.aimbot->nuc_start_flag() != 0 &&
-      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
-       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
-       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig)) {
+  const bool auto_aim_active = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
+                               input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+                               input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
+  const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
+                                     g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
+                                     g.aimbot->aimbot_target() != 0;
+  if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
+    // Host -> RC handover: take over from the current pose instead of returning to a stale manual target.
+    semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
+    semantic_state.rc_target.pitch_rad = -g.gimbal_rx->pitch_rad();
+    semantic_state.gimbal_target_initialized = true;
+    input.mode_request.rc_target = semantic_state.rc_target;
+  }
+  if (host_target_available) {
     constexpr float kDegToRad = params::active::kPi / 180.0f;
-    if (g.aimbot->aimbot_target() != 0) {
-      input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
-      input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
-      input.mode_request.host_target_valid = true;
-      input.mode_request.target_source = wheel_legged::TargetSource::kHost;
-    }
+    input.mode_request.host_target.yaw_rad = g.aimbot->yaw() * kDegToRad;
+    input.mode_request.host_target.pitch_rad = -g.aimbot->pitch() * kDegToRad;
+    input.mode_request.host_target_valid = true;
+    input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
   flag = g.aimbot->aimbot_target();
 
@@ -752,6 +787,8 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
   fsm_input.request = {
+      .stair_descend_active = m.stair_descend_active,
+      .theta_b_rad = chassis_output.current_state.theta_b,
       .input_valid = m.input_valid,
       .domain_request = m.domain_request,
       .leg_request = m.leg_request,

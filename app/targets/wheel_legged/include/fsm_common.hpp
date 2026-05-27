@@ -128,6 +128,7 @@ struct GimbalTarget {
  * @note  该结构是底盘 FSM 与云台 FSM 的共同输入，避免各模块直接解析遥控器原始量。
  */
 struct ModeRequest {
+  bool stair_descend_active{false};                        ///< Stair-descend mode toggled by mouse wheel up.
   bool input_valid{false};                                 ///< 输入源是否在线且可信
   DomainRequest domain_request{DomainRequest::kDisabled};  ///< 整车工作域
   ServiceProfile service_profile{
@@ -191,6 +192,8 @@ struct ModeRequest {
  * - kStairTask → kLowLeg: 台阶任务成功或受控终止
  */
 struct ChassisFsmInput {
+  bool stair_descend_active{false};                        ///< Stair-descend mode request.
+  float theta_b_rad{0.0f};                                 ///< Current body pitch for stair-descend detection.
   bool input_valid{false};                                 ///< 输入源是否在线且可信
   DomainRequest domain_request{DomainRequest::kDisabled};  ///< 整车工作域
   LegProfile leg_request{LegProfile::kLow};                ///< 腿长档位请求

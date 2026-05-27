@@ -34,6 +34,7 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   filtered_yaw_dot = 0.0f;
   yaw_follow_pid.Clear();
   integrate_position = false;
+  position_hold_timeout_ticks = 0U;
   yaw_follow_target_initialized = false;
   landing_decel_active = false;
   landing_theta_bias = 0.0f;
