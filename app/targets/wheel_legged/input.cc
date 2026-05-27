@@ -698,7 +698,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       s_distance_below_timer = 0.0f;
     }
     if (s_distance_below_timer >= kAutoJumpDistanceHoldTimeS) {
-      //input.mode_request.jump_trigger = true;
+      // input.mode_request.jump_trigger = true;
       input.mode_request.auto_jump_triggered = true;
       input.auto_small_jump_triggered = true;  // 锁存，供调试观察
       tc_state.auto_small_jump_enabled = false;
