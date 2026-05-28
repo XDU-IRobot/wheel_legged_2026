@@ -34,6 +34,7 @@ class Gimbal {
     bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
     bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
     bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
+    bool aimbot_is_rune{false};            ///< 是否是打符模式（小符/大符），单独使用打符 PID
     float aimbot_yaw_vel{0.0f};            ///< 自瞄目标偏航角速度 (rad/s)
     float aimbot_pitch_vel{0.0f};          ///< 自瞄目标俯仰角速度 (rad/s)
     float aimbot_yaw_acc{0.0f};            ///< 自瞄目标偏航角加速度 (rad/s^2)
@@ -179,11 +180,18 @@ class Gimbal {
       }
       last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
 
-      if (input.aimbot_mode != last_aimbot_mode_) {
+      if (input.aimbot_mode != last_aimbot_mode_ || input.aimbot_is_rune != last_aimbot_is_rune_) {
         ClearPid();
-        input.aimbot_mode ? ConfigureAimbotPid() : ConfigurePid();
+        if (!input.aimbot_mode) {
+          ConfigurePid();
+        } else if (input.aimbot_is_rune) {
+          ConfigureAimbotRunePid();
+        } else {
+          ConfigureAimbotPid();
+        }
       }
       last_aimbot_mode_ = input.aimbot_mode;
+      last_aimbot_is_rune_ = input.aimbot_is_rune;
 
       const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
       controller_.Enable(true);
@@ -325,6 +333,38 @@ class Gimbal {
         .SetMaxIout(pitch_spd.max_iout);
   }
 
+  /** @brief 配置自瞄打符双环 PID 参数 */
+  void ConfigureAimbotRunePid() {
+    const auto &yaw_pos = wheel_legged::params::active::aimbot::kYawPositionPidRune;
+    const auto &yaw_spd = wheel_legged::params::active::aimbot::kYawSpeedPidRune;
+    const auto &pitch_pos = wheel_legged::params::active::aimbot::kPitchPositionPidRune;
+    const auto &pitch_spd = wheel_legged::params::active::aimbot::kPitchSpeedPidRune;
+    controller_.pid()
+        .yaw_position.SetKp(yaw_pos.kp)
+        .SetKi(yaw_pos.ki)
+        .SetKd(yaw_pos.kd)
+        .SetMaxOut(yaw_pos.max_out)
+        .SetMaxIout(yaw_pos.max_iout);
+    controller_.pid()
+        .yaw_speed.SetKp(yaw_spd.kp)
+        .SetKi(yaw_spd.ki)
+        .SetKd(yaw_spd.kd)
+        .SetMaxOut(yaw_spd.max_out)
+        .SetMaxIout(yaw_spd.max_iout);
+    controller_.pid()
+        .pitch_position.SetKp(pitch_pos.kp)
+        .SetKi(pitch_pos.ki)
+        .SetKd(pitch_pos.kd)
+        .SetMaxOut(pitch_pos.max_out)
+        .SetMaxIout(pitch_pos.max_iout);
+    controller_.pid()
+        .pitch_speed.SetKp(pitch_spd.kp)
+        .SetKi(pitch_spd.ki)
+        .SetKd(pitch_spd.kd)
+        .SetMaxOut(pitch_spd.max_out)
+        .SetMaxIout(pitch_spd.max_iout);
+  }
+
   /** @brief 清空双环 PID 积分与历史状态 */
   void ClearPid() {
     controller_.pid().yaw_position.Clear();
@@ -335,6 +375,7 @@ class Gimbal {
 
   bool last_use_yaw_motor_feedback_{false};
   bool last_aimbot_mode_{false};
+  bool last_aimbot_is_rune_{false};
   bool last_ident_mode_active_{false};
 
   Gimbal2Dof controller_{};
