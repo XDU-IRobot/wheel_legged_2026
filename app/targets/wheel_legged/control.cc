@@ -31,6 +31,7 @@ using namespace wheel_legged::control_loop;
 constexpr float kControlLoopDtS = ns::control_loop::kControlLoopDtS;
 constexpr float kPi = ns::kPi;
 constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpeedMaxMps;
+constexpr float kTargetForwardSpeedMaxNoScMps = ns::control_loop::kTargetForwardSpeedMaxNoScMps;
 constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
 constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
 constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
@@ -40,9 +41,17 @@ constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasH
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
+constexpr float kYawFollowRampStepRadNoScS = ns::control_loop::kYawFollowRampStepRadNoScS;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
-constexpr float kSpinTargetYawDotRadS = ns::control_loop::kSpinTargetYawDotRadS;
+constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
+constexpr float kSpinTargetYawDotRadS2 = ns::control_loop::kSpinTargetYawDotRadS2;
+constexpr float kSpinTargetYawDotRadS3 = ns::control_loop::kSpinTargetYawDotRadS3;
+constexpr float kSpinTargetYawDotRadS4 = ns::control_loop::kSpinTargetYawDotRadS4;
+constexpr float kSpinTargetYawDotRadNoScS1 = ns::control_loop::kSpinTargetYawDotRadNoScS1;
+constexpr float kSpinTargetYawDotRadNoScS2 = ns::control_loop::kSpinTargetYawDotRadNoScS2;
+constexpr float kSpinTargetYawDotRadNoScS3 = ns::control_loop::kSpinTargetYawDotRadNoScS3;
+constexpr float kSpinTargetYawDotRadNoScS4 = ns::control_loop::kSpinTargetYawDotRadNoScS4;
 constexpr float kSpinExitYawAlignThresholdRad = ns::control_loop::kSpinExitYawAlignThresholdRad;
 constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
@@ -78,6 +87,18 @@ constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTarg
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
 chassis::StairClimbSequence g_stair_sequence{};
+
+/// 根据底盘功率限制返回小陀螺目标自旋角速度 [rad/s]
+/// ≤55W / 55-65W / 65-75W / >75W 四档
+/// kBuckBoost(bit2) 或 kShortCircuit(bit3) 置位时使用无超电档位
+constexpr uint8_t kScFatalMask = (1U << 2) | (1U << 3);
+float ResolveSpinTargetYawDot(uint16_t chassis_power_limit, uint8_t supercap_error_code) {
+  const bool has_supercap = (supercap_error_code & kScFatalMask) == 0;
+  if (chassis_power_limit <= 55) return has_supercap ? kSpinTargetYawDotRadS1 : kSpinTargetYawDotRadNoScS1;
+  if (chassis_power_limit <= 65) return has_supercap ? kSpinTargetYawDotRadS2 : kSpinTargetYawDotRadNoScS2;
+  if (chassis_power_limit <= 75) return has_supercap ? kSpinTargetYawDotRadS3 : kSpinTargetYawDotRadNoScS3;
+  return has_supercap ? kSpinTargetYawDotRadS4 : kSpinTargetYawDotRadNoScS4;
+}
 
 }  // namespace
 
@@ -229,6 +250,9 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
   gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  gimbal_update_input.aimbot_is_rune =
+      (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+       chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -569,12 +593,15 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
+  const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+  const bool has_supercap = (sc_err & kScFatalMask) == 0;
+  const float default_speed_max = has_supercap ? kTargetForwardSpeedMaxMps : kTargetForwardSpeedMaxNoScMps;
   const float forward_speed_base =
       (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
-          : kTargetForwardSpeedMaxMps;
+          : default_speed_max;
   const float forward_speed_bias =
       (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
@@ -762,7 +789,11 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.spin_exit_recovery = false;
     ctx.flip_180_in_progress = false;
-    RampYawDotToTarget(input.mode_request.spin_dir * kSpinTargetYawDotRadS, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
+    const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err);
+    RampYawDotToTarget(input.mode_request.spin_dir * spin_target, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
   } else if (ctx.flip_180_in_progress) {
     // R 键云台 180° 旋转中：抑制偏航跟随，等待云台旋转完成
@@ -803,7 +834,8 @@ void ControlLoop() {
     }
     ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad, ctx.filtered_yaw_dot, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
-    const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : kYawFollowRampStepRadS;
+    const float yaw_follow_step = has_supercap ? kYawFollowRampStepRadS : kYawFollowRampStepRadNoScS;
+    const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : yaw_follow_step;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
     // 退出小陀螺快速恢复：车体角速度降到 1 rad/s 以下切回正常斜坡
@@ -844,6 +876,9 @@ void ControlLoop() {
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
+  if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
+    g_actuators.ResetDmMotorsLatch();
+  }
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 

@@ -93,8 +93,25 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
   static float keyboard_forward = 0.0f;
   static float keyboard_side = 0.0f;
 
-  // VT03 键鼠 > DR16 键盘 > DR16 摇杆
-  if (tc_remote.valid) {
+  // DR16 优先 > VT03 键鼠 > DR16 摇杆
+  if (dr16.online) {
+    // DR16 键盘 WASD
+    const uint16_t keys = dr16.keyboard;
+    out.forward = ResolveKeyboardAxis(keys, kRcKeyW, kRcKeyS, keyboard_forward);
+    out.side = ResolveKeyboardAxis(keys, kRcKeyD, kRcKeyA, keyboard_side);
+
+    // 键盘无输入且斜坡归零后降级到摇杆
+    const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
+    if (!keyboard_active) {
+      if (std::fabs(keyboard_forward) < kKeyboardBrakeRampStep && std::fabs(keyboard_side) < kKeyboardBrakeRampStep) {
+        keyboard_forward = 0.0f;
+        keyboard_side = 0.0f;
+        out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
+        out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
+      }
+    }
+  } else if (tc_remote.valid) {
+    // VT03 键鼠（DR16 离线时的兜底）
     const uint16_t keys = tc_remote.keyboard_value;
     out.forward = ResolveKeyboardAxis(keys, kRcKeyW, kRcKeyS, keyboard_forward);
     out.side = ResolveKeyboardAxis(keys, kRcKeyD, kRcKeyA, keyboard_side);
@@ -110,22 +127,6 @@ DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &
           out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
           out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
         }
-      }
-    }
-  } else if (dr16.online) {
-    // DR16 键盘 WASD
-    const uint16_t keys = dr16.keyboard;
-    out.forward = ResolveKeyboardAxis(keys, kRcKeyW, kRcKeyS, keyboard_forward);
-    out.side = ResolveKeyboardAxis(keys, kRcKeyD, kRcKeyA, keyboard_side);
-
-    // 键盘无输入且斜坡归零后降级到摇杆
-    const bool keyboard_active = (keys & (kRcKeyW | kRcKeyS | kRcKeyA | kRcKeyD)) != 0U;
-    if (!keyboard_active) {
-      if (std::fabs(keyboard_forward) < kKeyboardBrakeRampStep && std::fabs(keyboard_side) < kKeyboardBrakeRampStep) {
-        keyboard_forward = 0.0f;
-        keyboard_side = 0.0f;
-        out.forward = NormalizeDr16Axis(dr16.right_y, kDr16AxisMaxAbs);
-        out.side = NormalizeDr16Axis(dr16.right_x, kDr16AxisMaxAbs);
       }
     }
   } else {
@@ -162,8 +163,8 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 
 void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
                            TcSemanticState &tc_state, InputSnapshot &input) {
-  // 严格优先级：CAN 桥/裁判系统（tc_remote）> DR16
-  // tc_remote 在线时，DR16 所有通道均被忽略，不混合来源。
+  // 严格优先级：DR16 > CAN 桥/裁判系统（tc_remote）
+  // DR16 在线时，tc_remote 所有通道均被忽略，不混合来源。
   const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
   const bool has_any_input = dr16.online || tc_remote.valid;
 
@@ -312,8 +313,78 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   wheel_legged::CombatProfile combat_profile = wheel_legged::CombatProfile::kNormal;
   wheel_legged::LegProfile leg_request = wheel_legged::LegProfile::kLow;
 
-  if (tc_remote_active) {
-    // ═══ 图传链路优先（CAN 桥 VT03 > 裁判系统 0x304）═══
+  if (dr16.online) {
+    // ═══ DR16 优先 ═══
+
+    // 左拨杆 kDown + 右拨杆的组合用于云台辨识/验证
+    if (dr16.switch_l == rm::device::DR16::SwitchPosition::kDown) {
+      if (dr16.switch_r == rm::device::DR16::SwitchPosition::kUp) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kIdent;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else if (dr16.switch_r == rm::device::DR16::SwitchPosition::kMid) {
+        request.domain_request = wheel_legged::DomainRequest::kService;
+        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kFfVerify;
+        leg_request = wheel_legged::LegProfile::kLow;
+      } else {
+        request.domain_request = wheel_legged::DomainRequest::kDisabled;
+        leg_request = wheel_legged::LegProfile::kLow;
+      }
+    } else {
+      request.domain_request = ResolveDomainRequest(dr16.switch_l);
+    }
+
+    // 腿长 + 战斗子模式：右拨杆
+    if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
+      switch (dr16.switch_r) {
+        case rm::device::DR16::SwitchPosition::kDown:
+          combat_profile = wheel_legged::CombatProfile::kNormal;
+          leg_request = wheel_legged::LegProfile::kLow;
+          break;
+        case rm::device::DR16::SwitchPosition::kMid:
+          combat_profile = wheel_legged::CombatProfile::kAutoAimAmmo;
+          leg_request = wheel_legged::LegProfile::kLow;
+          break;
+        case rm::device::DR16::SwitchPosition::kUp:
+          combat_profile = wheel_legged::CombatProfile::kAutoAimFuSmall;
+          leg_request = wheel_legged::LegProfile::kLow;
+          break;
+        default:
+          break;
+      }
+    } else if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
+      leg_request = ResolveLegProfile(dr16.switch_r);
+    }
+
+    // 鼠标右键按住时覆盖为自瞄模式（Ctrl+F/G 切换子模式）
+    if (tc_state.auto_aim_hold && request.domain_request == wheel_legged::DomainRequest::kCombat) {
+      switch (tc_state.aim_mode) {
+        case TcSemanticState::AimMode::kFuSmall:
+          combat_profile = wheel_legged::CombatProfile::kAutoAimFuSmall;
+          break;
+        case TcSemanticState::AimMode::kFuBig:
+          combat_profile = wheel_legged::CombatProfile::kAutoAimFuBig;
+          break;
+        case TcSemanticState::AimMode::kAmmo:
+        default:
+          combat_profile = wheel_legged::CombatProfile::kAutoAimAmmo;
+          break;
+      }
+    }
+
+    // 小陀螺正/反转：辨识/验证模式下不响应拨轮；战斗模式下禁用反转
+    if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
+      if (dr16.dial >= kWheelSpinThreshold) {
+        request.spin_hold = true;
+      } else if (dr16.dial <= -kWheelActionThreshold &&
+                 request.domain_request != wheel_legged::DomainRequest::kCombat) {
+        request.spin_hold = true;
+        request.spin_dir = -1.0f;
+      }
+    }
+
+  } else if (tc_remote_active) {
+    // ═══ 图传链路兜底（CAN 桥 VT03 > 裁判系统 0x304）═══
 
     // 战斗子模式：鼠标右键按住进入自瞄（Ctrl+F/G 切换子模式）
     if (tc_state.auto_aim_hold) {
@@ -388,26 +459,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       request.jump_trigger = mouse_z_edge && !tc_state.stair_descend_hold;
     }
 
-    // 并行模式：键盘空闲时 DR16 拨杆/拨轮接管，键盘有输入时忽略 DR16
-    const bool keyboard_idle = (tc_remote.keyboard_value == 0);
-    if (tc_state.dr16_parallel && dr16.online && keyboard_idle) {
-      if (request.domain_request == wheel_legged::DomainRequest::kDisabled) {
-        request.domain_request = ResolveDomainRequest(dr16.switch_l);
-      }
-      if (leg_request == wheel_legged::LegProfile::kLow) {
-        leg_request = ResolveLegProfile(dr16.switch_r);
-      }
-      if (!request.spin_hold) {
-        if (dr16.dial >= kWheelSpinThreshold) {
-          request.spin_hold = true;
-        } else if (dr16.dial <= -kWheelActionThreshold &&
-                   request.domain_request != wheel_legged::DomainRequest::kCombat) {
-          request.spin_hold = true;
-          request.spin_dir = -1.0f;
-        }
-      }
-    }
-
     // 手动倒地自启模式：A/D 控制左右腿正转，Ctrl+A/D 控制反转
     {
       const uint16_t keys = tc_remote.keyboard_value;
@@ -427,76 +478,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         } else if (d_held) {
           manual_right_leg_speed = kSpeed;
         }
-      }
-    }
-
-  } else if (dr16.online) {
-    // ═══ DR16 兜底 ═══
-
-    // 左拨杆 kDown + 右拨杆的组合用于云台辨识/验证
-    if (dr16.switch_l == rm::device::DR16::SwitchPosition::kDown) {
-      if (dr16.switch_r == rm::device::DR16::SwitchPosition::kUp) {
-        request.domain_request = wheel_legged::DomainRequest::kService;
-        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kIdent;
-        leg_request = wheel_legged::LegProfile::kLow;
-      } else if (dr16.switch_r == rm::device::DR16::SwitchPosition::kMid) {
-        request.domain_request = wheel_legged::DomainRequest::kService;
-        request.gimbal_test_profile = wheel_legged::GimbalTestProfile::kFfVerify;
-        leg_request = wheel_legged::LegProfile::kLow;
-      } else {
-        request.domain_request = wheel_legged::DomainRequest::kDisabled;
-        leg_request = wheel_legged::LegProfile::kLow;
-      }
-    } else {
-      request.domain_request = ResolveDomainRequest(dr16.switch_l);
-    }
-
-    // 腿长 + 战斗子模式：右拨杆
-    if (request.domain_request == wheel_legged::DomainRequest::kCombat) {
-      switch (dr16.switch_r) {
-        case rm::device::DR16::SwitchPosition::kDown:
-          combat_profile = wheel_legged::CombatProfile::kNormal;
-          leg_request = wheel_legged::LegProfile::kLow;
-          break;
-        case rm::device::DR16::SwitchPosition::kMid:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimAmmo;
-          leg_request = wheel_legged::LegProfile::kLow;
-          break;
-        case rm::device::DR16::SwitchPosition::kUp:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimFuSmall;
-          leg_request = wheel_legged::LegProfile::kLow;
-          break;
-        default:
-          break;
-      }
-    } else if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
-      leg_request = ResolveLegProfile(dr16.switch_r);
-    }
-
-    // 鼠标右键按住时覆盖为自瞄模式（Ctrl+F/G 切换子模式）
-    if (tc_state.auto_aim_hold && request.domain_request == wheel_legged::DomainRequest::kCombat) {
-      switch (tc_state.aim_mode) {
-        case TcSemanticState::AimMode::kFuSmall:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimFuSmall;
-          break;
-        case TcSemanticState::AimMode::kFuBig:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimFuBig;
-          break;
-        case TcSemanticState::AimMode::kAmmo:
-        default:
-          combat_profile = wheel_legged::CombatProfile::kAutoAimAmmo;
-          break;
-      }
-    }
-
-    // 小陀螺正/反转：辨识/验证模式下不响应拨轮；战斗模式下禁用反转
-    if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
-      if (dr16.dial >= kWheelSpinThreshold) {
-        request.spin_hold = true;
-      } else if (dr16.dial <= -kWheelActionThreshold &&
-                 request.domain_request != wheel_legged::DomainRequest::kCombat) {
-        request.spin_hold = true;
-        request.spin_dir = -1.0f;
       }
     }
 
@@ -544,7 +525,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.last_auto_aim = is_auto_aim;
   }
 
-  // ── 云台目标积分（优先级同上：tc_remote > DR16）──
+  // ── 云台目标积分（优先级同上：DR16 > tc_remote）──
   const bool is_auto_aim = (combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
                             combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
                             combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
@@ -568,8 +549,19 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     float yaw_delta = 0.0f;
     float pitch_delta = 0.0f;
-    if (tc_remote_active) {
-      // 图传鼠标（优先）
+    if (dr16.online) {
+      // DR16 鼠标（优先）
+      const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
+      if (dr16_mouse_active) {
+        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
+      } else {
+        // DR16 左摇杆
+        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+      }
+    } else if (tc_remote_active) {
+      // 图传鼠标（DR16 离线时的兜底）
       const float mouse_yaw =
           static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
       const float mouse_pitch =
@@ -578,21 +570,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       if (mouse_active) {
         yaw_delta += mouse_yaw;
         pitch_delta += mouse_pitch;
-      } else if (tc_state.dr16_parallel && dr16.online && tc_remote.keyboard_value == 0) {
-        // 鼠标静止 + 键盘空闲 + 并行模式 → 降级到 DR16 左摇杆
-        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
-      }
-    } else if (dr16.online) {
-      // DR16 鼠标（VT03 离线时的中间档）
-      const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
-      if (dr16_mouse_active) {
-        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
-      } else {
-        // DR16 左摇杆（兜底）
-        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
       }
     }
     semantic_state.rc_target.yaw_rad =
@@ -687,11 +664,11 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   {
     const bool tc_active = tc_remote.valid && !tc_remote.tc_from_dr16;
     wheel_legged::DomainRequest predicted_domain = wheel_legged::DomainRequest::kDisabled;
-    if (tc_active) {
+    if (dr16.online) {
+      predicted_domain = ResolveDomainRequest(dr16.switch_l);
+    } else if (tc_active) {
       predicted_domain =
           (tc_state.domain_state != 0) ? wheel_legged::DomainRequest::kCombat : wheel_legged::DomainRequest::kDisabled;
-    } else if (dr16.online) {
-      predicted_domain = ResolveDomainRequest(dr16.switch_l);
     }
     static wheel_legged::DomainRequest prev_domain = wheel_legged::DomainRequest::kDisabled;
     if (prev_domain == wheel_legged::DomainRequest::kDisabled &&

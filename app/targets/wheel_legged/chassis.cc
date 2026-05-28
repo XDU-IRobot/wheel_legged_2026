@@ -174,11 +174,6 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid_manual = wheel_legged::params::active::chassis::kRightLegTurnPidManual;
   init_pid(right_leg_turn_pid_manual_, right_leg_turn_pid_manual.kp, right_leg_turn_pid_manual.ki,
            right_leg_turn_pid_manual.kd, right_leg_turn_pid_manual.max_out, right_leg_turn_pid_manual.max_iout);
-  const auto &stair_theta_pid = wheel_legged::params::active::chassis_fsm::kStairClimb.theta_pid;
-  init_pid(left_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd, stair_theta_pid.max_out,
-           stair_theta_pid.max_iout);
-  init_pid(right_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd, stair_theta_pid.max_out,
-           stair_theta_pid.max_iout);
 
   left_stair_theta_pid_.SetCircular(true);
   right_stair_theta_pid_.SetCircular(true);
@@ -247,10 +242,13 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else if (input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kStairTask) {
       new_profile = wheel_legged::LegProfile::kHigh;
     }
+    static bool lqr_dirty_from_spin = false;
     if (input.fsm_mode == Fsm::State::kSpin) {
       UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPSpin));
-    } else if (new_profile != current_leg_profile_) {
+      lqr_dirty_from_spin = true;
+    } else if (new_profile != current_leg_profile_ || lqr_dirty_from_spin) {
       current_leg_profile_ = new_profile;
+      lqr_dirty_from_spin = false;
       switch (current_leg_profile_) {
         case wheel_legged::LegProfile::kLow:
           UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
@@ -508,7 +506,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected);
+  const rm::f32 displacement_bias = (input.fsm_mode == Fsm::State::kSpin)
+                                        ? 0.0f
+                                        : wheel_legged::params::active::control_loop::kExpectedDisplacementBiasM;
+  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
