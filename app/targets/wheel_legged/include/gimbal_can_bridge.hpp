@@ -60,7 +60,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
     } else if (msg->rx_std_id == kRxStdIdB && msg->dlc >= kPayloadSizeB) {
       mouse_x_ = UnpackI16(&msg->data[0]);
       mouse_y_ = UnpackI16(&msg->data[2]);
-      mouse_z_ = UnpackI16(&msg->data[4]);
+      // mouse_z_ = UnpackI16(&msg->data[4]);
+      mouse_z_ = 0;
       keyboard_value_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       kbd_frame_count_++;
