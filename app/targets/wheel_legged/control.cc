@@ -506,24 +506,32 @@ void ControlLoop() {
         (side_input_norm > 0.0f) ? YawFollowAlignMode::kSidePositive : YawFollowAlignMode::kSideNegative;
   }
 
-  // ── 7e. 偏航目标更新 ──
-  const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
+  // ── 7e. 偏航目标更新（每周期动态更新，前后方向自动选最近侧）──
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-  } else if (yaw_follow_mode_changed || !ctx.yaw_follow_target_initialized) {
-    ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
-    ctx.yaw_follow_target =
-        SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
-    ctx.yaw_follow_target_initialized = true;
-    ctx.yaw_follow_drive_ready = false;
-    ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-    if (!ctx.spin_exit_recovery) {
-      ctx.filtered_yaw_dot = 0.0f;
+  } else if (now_is_spin) {
+    // 自旋期间不更新偏航跟随目标
+  } else {
+    if (!ctx.yaw_follow_target_initialized) {
+      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
+      ctx.yaw_follow_target =
+          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
+      ctx.yaw_follow_target_initialized = true;
+      ctx.yaw_follow_drive_ready = false;
+      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+      if (!ctx.spin_exit_recovery) {
+        ctx.filtered_yaw_dot = 0.0f;
+      }
+      ctx.yaw_follow_pid.Clear();
+    } else {
+      // 每周期动态更新目标，自动选择离当前 yaw 最近的前后侧
+      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
+      ctx.yaw_follow_target =
+          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
     }
-    ctx.yaw_follow_pid.Clear();
   }
 
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
