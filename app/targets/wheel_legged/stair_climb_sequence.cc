@@ -68,8 +68,8 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
       switch (phase_) {
         case wheel_legged::StairPhase::kHook: {
           const bool at_target =
-              (input.theta_ll_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad &&
-              (input.theta_lr_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad;
+              std::fabs(input.theta_ll_rad - kParams.hook_theta_target_rad) <= kParams.hook_theta_tolerance_rad &&
+              std::fabs(input.theta_lr_rad - kParams.hook_theta_target_rad) <= kParams.hook_theta_tolerance_rad;
           if (StableFor(at_target, kParams.hook_stable_ms, input.tick_ms)) {
             EnterPhase(wheel_legged::StairPhase::kRetract, input.tick_ms);
           } else if (elapsed_ms >= kParams.hook_timeout_ms) {
