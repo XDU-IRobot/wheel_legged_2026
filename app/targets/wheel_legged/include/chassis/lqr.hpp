@@ -70,14 +70,15 @@ class WbrController {
   /**
    * @brief 单步控制解算
    */
-  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected) const {
+  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected,
+                                           rm::f32 displacement_bias_m = 0.0f) const {
     static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
 
     rm::f32 k_matrix[4][10]{};
     ComputeKMatrix(current.l_l, current.l_r, k_matrix);
 
     rm::f32 x_err[10]{};
-    x_err[0] = current.s - expected.s + 0.2f;
+    x_err[0] = current.s - expected.s + displacement_bias_m;
     x_err[1] = current.s_dot - expected.s_dot;
     x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi);
     x_err[3] = current.phi_dot - expected.phi_dot;
