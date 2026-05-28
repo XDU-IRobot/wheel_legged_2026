@@ -177,8 +177,8 @@ inline void dynamic3_crosshair_func() {
 inline void static4_func() {
   static rm::device::UIFigure1 static_4;
   if (globals->ui_refresh_key) {
-    static_4.figure1.fillRec("r2_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow, 3, 598, 836,
-                             1315, 870);
+    static_4.figure1.fillRec("r2_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow, 3, 598, 86,
+                             1315, 120);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -186,20 +186,42 @@ inline void static4_func() {
 }
 
 inline void dynamic_aimbot_box_func() {
-  static rm::device::UIFigure1 box;
+  static rm::device::UIFigure5 box;
   static bool added = false;
 
-  const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+  const bool has_target = globals->aimbot.has_value() && (globals->aimbot->aimbot_state() & 1) == 1;
   const auto color = has_target ? device::UIFigure::Color::Green : device::UIFigure::Color::White;
+
+  auto fill_hidden = [](rm::device::UIFigure &figure, const char *name, device::UIFigure::Operation op) {
+    figure.fillRec(name, op, 0, device::UIFigure::Color::Black, 1, 0, 0, 1, 1);
+  };
 
   if (globals->ui_refresh_key) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
+    if (has_target) {
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::RedBlue, 3, 790, 420,
+                                20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::White, 3, 790, 380,
+                                20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
+    } else {
+      fill_hidden(box.figure2, "ahp", device::UIFigure::Operation::Add);
+      fill_hidden(box.figure3, "aal", device::UIFigure::Operation::Add);
+    }
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
+    if (has_target) {
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790, 420,
+                                20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::White, 3, 790, 380,
+                                20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
+    } else {
+      fill_hidden(box.figure2, "ahp", device::UIFigure::Operation::Edit);
+      fill_hidden(box.figure3, "aal", device::UIFigure::Operation::Edit);
+    }
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -296,7 +318,7 @@ inline void dynamic2_func() {
     }
   }
 
-  int cap_len = 518 * ui_snapshot.supercap_cap_energy / 255;
+  int cap_len = 718 * ui_snapshot.supercap_cap_energy / 255;
   // int cap_len = 718;
   rm::device::UIFigure::Color cap_color;
   if (ui_snapshot.supercap_cap_energy / 255 < 0.4f) {
@@ -373,7 +395,7 @@ inline void dynamic2_func() {
   }
 
   if (globals->ui_refresh_key) {
-    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Add, 0, cap_color, 34, 598, 853, 698 + cap_len, 853);
+    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Add, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
     static_d2.figure2.fillLine("l2", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
     static_d2.figure3.fillLine("l3", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Cyan, 5, lm_x1,
@@ -391,7 +413,7 @@ inline void dynamic2_func() {
     globals_no_dtcm.referee_uart.Write(info, len, 50);
     added = true;
   } else if (added) {
-    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Edit, 0, cap_color, 34, 598, 853, 598 + cap_len, 853);
+    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Edit, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
     static_d2.figure2.fillLine("l2", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
     static_d2.figure3.fillLine("l3", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Cyan, 5, lm_x1,
@@ -446,7 +468,7 @@ inline void dynamic_status_func() {
   }
 
   {
-    const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+    const bool has_target = globals->aimbot.has_value() && (globals->aimbot->aimbot_state() & 1) == 1;
     device::UIFigure::Color am_color;
     if (ui_snapshot.auto_aim_hold) {
       am_color = has_target ? device::UIFigure::Color::Green : device::UIFigure::Color::Yellow;

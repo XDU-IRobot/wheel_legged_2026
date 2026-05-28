@@ -628,6 +628,7 @@ void ControlLoop() {
   if (!can_hold_position || driver_command_active || ctx.filtered_s_dot != 0.0f) {
     ctx.position_hold_timeout_ticks = 0U;
     ctx.integrate_position = false;
+    ctx.position_frozen_by_timeout = false;
     ctx.expected_s = current_state.s;
   } else if (ctx.integrate_position) {
     // 已锚定（正常冻结或超时强冻）：保持不动
@@ -636,12 +637,14 @@ void ControlLoop() {
     ctx.position_hold_timeout_ticks++;
     if (ctx.position_hold_timeout_ticks >= ns::control_loop::kPositionHoldTimeoutTicks) {
       ctx.integrate_position = true;  // 超时强冻
+      ctx.position_frozen_by_timeout = true;
     } else {
       ctx.expected_s = current_state.s;  // 继续跟随，等待静止
     }
   } else {
     ctx.position_hold_timeout_ticks = 0U;
     ctx.integrate_position = true;  // 正常冻结：车速已低于阈值
+    ctx.position_frozen_by_timeout = false;
   }
 
   // ── 7j. 纵向速度斜坡 ──
@@ -660,6 +663,7 @@ void ControlLoop() {
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
   wl_debug.filtered_s_dot_mps = ctx.filtered_s_dot;
+  wl_debug.position_frozen_by_timeout = ctx.position_frozen_by_timeout ? 1U : 0U;
   chassis_update_input.expected.phi = current_state.phi;
   chassis_update_input.expected.phi_dot = 0.0f;
 
@@ -982,7 +986,7 @@ void ControlLoop() {
   if (globals->aimbot.has_value()) {
     constexpr float kDegToRad = kPi / 180.0f;
     wl_debug.aimbot_rx_state = globals->aimbot->aimbot_state();
-    wl_debug.aimbot_rx_target = globals->aimbot->aimbot_target();
+    wl_debug.aimbot_rx_target = globals->aimbot->aimbot_id();
     wl_debug.aimbot_rx_nuc_start_flag = globals->aimbot->nuc_start_flag();
     wl_debug.aimbot_rx_yaw_rad = globals->aimbot->yaw() * kDegToRad;
     wl_debug.aimbot_rx_pitch_rad = globals->aimbot->pitch() * kDegToRad;
@@ -1096,6 +1100,47 @@ void ControlLoop() {
       ui_snapshot.enemy_standard_4_allowance = 0;
       ui_snapshot.enemy_drone_6_allowance = 0;
       ui_snapshot.enemy_sentry_7_allowance = 0;
+    }
+
+    if (globals->aimbot.has_value()) {
+      ui_snapshot.aimbot_id = globals->aimbot->aimbot_id();
+    } else {
+      ui_snapshot.aimbot_id = 0;
+    }
+
+    {
+      uint16_t target_hp = 0;
+      uint16_t target_allowance = 0;
+      if (globals->subReferee.has_value()) {
+        const auto &hp = globals->subReferee->data().enemy_robot_HP;
+        const auto &allow = globals->subReferee->data().enemy_robot_projectile_allowance;
+        switch (ui_snapshot.aimbot_id) {
+          case 1:
+            target_hp = hp.hero_1_HP;
+            target_allowance = allow.hero_1_projectile_allowance;
+            break;
+          case 2:
+            target_hp = hp.engineer_2_HP;
+            target_allowance = 0;
+            break;
+          case 3:
+            target_hp = hp.standard_3_HP;
+            target_allowance = allow.standard_3_projectile_allowance;
+            break;
+          case 4:
+            target_hp = hp.standard_4_HP;
+            target_allowance = allow.standard_4_projectile_allowance;
+            break;
+          case 5:
+            target_hp = hp.sentry_7_HP;
+            target_allowance = allow.sentry_7_projectile_allowance;
+            break;
+          default:
+            break;
+        }
+      }
+      ui_snapshot.aimbot_target_hp = target_hp;
+      ui_snapshot.aimbot_target_allowance = target_allowance;
     }
   }
 

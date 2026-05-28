@@ -2924,7 +2924,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">flag</member>
-			<member name="last_addr" type="uint32">0x20000D58</member>
+			<member name="last_addr" type="uint32">0x200010A0</member>
 			<member name="byte_size" type="sint32">1</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4247,7 +4247,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">pitch_motor_tau</member>
-			<member name="last_addr" type="uint32">0x20000C4C</member>
+			<member name="last_addr" type="uint32">0x20000F7C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4296,7 +4296,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">yaw_motor_tau</member>
-			<member name="last_addr" type="uint32">0x20000C48</member>
+			<member name="last_addr" type="uint32">0x20000F78</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4345,7 +4345,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">yaw_motor_pos</member>
-			<member name="last_addr" type="uint32">0x20000C50</member>
+			<member name="last_addr" type="uint32">0x20000F80</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4394,7 +4394,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">yaw_motor_vel</member>
-			<member name="last_addr" type="uint32">0x20000C58</member>
+			<member name="last_addr" type="uint32">0x20000F88</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4443,7 +4443,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">pitch_motor_pos</member>
-			<member name="last_addr" type="uint32">0x20000C54</member>
+			<member name="last_addr" type="uint32">0x20000F84</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4492,7 +4492,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">pitch_motor_vel</member>
-			<member name="last_addr" type="uint32">0x20000C5C</member>
+			<member name="last_addr" type="uint32">0x20000F8C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4541,7 +4541,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">x</member>
-			<member name="last_addr" type="uint32">0x20000854</member>
+			<member name="last_addr" type="uint32">0x20000880</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4590,7 +4590,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">y</member>
-			<member name="last_addr" type="uint32">0x20000858</member>
+			<member name="last_addr" type="uint32">0x20000884</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4639,7 +4639,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">s_ang</member>
-			<member name="last_addr" type="uint32">0x2000085C</member>
+			<member name="last_addr" type="uint32">0x20000888</member>
 			<member name="byte_size" type="sint32">2</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4688,7 +4688,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">e_ang</member>
-			<member name="last_addr" type="uint32">0x2000085E</member>
+			<member name="last_addr" type="uint32">0x2000088A</member>
 			<member name="byte_size" type="sint32">2</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4737,7 +4737,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">xx</member>
-			<member name="last_addr" type="uint32">0x20000860</member>
+			<member name="last_addr" type="uint32">0x2000088C</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -4786,7 +4786,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">yy</member>
-			<member name="last_addr" type="uint32">0x20000864</member>
+			<member name="last_addr" type="uint32">0x20000890</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -5031,7 +5031,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">left_</member>
-			<member name="last_addr" type="uint32">0x200007E4</member>
+			<member name="last_addr" type="uint32">0x200007F4</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -5080,7 +5080,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">right_</member>
-			<member name="last_addr" type="uint32">0x200007E8</member>
+			<member name="last_addr" type="uint32">0x200007F8</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -5227,7 +5227,7 @@
 			<member name="unit" type="string">unit</member>
 			<member name="period" type="sint32">0</member>
 			<member name="address" type="string">flag</member>
-			<member name="last_addr" type="uint32">0x20000D58</member>
+			<member name="last_addr" type="uint32">0x200010A0</member>
 			<member name="byte_size" type="sint32">4</member>
 			<member name="description" type="string"/>
 			<member name="comment" type="string"/>
@@ -6656,9 +6656,9 @@
 		</object>
 		<object name="ObjId0041" type="CPrjDoc_Hi509FileType"/>
 		<object name="ObjId0042" type="CObList">
-			<member name="item0" type="CObject_ptr">ObjId0966</member>
+			<member name="item0" type="CObject_ptr">ObjId0969</member>
 		</object>
-		<object name="ObjId0966" type="CPrjDoc_MapFileInfo">
+		<object name="ObjId0969" type="CPrjDoc_MapFileInfo">
 			<member name="file_name" type="string">..\..\..\..\build\Debug-infantry3\app\wheel_legged.elf</member>
 			<member name="file_type" type="CObject_ptr">ObjId0040</member>
 		</object>

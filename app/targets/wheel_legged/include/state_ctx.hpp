@@ -46,6 +46,7 @@ struct ChassisStateContext {
   // ── 位置保持（I 项）──
   bool integrate_position{false};  ///< 是否对期望纵向位置进行积分（速度目标归零后冻结为锚点）
   uint32_t position_hold_timeout_ticks{0U};  ///< 位置锚定超时计数器（斜坡归零后累积，超时强制冻结）
+  bool position_frozen_by_timeout{false};  ///< true=超时强冻, false=速度低于阈值正常冻结
 
   // ── 落地减速（离地→落地边沿触发）──
   bool landing_decel_active{false};        ///< 落地减速是否激活

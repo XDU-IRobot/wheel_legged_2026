@@ -740,7 +740,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
                                input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig;
   const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
                                      g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
-                                     g.aimbot->aimbot_target() != 0;
+                                     g.aimbot->aimbot_state() != 0;
   if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
     // Host -> RC handover: take over from the current pose instead of returning to a stale manual target.
     semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
@@ -755,7 +755,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     input.mode_request.host_target_valid = true;
     input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
-  flag = g.aimbot->aimbot_target();
+  flag = g.aimbot->aimbot_state();
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
