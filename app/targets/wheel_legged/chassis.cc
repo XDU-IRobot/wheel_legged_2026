@@ -166,11 +166,6 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid_manual = wheel_legged::params::active::chassis::kRightLegTurnPidManual;
   init_pid(right_leg_turn_pid_manual_, right_leg_turn_pid_manual.kp, right_leg_turn_pid_manual.ki,
            right_leg_turn_pid_manual.kd, right_leg_turn_pid_manual.max_out, right_leg_turn_pid_manual.max_iout);
-  const auto &stair_theta_pid = wheel_legged::params::active::chassis_fsm::kStairClimb.theta_pid;
-  init_pid(left_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd, stair_theta_pid.max_out,
-           stair_theta_pid.max_iout);
-  init_pid(right_stair_theta_pid_, stair_theta_pid.kp, stair_theta_pid.ki, stair_theta_pid.kd, stair_theta_pid.max_out,
-           stair_theta_pid.max_iout);
 
   left_stair_theta_pid_.SetCircular(true);
   right_stair_theta_pid_.SetCircular(true);
