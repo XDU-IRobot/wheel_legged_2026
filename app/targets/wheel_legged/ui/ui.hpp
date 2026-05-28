@@ -199,8 +199,8 @@ inline void dynamic_aimbot_box_func() {
   if (globals->ui_refresh_key) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
     if (has_target) {
-      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::RedBlue, 3, 790, 420,
-                                20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::RedBlue, 3, 790,
+                                420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
       box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::White, 3, 790, 380,
                                 20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
     } else {
@@ -214,10 +214,10 @@ inline void dynamic_aimbot_box_func() {
   } else if (added) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
     if (has_target) {
-      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790, 420,
-                                20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
-      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::White, 3, 790, 380,
-                                20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790,
+                                420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::White, 3, 790,
+                                380, 20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
     } else {
       fill_hidden(box.figure2, "ahp", device::UIFigure::Operation::Edit);
       fill_hidden(box.figure3, "aal", device::UIFigure::Operation::Edit);
