@@ -12,7 +12,7 @@ class AimbotCanCommunicator final : public CanDevice {
   ~AimbotCanCommunicator() override = default;
 
   [[nodiscard]] u8 aimbot_state() const;
-  [[nodiscard]] u8 aimbot_target() const;
+  [[nodiscard]] u8 aimbot_id() const;
   [[nodiscard]] f32 yaw() const;
   [[nodiscard]] f32 pitch() const;
   [[nodiscard]] u8 nuc_start_flag() const;
@@ -27,7 +27,7 @@ class AimbotCanCommunicator final : public CanDevice {
  private:
   // 收nuc
   u8 aimbot_state_{0};
-  u8 aimbot_target_{0};
+  u8 aimbot_id_{0};
   f32 yaw_{0};
   f32 pitch_{0};
   u8 nuc_start_flag_{0};

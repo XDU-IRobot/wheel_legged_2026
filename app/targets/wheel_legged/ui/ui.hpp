@@ -26,6 +26,12 @@ void dynamic3_func();
 void dynamic4_func();
 void dynamic_status_func();
 void dynamic_aimbot_box_func();
+void robot_hp_header_func();
+void robot_hp_func();
+void blue_robot_hp_header_func();
+void blue_robot_hp_func();
+void gold_coin_func();
+void enemy_allowance_func();
 inline auto schedule = rm::device::UITaskScheduler(30);
 inline auto UI_static1 = rm::device::UITask(static1_func, 0.5);
 inline auto UI_static2 = rm::device::UITask(static2_func, 0.5);
@@ -39,8 +45,15 @@ inline auto UI_dynamic3 = rm::device::UITask(dynamic3_func, 3);
 inline auto UI_dynamic4 = rm::device::UITask(dynamic4_func, 3);
 inline auto UI_dynamic_status = rm::device::UITask(dynamic_status_func, 3);
 inline auto UI_dynamic_aimbot_box = rm::device::UITask(dynamic_aimbot_box_func, 3);
+inline auto UI_robot_hp_header = rm::device::UITask(robot_hp_header_func, 0.5);
+inline auto UI_robot_hp = rm::device::UITask(robot_hp_func, 3);
+inline auto UI_blue_robot_hp_header = rm::device::UITask(blue_robot_hp_header_func, 0.5);
+inline auto UI_blue_robot_hp = rm::device::UITask(blue_robot_hp_func, 3);
+inline auto UI_gold_coin = rm::device::UITask(gold_coin_func, 3);
+inline auto UI_enemy_allowance = rm::device::UITask(enemy_allowance_func, 3);
 
 inline u8 robot_id() { return ui_snapshot.referee_robot_id; }
+inline bool is_red_team() { return robot_id() > 0 && robot_id() <= 100; }
 
 inline void calcPointC(double x1, double y1, double x2, double y2, double L1, double L2, int sel, float *x3_out,
                        float *y3_out) {
@@ -94,6 +107,12 @@ inline void ui_init() {
   schedule.addTask(&UI_dynamic3);
   schedule.addTask(&UI_dynamic4);
   schedule.addTask(&UI_dynamic_aimbot_box);
+  schedule.addTask(&UI_robot_hp_header);
+  schedule.addTask(&UI_robot_hp);
+  schedule.addTask(&UI_blue_robot_hp_header);
+  schedule.addTask(&UI_blue_robot_hp);
+  schedule.addTask(&UI_gold_coin);
+  schedule.addTask(&UI_enemy_allowance);
 }
 
 inline void static1_func() {
@@ -158,8 +177,8 @@ inline void dynamic3_crosshair_func() {
 inline void static4_func() {
   static rm::device::UIFigure1 static_4;
   if (globals->ui_refresh_key) {
-    static_4.figure1.fillRec("r2_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow, 3, 598, 836,
-                             1315, 870);
+    static_4.figure1.fillRec("r2_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow, 3, 598, 86,
+                             1315, 120);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -167,20 +186,42 @@ inline void static4_func() {
 }
 
 inline void dynamic_aimbot_box_func() {
-  static rm::device::UIFigure1 box;
+  static rm::device::UIFigure5 box;
   static bool added = false;
 
-  const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+  const bool has_target = globals->aimbot.has_value() && (globals->aimbot->aimbot_state() & 1) == 1;
   const auto color = has_target ? device::UIFigure::Color::Green : device::UIFigure::Color::White;
+
+  auto fill_hidden = [](rm::device::UIFigure &figure, const char *name, device::UIFigure::Operation op) {
+    figure.fillRec(name, op, 0, device::UIFigure::Color::Black, 1, 0, 0, 1, 1);
+  };
 
   if (globals->ui_refresh_key) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
+    if (has_target) {
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::RedBlue, 3, 790,
+                                420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::White, 3, 790, 380,
+                                20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
+    } else {
+      fill_hidden(box.figure2, "ahp", device::UIFigure::Operation::Add);
+      fill_hidden(box.figure3, "aal", device::UIFigure::Operation::Add);
+    }
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
     box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
+    if (has_target) {
+      box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790,
+                                420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
+      box.figure3.fillIntegrate("aal", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::White, 3, 790,
+                                380, 20, static_cast<i32>(ui_snapshot.aimbot_target_allowance));
+    } else {
+      fill_hidden(box.figure2, "ahp", device::UIFigure::Operation::Edit);
+      fill_hidden(box.figure3, "aal", device::UIFigure::Operation::Edit);
+    }
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, box, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
@@ -354,7 +395,7 @@ inline void dynamic2_func() {
   }
 
   if (globals->ui_refresh_key) {
-    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Add, 0, cap_color, 34, 598, 853, 598 + cap_len, 853);
+    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Add, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
     static_d2.figure2.fillLine("l2", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
     static_d2.figure3.fillLine("l3", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Cyan, 5, lm_x1,
@@ -372,7 +413,7 @@ inline void dynamic2_func() {
     globals_no_dtcm.referee_uart.Write(info, len, 50);
     added = true;
   } else if (added) {
-    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Edit, 0, cap_color, 34, 598, 853, 598 + cap_len, 853);
+    static_d2.figure1.fillLine("l1", device::UIFigure::Operation::Edit, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
     static_d2.figure2.fillLine("l2", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Cyan, 5, lb_x1,
                                lb_y1, lb_x2, lb_y2);
     static_d2.figure3.fillLine("l3", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Cyan, 5, lm_x1,
@@ -427,7 +468,7 @@ inline void dynamic_status_func() {
   }
 
   {
-    const bool has_target = globals->aimbot.has_value() && globals->aimbot->aimbot_target() == 1;
+    const bool has_target = globals->aimbot.has_value() && (globals->aimbot->aimbot_state() & 1) == 1;
     device::UIFigure::Color am_color;
     if (ui_snapshot.auto_aim_hold) {
       am_color = has_target ? device::UIFigure::Color::Green : device::UIFigure::Color::Yellow;
@@ -537,5 +578,124 @@ inline void dynamic4_func() {
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d4, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);
+  }
+}
+
+inline void robot_hp_header_func() {
+  if (!is_red_team()) return;
+  static rm::device::UICharacter hp_header;
+  if (globals->ui_refresh_key) {
+    hp_header.character.fillCharacter("Hed", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Orange, 6,
+                                      1170, 890, 24, 30);
+    memcpy(hp_header.data, "HRO1 ENG2 STD3 STD4 DRO6 SEN7", 30);
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, hp_header, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+  }
+}
+
+inline void robot_hp_func() {
+  if (!is_red_team()) return;
+  static rm::device::UIFigure5 hp_figures;
+  static bool added = false;
+  const auto op = globals->ui_refresh_key ? device::UIFigure::Operation::Add : device::UIFigure::Operation::Edit;
+
+  hp_figures.figure1.fillIntegrate("HP1", op, 0, device::UIFigure::Color::RedBlue, 4, 1170, 850, 20,
+                                   static_cast<i32>(ui_snapshot.hero_1_HP));
+  hp_figures.figure2.fillIntegrate("HP2", op, 0, device::UIFigure::Color::RedBlue, 4, 1290, 850, 20,
+                                   static_cast<i32>(ui_snapshot.engineer_2_HP));
+  hp_figures.figure3.fillIntegrate("HP3", op, 0, device::UIFigure::Color::RedBlue, 4, 1410, 850, 20,
+                                   static_cast<i32>(ui_snapshot.standard_3_HP));
+  hp_figures.figure4.fillIntegrate("HP4", op, 0, device::UIFigure::Color::RedBlue, 4, 1530, 850, 20,
+                                   static_cast<i32>(ui_snapshot.standard_4_HP));
+  hp_figures.figure5.fillIntegrate("HP5", op, 0, device::UIFigure::Color::RedBlue, 4, 1770, 850, 20,
+                                   static_cast<i32>(ui_snapshot.sentry_7_HP));
+
+  if (globals->ui_refresh_key || added) {
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, hp_figures, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  }
+}
+
+inline void blue_robot_hp_header_func() {
+  if (is_red_team()) return;
+  static rm::device::UICharacter hp_header;
+  if (globals->ui_refresh_key) {
+    hp_header.character.fillCharacter("Bhd", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Orange, 6,
+                                      55, 890, 24, 29);
+    memcpy(hp_header.data, "SEN7 DRO6 STD4 STD3 ENG2 HRO1", 29);
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, hp_header, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+  }
+}
+
+inline void blue_robot_hp_func() {
+  if (is_red_team()) return;
+  static rm::device::UIFigure5 hp_figures;
+  static bool added = false;
+  const auto op = globals->ui_refresh_key ? device::UIFigure::Operation::Add : device::UIFigure::Operation::Edit;
+
+  hp_figures.figure1.fillIntegrate("BH1", op, 0, device::UIFigure::Color::RedBlue, 4, 55, 850, 20,
+                                   static_cast<i32>(ui_snapshot.sentry_7_HP));
+  hp_figures.figure2.fillIntegrate("BH2", op, 0, device::UIFigure::Color::RedBlue, 4, 295, 850, 20,
+                                   static_cast<i32>(ui_snapshot.standard_4_HP));
+  hp_figures.figure3.fillIntegrate("BH3", op, 0, device::UIFigure::Color::RedBlue, 4, 415, 850, 20,
+                                   static_cast<i32>(ui_snapshot.standard_3_HP));
+  hp_figures.figure4.fillIntegrate("BH4", op, 0, device::UIFigure::Color::RedBlue, 4, 535, 850, 20,
+                                   static_cast<i32>(ui_snapshot.engineer_2_HP));
+  hp_figures.figure5.fillIntegrate("BH5", op, 0, device::UIFigure::Color::RedBlue, 4, 655, 850, 20,
+                                   static_cast<i32>(ui_snapshot.hero_1_HP));
+
+  if (globals->ui_refresh_key || added) {
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, hp_figures, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  }
+}
+
+inline void gold_coin_func() {
+  static rm::device::UIFigure2 gold_figures;
+  static bool added = false;
+  const auto op = globals->ui_refresh_key ? device::UIFigure::Operation::Add : device::UIFigure::Operation::Edit;
+
+  gold_figures.figure1.fillIntegrate("sco", op, 0, device::UIFigure::Color::RedBlue, 4, 988, 900, 18,
+                                     static_cast<i32>(ui_snapshot.enemy_gold_total));
+  gold_figures.figure2.fillIntegrate("cco", op, 0, device::UIFigure::Color::White, 4, 988, 865, 24,
+                                     static_cast<i32>(ui_snapshot.enemy_gold_remaining));
+
+  if (globals->ui_refresh_key || added) {
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, gold_figures, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  }
+}
+
+inline void enemy_allowance_func() {
+  if (!is_red_team()) return;
+  static rm::device::UIFigure5 allow_figures;
+  static bool added = false;
+  const auto op = globals->ui_refresh_key ? device::UIFigure::Operation::Add : device::UIFigure::Operation::Edit;
+
+  allow_figures.figure1.fillIntegrate("AL1", op, 0, device::UIFigure::Color::White, 4, 1170, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_hero_1_allowance));
+  allow_figures.figure2.fillIntegrate("AL2", op, 0, device::UIFigure::Color::White, 4, 1410, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_standard_3_allowance));
+  allow_figures.figure3.fillIntegrate("AL3", op, 0, device::UIFigure::Color::White, 4, 1530, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_standard_4_allowance));
+  allow_figures.figure4.fillIntegrate("AL4", op, 0, device::UIFigure::Color::White, 4, 1650, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_drone_6_allowance));
+  allow_figures.figure5.fillIntegrate("AL5", op, 0, device::UIFigure::Color::White, 4, 1770, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_sentry_7_allowance));
+
+  if (globals->ui_refresh_key || added) {
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, allow_figures, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
   }
 }

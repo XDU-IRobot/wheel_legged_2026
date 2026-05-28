@@ -196,6 +196,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_off_ground;             // 离地
   uint8_t dm_enabled_latched;             // DM 电机使能锁存
   uint8_t gimbal_motors_enabled_latched;  // 云台电机使能锁存
+  uint8_t position_frozen_by_timeout;     // 位置锚定原因: 0=速度低于阈值, 1=超时强冻
   uint8_t motor_reenable_chassis_trig;    // 底盘电机重使能触发（心跳恢复脉冲，单周期）
   uint8_t motor_reenable_gimbal_trig;     // 云台电机重使能触发（心跳恢复脉冲，单周期）
   uint8_t dm_lf_online;                   // 左前 DM 电机在线状态 (Device::online_status)

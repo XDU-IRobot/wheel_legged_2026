@@ -6,7 +6,7 @@ AimbotCanCommunicator::AimbotCanCommunicator(rm::hal::CanInterface &can) : CanDe
 
 u8 AimbotCanCommunicator::aimbot_state() const { return aimbot_state_; }
 
-u8 AimbotCanCommunicator::aimbot_target() const { return aimbot_target_; }
+u8 AimbotCanCommunicator::aimbot_id() const { return aimbot_id_; }
 
 f32 AimbotCanCommunicator::yaw() const { return yaw_; }
 
@@ -26,7 +26,7 @@ void AimbotCanCommunicator::RxCallback(const hal::CanFrame *msg) {
   if (msg->rx_std_id == 0x170) {
     ReportStatus(kOk);
     aimbot_state_ = static_cast<u8>(msg->data[0]);
-    aimbot_target_ = static_cast<u8>(msg->data[1]);
+    aimbot_id_ = static_cast<u8>(msg->data[1]);
     yaw_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[2]) << 8) | msg->data[3]));
     pitch_ = modules::F16ToF32(static_cast<modules::f16>((static_cast<uint16_t>(msg->data[4]) << 8) | msg->data[5]));
     nuc_start_flag_ = static_cast<u8>(msg->data[6]);

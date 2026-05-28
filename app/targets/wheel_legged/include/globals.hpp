@@ -18,6 +18,7 @@
 #include "utils/aimbot_can.hpp"
 #include "librm/device/supercap/gk_supercap.hpp"
 #include "librm/device/referee/referee.hpp"
+#include "../ui/referee_user.hpp"
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "gimbal/gimbal_ident.hpp"
@@ -57,10 +58,11 @@ struct SharedResources {
   std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
-  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV110>> referee{};  ///< 裁判系统串口w
-  std::optional<rm::device::GkSupercap> supercap{};                                     ///< 超级电容 (wheel_can)
-  std::optional<rm::device::DypA22> dyp_left{};                                         ///< DYP 左超声波 (UART8)
-  std::optional<rm::device::DypA22> dyp_right{};                                        ///< DYP 右超声波 (UART9)
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
+  std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
+  std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
+  std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
+  std::optional<rm::device::DypA22> dyp_right{};     ///< DYP 右超声波 (UART9)
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -171,6 +173,10 @@ struct SharedResources {
         }
       });
       no_dtcm->referee_uart.Start();
+    }
+    if (!subReferee.has_value()) {
+      subReferee.emplace(*referee);
+      referee->AttachCallback([this](rm::u16 cmd_id, rm::u8 seq) { subReferee->AttachCallback(cmd_id, seq); });
     }
     if (!supercap.has_value()) {
       supercap.emplace(*wheel_can);

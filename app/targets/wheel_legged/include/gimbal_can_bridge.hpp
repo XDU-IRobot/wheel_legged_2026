@@ -11,23 +11,38 @@
  * @brief 接收云台 GimbalToChassisTxBridge 转发的惯导 + VT03 键鼠 CAN 数据
  */
 
+struct EmyRobotHP {
+  rm::u16 hero_1_HP;
+  rm::u16 engineer_2_HP;
+  rm::u16 standard_3_HP;
+  rm::u16 standard_4_HP;
+  rm::u16 sentry_7_HP;
+};
+
 /**
  * @brief 云台→底盘 CAN 接收桥
  * @note  与云台端 GimbalToChassisTxBridge 协议一致：
  *        - 0x110: [0..1]vt03_online [2..3]gyro_z [4..5]gyro_x [6]mouse_left [7]mouse_right
  *        - 0x111: [0..1]mouse_x [2..3]mouse_y [4..5]mouse_z [6..7]keyboard_key
  *        - 0x112: [0-1]quat_w [2-3]quat_x [4-5]quat_y [6-7]quat_z  (int16, scale 32767)
+ *        - 0x113: [0-1]hero_1_HP [2-3]engineer_2_HP [4-5]standard_3_HP [6-7]standard_4_HP
+ *        - 0x114: [0-1]sentry_7_HP
  */
 class GimbalToChassisRxBridge final : public rm::device::CanDevice {
  public:
   static constexpr rm::u16 kRxStdIdA = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdA;
   static constexpr rm::u16 kRxStdIdB = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdB;
   static constexpr rm::u16 kRxStdIdC = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdC;
+  static constexpr rm::u16 kRxStdIdD = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdD;
+  static constexpr rm::u16 kRxStdIdE = wheel_legged::params::active::remote_control_can_bridge::kRxStdIdE;
   static constexpr rm::usize kPayloadSizeA = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeA;
   static constexpr rm::usize kPayloadSizeB = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeB;
   static constexpr rm::usize kPayloadSizeC = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeC;
+  static constexpr rm::usize kPayloadSizeD = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeD;
+  static constexpr rm::usize kPayloadSizeE = wheel_legged::params::active::remote_control_can_bridge::kPayloadSizeE;
 
-  explicit GimbalToChassisRxBridge(rm::hal::CanInterface &can) : CanDevice(can, kRxStdIdA, kRxStdIdB, kRxStdIdC) {}
+  explicit GimbalToChassisRxBridge(rm::hal::CanInterface &can)
+      : CanDevice(can, kRxStdIdA, kRxStdIdB, kRxStdIdC, kRxStdIdD, kRxStdIdE) {}
 
   void RxCallback(const rm::hal::CanFrame *msg) override {
     if (msg == nullptr) {
@@ -45,7 +60,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
     } else if (msg->rx_std_id == kRxStdIdB && msg->dlc >= kPayloadSizeB) {
       mouse_x_ = UnpackI16(&msg->data[0]);
       mouse_y_ = UnpackI16(&msg->data[2]);
-      mouse_z_ = UnpackI16(&msg->data[4]);
+      // mouse_z_ = UnpackI16(&msg->data[4]);
+      mouse_z_ = 0;
       keyboard_value_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       kbd_frame_count_++;
@@ -64,6 +80,17 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       euler_yaw_rad_ = euler[2];
       pitch_rad_ = euler_pitch_rad_;
       yaw_rad_ = euler_yaw_rad_;
+      frame_count_++;
+      ReportStatus(kOk);
+    } else if (msg->rx_std_id == kRxStdIdD && msg->dlc >= kPayloadSizeD) {
+      robot_hp_.hero_1_HP = UnpackU16(&msg->data[0]);
+      robot_hp_.engineer_2_HP = UnpackU16(&msg->data[2]);
+      robot_hp_.standard_3_HP = UnpackU16(&msg->data[4]);
+      robot_hp_.standard_4_HP = UnpackU16(&msg->data[6]);
+      frame_count_++;
+      ReportStatus(kOk);
+    } else if (msg->rx_std_id == kRxStdIdE && msg->dlc >= kPayloadSizeE) {
+      robot_hp_.sentry_7_HP = UnpackU16(&msg->data[0]);
       frame_count_++;
       ReportStatus(kOk);
     } else {
@@ -87,6 +114,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] rm::u16 keyboard_value() const { return keyboard_value_; }
   [[nodiscard]] rm::u32 frame_count() const { return frame_count_; }
   [[nodiscard]] rm::u32 keyboard_frame_count() const { return kbd_frame_count_; }
+  [[nodiscard]] const EmyRobotHP &robot_hp() const { return robot_hp_; }
 
  private:
   static rm::i16 UnpackI16(const rm::u8 *in) {
@@ -120,4 +148,5 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   rm::u16 keyboard_value_{0};
   rm::u32 frame_count_{0};
   rm::u32 kbd_frame_count_{0};
+  EmyRobotHP robot_hp_{};
 };
