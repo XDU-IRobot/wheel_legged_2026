@@ -776,7 +776,8 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.spin_exit_recovery = false;
     ctx.flip_180_in_progress = false;
-    const bool ref_online = globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
     const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
     const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err);
     RampYawDotToTarget(input.mode_request.spin_dir * spin_target, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
