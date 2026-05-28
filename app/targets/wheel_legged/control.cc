@@ -48,8 +48,15 @@ constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLegC;
+constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLegC;
+constexpr float kExpectedThetaLlBiasRadMidLegF = ns::control_loop::kExpectedThetaLlBiasRadMidLegF;
+constexpr float kExpectedThetaLrBiasRadMidLegF = ns::control_loop::kExpectedThetaLrBiasRadMidLegF;
+#else
 constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
 constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
+#endif
 constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
 constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
 constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
@@ -296,9 +303,7 @@ void ControlLoop() {
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
-    // const bool fire_flag = (globals->aimbot->aimbot_state() == 0 && manual_fire) ||
-    const bool fire_flag =
-        (manual_fire) || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+    const bool fire_flag =manual_fire|| (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                           (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
     globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
@@ -307,7 +312,7 @@ void ControlLoop() {
     wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
     wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
-    // rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+    rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -429,6 +434,9 @@ void ControlLoop() {
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.motion_target = stair_sequence_output.target;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
+#endif
   }
   chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;
@@ -731,6 +739,11 @@ void ControlLoop() {
     if (chassis_control_output.mid_leg_dip_active) {
       chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
       chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    } else if (input.mode_request.mid_leg_f) {
+      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLegF;
+      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLegF;
+#endif
     } else {
       chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
       chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
@@ -887,11 +900,16 @@ void ControlLoop() {
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
+
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    const float bullet_speed = 11.65;
+#else
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)
             ? referee_bullet_speed
             : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps
                                                                : ns::aimbot::kBulletSpeedMps);
+#endif
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 

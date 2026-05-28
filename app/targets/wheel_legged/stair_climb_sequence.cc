@@ -68,13 +68,21 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
       switch (phase_) {
         case wheel_legged::StairPhase::kHook: {
           const bool at_target =
-              (input.theta_ll_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad &&
-              (input.theta_lr_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad;
+              std::fabs(input.theta_ll_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad &&
+              std::fabs(input.theta_lr_rad - kParams.hook_theta_target_rad) >= kParams.hook_theta_tolerance_rad;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+          if (StableFor(at_target, kParams.hook_stable_ms, input.tick_ms)) {
+            EnterPhase(wheel_legged::StairPhase::kSucceeded, input.tick_ms);
+          } else if (elapsed_ms >= kParams.hook_timeout_ms) {
+            Abort(wheel_legged::StairAbortReason::kHookTimeout, input.tick_ms);
+          }
+#else
           if (StableFor(at_target, kParams.hook_stable_ms, input.tick_ms)) {
             EnterPhase(wheel_legged::StairPhase::kRetract, input.tick_ms);
           } else if (elapsed_ms >= kParams.hook_timeout_ms) {
             Abort(wheel_legged::StairAbortReason::kHookTimeout, input.tick_ms);
           }
+#endif
           break;
         }
         case wheel_legged::StairPhase::kRetract: {
@@ -120,7 +128,11 @@ void StairClimbSequence::UpdateOutput(const Input &input) {
   output_.aborted = phase_ == wheel_legged::StairPhase::kAborted;
   output_.controls_motion = output_.running || output_.succeeded || output_.aborted;
   output_.target = {};
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  output_.target.disable_wheel_torque = output_.controls_motion;
+#else
   output_.target.disable_wheel_torque = output_.running;
+#endif
   output_.target.use_stair_theta_controller = output_.controls_motion;
 
   switch (phase_) {
@@ -128,6 +140,9 @@ void StairClimbSequence::UpdateOutput(const Input &input) {
       output_.target.leg_length_m = kParams.hook_leg_length_m;
       output_.target.theta_ll_rad = kParams.hook_theta_target_rad;
       output_.target.theta_lr_rad = kParams.hook_theta_target_rad;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      output_.target.disable_leg_force = true;
+#endif
       break;
     case wheel_legged::StairPhase::kRetract:
       output_.target.leg_length_m = kParams.retract_leg_length_m;

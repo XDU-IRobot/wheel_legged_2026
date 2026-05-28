@@ -93,10 +93,11 @@ inline void ui_init() {
   schedule.addTask(&UI_static1);
 #else
   schedule.addTask(&UI_static_status);
+  schedule.addTask(&UI_static5);
 #endif
   schedule.addTask(&UI_static2);
   schedule.addTask(&UI_static4);
-  schedule.addTask(&UI_static5);
+
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   schedule.addTask(&UI_dynamic1);
 #else
@@ -197,7 +198,7 @@ inline void dynamic_aimbot_box_func() {
   };
 
   if (globals->ui_refresh_key) {
-    box.figure1.fillRec("r1_", device::UIFigure::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
+    box.figure1.fillRec("r1_", device::UIFigure::Operation::Add, 0, color, 3, 760, 536, 1129, 230);
     if (has_target) {
       box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::RedBlue, 3, 790,
                                 420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
@@ -212,7 +213,7 @@ inline void dynamic_aimbot_box_func() {
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
-    box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
+    box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 760, 536,1129, 230);
     if (has_target) {
       box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790,
                                 420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));
@@ -386,8 +387,14 @@ inline void dynamic2_func() {
   }
 
   {
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + 2.076f) * 57.3 - 30);
+    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + 2.076f) * 57.3 + 30);
+#else
     s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 - 30);
     e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 + 30);
+#endif
+
     if (s_ang < 0) s_ang += 360;
     if (e_ang < 0) e_ang += 360;
     if (s_ang > 360) s_ang -= 360;
@@ -510,22 +517,22 @@ inline void dynamic3_func() {
   static bool added = false;
   if (globals->ui_refresh_key) {
     static_d3.figure1.fillIntegrate("f1_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1750,
-                                    722, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_1));
+                                    532, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_1));
     static_d3.figure2.fillIntegrate("f2_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1750,
-                                    762, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_2));
+                                    562, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_2));
     static_d3.figure3.fillIntegrate("f3_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1750,
-                                    802, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
+                                    592, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 50);
     added = true;
   } else if (added) {
     static_d3.figure1.fillIntegrate("f1_", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Green, 3,
-                                    1750, 722, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_1));
+                                    1750, 532, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_1));
     static_d3.figure2.fillIntegrate("f2_", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Green, 3,
-                                    1750, 762, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_2));
+                                    1750, 562, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_2));
     static_d3.figure3.fillIntegrate("f3_", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Green, 3,
-                                    1750, 802, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
+                                    1750, 592, 20, static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 50);

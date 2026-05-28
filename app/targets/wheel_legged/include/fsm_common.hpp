@@ -80,6 +80,7 @@ struct ChassisMotionTarget {
   float theta_b_rad{0.0f};
   bool disable_wheel_torque{false};
   bool use_stair_theta_controller{false};
+  bool disable_leg_force{false};
 };
 
 /**
