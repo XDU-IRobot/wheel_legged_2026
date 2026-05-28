@@ -863,6 +863,9 @@ void ControlLoop() {
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
+  if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
+    g_actuators.ResetDmMotorsLatch();
+  }
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 
