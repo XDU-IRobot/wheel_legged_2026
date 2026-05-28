@@ -28,6 +28,7 @@ struct StairClimbParams {
   float contact_theta_threshold_rad;
   float hook_theta_target_rad;
   float retract_theta_target_rad;
+  float retract_theta_tolerance_rad;
   float hook_theta_tolerance_rad;
   float leg_length_tolerance_m;
   float theta_dot_tolerance_rad_s;
@@ -233,6 +234,7 @@ constexpr StairClimbParams kStairClimb{
     .contact_theta_threshold_rad = 0.40f,
     .hook_theta_target_rad = 1.35f,
     .retract_theta_target_rad = 1.3f,
+    .retract_theta_tolerance_rad = 0.2f,
     .hook_theta_tolerance_rad = 0.20f,
     .leg_length_tolerance_m = 0.01f,
     .theta_dot_tolerance_rad_s = 0.50f,
@@ -741,10 +743,11 @@ constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.33f,
     .hook_leg_length_m = 0.3f,
     .retract_leg_length_m = 0.1f,
-    .settle_leg_length_m = 0.15f,
+    .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = 0.f,
+    .hook_theta_target_rad = 1.1f,
+    .retract_theta_target_rad = -0.1f,
+    .retract_theta_tolerance_rad = 0.4f,
     .hook_theta_tolerance_rad = 0.1f,
     .leg_length_tolerance_m = 0.05f,
     .theta_dot_tolerance_rad_s = 0.50f,
@@ -754,11 +757,11 @@ constexpr StairClimbParams kStairClimb{
     .settle_pitch_dot_tolerance_rad_s = 0.50f,
     .settle_roll_tolerance_rad = 0.25f,
     .hook_stable_ms = 100U,
-    .retract_stable_ms = 50U,
-    .settle_stable_ms = 500U,
-    .hook_timeout_ms = 1000U,
-    .retract_timeout_ms = 500U,
-    .settle_timeout_ms = 3000U,
+    .retract_stable_ms = 200U,
+    .settle_stable_ms = 200U,
+    .hook_timeout_ms = 10000U,
+    .retract_timeout_ms = 10000U,
+    .settle_timeout_ms = 30000U,
     .theta_pid = {40.0f, 0.0f, 8.0f, 60.0f, 30.0f},
 };
 
@@ -1299,6 +1302,7 @@ constexpr StairClimbParams kStairClimb{
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 0.80f,
     .retract_theta_target_rad = 1.f,
+  .retract_theta_tolerance_rad = 0.2f,
     .hook_theta_tolerance_rad = 0.10f,
     .leg_length_tolerance_m = 0.02f,
     .theta_dot_tolerance_rad_s = 0.50f,
