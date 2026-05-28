@@ -222,6 +222,9 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
   gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  gimbal_update_input.aimbot_is_rune =
+      (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+       chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
