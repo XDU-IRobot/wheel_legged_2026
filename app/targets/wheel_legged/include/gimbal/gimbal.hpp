@@ -28,27 +28,27 @@ class Gimbal {
    * @brief 单次云台控制更新输入
    */
   struct UpdateInput {
-    DmMitMotor *yaw_motor{nullptr};        ///< 偏航 DM 电机对象
-    DmMitMotor *pitch_motor{nullptr};      ///< 俯仰 DM 电机对象
-    bool gimbal_enable{false};             ///< 是否使能云台输出
-    bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
-    bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
-    bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
-    bool aimbot_is_rune{false};            ///< 是否是打符模式（小符/大符），单独使用打符 PID
-    bool spin_hold{false};                 ///< 是否小陀螺模式，自瞄+小陀螺时使用另一套 PID
-    float spin_yaw_target_dot_rad_s{0.0f}; ///< 小陀螺目标自旋角速度，用于选择偏航偏置档位
-    float aimbot_yaw_vel{0.0f};            ///< 自瞄目标偏航角速度 (rad/s)
-    float aimbot_pitch_vel{0.0f};          ///< 自瞄目标俯仰角速度 (rad/s)
-    float aimbot_yaw_acc{0.0f};            ///< 自瞄目标偏航角加速度 (rad/s^2)
-    float aimbot_pitch_acc{0.0f};          ///< 自瞄目标俯仰角加速度 (rad/s^2)
-    wheel_legged::GimbalTarget target{};   ///< 云台角度目标
-    float chassis_yaw_rad{0.0f};           ///< 车体偏航角
-    float chassis_pitch_rad{0.0f};         ///< 车体俯仰角，用于俯仰重力补偿
-    float yaw_motor_rad{0.0f};             ///< 偏航电机编码器角度
-    float gimbal_imu_yaw_rad{0.0f};        ///< 云台惯导偏航角
-    float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
-    float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
-    float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
+    DmMitMotor *yaw_motor{nullptr};         ///< 偏航 DM 电机对象
+    DmMitMotor *pitch_motor{nullptr};       ///< 俯仰 DM 电机对象
+    bool gimbal_enable{false};              ///< 是否使能云台输出
+    bool align_to_chassis_forward{false};   ///< 是否对齐车体前方
+    bool use_yaw_motor_feedback{false};     ///< 是否用偏航电机编码器作为偏航反馈
+    bool aimbot_mode{false};                ///< 是否自瞄模式，切换 PID 参数
+    bool aimbot_is_rune{false};             ///< 是否是打符模式（小符/大符），单独使用打符 PID
+    bool spin_hold{false};                  ///< 是否小陀螺模式，自瞄+小陀螺时使用另一套 PID
+    float spin_yaw_target_dot_rad_s{0.0f};  ///< 小陀螺目标自旋角速度，用于选择偏航偏置档位
+    float aimbot_yaw_vel{0.0f};             ///< 自瞄目标偏航角速度 (rad/s)
+    float aimbot_pitch_vel{0.0f};           ///< 自瞄目标俯仰角速度 (rad/s)
+    float aimbot_yaw_acc{0.0f};             ///< 自瞄目标偏航角加速度 (rad/s^2)
+    float aimbot_pitch_acc{0.0f};           ///< 自瞄目标俯仰角加速度 (rad/s^2)
+    wheel_legged::GimbalTarget target{};    ///< 云台角度目标
+    float chassis_yaw_rad{0.0f};            ///< 车体偏航角
+    float chassis_pitch_rad{0.0f};          ///< 车体俯仰角，用于俯仰重力补偿
+    float yaw_motor_rad{0.0f};              ///< 偏航电机编码器角度
+    float gimbal_imu_yaw_rad{0.0f};         ///< 云台惯导偏航角
+    float gimbal_imu_pitch_rad{0.0f};       ///< 云台惯导俯仰角
+    float gimbal_imu_gyro_z_rad_s{0.0f};    ///< 云台惯导偏航角速度（替代偏航电机 vel）
+    float gimbal_imu_gyro_x_rad_s{0.0f};    ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
     float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
 
     /// 辨识/验证模式专用
