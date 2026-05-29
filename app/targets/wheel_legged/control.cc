@@ -15,6 +15,7 @@ float yaw_motor_pos, pitch_motor_pos;
 float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
 int times = 0;
+int id=0;
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -910,9 +911,7 @@ void ControlLoop() {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
     const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    // todo: hero和infantry不同？？
     const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
-    // const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {

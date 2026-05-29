@@ -11,7 +11,7 @@
 #include "include/actuators.hpp"
 #include "include/globals.hpp"
 #include "include/params.hpp"
-f32 flag;
+f32 flag1,flag2,flag3,f4,f5;
 namespace wheel_legged::control_loop {
 
 namespace {
@@ -292,6 +292,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   // 鼠标右键：按住时进入自瞄模式（电平有效，VT03 / DR16 均生效）
   tc_state.auto_aim_hold = tc_remote.right_button;
+  f5 = tc_remote.right_button;
 
   input.input_valid = has_any_input;
   input.dr16 = dr16;
@@ -732,7 +733,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     input.mode_request.host_target_valid = true;
     input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
-  flag = g.aimbot->aimbot_state();
+
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;
