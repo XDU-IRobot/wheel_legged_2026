@@ -288,6 +288,13 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       tc_state.z_hold_ms = 0.0f;
       tc_state.z_recovery_armed = true;
     }
+
+    // Z 键短按（无 Ctrl）：切换 AD 功能开关
+    if (z_pressed && !ctrl_pressed && tc_state.z_ad_armed) {
+      tc_state.ad_enabled = !tc_state.ad_enabled;
+      tc_state.z_ad_armed = false;
+    }
+    if (!z_pressed) tc_state.z_ad_armed = true;
   }
 
   // 鼠标右键：按住时进入自瞄模式（电平有效，VT03 / DR16 均生效）

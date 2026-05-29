@@ -260,7 +260,10 @@ inline void static_status_func() {
     case 1:
       status_line.character.fillCharacter("st2", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow,
                                           2, 740, 308, 20, 10);
-      memcpy(status_line.data, "SPIN CROSS", 10);
+      status_line.character.fillCharacter(
+          "sa2", device::UIFigure::Operation::Add, 0,
+          ui_snapshot.ad_active ? device::UIFigure::Color::Yellow : device::UIFigure::Color::Black, 2, 760, 308, 6, 10);
+      memcpy(status_line.data, "SPIN CROSS AD", 13);
       break;
     default:
       status_line.character.fillCharacter("st3", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow,

@@ -1608,18 +1608,18 @@ constexpr std::uint32_t kLandingDecelStableDurationMs = 400U;  ///< 落地减速
 
 constexpr float kYawFollowFixedTargetRad = 0.f;                 ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;           ///< 偏航跟随侧向目标偏置角 [rad]
-constexpr PidGains kYawFollowPid{20.f, 0.0f, 3.f, 8.0f, 0.0f};  ///< 偏航跟随 PID
+constexpr PidGains kYawFollowPid{28.f, 0.0f, 3.f, 8.0f, 0.0f};  ///< 偏航跟随 PID
 
 // ==== 期望状态偏置 ====
-constexpr float kExpectedThetaLlBiasRadLowLeg = 0.01f;     ///< 低腿长期望左腿摆角偏置 [rad]
-constexpr float kExpectedThetaLrBiasRadLowLeg = 0.01f;     ///< 低腿长期望右腿摆角偏置 [rad]
-constexpr float kExpectedThetaLlBiasRadMidLeg = 0.001f;    ///< 中腿长期望左腿摆角偏置 [rad]
-constexpr float kExpectedThetaLrBiasRadMidLeg = 0.001f;    ///< 中腿长期望右腿摆角偏置 [rad]
-constexpr float kExpectedThetaLlBiasRadHighLeg = 0.02f;    ///< 高腿长期望左腿摆角偏置 [rad]
-constexpr float kExpectedThetaLrBiasRadHighLeg = 0.02f;    ///< 高腿长期望右腿摆角偏置 [rad]
-constexpr float kExpectedThetaBBiasRad = 0.02f;            ///< 期望机体俯仰偏置 [rad]
-constexpr float kExpectedDisplacementBiasMLowLeg = 0.18f;  ///< 低腿长期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMMidLeg = 0.15f;  ///< 中腿长期望位移偏置 [m]
+constexpr float kExpectedThetaLlBiasRadLowLeg = -0.045f;  ///< 低腿长期望左腿摆角偏置 [rad]
+constexpr float kExpectedThetaLrBiasRadLowLeg = -0.045f;  ///< 低腿长期望右腿摆角偏置 [rad]
+constexpr float kExpectedThetaLlBiasRadMidLeg = -0.03f;   ///< 中腿长期望左腿摆角偏置 [rad]
+constexpr float kExpectedThetaLrBiasRadMidLeg = -0.03f;   ///< 中腿长期望右腿摆角偏置 [rad]
+constexpr float kExpectedThetaLlBiasRadHighLeg = -0.03f;  ///< 高腿长期望左腿摆角偏置 [rad]
+constexpr float kExpectedThetaLrBiasRadHighLeg = -0.03f;  ///< 高腿长期望右腿摆角偏置 [rad]
+constexpr float kExpectedThetaBBiasRad = -0.018f;         ///< 期望机体俯仰偏置 [rad]
+constexpr float kExpectedDisplacementBiasMLowLeg = 0.f;   ///< 低腿长期望位移偏置 [m]
+constexpr float kExpectedDisplacementBiasMMidLeg = 0.f;   ///< 中腿长期望位移偏置 [m]
 
 // ==== 速度斜坡参数 ====
 constexpr SdotRampParams kSdotRampLowLeg{0.0065f, 0.007f};   ///< 低腿长速度斜坡

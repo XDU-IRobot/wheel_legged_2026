@@ -492,6 +492,13 @@ void ControlLoop() {
   const bool tc_remote_active = input.tc_remote.valid;
   const bool has_drive_input = dr16_online || tc_remote_active;
 
+  // AD 屏蔽：AD 关闭时清除键盘 A/D 键位（小陀螺模式或 Z 键开启时不屏蔽）
+  if (!tc_state.ad_enabled && chassis_output.mode != chassis::Fsm::State::kSpin &&
+      chassis_output.mode != chassis::Fsm::State::kSpinExitPending) {
+    input.dr16.keyboard &= ~0x000Cu;
+    input.tc_remote.keyboard_value &= ~0x000Cu;
+  }
+
   const auto drive = ResolveDriveInput(input.dr16, input.tc_remote, tc_state.dr16_parallel);
   const float forward_input_norm = drive.forward;
   const float side_input_norm = drive.side;
@@ -1068,6 +1075,8 @@ void ControlLoop() {
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
+    ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
+                            chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
 
     ui_snapshot.supercap_cap_energy =
         globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
