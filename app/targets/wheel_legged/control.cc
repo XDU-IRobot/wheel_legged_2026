@@ -192,8 +192,7 @@ void ControlLoop() {
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
-  if (globals->referee.has_value() &&
-      globals->referee->online_status() == rm::device::Device::kOk &&
+  if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk &&
       globals->referee->data().robot_status.power_management_chassis_output == 0) {
     chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
   }

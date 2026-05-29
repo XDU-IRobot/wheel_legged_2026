@@ -990,8 +990,8 @@ constexpr PidGains kLeftL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};   ///< 左腿摆角速度 PID
-constexpr PidGains kRightLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};  ///< 右腿摆角速度 PID
+constexpr PidGains kLeftLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};         ///< 左腿摆角速度 PID
+constexpr PidGains kRightLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};        ///< 右腿摆角速度 PID
 constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
 constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
 
@@ -1716,10 +1716,10 @@ constexpr float kBulletSpeedMps = 23.0f;         ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;   ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 20.f;  ///< 区分裁判系统返回值是否正确7
 
-constexpr PidGains kYawPositionPid{70.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
+constexpr PidGains kYawPositionPid{70.0f, 0.f, 1.5f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄偏航速度 PID（打装甲板）
 constexpr PidGains kPitchPositionPid{40.0f, 1.f, 2.f, 30.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};   ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{60.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.55f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
