@@ -463,7 +463,7 @@ inline void dynamic_status_func() {
   }
 
   if (ui_snapshot.spin_active) {
-    fill_rect(status_frame.figure2, "mv_", op, 736,278, 832, 318);
+    fill_rect(status_frame.figure2, "mv_", op, 736, 278, 832, 318);
   } else if (ui_snapshot.cross_active) {
     fill_rect(status_frame.figure2, "mv_", op, 842, 278, 965, 318);
   } else {
