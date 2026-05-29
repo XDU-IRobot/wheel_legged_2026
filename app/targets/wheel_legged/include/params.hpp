@@ -763,13 +763,13 @@ constexpr StairClimbParams kStairClimb{
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.1f,
-    .retract_theta_target_rad = 0.f,
-    .retract_theta_tolerance_rad = 0.4f,
+    .hook_theta_target_rad = 1.f,
+    .retract_theta_target_rad = -0.2f,
+    .retract_theta_tolerance_rad = 0.3f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
     .settle_theta_tolerance_rad = 0.3f,
-    .settle_theta_target_rad = 0.f,
+    .settle_theta_target_rad = -0.2f,
     .hook_stable_ms = 100U,
     .retract_stable_ms = 200U,
     .settle_stable_ms = 200U,
@@ -990,8 +990,8 @@ constexpr PidGains kLeftL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{15.0f, 2.f, 0.0f, 25.0f, 10.0f};   ///< 左腿摆角速度 PID
-constexpr PidGains kRightLegTurnPid{15.0f, 2.f, 0.0f, 25.0f, 10.0f};  ///< 右腿摆角速度 PID
+constexpr PidGains kLeftLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};   ///< 左腿摆角速度 PID
+constexpr PidGains kRightLegTurnPid{15.0f, 0.f, 0.0f, 18.0f, 0.0f};  ///< 右腿摆角速度 PID
 constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
 constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
 
@@ -1526,8 +1526,8 @@ constexpr PidGains kLeftL0PidDip{400.0f, 0.f, 200.0f, 170.0f, 30.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{400.0f, 0.f, 200.0f, 170.0f, 30.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{15.0f, 2.f, 0.0f, 25.0f, 10.0f};   ///<   左腿摆角速度 PID
-constexpr PidGains kRightLegTurnPid{15.0f, 2.f, 0.0f, 25.0f, 10.0f};  ///< 右腿摆角速度 PID
+constexpr PidGains kLeftLegTurnPid{15.0f, 2.f, 0.0f, 18.0f, 10.0f};   ///< 左腿摆角速度 PID
+constexpr PidGains kRightLegTurnPid{15.0f, 2.f, 0.0f, 18.0f, 10.0f};  ///< 右腿摆角速度 PID
 constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
 constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
 

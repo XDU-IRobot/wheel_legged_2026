@@ -76,7 +76,6 @@ constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandi
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
-constexpr uint32_t kChassisReenableDelayMs = 500U;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -114,9 +113,6 @@ void ControlLoop() {
   static ChassisStateContext ctx{};
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
-  static bool chassis_reenable_delay_armed = true;
-  static bool chassis_reenable_delay_active = false;
-  static uint32_t chassis_reenable_delay_start_ms = 0U;
 
   // ── 一次性初始化 ──
   if (!ctx.yaw_follow_pid_initialized) {
@@ -138,9 +134,6 @@ void ControlLoop() {
   UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
   globals->ui_refresh_key = tc_state.e_ui_refresh;
   input.ui_refresh_key = tc_state.e_ui_refresh;
-
-  wl_debug.motor_reenable_chassis_trig = 0U;
-  wl_debug.motor_reenable_gimbal_trig = 0U;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
@@ -197,6 +190,24 @@ void ControlLoop() {
     const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
+  }
+  // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
+  if (globals->referee.has_value() &&
+      globals->referee->online_status() == rm::device::Device::kOk &&
+      globals->referee->data().robot_status.power_management_chassis_output == 0) {
+    chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+  }
+  // 只有 Q 键或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
+  {
+    static uint8_t prev_domain_state = 0U;
+    const bool q_just_pressed = (prev_domain_state == 0U && tc_state.domain_state != 0U);
+    const bool dr16_drives_domain = input.dr16.online;
+    if (globals->chassis_fsm.mode() == chassis::Fsm::State::kDisabled &&
+        chassis_input.request.domain_request != wheel_legged::DomainRequest::kDisabled && !q_just_pressed &&
+        !dr16_drives_domain) {
+      chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+    }
+    prev_domain_state = tc_state.domain_state;
   }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
@@ -286,26 +297,14 @@ void ControlLoop() {
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
   wl_debug.gimbal_motors_enabled_latched = g_actuators.gimbal_motors_enabled_latched() ? 1U : 0U;
 
-  // 云台电机心跳检测：全部 offline→online 边沿触发重使能
+  // 云台电机在线状态
   {
-    static bool prev_all_ok = false;
     const bool yaw_ok =
         globals->yaw_motor.has_value() && globals->yaw_motor->online_status() == rm::device::Device::kOk;
     const bool pitch_ok =
         globals->pitch_motor.has_value() && globals->pitch_motor->online_status() == rm::device::Device::kOk;
-    const bool cur_all_ok = yaw_ok && pitch_ok;
-
     wl_debug.yaw_motor_online = yaw_ok ? 1U : 0U;
     wl_debug.pitch_motor_online = pitch_ok ? 1U : 0U;
-
-    if (cur_all_ok && !prev_all_ok && gimbal_control_output.gimbal_enabled) {
-      g_actuators.ResetGimbalMotorsLatch();
-      ctx.gimbal_startup_align_complete = false;
-      ctx.gimbal_startup_align_was_active = false;
-      ctx.gimbal_startup_align_stable_ticks = 0U;
-      wl_debug.motor_reenable_gimbal_trig = 1U;
-    }
-    prev_all_ok = cur_all_ok;
   }
 
   // 辨识模式串口数据发送
@@ -886,41 +885,20 @@ void ControlLoop() {
 
   if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
     g_actuators.ResetDmMotorsLatch();
-    chassis_reenable_delay_armed = true;
-    chassis_reenable_delay_active = false;
-  } else if (chassis_reenable_delay_armed && chassis_output_enable) {
-    chassis_reenable_delay_armed = false;
-    chassis_reenable_delay_active = true;
-    chassis_reenable_delay_start_ms = now_ms;
   }
-  if (chassis_reenable_delay_active && now_ms - chassis_reenable_delay_start_ms >= kChassisReenableDelayMs) {
-    chassis_reenable_delay_active = false;
-  }
-
-  if (!chassis_reenable_delay_active) {
-    g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
-  }
+  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 
-  // 底盘电机心跳检测：全部 offline→online 边沿触发重使能
+  // 底盘电机在线状态
   {
-    static bool prev_all_ok = false;
     const bool lf_ok = globals->dm_lf.has_value() && globals->dm_lf->online_status() == rm::device::Device::kOk;
     const bool lb_ok = globals->dm_lb.has_value() && globals->dm_lb->online_status() == rm::device::Device::kOk;
     const bool rf_ok = globals->dm_rf.has_value() && globals->dm_rf->online_status() == rm::device::Device::kOk;
     const bool rb_ok = globals->dm_rb.has_value() && globals->dm_rb->online_status() == rm::device::Device::kOk;
-    const bool cur_all_ok = lf_ok && lb_ok && rf_ok && rb_ok;
-
     wl_debug.dm_lf_online = lf_ok ? 1U : 0U;
     wl_debug.dm_lb_online = lb_ok ? 1U : 0U;
     wl_debug.dm_rf_online = rf_ok ? 1U : 0U;
     wl_debug.dm_rb_online = rb_ok ? 1U : 0U;
-
-    if (cur_all_ok && !prev_all_ok && chassis_output_enable) {
-      g_actuators.ResetDmMotorsLatch();
-      wl_debug.motor_reenable_chassis_trig = 1U;
-    }
-    prev_all_ok = cur_all_ok;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
