@@ -260,8 +260,7 @@ class Gimbal {
       const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
       // const auto ff =
       //     dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
-      const auto ff =
-          dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, 0.f, 0.f, 0.f, 0.f, g_vec);
+      const auto ff = dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, 0.f, 0.f, 0.f, 0.f, g_vec);
       const float ff_p = 1.5f * std::cos(output_.pitch_pos_rad);
 
       // 开前馈
