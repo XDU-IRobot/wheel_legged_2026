@@ -1075,8 +1075,7 @@ void ControlLoop() {
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
-    ui_snapshot.ad_active = tc_state.ad_enabled ||
-                            chassis_output.mode == chassis::Fsm::State::kSpin ||
+    ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
                             chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
 
     ui_snapshot.supercap_cap_energy =
