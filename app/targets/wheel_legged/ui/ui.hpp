@@ -32,6 +32,7 @@ void blue_robot_hp_header_func();
 void blue_robot_hp_func();
 void gold_coin_func();
 void enemy_allowance_func();
+void blue_enemy_allowance_func();
 inline auto schedule = rm::device::UITaskScheduler(30);
 inline auto UI_static1 = rm::device::UITask(static1_func, 0.5);
 inline auto UI_static2 = rm::device::UITask(static2_func, 0.5);
@@ -51,6 +52,7 @@ inline auto UI_blue_robot_hp_header = rm::device::UITask(blue_robot_hp_header_fu
 inline auto UI_blue_robot_hp = rm::device::UITask(blue_robot_hp_func, 3);
 inline auto UI_gold_coin = rm::device::UITask(gold_coin_func, 3);
 inline auto UI_enemy_allowance = rm::device::UITask(enemy_allowance_func, 3);
+inline auto UI_blue_enemy_allowance = rm::device::UITask(blue_enemy_allowance_func, 3);
 
 inline u8 robot_id() { return ui_snapshot.referee_robot_id; }
 inline bool is_red_team() { return robot_id() > 0 && robot_id() <= 100; }
@@ -114,6 +116,7 @@ inline void ui_init() {
   schedule.addTask(&UI_blue_robot_hp);
   schedule.addTask(&UI_gold_coin);
   schedule.addTask(&UI_enemy_allowance);
+  schedule.addTask(&UI_blue_enemy_allowance);
 }
 
 inline void static1_func() {
@@ -698,6 +701,31 @@ inline void enemy_allowance_func() {
                                       static_cast<i32>(ui_snapshot.enemy_drone_6_allowance));
   allow_figures.figure5.fillIntegrate("AL5", op, 0, device::UIFigure::Color::White, 4, 1770, 810, 16,
                                       static_cast<i32>(ui_snapshot.enemy_sentry_7_allowance));
+
+  if (globals->ui_refresh_key || added) {
+    u8 sender = robot_id();
+    u8 len = rm::device::Referee0x301Prepare(info, 0, allow_figures, sender, static_cast<u16>(sender) + 256);
+    globals_no_dtcm.referee_uart.Write(info, len, 10);
+    added = true;
+  }
+}
+
+inline void blue_enemy_allowance_func() {
+  if (is_red_team()) return;
+  static rm::device::UIFigure5 allow_figures;
+  static bool added = false;
+  const auto op = globals->ui_refresh_key ? device::UIFigure::Operation::Add : device::UIFigure::Operation::Edit;
+
+  allow_figures.figure1.fillIntegrate("BA1", op, 0, device::UIFigure::Color::White, 4, 55, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_sentry_7_allowance));
+  allow_figures.figure2.fillIntegrate("BA2", op, 0, device::UIFigure::Color::White, 4, 175, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_drone_6_allowance));
+  allow_figures.figure3.fillIntegrate("BA3", op, 0, device::UIFigure::Color::White, 4, 295, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_standard_4_allowance));
+  allow_figures.figure4.fillIntegrate("BA4", op, 0, device::UIFigure::Color::White, 4, 415, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_standard_3_allowance));
+  allow_figures.figure5.fillIntegrate("BA5", op, 0, device::UIFigure::Color::White, 4, 655, 810, 16,
+                                      static_cast<i32>(ui_snapshot.enemy_hero_1_allowance));
 
   if (globals->ui_refresh_key || added) {
     u8 sender = robot_id();

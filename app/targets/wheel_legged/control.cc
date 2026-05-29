@@ -143,9 +143,6 @@ void ControlLoop() {
   globals->ui_refresh_key = tc_state.e_ui_refresh;
   input.ui_refresh_key = tc_state.e_ui_refresh;
 
-  wl_debug.motor_reenable_chassis_trig = 0U;
-  wl_debug.motor_reenable_gimbal_trig = 0U;
-
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
@@ -202,6 +199,23 @@ void ControlLoop() {
     const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
+  // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
+  if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk &&
+      globals->referee->data().robot_status.power_management_chassis_output == 0) {
+    chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+  }
+  // 只有 Q 键或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
+  {
+    static uint8_t prev_domain_state = 0U;
+    const bool q_just_pressed = (prev_domain_state == 0U && tc_state.domain_state != 0U);
+    const bool dr16_drives_domain = input.dr16.online;
+    if (globals->chassis_fsm.mode() == chassis::Fsm::State::kDisabled &&
+        chassis_input.request.domain_request != wheel_legged::DomainRequest::kDisabled && !q_just_pressed &&
+        !dr16_drives_domain) {
+      chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+    }
+    prev_domain_state = tc_state.domain_state;
+  }
   const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
@@ -254,6 +268,15 @@ void ControlLoop() {
   gimbal_update_input.aimbot_is_rune =
       (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+  gimbal_update_input.spin_hold = (chassis_output.mode == chassis::Fsm::State::kSpin ||
+                                   chassis_output.mode == chassis::Fsm::State::kSpinExitPending);
+  if (gimbal_update_input.spin_hold) {
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
+    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+    gimbal_update_input.spin_yaw_target_dot_rad_s = ResolveSpinTargetYawDot(power_limit, sc_err);
+  }
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -281,26 +304,14 @@ void ControlLoop() {
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
   wl_debug.gimbal_motors_enabled_latched = g_actuators.gimbal_motors_enabled_latched() ? 1U : 0U;
 
-  // 云台电机心跳检测：全部 offline→online 边沿触发重使能
+  // 云台电机在线状态
   {
-    static bool prev_all_ok = false;
     const bool yaw_ok =
         globals->yaw_motor.has_value() && globals->yaw_motor->online_status() == rm::device::Device::kOk;
     const bool pitch_ok =
         globals->pitch_motor.has_value() && globals->pitch_motor->online_status() == rm::device::Device::kOk;
-    const bool cur_all_ok = yaw_ok && pitch_ok;
-
     wl_debug.yaw_motor_online = yaw_ok ? 1U : 0U;
     wl_debug.pitch_motor_online = pitch_ok ? 1U : 0U;
-
-    if (cur_all_ok && !prev_all_ok && gimbal_control_output.gimbal_enabled) {
-      g_actuators.ResetGimbalMotorsLatch();
-      ctx.gimbal_startup_align_complete = false;
-      ctx.gimbal_startup_align_was_active = false;
-      ctx.gimbal_startup_align_stable_ticks = 0U;
-      wl_debug.motor_reenable_gimbal_trig = 1U;
-    }
-    prev_all_ok = cur_all_ok;
   }
 
   // 辨识模式串口数据发送
@@ -515,24 +526,32 @@ void ControlLoop() {
         (side_input_norm > 0.0f) ? YawFollowAlignMode::kSidePositive : YawFollowAlignMode::kSideNegative;
   }
 
-  // ── 7e. 偏航目标更新 ──
-  const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
+  // ── 7e. 偏航目标更新（每周期动态更新，前后方向自动选最近侧）──
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-  } else if (yaw_follow_mode_changed || !ctx.yaw_follow_target_initialized) {
-    ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
-    ctx.yaw_follow_target =
-        SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
-    ctx.yaw_follow_target_initialized = true;
-    ctx.yaw_follow_drive_ready = false;
-    ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-    if (!ctx.spin_exit_recovery) {
-      ctx.filtered_yaw_dot = 0.0f;
+  } else if (now_is_spin) {
+    // 自旋期间不更新偏航跟随目标
+  } else {
+    if (!ctx.yaw_follow_target_initialized) {
+      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
+      ctx.yaw_follow_target =
+          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
+      ctx.yaw_follow_target_initialized = true;
+      ctx.yaw_follow_drive_ready = false;
+      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+      if (!ctx.spin_exit_recovery) {
+        ctx.filtered_yaw_dot = 0.0f;
+      }
+      ctx.yaw_follow_pid.Clear();
+    } else {
+      // 每周期动态更新目标，自动选择离当前 yaw 最近的前后侧
+      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
+      ctx.yaw_follow_target =
+          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
     }
-    ctx.yaw_follow_pid.Clear();
   }
 
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
@@ -883,25 +902,16 @@ void ControlLoop() {
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 
-  // 底盘电机心跳检测：全部 offline→online 边沿触发重使能
+  // 底盘电机在线状态
   {
-    static bool prev_all_ok = false;
     const bool lf_ok = globals->dm_lf.has_value() && globals->dm_lf->online_status() == rm::device::Device::kOk;
     const bool lb_ok = globals->dm_lb.has_value() && globals->dm_lb->online_status() == rm::device::Device::kOk;
     const bool rf_ok = globals->dm_rf.has_value() && globals->dm_rf->online_status() == rm::device::Device::kOk;
     const bool rb_ok = globals->dm_rb.has_value() && globals->dm_rb->online_status() == rm::device::Device::kOk;
-    const bool cur_all_ok = lf_ok && lb_ok && rf_ok && rb_ok;
-
     wl_debug.dm_lf_online = lf_ok ? 1U : 0U;
     wl_debug.dm_lb_online = lb_ok ? 1U : 0U;
     wl_debug.dm_rf_online = rf_ok ? 1U : 0U;
     wl_debug.dm_rb_online = rb_ok ? 1U : 0U;
-
-    if (cur_all_ok && !prev_all_ok && chassis_output_enable) {
-      g_actuators.ResetDmMotorsLatch();
-      wl_debug.motor_reenable_chassis_trig = 1U;
-    }
-    prev_all_ok = cur_all_ok;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
