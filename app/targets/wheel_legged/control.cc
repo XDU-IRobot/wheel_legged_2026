@@ -262,13 +262,6 @@ void ControlLoop() {
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
   gimbal_update_input.spin_hold = (chassis_output.mode == chassis::Fsm::State::kSpin ||
                                    chassis_output.mode == chassis::Fsm::State::kSpinExitPending);
-  if (gimbal_update_input.spin_hold) {
-    const bool ref_online =
-        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
-    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
-    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
-    gimbal_update_input.spin_yaw_target_dot_rad_s = ResolveSpinTargetYawDot(power_limit, sc_err);
-  }
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -282,6 +275,7 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = ctx.gimbal_startup_align_target_rad;
   }
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
+  gimbal_update_input.chassis_yaw_rate_rad_s = input.estimator_input.imu.gyro_z_rad_s;
   gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
   gimbal_update_input.yaw_motor_rad = input.estimator_input.yaw_motor_rad;
   gimbal_update_input.gimbal_imu_yaw_rad = input.gimbal_imu_yaw_rad;

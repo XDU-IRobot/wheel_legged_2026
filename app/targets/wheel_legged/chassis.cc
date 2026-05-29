@@ -103,6 +103,12 @@ constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecovery
 constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
 constexpr float kJumpPushForceN = wheel_legged::params::active::chassis::kJumpPushForceN;
+constexpr float kPitchBrakeZoneRad = 0.55f;
+constexpr float kPitchBrakeRateStartRadS = 0.6f;
+constexpr float kPitchBrakeRateFullRadS = 2.0f;
+constexpr float kPitchBrakeMinScale = 0.25f;
+constexpr float kPitchBrakeReverseRateRadS = 2.6f;
+constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;
 
 /// 计算恢复减速比例：1.0=全速，接近目标边界时线性衰减到 0
 inline float RecoveryProximityScale(const float current_angle, const float target_boundary, const float decel_zone) {
@@ -116,6 +122,26 @@ inline float RecoveryProximityScale(const float current_angle, const float targe
 inline float ApplyRecoveryDecel(const float raw_target, const float proximity, const float min_speed) {
   const float abs_target = min_speed + (std::fabs(raw_target) - min_speed) * proximity;
   return std::copysign(abs_target, raw_target);
+}
+
+inline float ApplyPitchRecoveryBrake(const float raw_target, const float theta_b, const float theta_b_dot,
+                                     const float pitch_boundary, const bool is_front_fall) {
+  const float boundary_distance = std::fabs(theta_b - pitch_boundary);
+  const float near_boundary =
+      1.0f - std::clamp(boundary_distance / kPitchBrakeZoneRad, 0.0f, 1.0f);
+  if (near_boundary <= 0.0f) return raw_target;
+
+  const float upright_rate = is_front_fall ? theta_b_dot : -theta_b_dot;
+  if (upright_rate <= kPitchBrakeRateStartRadS) return raw_target;
+
+  const float rate_span = std::max(kPitchBrakeRateFullRadS - kPitchBrakeRateStartRadS, 1e-3f);
+  const float rate_scale = std::clamp((upright_rate - kPitchBrakeRateStartRadS) / rate_span, 0.0f, 1.0f);
+  const float speed_scale = 1.0f - near_boundary * rate_scale * (1.0f - kPitchBrakeMinScale);
+
+  if (near_boundary > 0.65f && upright_rate > kPitchBrakeReverseRateRadS) {
+    return -std::copysign(kPitchBrakeReverseSpeedRadS, raw_target);
+  }
+  return raw_target * speed_scale;
 }
 
 }  // namespace
@@ -707,16 +733,21 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
       const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
       const rm::f32 dir = is_front ? kVel : -kVel;
+      const rm::f32 pitch_boundary = is_front ? wheel_legged::params::active::chassis::kPostureThetaBMinRad
+                                              : wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
+      const rm::f32 braked_dir =
+          ApplyPitchRecoveryBrake(dir, state_output.current.theta_b, state_output.current.theta_b_dot, pitch_boundary,
+                                  is_front);
 
       const bool l_in = (lw >= tgt_min && lw <= tgt_max);
       const bool r_in = (rw >= tgt_min && rw <= tgt_max);
 
       if (l_in && r_in) {
-        left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
+        left_leg_turn_pid_.Update(braked_dir, state_output.current.theta_ll_dot);
+        right_leg_turn_pid_.Update(braked_dir, state_output.current.theta_lr_dot);
       } else {
-        const rm::f32 lv = l_in ? 0.0f : dir;
-        const rm::f32 rv = r_in ? 0.0f : dir;
+        const rm::f32 lv = l_in ? 0.0f : braked_dir;
+        const rm::f32 rv = r_in ? 0.0f : braked_dir;
         left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
         right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
       }
