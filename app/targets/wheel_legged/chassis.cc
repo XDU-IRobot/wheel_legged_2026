@@ -127,8 +127,7 @@ inline float ApplyRecoveryDecel(const float raw_target, const float proximity, c
 inline float ApplyPitchRecoveryBrake(const float raw_target, const float theta_b, const float theta_b_dot,
                                      const float pitch_boundary, const bool is_front_fall) {
   const float boundary_distance = std::fabs(theta_b - pitch_boundary);
-  const float near_boundary =
-      1.0f - std::clamp(boundary_distance / kPitchBrakeZoneRad, 0.0f, 1.0f);
+  const float near_boundary = 1.0f - std::clamp(boundary_distance / kPitchBrakeZoneRad, 0.0f, 1.0f);
   if (near_boundary <= 0.0f) return raw_target;
 
   const float upright_rate = is_front_fall ? theta_b_dot : -theta_b_dot;
@@ -735,9 +734,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const rm::f32 dir = is_front ? kVel : -kVel;
       const rm::f32 pitch_boundary = is_front ? wheel_legged::params::active::chassis::kPostureThetaBMinRad
                                               : wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
-      const rm::f32 braked_dir =
-          ApplyPitchRecoveryBrake(dir, state_output.current.theta_b, state_output.current.theta_b_dot, pitch_boundary,
-                                  is_front);
+      const rm::f32 braked_dir = ApplyPitchRecoveryBrake(dir, state_output.current.theta_b,
+                                                         state_output.current.theta_b_dot, pitch_boundary, is_front);
 
       const bool l_in = (lw >= tgt_min && lw <= tgt_max);
       const bool r_in = (rw >= tgt_min && rw <= tgt_max);
