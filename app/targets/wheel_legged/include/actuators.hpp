@@ -110,10 +110,7 @@ class Actuators {
   }
 #endif
 
-  void ResetDmMotorsLatch() {
-    dm_enabled_latched_ = false;
-    dm_enable_attempt_count_ = 0U;
-  }
+  void ResetDmMotorsLatch() { dm_enabled_latched_ = false; }
   void ResetGimbalMotorsLatch() { gimbal_motors_enabled_latched_ = false; }
   bool dm_enabled_latched() const { return dm_enabled_latched_; }
   bool gimbal_motors_enabled_latched() const { return gimbal_motors_enabled_latched_; }
@@ -141,8 +138,6 @@ class Actuators {
  private:
   bool dm_enabled_latched_{false};             ///< 底盘 DM 使能锁存
   bool gimbal_motors_enabled_latched_{false};  ///< 云台 DM 使能锁存
-  uint8_t dm_enable_attempt_count_{0U};
-  static constexpr uint8_t kDmEnableAttemptCount = 10U;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   bool booster_enabled_latched_{false};  ///< DM 拨盘使能锁存
 #endif
@@ -180,10 +175,7 @@ class Actuators {
     g.dm_rb->SendInstruction(rm::device::DmMotorInstructions::kClearError);
     g.dm_rb->SendInstruction(rm::device::DmMotorInstructions::kEnable);
 
-    if (++dm_enable_attempt_count_ >= kDmEnableAttemptCount) {
-      dm_enabled_latched_ = true;
-      dm_enable_attempt_count_ = 0U;
-    }
+    dm_enabled_latched_ = true;
   }
 
   /**
@@ -200,7 +192,6 @@ class Actuators {
     g.dm_rb->SendInstruction(rm::device::DmMotorInstructions::kDisable);
 
     dm_enabled_latched_ = false;
-    dm_enable_attempt_count_ = 0U;
   }
 
   void EnableGimbalMotorsIfNeeded(SharedResources &g) {

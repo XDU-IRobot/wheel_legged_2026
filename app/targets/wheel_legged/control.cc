@@ -76,6 +76,7 @@ constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandi
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
+constexpr uint32_t kChassisReenableDelayMs = 500U;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -113,6 +114,9 @@ void ControlLoop() {
   static ChassisStateContext ctx{};
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
+  static bool chassis_reenable_delay_armed = true;
+  static bool chassis_reenable_delay_active = false;
+  static uint32_t chassis_reenable_delay_start_ms = 0U;
 
   // ── 一次性初始化 ──
   if (!ctx.yaw_follow_pid_initialized) {
@@ -246,6 +250,15 @@ void ControlLoop() {
   gimbal_update_input.aimbot_is_rune =
       (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+  gimbal_update_input.spin_hold = (chassis_output.mode == chassis::Fsm::State::kSpin ||
+                                   chassis_output.mode == chassis::Fsm::State::kSpinExitPending);
+  if (gimbal_update_input.spin_hold) {
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
+    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+    gimbal_update_input.spin_yaw_target_dot_rad_s = ResolveSpinTargetYawDot(power_limit, sc_err);
+  }
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -873,8 +886,20 @@ void ControlLoop() {
 
   if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
     g_actuators.ResetDmMotorsLatch();
+    chassis_reenable_delay_armed = true;
+    chassis_reenable_delay_active = false;
+  } else if (chassis_reenable_delay_armed && chassis_output_enable) {
+    chassis_reenable_delay_armed = false;
+    chassis_reenable_delay_active = true;
+    chassis_reenable_delay_start_ms = now_ms;
   }
-  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
+  if (chassis_reenable_delay_active && now_ms - chassis_reenable_delay_start_ms >= kChassisReenableDelayMs) {
+    chassis_reenable_delay_active = false;
+  }
+
+  if (!chassis_reenable_delay_active) {
+    g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
+  }
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 
   // 底盘电机心跳检测：全部 offline→online 边沿触发重使能
