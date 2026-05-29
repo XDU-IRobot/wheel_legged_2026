@@ -752,9 +752,9 @@ constexpr StairClimbParams kStairClimb{
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 1.1f,
-    .retract_theta_target_rad = -0.1f,
+    .retract_theta_target_rad = 0.f,
     .retract_theta_tolerance_rad = 0.4f,
-    .hook_theta_tolerance_rad = 0.1f,
+    .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
     .settle_theta_tolerance_rad = 0.3f,
     .settle_theta_target_rad = 0.f,
@@ -1754,7 +1754,7 @@ constexpr float kBulletBoundarySpeedMps = 20.f;  ///< 区分裁判系统返回�
 
 constexpr PidGains kYawPositionPid{70.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
 constexpr PidGains kYawSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
-constexpr PidGains kPitchPositionPid{40.0f, 0.f, 1.5f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
+constexpr PidGains kPitchPositionPid{40.0f, 1.f, 2.f, 30.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{60.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
