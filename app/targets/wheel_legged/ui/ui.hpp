@@ -134,7 +134,7 @@ inline void static2_func() {
   static rm::device::UICharacter static_2;
   if (globals->ui_refresh_key) {
     static_2.character.fillCharacter("leg", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3,
-                                     static_cast<u16>(1748), static_cast<u16>(748), 30, 5);
+                                     static_cast<u16>(1448), static_cast<u16>(748), 30, 5);
     memcpy(static_2.data, "L M H", 10);
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_2, sender, static_cast<u16>(sender) + 256);
@@ -254,17 +254,17 @@ inline void static_status_func() {
   switch (status_line_index) {
     case 0:
       status_line.character.fillCharacter("st1", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow,
-                                          2, 10, 748, 20, 22);
+                                          2, 740, 348, 20, 22);
       memcpy(status_line.data, "DISABLE STANDBY ENABLE", 22);
       break;
     case 1:
       status_line.character.fillCharacter("st2", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow,
-                                          2, 10, 708, 20, 10);
+                                          2, 740, 308, 20, 10);
       memcpy(status_line.data, "SPIN CROSS", 10);
       break;
     default:
       status_line.character.fillCharacter("st3", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Yellow,
-                                          2, 10, 668, 20, 16);
+                                          2, 740, 268, 20, 16);
       memcpy(status_line.data, "NORMAL SMALL BIG", 16);
       break;
   }
@@ -305,16 +305,16 @@ inline void dynamic2_func() {
   static rm::device::UIFigure7 static_d2;
   static bool added = false;
 
-  u16 rec_x_start = 1735, rec_x_end = 1785;
+  u16 rec_x_start = 1435, rec_x_end = 1485;
   {
     switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
       case chassis::Fsm::State::kMidLeg:
-        rec_x_start = 1785;
-        rec_x_end = 1845;
+        rec_x_start = 1485;
+        rec_x_end = 1545;
         break;
       case chassis::Fsm::State::kHighLeg:
-        rec_x_start = 1850;
-        rec_x_end = 1910;
+        rec_x_start = 1550;
+        rec_x_end = 1610;
         break;
       default:
         break;
@@ -330,9 +330,9 @@ inline void dynamic2_func() {
     cap_color = device::UIFigure::Color::Green;
   }
 
-  u16 lb_x1, lb_y1, lb_x2 = 660, lb_y2 = 766;
+  u16 lb_x1, lb_y1, lb_x2 = 770, lb_y2 = 700;
   u16 lm_x1, lm_y1, lm_x2, lm_y2;
-  u16 rb_x1 = 1235, rb_y1 = 766, rb_x2, rb_y2;
+  u16 rb_x1 = 1135, rb_y1 = 700, rb_x2, rb_y2;
   u16 rm_x1, rm_y1, rm_x2, rm_y2;
   float left_len = ui_snapshot.left_leg_length_m * 500.0f, right_len = ui_snapshot.right_leg_length_m * 500.0f;
   float left_the = ui_snapshot.left_leg_theta_rad, right_the = ui_snapshot.right_leg_theta_rad;
@@ -453,19 +453,19 @@ inline void dynamic_status_func() {
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {
-    fill_rect(status_frame.figure1, "ps_", op, 6, 718, 142, 758);
+    fill_rect(status_frame.figure1, "ps_", op, 736, 318, 872, 358);
   } else if (ui_snapshot.standby) {
-    fill_rect(status_frame.figure1, "ps_", op, 150, 718, 318, 758);
+    fill_rect(status_frame.figure1, "ps_", op, 880, 318, 1048, 358);
   } else if (enabled) {
-    fill_rect(status_frame.figure1, "ps_", op, 328, 718, 470, 758);
+    fill_rect(status_frame.figure1, "ps_", op, 1058, 318, 1200, 358);
   } else {
     fill_hidden(status_frame.figure1, "ps_", op);
   }
 
   if (ui_snapshot.spin_active) {
-    fill_rect(status_frame.figure2, "mv_", op, 6, 678, 102, 718);
+    fill_rect(status_frame.figure2, "mv_", op, 736,278, 832, 318);
   } else if (ui_snapshot.cross_active) {
-    fill_rect(status_frame.figure2, "mv_", op, 112, 678, 235, 718);
+    fill_rect(status_frame.figure2, "mv_", op, 842, 278, 965, 318);
   } else {
     fill_hidden(status_frame.figure2, "mv_", op);
   }
@@ -478,19 +478,19 @@ inline void dynamic_status_func() {
     } else {
       am_color = device::UIFigure::Color::White;
     }
-    u16 x1 = 0, y1 = 638, x2 = 0, y2 = 678;
+    u16 x1 = 290, y1 = 238, x2 = 290, y2 = 278;
     switch (ui_snapshot.aim_mode) {
       case 1:
-        x1 = 146;
-        x2 = 246;
+        x1 = 876;
+        x2 = 976;
         break;  // kFuSmall
       case 2:
-        x1 = 264;
-        x2 = 330;
+        x1 = 994;
+        x2 = 1060;
         break;  // kFuBig
       default:
-        x1 = 6;
-        x2 = 128;
+        x1 = 736;
+        x2 = 858;
         break;  // kAmmo
     }
     status_frame.figure3.fillRec("am_", op, 0, am_color, 2, x1, y1, x2, y2);
@@ -537,9 +537,9 @@ inline void dynamic3_func() {
   static rm::device::UIFigure2 static_d3;
   static bool added = false;
   if (globals->ui_refresh_key) {
-    static_d3.figure1.fillIntegrate("fL_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1750,
+    static_d3.figure1.fillIntegrate("fL_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1450,
                                     646, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
-    static_d3.figure2.fillIntegrate("fR_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1750,
+    static_d3.figure2.fillIntegrate("fR_", device::UIFigure::Operation::Add, 0, device::UIFigure::Color::Green, 3, 1450,
                                     676, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
@@ -547,9 +547,9 @@ inline void dynamic3_func() {
     added = true;
   } else if (added) {
     static_d3.figure1.fillIntegrate("fL_", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Green, 3,
-                                    1750, 646, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
+                                    1450, 646, 20, static_cast<i32>(ui_snapshot.fric_left_rpm));
     static_d3.figure2.fillIntegrate("fR_", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::Green, 3,
-                                    1750, 676, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
+                                    1450, 676, 20, static_cast<i32>(ui_snapshot.fric_right_rpm));
     u8 sender = robot_id();
     u8 len = rm::device::Referee0x301Prepare(info, 0, static_d3, sender, static_cast<u16>(sender) + 256);
     globals_no_dtcm.referee_uart.Write(info, len, 10);

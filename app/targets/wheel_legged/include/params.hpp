@@ -759,20 +759,20 @@ constexpr float kStairDescendThetaBTriggerRad = 0.18f;
 
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.3f,
+    .hook_leg_length_m = 0.33f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = -0.2f,
-    .retract_theta_tolerance_rad = 0.3f,
+    .retract_theta_target_rad = 0.f,
+    .retract_theta_tolerance_rad = 0.4f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.3f,
-    .settle_theta_target_rad = -0.2f,
+    .settle_theta_tolerance_rad = 0.4f,
+    .settle_theta_target_rad = 0.f,
     .hook_stable_ms = 100U,
-    .retract_stable_ms = 200U,
-    .settle_stable_ms = 200U,
+    .retract_stable_ms = 100U,
+    .settle_stable_ms = 100U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
@@ -1562,13 +1562,13 @@ constexpr float kTcMouseMax = 200.0f;               ///< 图传鼠标增量最�
 constexpr float kRcYawRateMaxRadS = -4.f;           ///< RC 摇杆满偏时偏航积分速率 [rad/s]
 constexpr float kRcPitchRateMaxRadS = 2.5f;         ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
 constexpr float kTcMouseYawRateMaxRadS = -3.0f;     ///< 图传鼠标满偏时偏航积分速率 [rad/s]
-constexpr float kTcMousePitchRateMaxRadS = 1.5f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
+constexpr float kTcMousePitchRateMaxRadS = 2.5f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
 constexpr float kDr16MouseYawRateMaxRadS = -2.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kDr16MousePitchRateMaxRadS = 1.5f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kPitchTargetMinRad = -0.35f;        ///< RC 积分俯仰目标下限 [rad]
 constexpr float kPitchTargetMaxRad = 0.6f;          ///< RC 积分俯仰目标上限 [rad]
-constexpr float kKeyboardAccelRampStep = 0.004f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
+constexpr float kKeyboardAccelRampStep = 0.006f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.1f;      ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
 // -- 云台启动归中判稳 --
