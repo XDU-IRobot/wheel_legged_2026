@@ -6,7 +6,10 @@
 #include "main.h"
 #include <algorithm>
 #include <cmath>
-#include "ui.hpp"
+#include "ui/UIWheelLegged.hpp"
+#include "ui/UIEnemyInfo.hpp"
+#include "ui/TaskScheduler.hpp"
+#include "ui/ui_snapshot.hpp"
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
 float debug_mid_target_theta;
@@ -16,6 +19,108 @@ float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
 int times = 0;
 int id=0;
+
+// ── UI task scheduler & task objects (drone_gb_new style) ──
+static auto schedule = rm::device::UITaskScheduler(30);
+
+// Static labels (one-shot add)
+static auto UI_label_py = rm::device::UITask(UIWheelLeggedLabelPY_add);
+static auto UI_label_leg = rm::device::UITask(UIWheelLeggedLabelLeg_add);
+static auto UI_decorative_rect = rm::device::UITask(UIWheelLeggedDecorativeRect_add);
+
+// Crosshair
+static auto UI_crosshair_add = rm::device::UITask(UIWheelLeggedCrosshair_add);
+static auto UI_crosshair_edit = rm::device::UITask(UIWheelLeggedCrosshair_edit, 1.5f);
+
+// Gimbal data (hero variant)
+static auto UI_gimbal_data_add = rm::device::UITask(UIWheelLeggedGimbalData_add);
+static auto UI_gimbal_data_edit = rm::device::UITask(UIWheelLeggedGimbalData_edit, 1.5f);
+
+// Leg kinematics + supercap
+static auto UI_kinematics_add = rm::device::UITask(UIWheelLeggedKinematics_add);
+static auto UI_kinematics_edit = rm::device::UITask(UIWheelLeggedKinematics_edit, 1.0f);
+
+// Friction RPM
+static auto UI_fric_rpm_add = rm::device::UITask(UIWheelLeggedFricRPM_add);
+static auto UI_fric_rpm_edit = rm::device::UITask(UIWheelLeggedFricRPM_edit, 3.0f);
+
+// Bullet data
+static auto UI_bullet_add = rm::device::UITask(UIWheelLeggedBulletData_add);
+static auto UI_bullet_edit = rm::device::UITask(UIWheelLeggedBulletData_edit, 3.0f);
+
+// Status labels (infantry variant, rotating — always Add)
+static auto UI_status_label = rm::device::UITask(UIWheelLeggedStatusLabel_add, 3.0f);
+
+// State indicator (infantry variant)
+static auto UI_state_indicator_add = rm::device::UITask(UIWheelLeggedStateIndicator_add);
+static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndicator_edit, 1.0f);
+
+// Aimbot box
+static auto UI_aimbot_box_add = rm::device::UITask(UIWheelLeggedAimbotBox_add);
+static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 3.f);
+
+// Enemy info — red team
+static auto UI_enemy_header_red = rm::device::UITask(UIEnemyHeaderRed_add);
+static auto UI_enemy_hp_red_add = rm::device::UITask(UIEnemyHPRed_add);
+static auto UI_enemy_hp_red_edit = rm::device::UITask(UIEnemyHPRed_edit, 3.f);
+static auto UI_enemy_allowance_red_add = rm::device::UITask(UIEnemyAllowanceRed_add);
+static auto UI_enemy_allowance_red_edit = rm::device::UITask(UIEnemyAllowanceRed_edit, 3.f);
+
+// Enemy info — blue team
+static auto UI_enemy_header_blue = rm::device::UITask(UIEnemyHeaderBlue_add);
+static auto UI_enemy_hp_blue_add = rm::device::UITask(UIEnemyHPBlue_add);
+static auto UI_enemy_hp_blue_edit = rm::device::UITask(UIEnemyHPBlue_edit, 3.f);
+static auto UI_enemy_allowance_blue_add = rm::device::UITask(UIEnemyAllowanceBlue_add);
+static auto UI_enemy_allowance_blue_edit = rm::device::UITask(UIEnemyAllowanceBlue_edit, 3.f);
+
+// Gold coin
+static auto UI_gold_coin_add = rm::device::UITask(UIGoldCoin_add);
+static auto UI_gold_coin_edit = rm::device::UITask(UIGoldCoin_edit, 3.0f);
+
+void static_UI_add() {
+  schedule.addTaskStatic(&UI_label_py);
+  schedule.addTaskStatic(&UI_label_leg);
+  schedule.addTaskStatic(&UI_decorative_rect);
+
+  schedule.addTaskStatic(&UI_crosshair_add);
+  schedule.addTask(&UI_crosshair_edit);
+
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  schedule.addTaskStatic(&UI_gimbal_data_add);
+  schedule.addTask(&UI_gimbal_data_edit);
+#else
+  schedule.addTask(&UI_status_label);
+  schedule.addTaskStatic(&UI_state_indicator_add);
+  schedule.addTask(&UI_state_indicator_edit);
+#endif
+
+  schedule.addTaskStatic(&UI_kinematics_add);
+  schedule.addTask(&UI_kinematics_edit);
+
+  schedule.addTaskStatic(&UI_fric_rpm_add);
+  schedule.addTask(&UI_fric_rpm_edit);
+
+  schedule.addTaskStatic(&UI_bullet_add);
+  schedule.addTask(&UI_bullet_edit);
+
+  schedule.addTaskStatic(&UI_aimbot_box_add);
+  schedule.addTask(&UI_aimbot_box_edit);
+
+  schedule.addTaskStatic(&UI_enemy_header_red);
+  schedule.addTaskStatic(&UI_enemy_hp_red_add);
+  schedule.addTask(&UI_enemy_hp_red_edit);
+  schedule.addTaskStatic(&UI_enemy_allowance_red_add);
+  schedule.addTask(&UI_enemy_allowance_red_edit);
+
+  schedule.addTaskStatic(&UI_enemy_header_blue);
+  schedule.addTaskStatic(&UI_enemy_hp_blue_add);
+  schedule.addTask(&UI_enemy_hp_blue_edit);
+  schedule.addTaskStatic(&UI_enemy_allowance_blue_add);
+  schedule.addTask(&UI_enemy_allowance_blue_edit);
+
+  schedule.addTaskStatic(&UI_gold_coin_add);
+  schedule.addTask(&UI_gold_coin_edit);
+}
 /**
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
@@ -270,13 +375,6 @@ void ControlLoop() {
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
   gimbal_update_input.spin_hold = (chassis_output.mode == chassis::Fsm::State::kSpin ||
                                    chassis_output.mode == chassis::Fsm::State::kSpinExitPending);
-  if (gimbal_update_input.spin_hold) {
-    const bool ref_online =
-        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
-    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
-    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
-    gimbal_update_input.spin_yaw_target_dot_rad_s = ResolveSpinTargetYawDot(power_limit, sc_err);
-  }
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -290,6 +388,7 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = ctx.gimbal_startup_align_target_rad;
   }
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
+  gimbal_update_input.chassis_yaw_rate_rad_s = input.estimator_input.imu.gyro_z_rad_s;
   gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
   gimbal_update_input.yaw_motor_rad = input.estimator_input.yaw_motor_rad;
   gimbal_update_input.gimbal_imu_yaw_rad = input.gimbal_imu_yaw_rad;
@@ -507,6 +606,13 @@ void ControlLoop() {
   const bool tc_remote_active = input.tc_remote.valid;
   const bool has_drive_input = dr16_online || tc_remote_active;
 
+  // AD 屏蔽：AD 关闭时清除键盘 A/D 键位（小陀螺模式或 Z 键开启时不屏蔽）
+  if (!tc_state.ad_enabled && chassis_output.mode != chassis::Fsm::State::kSpin &&
+      chassis_output.mode != chassis::Fsm::State::kSpinExitPending) {
+    input.dr16.keyboard &= ~0x000Cu;
+    input.tc_remote.keyboard_value &= ~0x000Cu;
+  }
+
   const auto drive = ResolveDriveInput(input.dr16, input.tc_remote, tc_state.dr16_parallel);
   const float forward_input_norm = drive.forward;
   const float side_input_norm = drive.side;
@@ -526,32 +632,24 @@ void ControlLoop() {
         (side_input_norm > 0.0f) ? YawFollowAlignMode::kSidePositive : YawFollowAlignMode::kSideNegative;
   }
 
-  // ── 7e. 偏航目标更新（每周期动态更新，前后方向自动选最近侧）──
+  // ── 7e. 偏航目标更新 ──
+  const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-  } else if (now_is_spin) {
-    // 自旋期间不更新偏航跟随目标
-  } else {
-    if (!ctx.yaw_follow_target_initialized) {
-      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
-      ctx.yaw_follow_target =
-          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
-      ctx.yaw_follow_target_initialized = true;
-      ctx.yaw_follow_drive_ready = false;
-      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-      if (!ctx.spin_exit_recovery) {
-        ctx.filtered_yaw_dot = 0.0f;
-      }
-      ctx.yaw_follow_pid.Clear();
-    } else {
-      // 每周期动态更新目标，自动选择离当前 yaw 最近的前后侧
-      ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
-      ctx.yaw_follow_target =
-          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
+  } else if (yaw_follow_mode_changed || !ctx.yaw_follow_target_initialized) {
+    ctx.yaw_follow_align_mode = requested_yaw_follow_align_mode;
+    ctx.yaw_follow_target =
+        SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, YawFollowTargetOffset(ctx.yaw_follow_align_mode));
+    ctx.yaw_follow_target_initialized = true;
+    ctx.yaw_follow_drive_ready = false;
+    ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+    if (!ctx.spin_exit_recovery) {
+      ctx.filtered_yaw_dot = 0.0f;
     }
+    ctx.yaw_follow_pid.Clear();
   }
 
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
@@ -651,7 +749,9 @@ void ControlLoop() {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * side_input_norm;
   }
   target_s_dot += forward_speed_bias;
-  if (!chassis_output_enable || now_is_standby) {
+  const bool stair_seq_active = stair_task_output.mode == wheel_legged::StairTaskMode::kExecuting ||
+                                stair_task_output.mode == wheel_legged::StairTaskMode::kBetweenSteps;
+  if (!chassis_output_enable || now_is_standby || stair_seq_active) {
     target_s_dot = 0.0f;
   }
 
@@ -1114,6 +1214,8 @@ void ControlLoop() {
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
+    ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
+                            chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
 
     ui_snapshot.supercap_cap_energy =
         globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
@@ -1225,11 +1327,16 @@ void ControlLoop() {
                       stair_task_output, stair_sequence_output);
 
   if (!init_flag) {
-    ui_init();
+    static_UI_add();
     init_flag = true;
   }
   times++;
   if (times % 17 == 0) {
     schedule.schedule();
+    static bool last_ui_refresh = false;
+    if (globals->ui_refresh_key && !last_ui_refresh) {
+      static_UI_add();
+    }
+    last_ui_refresh = globals->ui_refresh_key;
   }
 }

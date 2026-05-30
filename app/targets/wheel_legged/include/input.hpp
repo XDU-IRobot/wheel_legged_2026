@@ -122,6 +122,8 @@ struct TcSemanticState {
   bool recovery_manual_mode{false};  ///< 倒地自启手动模式（Z 键长按切换）
   bool z_recovery_armed{true};       ///< Z 键是否已就绪（长按防抖）
   float z_hold_ms{0.0f};             ///< Z 键已按住时长 [ms]
+  bool ad_enabled{false};            ///< AD 功能开关（Z 键短按切换，默认关闭）
+  bool z_ad_armed{true};             ///< Z 键 AD 切换是否已就绪（上升沿检测）
 };
 
 /**

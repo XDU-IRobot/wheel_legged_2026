@@ -28,27 +28,27 @@ class Gimbal {
    * @brief 单次云台控制更新输入
    */
   struct UpdateInput {
-    DmMitMotor *yaw_motor{nullptr};         ///< 偏航 DM 电机对象
-    DmMitMotor *pitch_motor{nullptr};       ///< 俯仰 DM 电机对象
-    bool gimbal_enable{false};              ///< 是否使能云台输出
-    bool align_to_chassis_forward{false};   ///< 是否对齐车体前方
-    bool use_yaw_motor_feedback{false};     ///< 是否用偏航电机编码器作为偏航反馈
-    bool aimbot_mode{false};                ///< 是否自瞄模式，切换 PID 参数
-    bool aimbot_is_rune{false};             ///< 是否是打符模式（小符/大符），单独使用打符 PID
-    bool spin_hold{false};                  ///< 是否小陀螺模式，自瞄+小陀螺时使用另一套 PID
-    float spin_yaw_target_dot_rad_s{0.0f};  ///< 小陀螺目标自旋角速度，用于选择偏航偏置档位
-    float aimbot_yaw_vel{0.0f};             ///< 自瞄目标偏航角速度 (rad/s)
-    float aimbot_pitch_vel{0.0f};           ///< 自瞄目标俯仰角速度 (rad/s)
-    float aimbot_yaw_acc{0.0f};             ///< 自瞄目标偏航角加速度 (rad/s^2)
-    float aimbot_pitch_acc{0.0f};           ///< 自瞄目标俯仰角加速度 (rad/s^2)
-    wheel_legged::GimbalTarget target{};    ///< 云台角度目标
-    float chassis_yaw_rad{0.0f};            ///< 车体偏航角
-    float chassis_pitch_rad{0.0f};          ///< 车体俯仰角，用于俯仰重力补偿
-    float yaw_motor_rad{0.0f};              ///< 偏航电机编码器角度
-    float gimbal_imu_yaw_rad{0.0f};         ///< 云台惯导偏航角
-    float gimbal_imu_pitch_rad{0.0f};       ///< 云台惯导俯仰角
-    float gimbal_imu_gyro_z_rad_s{0.0f};    ///< 云台惯导偏航角速度（替代偏航电机 vel）
-    float gimbal_imu_gyro_x_rad_s{0.0f};    ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
+    DmMitMotor *yaw_motor{nullptr};        ///< 偏航 DM 电机对象
+    DmMitMotor *pitch_motor{nullptr};      ///< 俯仰 DM 电机对象
+    bool gimbal_enable{false};             ///< 是否使能云台输出
+    bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
+    bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
+    bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
+    bool aimbot_is_rune{false};            ///< 是否是打符模式（小符/大符），单独使用打符 PID
+    bool spin_hold{false};                 ///< 是否小陀螺模式，自瞄+小陀螺时使用另一套 PID
+    float aimbot_yaw_vel{0.0f};            ///< 自瞄目标偏航角速度 (rad/s)
+    float aimbot_pitch_vel{0.0f};          ///< 自瞄目标俯仰角速度 (rad/s)
+    float aimbot_yaw_acc{0.0f};            ///< 自瞄目标偏航角加速度 (rad/s^2)
+    float aimbot_pitch_acc{0.0f};          ///< 自瞄目标俯仰角加速度 (rad/s^2)
+    wheel_legged::GimbalTarget target{};   ///< 云台角度目标
+    float chassis_yaw_rad{0.0f};           ///< 车体偏航角
+    float chassis_yaw_rate_rad_s{0.0f};    ///< 车体偏航角速度，小陀螺自瞄时用于速度前馈
+    float chassis_pitch_rad{0.0f};         ///< 车体俯仰角，用于俯仰重力补偿
+    float yaw_motor_rad{0.0f};             ///< 偏航电机编码器角度
+    float gimbal_imu_yaw_rad{0.0f};        ///< 云台惯导偏航角
+    float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
+    float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
+    float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
     float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
 
     /// 辨识/验证模式专用
@@ -116,23 +116,7 @@ class Gimbal {
       output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
 
       const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
-      // 自瞄+小陀螺时叠加偏航偏置，补偿自旋角度滞后
-      float yaw_target_bias = 0.0f;
-      if (input.aimbot_mode && input.spin_hold) {
-        const float abs_dot = std::fabs(input.spin_yaw_target_dot_rad_s);
-        const auto &thresh = wheel_legged::params::active::aimbot_spin::kYawTargetBiasSpeedThresholds;
-        const auto &bias = wheel_legged::params::active::aimbot_spin::kYawTargetBiasRad;
-        if (abs_dot < thresh[0]) {
-          yaw_target_bias = bias[0];
-        } else if (abs_dot < thresh[1]) {
-          yaw_target_bias = bias[1];
-        } else if (abs_dot < thresh[2]) {
-          yaw_target_bias = bias[2];
-        } else {
-          yaw_target_bias = bias[3];
-        }
-      }
-      output_.yaw_target_rad = desired_yaw + yaw_target_bias;
+      output_.yaw_target_rad = desired_yaw;
       output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
                                             wheel_legged::params::active::gimbal::kPitchMaxRad);
       output_.gimbal_enabled = input.gimbal_enable;
@@ -221,8 +205,14 @@ class Gimbal {
       yaw_ff.Update(output_.yaw_target_rad);
       controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,
                             input.aimbot_mode ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
+#else
+      if (input.aimbot_mode && input.spin_hold) {
+        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, -input.chassis_yaw_rate_rad_s);
+      } else {
+        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+      }
 #endif
-      controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+
       controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                          dt_s);
 
