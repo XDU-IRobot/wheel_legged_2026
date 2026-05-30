@@ -59,6 +59,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.stair_leg_length_error_m = stair_sequence_output.leg_length_error_m;
   wl_debug.stair_phase_elapsed_ms = stair_sequence_output.phase_elapsed_ms;
   wl_debug.stair_stable_elapsed_ms = stair_sequence_output.stable_elapsed_ms;
+  wl_debug.stair_t_bl_cmd = chassis_control_output.stair_t_bl_cmd;
+  wl_debug.stair_t_br_cmd = chassis_control_output.stair_t_br_cmd;
 
   wl_debug.dr16_left_x_raw = input.dr16.left_x;
   wl_debug.dr16_left_y_raw = input.dr16.left_y;

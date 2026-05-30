@@ -65,6 +65,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float stair_theta_ll_error_rad;
   float stair_theta_lr_error_rad;
   float stair_leg_length_error_m;
+  float stair_t_bl_cmd;  ///< 上台阶左腿摆角控制输出
+  float stair_t_br_cmd;  ///< 上台阶右腿摆角控制输出
   uint32_t stair_phase_elapsed_ms;
   uint32_t stair_stable_elapsed_ms;
   uint8_t reset_yaw_request;      // R键重置正方向请求

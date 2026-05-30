@@ -79,8 +79,7 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
         }
         case wheel_legged::StairPhase::kRetract: {
           const bool at_target =
-              std::fabs(input.theta_ll_rad - kParams.retract_theta_target_rad) <= kParams.retract_theta_tolerance_rad &&
-              std::fabs(input.theta_lr_rad - kParams.retract_theta_target_rad) <= kParams.retract_theta_tolerance_rad;
+              std::fabs(input.mean_leg_length_m - kParams.retract_leg_length_m) <= kParams.retract_length_tolerance ;
           // const bool at_target = true;
           if (StableFor(at_target, kParams.retract_stable_ms, input.tick_ms)) {
             EnterPhase(wheel_legged::StairPhase::kSettle, input.tick_ms);
