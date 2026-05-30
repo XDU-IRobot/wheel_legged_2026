@@ -261,9 +261,8 @@ void ControlLoop() {
   const bool stair_high_leg_ready = std::fabs(chassis_control_output.mean_leg_length_m -
                                               stair_params.high_leg_length_m) <= stair_params.leg_length_tolerance_m;
   const auto &previous_sequence_output = g_stair_sequence.output();
-  const auto effective_stair_request = input.mode_request.spin_hold
-                                           ? wheel_legged::StairTaskRequest::kCancel
-                                           : input.mode_request.stair_task_request;
+  const auto effective_stair_request =
+      input.mode_request.spin_hold ? wheel_legged::StairTaskRequest::kCancel : input.mode_request.stair_task_request;
   const auto &stair_task_output = g_stair_task_coordinator.Update({
       .request = effective_stair_request,
       .contact_detected = stair_contact_detected,

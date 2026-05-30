@@ -76,8 +76,8 @@ class Chassis {
     bool posture_valid{true};            ///< 底盘姿态是否在安全范围内
     bool standup_complete{false};        ///< 起立完成：双腿 theta 均小于阈值后置 true
     bool mid_leg_dip_active{false};      ///< 中腿长下压激活中
-    rm::f32 stair_t_bl_cmd{0.0f};       ///< 上台阶左腿摆角控制输出（PID 或 LQR）
-    rm::f32 stair_t_br_cmd{0.0f};       ///< 上台阶右腿摆角控制输出（PID 或 LQR）
+    rm::f32 stair_t_bl_cmd{0.0f};        ///< 上台阶左腿摆角控制输出（PID 或 LQR）
+    rm::f32 stair_t_br_cmd{0.0f};        ///< 上台阶右腿摆角控制输出（PID 或 LQR）
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
