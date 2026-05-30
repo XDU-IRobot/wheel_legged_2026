@@ -124,8 +124,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = true;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.leg_profile = requested_leg_profile;
-      control.target_leg_length_m = LegLengthForProfile(requested_leg_profile);
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
       control.jump_phase = 0U;
       break;
 
@@ -135,8 +135,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.spin_enable = true;
       control.recovery_enable = false;
       control.safe_output_required = false;
-      control.leg_profile = requested_leg_profile;
-      control.target_leg_length_m = LegLengthForProfile(requested_leg_profile);
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
       control.jump_phase = 0U;
       break;
 
@@ -241,12 +241,26 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 
   const wheel_legged::ChassisFsmInput &request = input.request;
-  requested_leg_profile_ = ResolveRequestedLegProfile(request);
+  const wheel_legged::LegProfile raw_leg_profile = ResolveRequestedLegProfile(request);
+
+  // 小陀螺锁低腿长：检测手动切档解锁
+  if (spin_lock_low_) {
+    if (raw_leg_profile != prev_leg_request_) {
+      spin_lock_low_ = false;
+    } else {
+      requested_leg_profile_ = wheel_legged::LegProfile::kLow;
+    }
+  }
+  if (!spin_lock_low_) {
+    requested_leg_profile_ = raw_leg_profile;
+  }
+  prev_leg_request_ = raw_leg_profile;
 
   // 输入失效或请求关闭时立即退回 Disabled，并由执行器层输出零力矩。
   if (!request.input_valid || request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     if (mode_ != State::kDisabled) {
       state_enter_tick_ms_ = request.tick_ms;
+      spin_lock_low_ = false;
     }
     Transit(State::kDisabled);
     return output_;
@@ -331,6 +345,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.standby) {
         next_mode = State::kStandby;
       } else if (!request.spin_hold) {
+        spin_lock_low_ = true;
         next_mode = State::kSpinExitPending;
       }
       break;
@@ -408,6 +423,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
+      } else if (request.spin_hold) {
+        next_mode = State::kSpin;
       } else if (!request.stair_task_active) {
         next_mode = requested_stable_state;
       }

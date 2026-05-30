@@ -88,6 +88,8 @@ class Fsm {
   wheel_legged::LegProfile requested_leg_profile_{wheel_legged::LegProfile::kLow};
   wheel_legged::LegProfile jump_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 触发跳跃时的腿长档位
   bool stair_descend_retracted_{false};  ///< Hold minimum leg length after the edge is detected.
+  bool spin_lock_low_{false};            ///< 小陀螺后锁定低腿长，仅手动切档解锁
+  wheel_legged::LegProfile prev_leg_request_{wheel_legged::LegProfile::kLow};  ///< 上周期腿长请求（检测手动切档）
   uint32_t state_enter_tick_ms_{0};
   Output output_{};
 };

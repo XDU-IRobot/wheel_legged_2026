@@ -108,7 +108,8 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else if (fire_trigger && curHeatDelta >= 100) {
+        } else if (fire_trigger && curHeatDelta >= 100 && fw_[0]->rpm() >= kFwReadyRpm &&
+                   fw_[1]->rpm() >= kFwReadyRpm && fw_[2]->rpm() >= kFwReadyRpm) {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
@@ -135,8 +136,12 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else {
+          break;
+        }
+        if (curHeatDelta >= 100) {
           state_ = State::kReady;
+        } else {
+          state_ = State::kCooling;
         }
         break;
 
@@ -152,11 +157,11 @@ class ShootController {
 
       for (int i = 0; i < 3; ++i) {
         if (enter_shoot) {
-          fw_speed_pid_[i]->Update(fric_speed_target_rpm, static_cast<float>(fw_[i]->rpm()));
-          fw_[i]->SetCurrent(static_cast<std::int16_t>(fw_speed_pid_[i]->out()));
-        } else if (static_cast<float>(fw_[i]->rpm()) >= kFwBrakeThresholdRpm) {
-          fw_speed_pid_[i]->Update(kFwBrakeTargetRpm, static_cast<float>(fw_[i]->rpm()));
-          fw_[i]->SetCurrent(static_cast<std::int16_t>(fw_speed_pid_[i]->out()));
+          fw_speed_pid_[i]->Update(fric_speed_target_rpm, fw_[i]->rpm());
+          fw_[i]->SetCurrent(fw_speed_pid_[i]->out());
+        } else if (fw_[i]->rpm() >= kFwBrakeThresholdRpm) {
+          fw_speed_pid_[i]->Update(kFwBrakeTargetRpm, fw_[i]->rpm());
+          fw_[i]->SetCurrent(fw_speed_pid_[i]->out());
         } else {
           fw_speed_pid_[i]->Clear();
           fw_[i]->SetCurrent(0);
@@ -170,14 +175,16 @@ class ShootController {
 
     // 电机命令下发
     if (booster_enable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kEnable);
       booster_enable_ = false;
     } else if (booster_disable_) {
+      booster_->SendInstruction(rm::device::DmMotorInstructions::kClearError);
       booster_->SendInstruction(rm::device::DmMotorInstructions::kDisable);
       booster_disable_ = false;
-      // } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
+      // booster_->SetMitCommand(0, 0.0f, 0, 0.0f, 0.0f);
     }
   }
 

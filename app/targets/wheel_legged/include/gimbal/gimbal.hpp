@@ -7,9 +7,9 @@
 #include "gimbal_ident.hpp"
 #include "../fsm_common.hpp"
 #include "../params.hpp"
-
-// using wheel_legged::params::active::yaw_ff;
-
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+using wheel_legged::params::active::yaw_ff;
+#endif
 /**
  * @file  targets/wheel_legged/include/gimbal/gimbal.hpp
  * @brief 云台双轴控制器与 DM 电机命令输出
@@ -201,11 +201,18 @@ class Gimbal {
 
       const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
       controller_.Enable(true);
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      yaw_ff.Update(output_.yaw_target_rad);
+      controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,
+                            input.aimbot_mode ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
+#else
       if (input.aimbot_mode && input.spin_hold) {
         controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, -input.chassis_yaw_rate_rad_s);
       } else {
         controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
       }
+#endif
+
       controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
                          dt_s);
 
@@ -252,9 +259,17 @@ class Gimbal {
       const float ff_p = 1.5f * std::cos(output_.pitch_pos_rad);
 
       // 开前馈
-      // output_.yaw_cmd_torque_nm =
-      //     std::clamp(controller_.output().yaw + ff.x(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      output_.yaw_cmd_torque_nm =
+          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                     wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      output_.pitch_cmd_torque_nm =
+          std::clamp(controller_.output().pitch + wheel_legged::params::active::gimbal::kPitchGravityCompensationNm *
+                                                      std::cos(input.gimbal_imu_pitch_rad),
+                     -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+                     wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+
+#else
       output_.yaw_cmd_torque_nm =
           std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
@@ -267,14 +282,7 @@ class Gimbal {
       // output_.pitch_cmd_torque_nm =
       //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
       //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-
-      // 关前馈
-      // output_.yaw_cmd_torque_nm =
-      //     std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+#endif
     }
   }
 
