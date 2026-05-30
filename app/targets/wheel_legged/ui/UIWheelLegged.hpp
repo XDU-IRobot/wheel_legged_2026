@@ -42,7 +42,7 @@ extern void UIWheelLeggedAimbotBox_add();
 extern void UIWheelLeggedAimbotBox_edit();
 
 // ── Helper: five-bar linkage inverse kinematics ──
-extern void calcPointC(double x1, double y1, double x2, double y2, double L1, double L2, int sel,
-                       float *x3_out, float *y3_out);
+extern void calcPointC(double x1, double y1, double x2, double y2, double L1, double L2, int sel, float *x3_out,
+                       float *y3_out);
 
 #endif  // UIWHEELLEGGED_HPP

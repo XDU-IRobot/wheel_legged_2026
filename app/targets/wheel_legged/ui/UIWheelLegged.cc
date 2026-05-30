@@ -67,8 +67,8 @@ void calcPointC(double x1, double y1, double x2, double y2, double L1, double L2
 
 void UIWheelLeggedLabelPY_add() {
   UICharacter fig;
-  fig.character.fillCharacter("py", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3,
-                              static_cast<u16>(8.728), static_cast<u16>(738.454), 30, 5);
+  fig.character.fillCharacter("py", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3, static_cast<u16>(8.728),
+                              static_cast<u16>(738.454), 30, 5);
   memcpy(fig.data, "P:\nY:", 5);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -77,8 +77,8 @@ void UIWheelLeggedLabelPY_add() {
 
 void UIWheelLeggedLabelLeg_add() {
   UICharacter fig;
-  fig.character.fillCharacter("leg", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3,
-                              static_cast<u16>(1448), static_cast<u16>(748), 30, 5);
+  fig.character.fillCharacter("leg", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1448),
+                              static_cast<u16>(748), 30, 5);
   memcpy(fig.data, "L M H", 10);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -145,12 +145,10 @@ void UIWheelLeggedCrosshair_edit() {
 
 void UIWheelLeggedGimbalData_add() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("pit", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(77.748), static_cast<u16>(730.583), 25,
-                        ui_snapshot.gimbal_pitch_rad * 1000);
-  fig.figure2.fillFloat("yaw", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(77.348), static_cast<u16>(690.988), 25,
-                        ui_snapshot.gimbal_yaw_rad * 1000);
+  fig.figure1.fillFloat("pit", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(77.748),
+                        static_cast<u16>(730.583), 25, ui_snapshot.gimbal_pitch_rad * 1000);
+  fig.figure2.fillFloat("yaw", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(77.348),
+                        static_cast<u16>(690.988), 25, ui_snapshot.gimbal_yaw_rad * 1000);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -158,12 +156,10 @@ void UIWheelLeggedGimbalData_add() {
 
 void UIWheelLeggedGimbalData_edit() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("pit", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(77.748), static_cast<u16>(730.583), 25,
-                        ui_snapshot.gimbal_pitch_rad * 1000);
-  fig.figure2.fillFloat("yaw", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(77.348), static_cast<u16>(690.988), 25,
-                        ui_snapshot.gimbal_yaw_rad * 1000);
+  fig.figure1.fillFloat("pit", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(77.748),
+                        static_cast<u16>(730.583), 25, ui_snapshot.gimbal_pitch_rad * 1000);
+  fig.figure2.fillFloat("yaw", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(77.348),
+                        static_cast<u16>(690.988), 25, ui_snapshot.gimbal_yaw_rad * 1000);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -445,12 +441,10 @@ void UIWheelLeggedFricRPM_edit() {
 
 void UIWheelLeggedBulletData_add() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("spd", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(1343.216), static_cast<u16>(644.661), 25,
-                        ui_snapshot.bullet_speed_mps);
-  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3,
-                            static_cast<u16>(1346.347), static_cast<u16>(472.9), 25,
-                            static_cast<i32>(ui_snapshot.projectile_allowance));
+  fig.figure1.fillFloat("spd", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1343.216),
+                        static_cast<u16>(644.661), 25, ui_snapshot.bullet_speed_mps);
+  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1346.347),
+                            static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -458,12 +452,10 @@ void UIWheelLeggedBulletData_add() {
 
 void UIWheelLeggedBulletData_edit() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("spd", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3,
-                        static_cast<u16>(1343.216), static_cast<u16>(644.661), 25,
-                        ui_snapshot.bullet_speed_mps);
-  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3,
-                            static_cast<u16>(1346.347), static_cast<u16>(472.9), 25,
-                            static_cast<i32>(ui_snapshot.projectile_allowance));
+  fig.figure1.fillFloat("spd", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1343.216),
+                        static_cast<u16>(644.661), 25, ui_snapshot.bullet_speed_mps);
+  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1346.347),
+                            static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -484,25 +476,21 @@ void UIWheelLeggedStatusLabel_add() {
   memset(status_line.data, 0, sizeof(status_line.data));
   switch (status_line_index) {
     case 0:
-      status_line.character.fillCharacter("st1", op, 0, UIFigure::Color::Yellow,
-                                          2, 740, 348, 20, 22);
+      status_line.character.fillCharacter("st1", op, 0, UIFigure::Color::Yellow, 2, 740, 348, 20, 22);
       memcpy(status_line.data, "DISABLE STANDBY ENABLE", 22);
       break;
     case 1:
-      status_line.character.fillCharacter("st2", op, 0, UIFigure::Color::Yellow,
-                                          2, 740, 308, 20, 16);
+      status_line.character.fillCharacter("st2", op, 0, UIFigure::Color::Yellow, 2, 740, 308, 20, 16);
       if (ui_snapshot.ad_active) {
-        status_line.character.fillCharacter("sa2", op, 0, UIFigure::Color::Yellow,
-                                            2, 760, 308, 6, 16);
+        status_line.character.fillCharacter("sa2", op, 0, UIFigure::Color::Yellow, 2, 760, 308, 6, 16);
       } else {
-        status_line.character.fillCharacter("sa2", UIFigure::Operation::Delete,
-                                            0, UIFigure::Color::Yellow, 2, 760, 308, 6, 16);
+        status_line.character.fillCharacter("sa2", UIFigure::Operation::Delete, 0, UIFigure::Color::Yellow, 2, 760, 308,
+                                            6, 16);
       }
       memcpy(status_line.data, "SPIN CROSS AD", 13);
       break;
     default:
-      status_line.character.fillCharacter("st3", op, 0, UIFigure::Color::Yellow,
-                                          2, 740, 268, 20, 16);
+      status_line.character.fillCharacter("st3", op, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 16);
       memcpy(status_line.data, "NORMAL SMALL BIG", 16);
       break;
   }
@@ -560,9 +548,18 @@ void UIWheelLeggedStateIndicator_add() {
     }
     u16 x1 = 290, y1 = 238, x2 = 290, y2 = 278;
     switch (ui_snapshot.aim_mode) {
-      case 1: x1 = 876; x2 = 976; break;
-      case 2: x1 = 994; x2 = 1060; break;
-      default: x1 = 736; x2 = 858; break;
+      case 1:
+        x1 = 876;
+        x2 = 976;
+        break;
+      case 2:
+        x1 = 994;
+        x2 = 1060;
+        break;
+      default:
+        x1 = 736;
+        x2 = 858;
+        break;
     }
     fig.figure3.fillRec("am_", UIFigure::Operation::Add, 0, am_color, 2, x1, y1, x2, y2);
   }
@@ -618,9 +615,18 @@ void UIWheelLeggedStateIndicator_edit() {
     }
     u16 x1 = 290, y1 = 238, x2 = 290, y2 = 278;
     switch (ui_snapshot.aim_mode) {
-      case 1: x1 = 876; x2 = 976; break;
-      case 2: x1 = 994; x2 = 1060; break;
-      default: x1 = 736; x2 = 858; break;
+      case 1:
+        x1 = 876;
+        x2 = 976;
+        break;
+      case 2:
+        x1 = 994;
+        x2 = 1060;
+        break;
+      default:
+        x1 = 736;
+        x2 = 858;
+        break;
     }
     fig.figure3.fillRec("am_", UIFigure::Operation::Edit, 0, am_color, 2, x1, y1, x2, y2);
   }
