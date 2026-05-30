@@ -11,7 +11,6 @@
 #include "include/actuators.hpp"
 #include "include/globals.hpp"
 #include "include/params.hpp"
-f32 flag2, flag3, f4, f5;
 namespace wheel_legged::control_loop {
 
 namespace {
@@ -299,7 +298,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 
   // 鼠标右键：按住时进入自瞄模式（电平有效，VT03 / DR16 均生效）
   tc_state.auto_aim_hold = tc_remote.right_button;
-  f5 = tc_remote.right_button;
 
   input.input_valid = has_any_input;
   input.dr16 = dr16;
