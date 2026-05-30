@@ -388,7 +388,16 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = ctx.gimbal_startup_align_target_rad;
   }
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
-  gimbal_update_input.chassis_yaw_rate_rad_s = input.estimator_input.imu.gyro_z_rad_s;
+  if (gimbal_update_input.spin_hold) {
+    const bool ref_online =
+        globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
+    const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
+    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+    const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err);
+    gimbal_update_input.chassis_yaw_rate_rad_s = input.mode_request.spin_dir * spin_target;
+  } else {
+    gimbal_update_input.chassis_yaw_rate_rad_s = input.estimator_input.imu.gyro_z_rad_s;
+  }
   gimbal_update_input.chassis_pitch_rad = input.estimator_input.imu.pitch_rad;
   gimbal_update_input.yaw_motor_rad = input.estimator_input.yaw_motor_rad;
   gimbal_update_input.gimbal_imu_yaw_rad = input.gimbal_imu_yaw_rad;

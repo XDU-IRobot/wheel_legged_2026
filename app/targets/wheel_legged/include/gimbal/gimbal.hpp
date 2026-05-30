@@ -207,7 +207,8 @@ class Gimbal {
                             input.aimbot_mode ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
 #else
       if (input.aimbot_mode && input.spin_hold) {
-        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, -input.chassis_yaw_rate_rad_s);
+        // controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, -input.chassis_yaw_rate_rad_s);
+        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
       } else {
         controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
       }
