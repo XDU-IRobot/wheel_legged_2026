@@ -7,7 +7,7 @@
 #include "gimbal_ident.hpp"
 #include "../fsm_common.hpp"
 #include "../params.hpp"
-#if WHEEL_LEGGED_ROBOT_VARIANT==1
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
 using wheel_legged::params::active::yaw_ff;
 #endif
 /**
@@ -264,7 +264,9 @@ class Gimbal {
           std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm =
-          std::clamp(controller_.output().pitch + wheel_legged::params::active::gimbal::kPitchGravityCompensationNm * std::cos(input.gimbal_imu_pitch_rad), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().pitch + wheel_legged::params::active::gimbal::kPitchGravityCompensationNm *
+                                                      std::cos(input.gimbal_imu_pitch_rad),
+                     -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 
 #else
@@ -281,7 +283,6 @@ class Gimbal {
       //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
       //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
 #endif
-
     }
   }
 

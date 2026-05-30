@@ -154,8 +154,8 @@ void chassis::Chassis::Init() {
            right_l0_dip.max_iout);
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   const auto &left_l0_standup = wheel_legged::params::active::chassis::kLeftL0PidStandup;
-  init_pid(left_l0_pid_standup_, left_l0_standup.kp, left_l0_standup.ki, left_l0_standup.kd,
-           left_l0_standup.max_out, left_l0_standup.max_iout);
+  init_pid(left_l0_pid_standup_, left_l0_standup.kp, left_l0_standup.ki, left_l0_standup.kd, left_l0_standup.max_out,
+           left_l0_standup.max_iout);
   const auto &right_l0_standup = wheel_legged::params::active::chassis::kRightL0PidStandup;
   init_pid(right_l0_pid_standup_, right_l0_standup.kp, right_l0_standup.ki, right_l0_standup.kd,
            right_l0_standup.max_out, right_l0_standup.max_iout);
@@ -530,10 +530,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
                                 -right_leg_.l0_dot(), 2);
-  } else if (!standup_complete_){
+  } else if (!standup_complete_) {
     left_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
     right_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
-  }else {
+  } else {
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
@@ -555,17 +555,19 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
-  output_.left_l0_pid_out = mid_leg_dip_active_ ? left_l0_pid_dip_.out()
+  output_.left_l0_pid_out = mid_leg_dip_active_
+                                ? left_l0_pid_dip_.out()
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-                          : (!standup_complete_ ? left_l0_pid_standup_.out() : left_l0_pid_.out());
+                                : (!standup_complete_ ? left_l0_pid_standup_.out() : left_l0_pid_.out());
 #else
-                          : left_l0_pid_.out();
+                                : left_l0_pid_.out();
 #endif
-  output_.right_l0_pid_out = mid_leg_dip_active_ ? right_l0_pid_dip_.out()
+  output_.right_l0_pid_out = mid_leg_dip_active_
+                                 ? right_l0_pid_dip_.out()
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-                           : (!standup_complete_ ? right_l0_pid_standup_.out() : right_l0_pid_.out());
+                                 : (!standup_complete_ ? right_l0_pid_standup_.out() : right_l0_pid_.out());
 #else
-                           : right_l0_pid_.out();
+                                 : right_l0_pid_.out();
 #endif
   const rm::f32 length_force_base = 0.5f * (output_.left_l0_pid_out + output_.right_l0_pid_out);
 
@@ -772,17 +774,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = 0.0f;
       right_force_ = 0.0f;
       if (l_in && r_in) {
-        const float err_pitch =
-            std::copysign(state_output.current.theta_b, left_leg_turn_pid_.out());
-        ll_pid_out =
-            -(left_leg_turn_pid_.out() +
-              wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
-        lr_pid_out =
-            -(right_leg_turn_pid_.out() +
-              wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
+        const float err_pitch = std::copysign(state_output.current.theta_b, left_leg_turn_pid_.out());
+        ll_pid_out = -(left_leg_turn_pid_.out() +
+                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
+        lr_pid_out = -(right_leg_turn_pid_.out() +
+                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
       } else {
-        ll_pid_out = -1.8*left_leg_turn_pid_.out();
-        lr_pid_out = -1.8*right_leg_turn_pid_.out();
+        ll_pid_out = -1.8 * left_leg_turn_pid_.out();
+        lr_pid_out = -1.8 * right_leg_turn_pid_.out();
       }
 
       output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
@@ -808,16 +807,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       if (imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMaxRad) {
         right_leg_turn_pid_.Update(-1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
                                    state_output.current.theta_lr_dot);
-        const float err_roll =
-            std::copysign(imu_roll_, right_leg_turn_pid_.out());
+        const float err_roll = std::copysign(imu_roll_, right_leg_turn_pid_.out());
         ll_pid_out = 0;
         lr_pid_out =
             -(right_leg_turn_pid_.out() + wheel_legged::params::active::chassis::kRecoveryRollFeedforwardKp * err_roll);
       } else if (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad) {
         left_leg_turn_pid_.Update(-1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
                                   state_output.current.theta_ll_dot);
-        const float err_roll =
-            std::copysign(imu_roll_, left_leg_turn_pid_.out());
+        const float err_roll = std::copysign(imu_roll_, left_leg_turn_pid_.out());
         ll_pid_out =
             -(left_leg_turn_pid_.out() + wheel_legged::params::active::chassis::kRecoveryRollFeedforwardKp * err_roll);
         lr_pid_out = 0;

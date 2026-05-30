@@ -11,7 +11,7 @@
 #include "include/actuators.hpp"
 #include "include/globals.hpp"
 #include "include/params.hpp"
-f32 flag1,flag2,flag3,f4,f5;
+f32 flag1, flag2, flag3, f4, f5;
 namespace wheel_legged::control_loop {
 
 namespace {
@@ -740,7 +740,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     input.mode_request.host_target_valid = true;
     input.mode_request.target_source = wheel_legged::TargetSource::kHost;
   }
-
 
   // 4. 云台惯导（CAN 桥，独立于底盘 IMU）
   input.gimbal_imu_yaw_rad = gimbal_rx_valid ? g.gimbal_rx->yaw_rad() : 0.0f;

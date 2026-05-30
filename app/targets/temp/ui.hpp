@@ -216,7 +216,7 @@ inline void dynamic_aimbot_box_func() {
     globals_no_dtcm.referee_uart.Write(info, len, 10);
     added = true;
   } else if (added) {
-    box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 760, 536,1129, 230);
+    box.figure1.fillRec("r1_", device::UIFigure::Operation::Edit, 0, color, 3, 760, 536, 1129, 230);
     if (has_target) {
       box.figure2.fillIntegrate("ahp", device::UIFigure::Operation::Edit, 0, device::UIFigure::Color::RedBlue, 3, 790,
                                 420, 20, static_cast<i32>(ui_snapshot.aimbot_target_hp));

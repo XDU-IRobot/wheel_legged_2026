@@ -108,7 +108,8 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else if (fire_trigger && curHeatDelta >= 100 && fw_[0]->rpm() >= kFwReadyRpm&&fw_[1]->rpm() >= kFwReadyRpm&&fw_[2]->rpm() >= kFwReadyRpm) {
+        } else if (fire_trigger && curHeatDelta >= 100 && fw_[0]->rpm() >= kFwReadyRpm &&
+                   fw_[1]->rpm() >= kFwReadyRpm && fw_[2]->rpm() >= kFwReadyRpm) {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
@@ -140,7 +141,7 @@ class ShootController {
         if (curHeatDelta >= 100) {
           state_ = State::kReady;
         } else {
-          state_= State::kCooling;
+          state_ = State::kCooling;
         }
         break;
 
@@ -184,7 +185,6 @@ class ShootController {
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
       // booster_->SetMitCommand(0, 0.0f, 0, 0.0f, 0.0f);
-
     }
   }
 

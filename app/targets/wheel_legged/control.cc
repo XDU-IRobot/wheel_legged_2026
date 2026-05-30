@@ -18,7 +18,7 @@ float yaw_motor_pos, pitch_motor_pos;
 float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
 int times = 0;
-int id=0;
+int id = 0;
 
 // ── UI task scheduler & task objects (drone_gb_new style) ──
 static auto schedule = rm::device::UITaskScheduler(30);
@@ -438,8 +438,9 @@ void ControlLoop() {
   {
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
     const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
-    const bool fire_flag =manual_fire|| (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                          (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    const bool fire_flag =
+        manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
+                        (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
     globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
@@ -816,9 +817,8 @@ void ControlLoop() {
   if (target_s_dot == 0.0f && effective_s_dot == 0.0f) {
     effective_s_dot = -ns::control_loop::kLqrStopDampingK * current_state.s_dot;
   }
-  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
-                                            ? current_state.s_dot
-                                            : effective_s_dot;
+  chassis_update_input.expected.s_dot =
+      chassis_control_output.off_ground_in_mid_high_leg ? current_state.s_dot : effective_s_dot;
 #else
   chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
                                             ? current_state.s_dot

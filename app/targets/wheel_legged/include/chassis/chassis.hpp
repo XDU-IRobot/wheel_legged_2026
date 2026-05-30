@@ -168,11 +168,11 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{false};            ///< 起立完成
-  uint8_t standup_phase_{0};                ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
-  bool prev_fsm_was_recovery_{false};       ///< 上一周期是否在恢复状态
+  bool standup_complete_{false};       ///< 起立完成
+  uint8_t standup_phase_{0};           ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  bool prev_fsm_was_recovery_{false};  ///< 上一周期是否在恢复状态
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  bool prev_in_stair_task_{false};          ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）
+  bool prev_in_stair_task_{false};  ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）
 #endif
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
