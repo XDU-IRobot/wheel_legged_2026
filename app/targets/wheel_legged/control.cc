@@ -711,9 +711,19 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  float effective_s_dot = spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot;
+  if (target_s_dot == 0.0f && effective_s_dot == 0.0f) {
+    effective_s_dot = -ns::control_loop::kLqrStopDampingK * current_state.s_dot;
+  }
+  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
+                                            ? current_state.s_dot
+                                            : effective_s_dot;
+#else
   chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
                                             ? current_state.s_dot
                                             : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
+#endif
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
@@ -801,7 +811,12 @@ void ControlLoop() {
   }
   if (!spin_control_enabled &&
       !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    chassis_update_input.expected.theta_b =
+        kExpectedThetaBBiasRad + wheel_legged::params::hero::control_loop::kExpectedThetaBSpeedK * ctx.filtered_s_dot;
+#else
     chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
+#endif
   }
 
   // ── 7l. 偏航角速度控制 ──
