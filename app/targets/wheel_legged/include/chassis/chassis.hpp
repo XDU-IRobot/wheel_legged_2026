@@ -174,8 +174,8 @@ class Chassis {
   bool standup_complete_{false};       ///< 起立完成
   uint8_t standup_phase_{0};           ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
   float standup_theta_target_{0.0f};   ///< 起立摆角 PID 目标斜坡当前值 [rad]
-  uint8_t theta_recovery_phase_{0};     ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
-  bool theta_recovery_active_{false};   ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
+  uint8_t theta_recovery_phase_{0};    ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
+  bool theta_recovery_active_{false};  ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool prev_fsm_was_recovery_{false};  ///< 上一周期是否在恢复状态
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   bool prev_in_stair_task_{false};  ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）

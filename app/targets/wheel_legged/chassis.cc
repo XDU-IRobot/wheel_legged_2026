@@ -532,14 +532,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  const rm::f32 displacement_bias =
-      (input.fsm_mode == Fsm::State::kSpin)
-          ? 0.0f
-          : (input.fsm_mode == Fsm::State::kHighLeg)
-              ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMHighLeg
-              : (input.fsm_mode == Fsm::State::kMidLeg && !mid_leg_dip_active_)
-                  ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMMidLeg
-                  : wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
+  const rm::f32 displacement_bias = (input.fsm_mode == Fsm::State::kSpin) ? 0.0f
+                                    : (input.fsm_mode == Fsm::State::kHighLeg)
+                                        ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMHighLeg
+                                    : (input.fsm_mode == Fsm::State::kMidLeg && !mid_leg_dip_active_)
+                                        ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMMidLeg
+                                        : wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
   base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
