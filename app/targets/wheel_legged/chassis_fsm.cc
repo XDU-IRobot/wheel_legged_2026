@@ -240,8 +240,8 @@ void chassis::Fsm::Transit(const State new_mode) {
   }
   mode_ = new_mode;
   output_.mode = mode_;
-  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_descend_retracted_,
-                                       ctrl_c_stair_);
+  output_.control =
+      BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_descend_retracted_, ctrl_c_stair_);
 }
 
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
