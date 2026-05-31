@@ -58,10 +58,14 @@ void UIEnemyHPRed_edit() {
   if (!is_red_team()) return;
   static UIFigure5 fig;
   const auto hp1_color = (ui_snapshot.enemy_hero_1_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto hp2_color = (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto hp3_color = (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto hp4_color = (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto hp5_color = (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp2_color =
+      (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp3_color =
+      (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp4_color =
+      (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp5_color =
+      (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
   fig.figure1.fillIntegrate("HP1", UIFigure::Operation::Edit, 0, hp1_color, 4, 1170, 850, 20,
                             static_cast<i32>(ui_snapshot.hero_1_HP));
   fig.figure2.fillIntegrate("HP2", UIFigure::Operation::Edit, 0, hp2_color, 4, 1290, 850, 20,
@@ -156,10 +160,14 @@ void UIEnemyHPBlue_add() {
 void UIEnemyHPBlue_edit() {
   if (is_red_team()) return;
   static UIFigure5 fig;
-  const auto bh1_color = (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto bh2_color = (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto bh3_color = (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
-  const auto bh4_color = (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh1_color =
+      (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh2_color =
+      (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh3_color =
+      (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh4_color =
+      (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
   const auto bh5_color = (ui_snapshot.enemy_hero_1_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
   fig.figure1.fillIntegrate("BH1", UIFigure::Operation::Edit, 0, bh1_color, 4, 55, 850, 20,
                             static_cast<i32>(ui_snapshot.sentry_7_HP));
