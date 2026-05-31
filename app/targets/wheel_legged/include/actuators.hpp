@@ -94,16 +94,16 @@ class Actuators {
    */
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
     if (g.fric_left.has_value()) {
-      // g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-      g.fric_left->SetCurrent(static_cast<int16_t>(0));
+      g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
+      // g.fric_left->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.fric_right.has_value()) {
-      // g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
-      g.fric_right->SetCurrent(static_cast<int16_t>(0));
+      g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
+      // g.fric_right->SetCurrent(static_cast<int16_t>(0));
     }
     if (g.dial.has_value()) {
-      // g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
-      g.dial->SetCurrent(static_cast<int16_t>(0));
+      g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
+      // g.dial->SetCurrent(static_cast<int16_t>(0));
     }
     rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
@@ -226,12 +226,12 @@ class Actuators {
 
   static void SendGimbalMitCommand(SharedResources &g, float yaw_tau, float pitch_tau) {
     if (g.yaw_motor.has_value()) {
-      // g.yaw_motor->SetMitCommand(0.0f, 0.0f, yaw_tau, 0.0f, 0.0f);
-      g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+      g.yaw_motor->SetMitCommand(0.0f, 0.0f, yaw_tau, 0.0f, 0.0f);
+      // g.yaw_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
     if (g.pitch_motor.has_value()) {
-      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
-      g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
+      g.pitch_motor->SetMitCommand(0.0f, 0.0f, pitch_tau, 0.0f, 0.0f);
+      // g.pitch_motor->SetMitCommand(0.0f, 0.0f, 0, 0.0f, 0.0f);
     }
   }
 
