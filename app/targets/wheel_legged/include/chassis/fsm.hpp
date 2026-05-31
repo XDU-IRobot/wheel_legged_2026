@@ -90,6 +90,7 @@ class Fsm {
   bool stair_descend_retracted_{false};  ///< Hold minimum leg length after the edge is detected.
   bool spin_lock_low_{false};            ///< 小陀螺后锁定低腿长，仅手动切档解锁
   bool ctrl_c_stair_{false};             ///< Ctrl+C 上台阶预备模式激活
+  bool stair_step2_{false};              ///< 双台阶第二步
   wheel_legged::LegProfile prev_leg_request_{wheel_legged::LegProfile::kLow};  ///< 上周期腿长请求（检测手动切档）
   uint32_t state_enter_tick_ms_{0};
   Output output_{};

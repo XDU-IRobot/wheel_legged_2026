@@ -821,7 +821,9 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .manual_right_leg_speed = m.manual_right_leg_speed,
       .tick_ms = tick_ms,
   };
+  fsm_input.request.current_s_dot = chassis_output.current_state.s_dot;
   fsm_input.request.ctrl_c_stair = m.ctrl_c_stair;
+  fsm_input.request.stair_step2 = m.stair_step2;
   return fsm_input;
 }
 

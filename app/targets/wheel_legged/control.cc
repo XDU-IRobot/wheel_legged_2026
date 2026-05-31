@@ -268,7 +268,8 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 2：状态机决策
   // ═══════════════════════════════════════════════════════════════════════
-  const auto &stair_params = ns::chassis_fsm::kStairClimb;
+  const bool stair_step2 = g_stair_task_coordinator.output().completed_attempts > 0U;
+  const auto &stair_params = stair_step2 ? ns::chassis_fsm::kStairClimbStep2 : ns::chassis_fsm::kStairClimb;
   const bool stair_output_enabled = input.mode_request.input_valid &&
                                     input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled &&
                                     !input.mode_request.standby;
@@ -296,6 +297,7 @@ void ControlLoop() {
   const auto &stair_sequence_output = g_stair_sequence.Update({
       .start = stair_task_output.start_sequence,
       .cancel = stair_task_output.cancel_sequence,
+      .use_step2_params = stair_task_output.completed_attempts > 0U,
       .output_enabled = stair_output_enabled,
       .posture_valid = chassis_control_output.posture_valid,
       .mean_leg_length_m = chassis_control_output.mean_leg_length_m,
@@ -317,6 +319,7 @@ void ControlLoop() {
     chassis_input.request.leg_request = wheel_legged::LegProfile::kLow;
   }
   chassis_input.request.stair_task_active = stair_task_output.task_active;
+  chassis_input.request.stair_step2 = stair_task_output.completed_attempts > 0U;
   chassis_input.request.stair_task_recovery_required = stair_task_output.recovery_required;
   {
     const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);

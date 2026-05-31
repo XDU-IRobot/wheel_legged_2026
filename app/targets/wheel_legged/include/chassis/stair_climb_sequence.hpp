@@ -11,6 +11,7 @@ class StairClimbSequence {
   struct Input {
     bool start{false};
     bool cancel{false};
+    bool use_step2_params{false};
     bool output_enabled{false};
     bool posture_valid{true};
     float mean_leg_length_m{0.0f};
@@ -49,6 +50,7 @@ class StairClimbSequence {
   bool StableFor(bool condition, uint32_t duration_ms, uint32_t tick_ms);
   void UpdateOutput(const Input &input);
 
+  bool use_step2_params_{false};
   wheel_legged::StairPhase phase_{wheel_legged::StairPhase::kIdle};
   wheel_legged::StairAbortReason abort_reason_{wheel_legged::StairAbortReason::kNone};
   uint32_t phase_enter_tick_ms_{0U};

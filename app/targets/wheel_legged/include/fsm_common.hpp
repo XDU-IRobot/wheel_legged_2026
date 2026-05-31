@@ -137,6 +137,7 @@ struct ModeRequest {
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
   bool mid_leg_f{false};                       ///< F 键触发的 mid_leg_f 中腿长（慢速斜坡参数）
   bool ctrl_c_stair{false};                    ///< Ctrl+C 触发的上台阶预备模式（0.2m腿长，theta到位后进kStairTask）
+  bool stair_step2{false};                     ///< 双台阶第二步
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
@@ -207,6 +208,7 @@ struct ChassisFsmInput {
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
   bool auto_jump_triggered{false};                         ///< 自动跳跃触发（DYP 测距）
   float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
+  float current_s_dot{0.0f};                               ///< 当前纵向速度 [m/s]
   float theta_ll_rad{0.0f};                                ///< 当前左腿摆角
   float theta_lr_rad{0.0f};                                ///< 当前右腿摆角
   bool fall_detected{false};                               ///< 是否检测到倒地
@@ -216,6 +218,7 @@ struct ChassisFsmInput {
   bool stair_task_active{false};                           ///< 上台阶任务处于待命或执行中
   bool stair_task_recovery_required{false};                ///< 台阶任务姿态异常，立即进入恢复
   bool ctrl_c_stair{false};                                ///< Ctrl+C 上台阶预备模式
+  bool stair_step2{false};                                 ///< 双台阶第二步（使用 kStairClimbStep2 参数）
   bool recovery_manual_mode{false};                        ///< 倒地自启手动模式
   float manual_left_leg_speed{0.0f};                       ///< 手动模式左腿摆角速度目标 [rad/s]
   float manual_right_leg_speed{0.0f};                      ///< 手动模式右腿摆角速度目标 [rad/s]
