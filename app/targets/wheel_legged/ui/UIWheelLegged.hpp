@@ -8,6 +8,7 @@
 // ── Static labels (one-shot add) ──
 extern void UIWheelLeggedLabelPY_add();
 extern void UIWheelLeggedLabelLeg_add();
+extern void UIWheelLeggedLabelAD_add();
 extern void UIWheelLeggedDecorativeRect_add();
 
 // ── Crosshair (add + edit) ──
@@ -18,9 +19,18 @@ extern void UIWheelLeggedCrosshair_edit();
 extern void UIWheelLeggedGimbalData_add();
 extern void UIWheelLeggedGimbalData_edit();
 
-// ── Leg kinematics + supercap energy bar ──
-extern void UIWheelLeggedKinematics_add();
-extern void UIWheelLeggedKinematics_edit();
+// ── Supercap energy bar ──
+extern void UIWheelLeggedSupercapBox_add();
+extern void UIWheelLeggedSupercap_add();
+extern void UIWheelLeggedSupercap_edit();
+
+// ── Leg length indicator (L M H box) ──
+extern void UIWheelLeggedLegBox_add();
+extern void UIWheelLeggedLegBox_edit();
+
+// ── Leg pose lines + yaw arc ──
+extern void UIWheelLeggedLegPose_add();
+extern void UIWheelLeggedLegPose_edit();
 
 // ── Friction wheel RPM ──
 extern void UIWheelLeggedFricRPM_add();
@@ -30,8 +40,10 @@ extern void UIWheelLeggedFricRPM_edit();
 extern void UIWheelLeggedBulletData_add();
 extern void UIWheelLeggedBulletData_edit();
 
-// ── Status labels (infantry variant, rotating) ──
-extern void UIWheelLeggedStatusLabel_add();
+// ── Status labels (infantry variant) ──
+extern void UIWheelLeggedStatusLabel_add_st1();
+extern void UIWheelLeggedStatusLabel_add_st2();
+extern void UIWheelLeggedStatusLabel_add_st3();
 
 // ── State indicator (infantry variant) ──
 extern void UIWheelLeggedStateIndicator_add();

@@ -12,33 +12,40 @@
 #include "ui/ui_snapshot.hpp"
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
-float debug_mid_target_theta;
-f32 yaw_motor_tau, pitch_motor_tau;
-float yaw_motor_pos, pitch_motor_pos;
-float yaw_motor_vel, pitch_motor_vel;
 bool init_flag;
-int times = 0;
-int id = 0;
+uint32_t times = 0;
 
 // ── UI task scheduler & task objects (drone_gb_new style) ──
 static auto schedule = rm::device::UITaskScheduler(30);
 
 // Static labels (one-shot add)
-static auto UI_label_py = rm::device::UITask(UIWheelLeggedLabelPY_add);
 static auto UI_label_leg = rm::device::UITask(UIWheelLeggedLabelLeg_add);
-static auto UI_decorative_rect = rm::device::UITask(UIWheelLeggedDecorativeRect_add);
+static auto UI_label_ad = rm::device::UITask(UIWheelLeggedLabelAD_add);
+static auto UI_status_label_st1 = rm::device::UITask(UIWheelLeggedStatusLabel_add_st1);
+static auto UI_status_label_st2 = rm::device::UITask(UIWheelLeggedStatusLabel_add_st2);
+static auto UI_status_label_st3 = rm::device::UITask(UIWheelLeggedStatusLabel_add_st3);
 
 // Crosshair
 static auto UI_crosshair_add = rm::device::UITask(UIWheelLeggedCrosshair_add);
 static auto UI_crosshair_edit = rm::device::UITask(UIWheelLeggedCrosshair_edit, 1.5f);
 
 // Gimbal data (hero variant)
+static auto UI_label_py = rm::device::UITask(UIWheelLeggedLabelPY_add);
 static auto UI_gimbal_data_add = rm::device::UITask(UIWheelLeggedGimbalData_add);
 static auto UI_gimbal_data_edit = rm::device::UITask(UIWheelLeggedGimbalData_edit, 1.5f);
 
-// Leg kinematics + supercap
-static auto UI_kinematics_add = rm::device::UITask(UIWheelLeggedKinematics_add);
-static auto UI_kinematics_edit = rm::device::UITask(UIWheelLeggedKinematics_edit, 1.0f);
+// Supercap energy bar
+static auto UI_supercap_box = rm::device::UITask(UIWheelLeggedSupercapBox_add);
+static auto UI_supercap_add = rm::device::UITask(UIWheelLeggedSupercap_add);
+static auto UI_supercap_edit = rm::device::UITask(UIWheelLeggedSupercap_edit, 1.0f);
+
+// Leg length indicator (L M H box)
+static auto UI_leg_box_add = rm::device::UITask(UIWheelLeggedLegBox_add);
+static auto UI_leg_box_edit = rm::device::UITask(UIWheelLeggedLegBox_edit, 1.0f);
+
+// Leg pose lines + yaw arc
+static auto UI_leg_pose_add = rm::device::UITask(UIWheelLeggedLegPose_add);
+static auto UI_leg_pose_edit = rm::device::UITask(UIWheelLeggedLegPose_edit, 1.0f);
 
 // Friction RPM
 static auto UI_fric_rpm_add = rm::device::UITask(UIWheelLeggedFricRPM_add);
@@ -47,13 +54,9 @@ static auto UI_fric_rpm_edit = rm::device::UITask(UIWheelLeggedFricRPM_edit, 3.0
 // Bullet data
 static auto UI_bullet_add = rm::device::UITask(UIWheelLeggedBulletData_add);
 static auto UI_bullet_edit = rm::device::UITask(UIWheelLeggedBulletData_edit, 3.0f);
-
-// Status labels (infantry variant, rotating — always Add)
-static auto UI_status_label = rm::device::UITask(UIWheelLeggedStatusLabel_add, 3.0f);
-
 // State indicator (infantry variant)
 static auto UI_state_indicator_add = rm::device::UITask(UIWheelLeggedStateIndicator_add);
-static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndicator_edit, 1.0f);
+static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndicator_edit, 0.5f);
 
 // Aimbot box
 static auto UI_aimbot_box_add = rm::device::UITask(UIWheelLeggedAimbotBox_add);
@@ -78,24 +81,30 @@ static auto UI_gold_coin_add = rm::device::UITask(UIGoldCoin_add);
 static auto UI_gold_coin_edit = rm::device::UITask(UIGoldCoin_edit, 3.0f);
 
 void static_UI_add() {
-  schedule.addTaskStatic(&UI_label_py);
   schedule.addTaskStatic(&UI_label_leg);
-  schedule.addTaskStatic(&UI_decorative_rect);
-
+  schedule.addTaskStatic(&UI_label_ad);
   schedule.addTaskStatic(&UI_crosshair_add);
   schedule.addTask(&UI_crosshair_edit);
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  schedule.addTaskStatic(&UI_label_py);
   schedule.addTaskStatic(&UI_gimbal_data_add);
   schedule.addTask(&UI_gimbal_data_edit);
 #else
-  schedule.addTask(&UI_status_label);
+  schedule.addTaskStatic(&UI_status_label_st1);
+  schedule.addTaskStatic(&UI_status_label_st2);
+  schedule.addTaskStatic(&UI_status_label_st3);
   schedule.addTaskStatic(&UI_state_indicator_add);
   schedule.addTask(&UI_state_indicator_edit);
 #endif
 
-  schedule.addTaskStatic(&UI_kinematics_add);
-  schedule.addTask(&UI_kinematics_edit);
+  schedule.addTaskStatic(&UI_supercap_box);
+  schedule.addTaskStatic(&UI_supercap_add);
+  schedule.addTask(&UI_supercap_edit);
+  schedule.addTaskStatic(&UI_leg_box_add);
+  schedule.addTask(&UI_leg_box_edit);
+  schedule.addTaskStatic(&UI_leg_pose_add);
+  schedule.addTask(&UI_leg_pose_edit);
 
   schedule.addTaskStatic(&UI_fric_rpm_add);
   schedule.addTask(&UI_fric_rpm_edit);
@@ -125,7 +134,6 @@ void static_UI_add() {
  * @file  targets/wheel_legged/control.cc
  * @brief 500Hz 主控制循环：输入采集、状态机更新、底盘解算、执行器输出与调试同步
  */
-float debug_pitch_motor_raw_pos_rad;
 DebugSnapshot wl_debug __attribute__((section(".sram4")));
 
 namespace {
@@ -1200,12 +1208,6 @@ void ControlLoop() {
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
   }
-  yaw_motor_pos = globals->yaw_motor->pos();
-  yaw_motor_vel = globals->yaw_motor->vel();
-  yaw_motor_tau = globals->yaw_motor->tau();
-  pitch_motor_pos = globals->pitch_motor->pos();
-  pitch_motor_vel = globals->pitch_motor->vel();
-  pitch_motor_tau = globals->pitch_motor->tau();
 
   {
     const bool referee_online =
@@ -1242,6 +1244,7 @@ void ControlLoop() {
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
     ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
                             chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.yaw_display_offset_rad = -ns::control_loop::kYawFollowFixedTargetRad;
 
     ui_snapshot.supercap_cap_energy =
         globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
@@ -1360,7 +1363,7 @@ void ControlLoop() {
   if (times % 17 == 0) {
     schedule.schedule();
     static bool last_ui_refresh = false;
-    if (globals->ui_refresh_key && !last_ui_refresh) {
+    if (globals->ui_refresh_key) {
       static_UI_add();
     }
     last_ui_refresh = globals->ui_refresh_key;
