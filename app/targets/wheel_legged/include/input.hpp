@@ -106,7 +106,8 @@ struct TcSemanticState {
   bool mid_leg_hold{false};             ///< 是否保持中腿长
   bool mid_leg_f{false};                ///< F 键触发的 mid_leg_f 中腿长模式（慢速斜坡参数）
   bool q_domain_armed{true};            ///< Q 键是否已就绪（上升沿检测）
-  uint8_t domain_state{0};              ///< Q domain cycle: 0=disabled, 1=standby, 2=enabled
+  bool ctrl_q_standby_armed{true};      ///< Ctrl+Q 组合键是否已就绪（上升沿检测，进入 standby）
+  uint8_t domain_state{0};              ///< Q domain: 0=disabled, 1=standby(Ctrl+Q), 2=enabled
   bool v_high_leg_armed{true};          ///< V 键是否已就绪（上升沿检测）
   bool b_high_leg_armed{true};          ///< B 键是否已就绪（上升沿检测）
   bool f_slow_armed{true};              ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）

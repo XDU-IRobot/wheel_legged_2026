@@ -261,9 +261,8 @@ void ControlLoop() {
   const bool stair_high_leg_ready = std::fabs(chassis_control_output.mean_leg_length_m -
                                               stair_params.high_leg_length_m) <= stair_params.leg_length_tolerance_m;
   const auto &previous_sequence_output = g_stair_sequence.output();
-  const auto effective_stair_request = input.mode_request.spin_hold
-                                           ? wheel_legged::StairTaskRequest::kCancel
-                                           : input.mode_request.stair_task_request;
+  const auto effective_stair_request =
+      input.mode_request.spin_hold ? wheel_legged::StairTaskRequest::kCancel : input.mode_request.stair_task_request;
   const auto &stair_task_output = g_stair_task_coordinator.Update({
       .request = effective_stair_request,
       .contact_detected = stair_contact_detected,
@@ -312,7 +311,7 @@ void ControlLoop() {
       globals->referee->data().robot_status.power_management_chassis_output == 0) {
     chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
   }
-  // 只有 Q 键或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
+  // 只有 Q 键 / Ctrl+Q 或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
   {
     static uint8_t prev_domain_state = 0U;
     const bool q_just_pressed = (prev_domain_state == 0U && tc_state.domain_state != 0U);
@@ -376,8 +375,9 @@ void ControlLoop() {
   gimbal_update_input.aimbot_is_rune =
       (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
-  gimbal_update_input.spin_hold = (chassis_output.mode == chassis::Fsm::State::kSpin ||
-                                   chassis_output.mode == chassis::Fsm::State::kSpinExitPending);
+  const bool chassis_spin_mode = chassis_output.mode == chassis::Fsm::State::kSpin;
+  const bool chassis_spin_exit_pending = chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+  gimbal_update_input.spin_hold = chassis_spin_mode || chassis_spin_exit_pending;
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
     gimbal_update_input.aimbot_yaw_vel = globals->aimbot->yaw_vel() * kDegToRad;
@@ -391,7 +391,7 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = ctx.gimbal_startup_align_target_rad;
   }
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
-  if (gimbal_update_input.spin_hold) {
+  if (chassis_spin_mode) {
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
     const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
@@ -598,18 +598,30 @@ void ControlLoop() {
   };
   const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
   const bool now_is_spin = is_spin_like(chassis_output.mode);
+  const bool now_is_spin_running = chassis_output.mode == chassis::Fsm::State::kSpin;
+  const bool now_is_spin_exit_pending = chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
   const bool now_is_standby = chassis_output.mode == chassis::Fsm::State::kStandby;
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
+    const auto previous_mode = ctx.last_chassis_mode;
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
     if (cross_spin) {
       if (!now_is_spin) {
-        // 退出小陀螺：偏航已对齐正前方，不继承 phi_dot，直接交给 yaw follow PID 控制
+        if (previous_mode == chassis::Fsm::State::kSpinExitPending) {
+          ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+          ctx.spin_exit_recovery = true;
+          ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+        }
+        // 退出小陀螺：继承当前 phi_dot，后续 yaw follow 使用退出斜坡缓慢收敛
       } else {
         // 进入小陀螺：继承当前车体角速度做平滑起步，强制对齐正前方
         ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
         ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
       }
+    } else if (previous_mode == chassis::Fsm::State::kSpin && now_is_spin_exit_pending) {
+      ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
+      ctx.spin_exit_recovery = true;
+      ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     }
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -636,8 +648,9 @@ void ControlLoop() {
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
   if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
-  } else if (now_is_spin) {
+  } else if (now_is_spin_running || now_is_spin_exit_pending) {
     // 自旋期间冻结 yaw follow 模式，不处理方向性输入
+    requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (forward_input_active) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (side_input_active) {
@@ -693,9 +706,8 @@ void ControlLoop() {
 
   // ── 7f. 纵向速度目标计算 ──
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
-  const bool spin_control_enabled = (chassis_output.mode == chassis::Fsm::State::kSpin ||
-                                     chassis_output.mode == chassis::Fsm::State::kSpinExitPending) &&
-                                    chassis_output_enable && chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
+                                    chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
        chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
@@ -753,6 +765,8 @@ void ControlLoop() {
         rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
     spin_target_s_dot =
         kSpinTranslationGain * (-vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
+    target_s_dot = 0.0f;
+  } else if (now_is_spin_exit_pending) {
     target_s_dot = 0.0f;
   } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;

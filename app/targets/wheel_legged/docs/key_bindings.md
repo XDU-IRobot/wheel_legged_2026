@@ -32,14 +32,15 @@
 
 | 键位 | 触发方式 | 功能 |
 |------|----------|------|
-| Q | 上升沿 | 工作域循环：`Disabled -> Standby -> Enabled -> Disabled` |
+| Q | 上升沿 | 工作域切换：`Disabled <-> Enabled`（跳过 Standby） |
+| Ctrl+Q | 上升沿 | 进入 Standby 模式 |
 
 对应代码状态：
 
 | `domain_state` | `domain_request` | `standby` |
 |----------------|------------------|-----------|
 | 0 | `kDisabled` | `false` |
-| 1 | `kCombat` | `true` |
+| 1 | `kCombat` | `true`（Ctrl+Q 或打符模式自动进入） |
 | 2 | `kCombat` | `false` |
 
 ### 1.3 腿长和上台阶

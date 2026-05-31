@@ -202,13 +202,24 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!g_pressed) tc_state.g_aim_armed = true;
 
-    // Q: disabled -> standby -> enabled -> disabled.
+    // Q: disabled <-> enabled；standby 时也直接进 enabled。
     const bool q_pressed = (tc_remote.keyboard_value & kRcKeyQ) != 0U;
-    if (q_pressed && tc_state.q_domain_armed) {
-      tc_state.domain_state = (tc_state.domain_state + 1) % 3;
+    if (q_pressed && !ctrl_pressed && tc_state.q_domain_armed) {
+      if (tc_state.domain_state == 1U) {
+        tc_state.domain_state = 2U;  // standby -> enabled
+      } else {
+        tc_state.domain_state = (tc_state.domain_state == 0U) ? 2U : 0U;  // disabled <-> enabled
+      }
       tc_state.q_domain_armed = false;
     }
     if (!q_pressed) tc_state.q_domain_armed = true;
+
+    // Ctrl+Q: 切换 standby / enabled（上升沿）。
+    if (ctrl_pressed && q_pressed && tc_state.ctrl_q_standby_armed) {
+      tc_state.domain_state = (tc_state.domain_state == 1U) ? 2U : 1U;
+      tc_state.ctrl_q_standby_armed = false;
+    }
+    if (!ctrl_pressed || !q_pressed) tc_state.ctrl_q_standby_armed = true;
 
     // V 键：启动/取消单台阶任务；待命期间由任务协调器保持高腿长。
     const bool v_pressed = (tc_remote.keyboard_value & kRcKeyV) != 0U;
@@ -408,7 +419,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       }
     }
 
-    // 工作域：Q 键循环
+    // 工作域：Q 键切换 disabled/enabled，Ctrl+Q 进入 standby
     switch (tc_state.domain_state) {
       case 0:
         request.domain_request = wheel_legged::DomainRequest::kDisabled;
