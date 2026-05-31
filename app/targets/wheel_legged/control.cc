@@ -41,26 +41,26 @@ static auto UI_supercap_edit = rm::device::UITask(UIWheelLeggedSupercap_edit, 1.
 
 // Leg length indicator (L M H box)
 static auto UI_leg_box_add = rm::device::UITask(UIWheelLeggedLegBox_add);
-static auto UI_leg_box_edit = rm::device::UITask(UIWheelLeggedLegBox_edit, 1.0f);
+static auto UI_leg_box_edit = rm::device::UITask(UIWheelLeggedLegBox_edit, 3.0f);
 
 // Leg pose lines + yaw arc
 static auto UI_leg_pose_add = rm::device::UITask(UIWheelLeggedLegPose_add);
-static auto UI_leg_pose_edit = rm::device::UITask(UIWheelLeggedLegPose_edit, 1.0f);
+static auto UI_leg_pose_edit = rm::device::UITask(UIWheelLeggedLegPose_edit, 2.0f);
 
 // Friction RPM
 static auto UI_fric_rpm_add = rm::device::UITask(UIWheelLeggedFricRPM_add);
-static auto UI_fric_rpm_edit = rm::device::UITask(UIWheelLeggedFricRPM_edit, 3.0f);
+static auto UI_fric_rpm_edit = rm::device::UITask(UIWheelLeggedFricRPM_edit, 0.5f);
 
 // Bullet data
 static auto UI_bullet_add = rm::device::UITask(UIWheelLeggedBulletData_add);
 static auto UI_bullet_edit = rm::device::UITask(UIWheelLeggedBulletData_edit, 3.0f);
 // State indicator (infantry variant)
 static auto UI_state_indicator_add = rm::device::UITask(UIWheelLeggedStateIndicator_add);
-static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndicator_edit, 0.5f);
+static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndicator_edit, 2.f);
 
 // Aimbot box
 static auto UI_aimbot_box_add = rm::device::UITask(UIWheelLeggedAimbotBox_add);
-static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 3.f);
+static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 2.f);
 
 // Shooter disabled warning X
 static auto UI_shooter_x_add = rm::device::UITask(UIWheelLeggedShooterX_add);
@@ -82,7 +82,7 @@ static auto UI_enemy_allowance_blue_edit = rm::device::UITask(UIEnemyAllowanceBl
 
 // Gold coin
 static auto UI_gold_coin_add = rm::device::UITask(UIGoldCoin_add);
-static auto UI_gold_coin_edit = rm::device::UITask(UIGoldCoin_edit, 3.0f);
+static auto UI_gold_coin_edit = rm::device::UITask(UIGoldCoin_edit, 0.5f);
 
 void static_UI_add() {
   schedule.addTaskStatic(&UI_label_leg);
@@ -1315,6 +1315,13 @@ void ControlLoop() {
       ui_snapshot.enemy_standard_4_allowance = allow.standard_4_projectile_allowance;
       ui_snapshot.enemy_drone_6_allowance = allow.drone_6_projectile_allowance;
       ui_snapshot.enemy_sentry_7_allowance = allow.sentry_7_projectile_allowance;
+
+      const auto &buff = globals->subReferee->data().enemy_robot_buff;
+      ui_snapshot.enemy_hero_1_defense = buff.hero.defense;
+      ui_snapshot.enemy_engineer_2_defense = buff.engineer.defense;
+      ui_snapshot.enemy_standard_3_defense = buff.infantry3.defense;
+      ui_snapshot.enemy_standard_4_defense = buff.infantry4.defense;
+      ui_snapshot.enemy_sentry_7_defense = buff.sentry.defense;
     } else {
       ui_snapshot.enemy_gold_remaining = 0;
       ui_snapshot.enemy_gold_total = 0;
@@ -1323,6 +1330,11 @@ void ControlLoop() {
       ui_snapshot.enemy_standard_4_allowance = 0;
       ui_snapshot.enemy_drone_6_allowance = 0;
       ui_snapshot.enemy_sentry_7_allowance = 0;
+      ui_snapshot.enemy_hero_1_defense = 0;
+      ui_snapshot.enemy_engineer_2_defense = 0;
+      ui_snapshot.enemy_standard_3_defense = 0;
+      ui_snapshot.enemy_standard_4_defense = 0;
+      ui_snapshot.enemy_sentry_7_defense = 0;
     }
 
     if (globals->aimbot.has_value()) {

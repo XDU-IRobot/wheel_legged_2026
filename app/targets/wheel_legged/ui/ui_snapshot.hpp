@@ -51,6 +51,12 @@ struct UiSnapshot {
   uint16_t enemy_drone_6_allowance{0};
   uint16_t enemy_sentry_7_allowance{0};
 
+  uint8_t enemy_hero_1_defense{0};
+  uint8_t enemy_engineer_2_defense{0};
+  uint8_t enemy_standard_3_defense{0};
+  uint8_t enemy_standard_4_defense{0};
+  uint8_t enemy_sentry_7_defense{0};
+
   uint8_t aimbot_id{0};
   uint16_t aimbot_target_hp{0};
   uint16_t aimbot_target_allowance{0};

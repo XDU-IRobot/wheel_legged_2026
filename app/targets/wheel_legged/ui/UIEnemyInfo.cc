@@ -57,15 +57,24 @@ void UIEnemyHPRed_add() {
 void UIEnemyHPRed_edit() {
   if (!is_red_team()) return;
   static UIFigure5 fig;
-  fig.figure1.fillIntegrate("HP1", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 1170, 850, 20,
+  const auto hp1_color = (ui_snapshot.enemy_hero_1_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp2_color =
+      (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp3_color =
+      (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp4_color =
+      (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto hp5_color =
+      (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  fig.figure1.fillIntegrate("HP1", UIFigure::Operation::Edit, 0, hp1_color, 4, 1170, 850, 20,
                             static_cast<i32>(ui_snapshot.hero_1_HP));
-  fig.figure2.fillIntegrate("HP2", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 1290, 850, 20,
+  fig.figure2.fillIntegrate("HP2", UIFigure::Operation::Edit, 0, hp2_color, 4, 1290, 850, 20,
                             static_cast<i32>(ui_snapshot.engineer_2_HP));
-  fig.figure3.fillIntegrate("HP3", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 1410, 850, 20,
+  fig.figure3.fillIntegrate("HP3", UIFigure::Operation::Edit, 0, hp3_color, 4, 1410, 850, 20,
                             static_cast<i32>(ui_snapshot.standard_3_HP));
-  fig.figure4.fillIntegrate("HP4", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 1530, 850, 20,
+  fig.figure4.fillIntegrate("HP4", UIFigure::Operation::Edit, 0, hp4_color, 4, 1530, 850, 20,
                             static_cast<i32>(ui_snapshot.standard_4_HP));
-  fig.figure5.fillIntegrate("HP5", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 1770, 850, 20,
+  fig.figure5.fillIntegrate("HP5", UIFigure::Operation::Edit, 0, hp5_color, 4, 1770, 850, 20,
                             static_cast<i32>(ui_snapshot.sentry_7_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -151,15 +160,24 @@ void UIEnemyHPBlue_add() {
 void UIEnemyHPBlue_edit() {
   if (is_red_team()) return;
   static UIFigure5 fig;
-  fig.figure1.fillIntegrate("BH1", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 55, 850, 20,
+  const auto bh1_color =
+      (ui_snapshot.enemy_sentry_7_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh2_color =
+      (ui_snapshot.enemy_standard_4_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh3_color =
+      (ui_snapshot.enemy_standard_3_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh4_color =
+      (ui_snapshot.enemy_engineer_2_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  const auto bh5_color = (ui_snapshot.enemy_hero_1_defense >= 100) ? UIFigure::Color::Yellow : UIFigure::Color::RedBlue;
+  fig.figure1.fillIntegrate("BH1", UIFigure::Operation::Edit, 0, bh1_color, 4, 55, 850, 20,
                             static_cast<i32>(ui_snapshot.sentry_7_HP));
-  fig.figure2.fillIntegrate("BH2", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 295, 850, 20,
+  fig.figure2.fillIntegrate("BH2", UIFigure::Operation::Edit, 0, bh2_color, 4, 295, 850, 20,
                             static_cast<i32>(ui_snapshot.standard_4_HP));
-  fig.figure3.fillIntegrate("BH3", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 415, 850, 20,
+  fig.figure3.fillIntegrate("BH3", UIFigure::Operation::Edit, 0, bh3_color, 4, 415, 850, 20,
                             static_cast<i32>(ui_snapshot.standard_3_HP));
-  fig.figure4.fillIntegrate("BH4", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 535, 850, 20,
+  fig.figure4.fillIntegrate("BH4", UIFigure::Operation::Edit, 0, bh4_color, 4, 535, 850, 20,
                             static_cast<i32>(ui_snapshot.engineer_2_HP));
-  fig.figure5.fillIntegrate("BH5", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 4, 655, 850, 20,
+  fig.figure5.fillIntegrate("BH5", UIFigure::Operation::Edit, 0, bh5_color, 4, 655, 850, 20,
                             static_cast<i32>(ui_snapshot.hero_1_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
