@@ -125,6 +125,8 @@ struct TcSemanticState {
   float z_hold_ms{0.0f};             ///< Z 键已按住时长 [ms]
   bool ad_enabled{false};            ///< AD 功能开关（Z 键短按切换，默认关闭）
   bool z_ad_armed{true};             ///< Z 键 AD 切换是否已就绪（上升沿检测）
+  bool ctrl_c_stair_armed{true};     ///< Ctrl+C 组合键是否已就绪（上升沿检测，上台阶预备模式）
+  bool ctrl_c_stair_armed_flag{false};  ///< Ctrl+C 上台阶预备模式是否激活
 };
 
 /**

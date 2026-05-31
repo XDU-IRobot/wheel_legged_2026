@@ -157,5 +157,6 @@ bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_
  */
 SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode);
 SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f);
+SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f, bool ctrl_c_stair);
 
 }  // namespace wheel_legged::control_loop

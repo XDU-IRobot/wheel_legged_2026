@@ -730,11 +730,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
         imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
-      // pitch/roll正常但theta异常 → 先收腿再摆腿
+      // pitch/roll正常但theta异常 → 直接摆腿恢复，不收腿
       // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
       if (!theta_recovery_active_) {
-        left_l0_pid_.Clear();
-        right_l0_pid_.Clear();
         left_leg_turn_pid_.Clear();
         right_leg_turn_pid_.Clear();
         theta_recovery_active_ = true;
@@ -742,68 +740,40 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
       constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
       constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
-      constexpr float kRetractTargetM = 0.16f;
-      constexpr float kRetractToleranceM = 0.01f;
 
-      if (theta_recovery_phase_ == 0) {
-        // Phase 0：收腿到 0.16f，不动摆角
-        left_l0_pid_.UpdateExtDiff(kRetractTargetM, left_leg_.l0(), -left_leg_.l0_dot(), 2);
-        right_l0_pid_.UpdateExtDiff(kRetractTargetM, right_leg_.l0(), -right_leg_.l0_dot(), 2);
+      const bool ll_in_range =
+          (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
+      const bool lr_in_range =
+          (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
 
-        left_force_ = left_l0_pid_.out() + l_spring_torque_;
-        right_force_ = right_l0_pid_.out() + r_spring_torque_;
-
-        // 双腿都收到目标长度以下时切换摆腿阶段
-        if (left_leg_.l0() <= kRetractTargetM + kRetractToleranceM &&
-            right_leg_.l0() <= kRetractTargetM + kRetractToleranceM) {
-          theta_recovery_phase_ = 1;
-        }
-
-        output_.lb_tau = left_leg_.jacobi_00() * left_force_;
-        output_.lf_tau = left_leg_.jacobi_10() * left_force_;
-        output_.rb_tau = right_leg_.jacobi_00() * right_force_;
-        output_.rf_tau = right_leg_.jacobi_10() * right_force_;
+      float ll_pid_out = 0.0f;
+      float lr_pid_out = 0.0f;
+      if (!ll_in_range) {
+        const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
+        const float prox = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
+        const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
+        left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
+        ll_pid_out = -left_leg_turn_pid_.out();
       } else {
-        // Phase 1：保持低腿长 + 摆腿恢复
-        left_l0_pid_.UpdateExtDiff(kRetractTargetM, left_leg_.l0(), -left_leg_.l0_dot(), 2);
-        right_l0_pid_.UpdateExtDiff(kRetractTargetM, right_leg_.l0(), -right_leg_.l0_dot(), 2);
-
-        const bool ll_in_range =
-            (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
-        const bool lr_in_range =
-            (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
-
-        float ll_pid_out = 0.0f;
-        float lr_pid_out = 0.0f;
-        float prox_left = 1.0f;
-        float prox_right = 1.0f;
-        if (!ll_in_range) {
-          const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-          prox_left = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
-          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox_left, kMinSpeedRadS);
-          left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
-          ll_pid_out = -left_leg_turn_pid_.out();
-        } else {
-          left_leg_turn_pid_.Clear();
-        }
-        if (!lr_in_range) {
-          const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-          prox_right = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
-          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox_right, kMinSpeedRadS);
-          right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
-          lr_pid_out = -right_leg_turn_pid_.out();
-        } else {
-          right_leg_turn_pid_.Clear();
-        }
-
-        left_force_ = left_l0_pid_.out() + l_spring_torque_;
-        right_force_ = right_l0_pid_.out() + r_spring_torque_;
-
-        output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
-        output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
-        output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
-        output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
+        left_leg_turn_pid_.Clear();
       }
+      if (!lr_in_range) {
+        const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
+        const float prox = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
+        const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
+        right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
+        lr_pid_out = -right_leg_turn_pid_.out();
+      } else {
+        right_leg_turn_pid_.Clear();
+      }
+
+      left_force_ = 0.0f;
+      right_force_ = 0.0f;
+
+      output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
+      output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
+      output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
+      output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;

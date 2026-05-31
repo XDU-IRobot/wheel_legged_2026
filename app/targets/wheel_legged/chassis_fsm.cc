@@ -67,7 +67,8 @@ chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile p
 chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State state,
                                                        const wheel_legged::LegProfile requested_leg_profile,
                                                        const wheel_legged::LegProfile jump_leg_profile,
-                                                       const bool stair_descend_retracted) {
+                                                       const bool stair_descend_retracted,
+                                                       const bool ctrl_c_stair = false) {
   chassis::Fsm::Output::ControlOutput control{};
   control.leg_profile = wheel_legged::LegProfile::kLow;
   control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
@@ -103,7 +104,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.recovery_enable = false;
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kMid;
-      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kMidLegLengthM;
+      control.target_leg_length_m = ctrl_c_stair ? wheel_legged::params::active::chassis_fsm::kCtrlCStairLegLengthM
+                                                 : wheel_legged::params::active::chassis_fsm::kMidLegLengthM;
       control.jump_phase = 0U;
       break;
 
@@ -232,15 +234,21 @@ void chassis::Fsm::Init() {
 
 void chassis::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
+  // 进入 kStairTask 时清除 ctrl_c_stair，由台阶任务协调器接管
+  if (new_mode == State::kStairTask && mode_ != State::kStairTask) {
+    ctrl_c_stair_ = false;
+  }
   mode_ = new_mode;
   output_.mode = mode_;
-  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_descend_retracted_);
+  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_descend_retracted_,
+                                       ctrl_c_stair_);
 }
 
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   output_.state_changed = false;
 
   const wheel_legged::ChassisFsmInput &request = input.request;
+  ctrl_c_stair_ = request.ctrl_c_stair;
   const wheel_legged::LegProfile raw_leg_profile = ResolveRequestedLegProfile(request);
 
   // 小陀螺锁低腿长：检测手动切档解锁

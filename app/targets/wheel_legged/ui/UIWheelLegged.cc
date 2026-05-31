@@ -693,9 +693,9 @@ void UIWheelLeggedAimbotBox_add() {
 
   box.figure1.fillRec("r1_", UIFigure::Operation::Add, 0, color, 3, 781, 361, 1129, 709);
   if (has_target) {
-    box.figure2.fillIntegrate("ahp", UIFigure::Operation::Add, 0, UIFigure::Color::RedBlue, 3, 790, 420, 20,
+    box.figure2.fillIntegrate("ahp", UIFigure::Operation::Add, 0, UIFigure::Color::RedBlue, 3, 1090, 420, 20,
                               static_cast<i32>(ui_snapshot.aimbot_target_hp));
-    box.figure3.fillIntegrate("aal", UIFigure::Operation::Add, 0, UIFigure::Color::White, 3, 790, 380, 20,
+    box.figure3.fillIntegrate("aal", UIFigure::Operation::Add, 0, UIFigure::Color::White, 3, 1090, 380, 20,
                               static_cast<i32>(ui_snapshot.aimbot_target_allowance));
   } else {
     fill_hidden(box.figure2, "ahp", UIFigure::Operation::Add);
@@ -719,9 +719,9 @@ void UIWheelLeggedAimbotBox_edit() {
 
   box.figure1.fillRec("r1_", UIFigure::Operation::Edit, 0, color, 3, 781, 361, 1129, 709);
   if (has_target) {
-    box.figure2.fillIntegrate("ahp", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 3, 790, 420, 20,
+    box.figure2.fillIntegrate("ahp", UIFigure::Operation::Edit, 0, UIFigure::Color::RedBlue, 3, 1090, 420, 20,
                               static_cast<i32>(ui_snapshot.aimbot_target_hp));
-    box.figure3.fillIntegrate("aal", UIFigure::Operation::Edit, 0, UIFigure::Color::White, 3, 790, 380, 20,
+    box.figure3.fillIntegrate("aal", UIFigure::Operation::Edit, 0, UIFigure::Color::White, 3, 1090, 380, 20,
                               static_cast<i32>(ui_snapshot.aimbot_target_allowance));
   } else {
     fill_hidden(box.figure2, "ahp", UIFigure::Operation::Edit);
@@ -730,5 +730,37 @@ void UIWheelLeggedAimbotBox_edit() {
 
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, box, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Shooter disabled warning X
+// ═══════════════════════════════════════════════════════════════════════════
+
+void UIWheelLeggedShooterX_add() {
+  static UIFigure2 fig;
+  if (!ui_snapshot.shooter_output) {
+    fig.figure1.fillLine("x1", UIFigure::Operation::Add, 0, UIFigure::Color::Orange, 10, 860, 440, 1060, 640);
+    fig.figure2.fillLine("x2", UIFigure::Operation::Add, 0, UIFigure::Color::Orange, 10, 1060, 440, 860, 640);
+  } else {
+    fig.figure1.fillLine("x1", UIFigure::Operation::Add, 0, UIFigure::Color::Orange, 0, 960, 540, 960, 540);
+    fig.figure2.fillLine("x2", UIFigure::Operation::Add, 0, UIFigure::Color::Orange, 0, 960, 540, 960, 540);
+  }
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+void UIWheelLeggedShooterX_edit() {
+  static UIFigure2 fig;
+  if (!ui_snapshot.shooter_output) {
+    fig.figure1.fillLine("x1", UIFigure::Operation::Edit, 0, UIFigure::Color::Orange, 10, 860, 440, 1060, 640);
+    fig.figure2.fillLine("x2", UIFigure::Operation::Edit, 0, UIFigure::Color::Orange, 10, 1060, 440, 860, 640);
+  } else {
+    fig.figure1.fillLine("x1", UIFigure::Operation::Edit, 0, UIFigure::Color::Orange, 0, 960, 540, 960, 540);
+    fig.figure2.fillLine("x2", UIFigure::Operation::Edit, 0, UIFigure::Color::Orange, 0, 960, 540, 960, 540);
+  }
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
 }

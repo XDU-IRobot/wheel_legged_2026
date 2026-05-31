@@ -54,6 +54,7 @@ struct UiSnapshot {
   uint8_t aimbot_id{0};
   uint16_t aimbot_target_hp{0};
   uint16_t aimbot_target_allowance{0};
+  bool shooter_output{true};
 };
 
 inline UiSnapshot ui_snapshot{};

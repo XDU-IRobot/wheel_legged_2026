@@ -53,6 +53,10 @@ extern void UIWheelLeggedStateIndicator_edit();
 extern void UIWheelLeggedAimbotBox_add();
 extern void UIWheelLeggedAimbotBox_edit();
 
+// ── Shooter disabled warning X ──
+extern void UIWheelLeggedShooterX_add();
+extern void UIWheelLeggedShooterX_edit();
+
 // ── Helper: five-bar linkage inverse kinematics ──
 extern void calcPointC(double x1, double y1, double x2, double y2, double L1, double L2, int sel, float *x3_out,
                        float *y3_out);

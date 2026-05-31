@@ -62,6 +62,10 @@ static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndic
 static auto UI_aimbot_box_add = rm::device::UITask(UIWheelLeggedAimbotBox_add);
 static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 3.f);
 
+// Shooter disabled warning X
+static auto UI_shooter_x_add = rm::device::UITask(UIWheelLeggedShooterX_add);
+static auto UI_shooter_x_edit = rm::device::UITask(UIWheelLeggedShooterX_edit, 3.f);
+
 // Enemy info — red team
 static auto UI_enemy_header_red = rm::device::UITask(UIEnemyHeaderRed_add);
 static auto UI_enemy_hp_red_add = rm::device::UITask(UIEnemyHPRed_add);
@@ -115,6 +119,9 @@ void static_UI_add() {
   schedule.addTaskStatic(&UI_aimbot_box_add);
   schedule.addTask(&UI_aimbot_box_edit);
 
+  schedule.addTaskStatic(&UI_shooter_x_add);
+  schedule.addTask(&UI_shooter_x_edit);
+
   schedule.addTaskStatic(&UI_enemy_header_red);
   schedule.addTaskStatic(&UI_enemy_hp_red_add);
   schedule.addTask(&UI_enemy_hp_red_edit);
@@ -148,10 +155,12 @@ constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpee
 constexpr float kTargetForwardSpeedMaxNoScMps = ns::control_loop::kTargetForwardSpeedMaxNoScMps;
 constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
 constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
+constexpr float kTargetForwardSpeedMaxCtrlCStairMps = ns::control_loop::kTargetForwardSpeedMaxCtrlCStairMps;
 constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
 constexpr float kTargetSpeedBiasMidLegMps = ns::control_loop::kTargetSpeedBiasMidLegMps;
 constexpr float kTargetSpeedBiasMidLegFMps = ns::control_loop::kTargetSpeedBiasMidLegFMps;
 constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasHighLegMps;
+constexpr float kTargetSpeedBiasCtrlCStairMps = ns::control_loop::kTargetSpeedBiasCtrlCStairMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
@@ -750,11 +759,15 @@ void ControlLoop() {
   const float forward_speed_base =
       (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.ctrl_c_stair)
+          ? kTargetForwardSpeedMaxCtrlCStairMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
           : default_speed_max;
   const float forward_speed_bias =
       (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
+      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.ctrl_c_stair)
+          ? kTargetSpeedBiasCtrlCStairMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetSpeedBiasMidLegFMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kTargetSpeedBiasMidLegMps
@@ -841,7 +854,8 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
+    const SdotRampParams ramp_params =
+        ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f, input.mode_request.ctrl_c_stair);
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
@@ -1170,6 +1184,7 @@ void ControlLoop() {
         static_cast<uint8_t>(globals->referee->data().robot_status.power_management_chassis_output);
     wl_debug.referee_power_gimbal =
         static_cast<uint8_t>(globals->referee->data().robot_status.power_management_gimbal_output);
+    ui_snapshot.shooter_output = globals->referee->data().robot_status.power_management_shooter_output != 0;
   } else {
     wl_debug.referee_online = 0U;
     wl_debug.referee_robot_id = 0U;
@@ -1323,6 +1338,10 @@ void ControlLoop() {
         const auto &hp = globals->subReferee->data().enemy_robot_HP;
         const auto &allow = globals->subReferee->data().enemy_robot_projectile_allowance;
         switch (ui_snapshot.aimbot_id) {
+          case 0:
+            target_hp = hp.sentry_7_HP;
+            target_allowance = allow.sentry_7_projectile_allowance;
+            break;
           case 1:
             target_hp = hp.hero_1_HP;
             target_allowance = allow.hero_1_projectile_allowance;
@@ -1338,10 +1357,6 @@ void ControlLoop() {
           case 4:
             target_hp = hp.standard_4_HP;
             target_allowance = allow.standard_4_projectile_allowance;
-            break;
-          case 5:
-            target_hp = hp.sentry_7_HP;
-            target_allowance = allow.sentry_7_projectile_allowance;
             break;
           default:
             break;

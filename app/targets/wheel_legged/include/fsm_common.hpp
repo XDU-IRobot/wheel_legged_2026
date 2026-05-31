@@ -136,6 +136,7 @@ struct ModeRequest {
       ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
   bool mid_leg_f{false};                       ///< F 键触发的 mid_leg_f 中腿长（慢速斜坡参数）
+  bool ctrl_c_stair{false};                    ///< Ctrl+C 触发的上台阶预备模式（0.2m腿长，theta到位后进kStairTask）
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
@@ -214,6 +215,7 @@ struct ChassisFsmInput {
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
   bool stair_task_active{false};                           ///< 上台阶任务处于待命或执行中
   bool stair_task_recovery_required{false};                ///< 台阶任务姿态异常，立即进入恢复
+  bool ctrl_c_stair{false};                                ///< Ctrl+C 上台阶预备模式
   bool recovery_manual_mode{false};                        ///< 倒地自启手动模式
   float manual_left_leg_speed{0.0f};                       ///< 手动模式左腿摆角速度目标 [rad/s]
   float manual_right_leg_speed{0.0f};                      ///< 手动模式右腿摆角速度目标 [rad/s]

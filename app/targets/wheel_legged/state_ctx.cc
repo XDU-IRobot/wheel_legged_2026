@@ -25,6 +25,7 @@ constexpr SdotRampParams kSdotRampLowLeg = params::active::control_loop::kSdotRa
 constexpr SdotRampParams kSdotRampMidLeg = params::active::control_loop::kSdotRampMidLeg;
 constexpr SdotRampParams kSdotRampMidLegF = params::active::control_loop::kSdotRampMidLegF;
 constexpr SdotRampParams kSdotRampHighLeg = params::active::control_loop::kSdotRampHighLeg;
+constexpr SdotRampParams kSdotRampCtrlCStair = params::active::control_loop::kSdotRampCtrlCStair;
 
 }  // namespace
 
@@ -141,6 +142,13 @@ SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool 
     return kSdotRampMidLegF;
   }
   return ResolveSdotRampParams(mode);
+}
+
+SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool mid_leg_f, const bool ctrl_c_stair) {
+  if (mode == chassis::Fsm::State::kMidLeg && ctrl_c_stair) {
+    return kSdotRampCtrlCStair;
+  }
+  return ResolveSdotRampParams(mode, mid_leg_f);
 }
 
 }  // namespace wheel_legged::control_loop
