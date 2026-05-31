@@ -150,6 +150,7 @@ void StairClimbSequence::UpdateOutput(const Input &input) {
       output_.target.theta_lr_rad = kParams.settle_theta_target_rad;
       break;
     case wheel_legged::StairPhase::kIdle:
+      break;
     default:
       output_.controls_motion = false;
       break;
