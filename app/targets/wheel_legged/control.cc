@@ -60,7 +60,7 @@ static auto UI_state_indicator_edit = rm::device::UITask(UIWheelLeggedStateIndic
 
 // Aimbot box
 static auto UI_aimbot_box_add = rm::device::UITask(UIWheelLeggedAimbotBox_add);
-static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 2.f);
+static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit, 5.f);
 
 // Shooter disabled warning X
 static auto UI_shooter_x_add = rm::device::UITask(UIWheelLeggedShooterX_add);
