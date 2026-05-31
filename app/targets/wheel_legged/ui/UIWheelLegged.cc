@@ -88,8 +88,8 @@ void UIWheelLeggedLabelLeg_add() {
 
 void UIWheelLeggedLabelAD_add() {
   UICharacter fig;
-  fig.character.fillCharacter("ad_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2,
-                              static_cast<u16>(760), static_cast<u16>(308), 6, 16);
+  fig.character.fillCharacter("ad_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, static_cast<u16>(760),
+                              static_cast<u16>(308), 6, 16);
   memcpy(fig.data, "AD", 2);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -328,7 +328,6 @@ void UIWheelLeggedLegPose_add() {
   }
 
   {
-
     s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 - 30);
     e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 + 30);
     if (s_ang < 0) s_ang += 360;
@@ -346,7 +345,6 @@ void UIWheelLeggedLegPose_add() {
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
 }
-
 
 void UIWheelLeggedLegPose_edit() {
   static UIFigure5 fig;
@@ -513,8 +511,7 @@ void UIWheelLeggedBulletData_edit() {
 void UIWheelLeggedStatusLabel_add_st1() {
   UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  fig.character.fillCharacter("st1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
-                              2, 740, 308, 20, 22);
+  fig.character.fillCharacter("st1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 308, 20, 22);
   memcpy(fig.data, "DISABLE STANDBY ENABLE", 22);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -523,8 +520,7 @@ void UIWheelLeggedStatusLabel_add_st1() {
 void UIWheelLeggedStatusLabel_add_st2() {
   UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
-                              2, 740, 268, 20, 16);
+  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 16);
   memcpy(fig.data, "SPIN CROSS", 10);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -533,8 +529,7 @@ void UIWheelLeggedStatusLabel_add_st2() {
 void UIWheelLeggedStatusLabel_add_st3() {
   UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  fig.character.fillCharacter("st3", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
-                              2, 740, 228, 20, 16);
+  fig.character.fillCharacter("st3", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 228, 20, 16);
   memcpy(fig.data, "NORMAL SMALL BIG", 16);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);

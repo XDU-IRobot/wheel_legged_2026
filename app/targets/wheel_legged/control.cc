@@ -13,7 +13,7 @@
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
 bool init_flag;
-uint32_t times=0;
+uint32_t times = 0;
 
 // ── UI task scheduler & task objects (drone_gb_new style) ──
 static auto schedule = rm::device::UITaskScheduler(30);
