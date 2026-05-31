@@ -25,6 +25,7 @@ struct UiSnapshot {
   bool spin_active{false};
   bool cross_active{false};
   bool ad_active{false};
+  float yaw_display_offset_rad{0.0f};
 
   float supercap_cap_energy{0.0f};
   float fric_left_rpm{0.0f};

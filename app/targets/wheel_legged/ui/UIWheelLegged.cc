@@ -10,6 +10,7 @@
 #include "ui_snapshot.hpp"
 #include "targets/wheel_legged/include/globals.hpp"
 #include "targets/wheel_legged/include/globals_no_dtcm.hpp"
+#include "targets/wheel_legged/include/params.hpp"
 
 #include <cmath>
 
@@ -77,17 +78,19 @@ void UIWheelLeggedLabelPY_add() {
 
 void UIWheelLeggedLabelLeg_add() {
   UICharacter fig;
-  fig.character.fillCharacter("leg", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1448),
-                              static_cast<u16>(748), 30, 5);
+  fig.character.fillCharacter("leg", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(748),
+                              static_cast<u16>(368), 30, 5);
   memcpy(fig.data, "L M H", 10);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
 }
 
-void UIWheelLeggedDecorativeRect_add() {
-  UIFigure1 fig;
-  fig.figure1.fillRec("dr_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3, 598, 86, 1315, 120);
+void UIWheelLeggedLabelAD_add() {
+  UICharacter fig;
+  fig.character.fillCharacter("ad_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2,
+                              static_cast<u16>(760), static_cast<u16>(308), 6, 16);
+  memcpy(fig.data, "AD", 2);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -166,29 +169,11 @@ void UIWheelLeggedGimbalData_edit() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Leg kinematics + supercap energy bar
+// Supercap energy bar
 // ═══════════════════════════════════════════════════════════════════════════
 
-void UIWheelLeggedKinematics_add() {
-  static UIFigure7 fig;
-
-  u16 rec_x_start = 1435, rec_x_end = 1485;
-  {
-    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
-      case chassis::Fsm::State::kMidLeg:
-        rec_x_start = 1485;
-        rec_x_end = 1545;
-        break;
-      case chassis::Fsm::State::kHighLeg:
-      case chassis::Fsm::State::kStairTask:
-        rec_x_start = 1550;
-        rec_x_end = 1610;
-        break;
-      default:
-        break;
-    }
-  }
-
+void UIWheelLeggedSupercap_add() {
+  UIFigure1 fig;
   int cap_len = 718 * ui_snapshot.supercap_cap_energy / 255;
   UIFigure::Color cap_color;
   if (ui_snapshot.supercap_cap_energy / 255 < 0.4f) {
@@ -196,106 +181,14 @@ void UIWheelLeggedKinematics_add() {
   } else {
     cap_color = UIFigure::Color::Green;
   }
-
-  u16 lb_x1, lb_y1, lb_x2 = 770, lb_y2 = 700;
-  u16 lm_x1, lm_y1, lm_x2, lm_y2;
-  u16 rb_x1 = 1135, rb_y1 = 700, rb_x2, rb_y2;
-  u16 rm_x1, rm_y1, rm_x2, rm_y2;
-  float left_len = ui_snapshot.left_leg_length_m * 500.0f, right_len = ui_snapshot.right_leg_length_m * 500.0f;
-  float left_the = ui_snapshot.left_leg_theta_rad, right_the = ui_snapshot.right_leg_theta_rad;
-  {
-    {
-      right_the = rm::modules::Wrap(right_the, 0, 2 * M_PI);
-      rm_x2 = static_cast<u16>(static_cast<float>(rb_x1) + right_len * static_cast<float>(sin(right_the)));
-      rm_y2 = static_cast<u16>(static_cast<float>(rb_y1) - right_len * static_cast<float>(cos(right_the)));
-      xx = rm_x2;
-      yy = rm_y2;
-
-      if (right_the > 1.5 * M_PI || right_the < M_PI / 2) {
-        calcPointC(rb_x1, rb_y1, rm_x2, rm_y2, leg_big, leg_small, 1, &x, &y);
-      } else {
-        calcPointC(rb_x1, rb_y1, rm_x2, rm_y2, leg_big, leg_small, 2, &x, &y);
-      }
-      rm_x1 = static_cast<u16>(x);
-      rm_y1 = static_cast<u16>(y);
-      rb_x2 = rm_x1;
-      rb_y2 = rm_y1;
-    }
-
-    {
-      left_the = rm::modules::Wrap(left_the, 0, 2 * M_PI);
-      lm_x2 = static_cast<u16>(static_cast<float>(lb_x2) - left_len * static_cast<float>(sin(left_the)));
-      lm_y2 = static_cast<u16>(static_cast<float>(lb_y2) - left_len * static_cast<float>(cos(left_the)));
-
-      if (left_the > 1.5 * M_PI || left_the < M_PI / 2) {
-        calcPointC(lb_x2, lb_y2, lm_x2, lm_y2, leg_big, leg_small, 2, &x, &y);
-      } else {
-        calcPointC(lb_x2, lb_y2, lm_x2, lm_y2, leg_big, leg_small, 1, &x, &y);
-      }
-      lm_x1 = static_cast<u16>(x);
-      lm_y1 = static_cast<u16>(y);
-      lb_x1 = lm_x1;
-      lb_y1 = lm_y1;
-    }
-  }
-
-  if (ui_snapshot.leg_view_flip) {
-    constexpr u16 left_axis_x = 660;
-    constexpr u16 right_axis_x = 1235;
-    auto mirror_x = [](const u16 axis_x, const u16 value) -> u16 {
-      const int mirrored = static_cast<int>(axis_x) * 2 - static_cast<int>(value);
-      return static_cast<u16>(mirrored < 0 ? 0 : mirrored);
-    };
-
-    lb_x1 = mirror_x(left_axis_x, lb_x1);
-    lm_x1 = mirror_x(left_axis_x, lm_x1);
-    lm_x2 = mirror_x(left_axis_x, lm_x2);
-    rb_x2 = mirror_x(right_axis_x, rb_x2);
-    rm_x1 = mirror_x(right_axis_x, rm_x1);
-    rm_x2 = mirror_x(right_axis_x, rm_x2);
-  }
-
-  {
-    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 - 30);
-    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 + 30);
-    if (s_ang < 0) s_ang += 360;
-    if (e_ang < 0) e_ang += 360;
-    if (s_ang > 360) s_ang -= 360;
-    if (e_ang > 360) e_ang -= 360;
-  }
-
   fig.figure1.fillLine("l1", UIFigure::Operation::Add, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
-  fig.figure2.fillLine("l2", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, lb_x1, lb_y1, lb_x2, lb_y2);
-  fig.figure3.fillLine("l3", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, lm_x1, lm_y1, lm_x2, lm_y2);
-  fig.figure4.fillLine("l4", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, rb_x1, rb_y1, rb_x2, rb_y2);
-  fig.figure5.fillLine("l5", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, rm_x1, rm_y1, rm_x2, rm_y2);
-  fig.figure6.fillArc("a1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
-  fig.figure7.fillRec("r1", UIFigure::Operation::Add, 0, UIFigure::Color::White, 2, rec_x_start, 700, rec_x_end, 770);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
 }
 
-void UIWheelLeggedKinematics_edit() {
-  static UIFigure7 fig;
-
-  u16 rec_x_start = 1435, rec_x_end = 1485;
-  {
-    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
-      case chassis::Fsm::State::kMidLeg:
-        rec_x_start = 1485;
-        rec_x_end = 1545;
-        break;
-      case chassis::Fsm::State::kHighLeg:
-      case chassis::Fsm::State::kStairTask:
-        rec_x_start = 1550;
-        rec_x_end = 1610;
-        break;
-      default:
-        break;
-    }
-  }
-
+void UIWheelLeggedSupercap_edit() {
+  UIFigure1 fig;
   int cap_len = 718 * ui_snapshot.supercap_cap_energy / 255;
   UIFigure::Color cap_color;
   if (ui_snapshot.supercap_cap_energy / 255 < 0.4f) {
@@ -303,6 +196,78 @@ void UIWheelLeggedKinematics_edit() {
   } else {
     cap_color = UIFigure::Color::Green;
   }
+  fig.figure1.fillLine("l1", UIFigure::Operation::Edit, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+}
+
+void UIWheelLeggedSupercapBox_add() {
+  UIFigure1 fig;
+  fig.figure1.fillRec("r2_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3, 598, 86, 1315, 120);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Leg length indicator (L M H box)
+// ═══════════════════════════════════════════════════════════════════════════
+
+void UIWheelLeggedLegBox_add() {
+  UIFigure1 fig;
+  u16 rec_x_start = 735, rec_x_end = 785;
+  {
+    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
+      case chassis::Fsm::State::kMidLeg:
+        rec_x_start = 785;
+        rec_x_end = 845;
+        break;
+      case chassis::Fsm::State::kHighLeg:
+      case chassis::Fsm::State::kStairTask:
+        rec_x_start = 850;
+        rec_x_end = 910;
+        break;
+      default:
+        break;
+    }
+  }
+  fig.figure1.fillRec("r1", UIFigure::Operation::Add, 0, UIFigure::Color::White, 2, rec_x_start, 320, rec_x_end, 390);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+void UIWheelLeggedLegBox_edit() {
+  UIFigure1 fig;
+  u16 rec_x_start = 735, rec_x_end = 785;
+  {
+    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
+      case chassis::Fsm::State::kMidLeg:
+        rec_x_start = 785;
+        rec_x_end = 845;
+        break;
+      case chassis::Fsm::State::kHighLeg:
+      case chassis::Fsm::State::kStairTask:
+        rec_x_start = 850;
+        rec_x_end = 910;
+        break;
+      default:
+        break;
+    }
+  }
+  fig.figure1.fillRec("r1", UIFigure::Operation::Edit, 0, UIFigure::Color::White, 2, rec_x_start, 320, rec_x_end, 390);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Leg pose lines + yaw arc
+// ═══════════════════════════════════════════════════════════════════════════
+
+void UIWheelLeggedLegPose_add() {
+  static UIFigure5 fig;
 
   u16 lb_x1, lb_y1, lb_x2 = 770, lb_y2 = 700;
   u16 lm_x1, lm_y1, lm_x2, lm_y2;
@@ -347,8 +312,8 @@ void UIWheelLeggedKinematics_edit() {
   }
 
   if (ui_snapshot.leg_view_flip) {
-    constexpr u16 left_axis_x = 660;
-    constexpr u16 right_axis_x = 1235;
+    constexpr u16 left_axis_x = 770;
+    constexpr u16 right_axis_x = 1135;
     auto mirror_x = [](const u16 axis_x, const u16 value) -> u16 {
       const int mirrored = static_cast<int>(axis_x) * 2 - static_cast<int>(value);
       return static_cast<u16>(mirrored < 0 ? 0 : mirrored);
@@ -363,21 +328,101 @@ void UIWheelLeggedKinematics_edit() {
   }
 
   {
-    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 - 30);
-    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad) * 57.3 + 30);
+
+    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 - 30);
+    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 + 30);
     if (s_ang < 0) s_ang += 360;
     if (e_ang < 0) e_ang += 360;
     if (s_ang > 360) s_ang -= 360;
     if (e_ang > 360) e_ang -= 360;
   }
 
-  fig.figure1.fillLine("l1", UIFigure::Operation::Edit, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
-  fig.figure2.fillLine("l2", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, lb_x1, lb_y1, lb_x2, lb_y2);
-  fig.figure3.fillLine("l3", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, lm_x1, lm_y1, lm_x2, lm_y2);
-  fig.figure4.fillLine("l4", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, rb_x1, rb_y1, rb_x2, rb_y2);
-  fig.figure5.fillLine("l5", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, rm_x1, rm_y1, rm_x2, rm_y2);
-  fig.figure6.fillArc("a1", UIFigure::Operation::Edit, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
-  fig.figure7.fillRec("r1", UIFigure::Operation::Edit, 0, UIFigure::Color::White, 2, rec_x_start, 700, rec_x_end, 770);
+  fig.figure1.fillLine("l2", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, lb_x1, lb_y1, lb_x2, lb_y2);
+  fig.figure2.fillLine("l3", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, lm_x1, lm_y1, lm_x2, lm_y2);
+  fig.figure3.fillLine("l4", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, rb_x1, rb_y1, rb_x2, rb_y2);
+  fig.figure4.fillLine("l5", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, rm_x1, rm_y1, rm_x2, rm_y2);
+  fig.figure5.fillArc("a1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+}
+
+
+void UIWheelLeggedLegPose_edit() {
+  static UIFigure5 fig;
+
+  u16 lb_x1, lb_y1, lb_x2 = 770, lb_y2 = 700;
+  u16 lm_x1, lm_y1, lm_x2, lm_y2;
+  u16 rb_x1 = 1135, rb_y1 = 700, rb_x2, rb_y2;
+  u16 rm_x1, rm_y1, rm_x2, rm_y2;
+  float left_len = ui_snapshot.left_leg_length_m * 500.0f, right_len = ui_snapshot.right_leg_length_m * 500.0f;
+  float left_the = ui_snapshot.left_leg_theta_rad, right_the = ui_snapshot.right_leg_theta_rad;
+  {
+    {
+      right_the = rm::modules::Wrap(right_the, 0, 2 * M_PI);
+      rm_x2 = static_cast<u16>(static_cast<float>(rb_x1) + right_len * static_cast<float>(sin(right_the)));
+      rm_y2 = static_cast<u16>(static_cast<float>(rb_y1) - right_len * static_cast<float>(cos(right_the)));
+      xx = rm_x2;
+      yy = rm_y2;
+
+      if (right_the > 1.5 * M_PI || right_the < M_PI / 2) {
+        calcPointC(rb_x1, rb_y1, rm_x2, rm_y2, leg_big, leg_small, 1, &x, &y);
+      } else {
+        calcPointC(rb_x1, rb_y1, rm_x2, rm_y2, leg_big, leg_small, 2, &x, &y);
+      }
+      rm_x1 = static_cast<u16>(x);
+      rm_y1 = static_cast<u16>(y);
+      rb_x2 = rm_x1;
+      rb_y2 = rm_y1;
+    }
+
+    {
+      left_the = rm::modules::Wrap(left_the, 0, 2 * M_PI);
+      lm_x2 = static_cast<u16>(static_cast<float>(lb_x2) - left_len * static_cast<float>(sin(left_the)));
+      lm_y2 = static_cast<u16>(static_cast<float>(lb_y2) - left_len * static_cast<float>(cos(left_the)));
+
+      if (left_the > 1.5 * M_PI || left_the < M_PI / 2) {
+        calcPointC(lb_x2, lb_y2, lm_x2, lm_y2, leg_big, leg_small, 2, &x, &y);
+      } else {
+        calcPointC(lb_x2, lb_y2, lm_x2, lm_y2, leg_big, leg_small, 1, &x, &y);
+      }
+      lm_x1 = static_cast<u16>(x);
+      lm_y1 = static_cast<u16>(y);
+      lb_x1 = lm_x1;
+      lb_y1 = lm_y1;
+    }
+  }
+
+  if (ui_snapshot.leg_view_flip) {
+    constexpr u16 left_axis_x = 770;
+    constexpr u16 right_axis_x = 1135;
+    auto mirror_x = [](const u16 axis_x, const u16 value) -> u16 {
+      const int mirrored = static_cast<int>(axis_x) * 2 - static_cast<int>(value);
+      return static_cast<u16>(mirrored < 0 ? 0 : mirrored);
+    };
+
+    lb_x1 = mirror_x(left_axis_x, lb_x1);
+    lm_x1 = mirror_x(left_axis_x, lm_x1);
+    lm_x2 = mirror_x(left_axis_x, lm_x2);
+    rb_x2 = mirror_x(right_axis_x, rb_x2);
+    rm_x1 = mirror_x(right_axis_x, rm_x1);
+    rm_x2 = mirror_x(right_axis_x, rm_x2);
+  }
+
+  {
+    s_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 - 30);
+    e_ang = static_cast<i16>((ui_snapshot.yaw_motor_raw_pos_rad + ui_snapshot.yaw_display_offset_rad) * 57.3 + 30);
+    if (s_ang < 0) s_ang += 360;
+    if (e_ang < 0) e_ang += 360;
+    if (s_ang > 360) s_ang -= 360;
+    if (e_ang > 360) e_ang -= 360;
+  }
+
+  fig.figure1.fillLine("l2", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, lb_x1, lb_y1, lb_x2, lb_y2);
+  fig.figure2.fillLine("l3", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, lm_x1, lm_y1, lm_x2, lm_y2);
+  fig.figure3.fillLine("l4", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, rb_x1, rb_y1, rb_x2, rb_y2);
+  fig.figure4.fillLine("l5", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, rm_x1, rm_y1, rm_x2, rm_y2);
+  fig.figure5.fillArc("a1", UIFigure::Operation::Edit, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
@@ -428,7 +473,7 @@ void UIWheelLeggedFricRPM_edit() {
   fig.figure1.fillIntegrate("fL_", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, 1450, 646, 20,
                             static_cast<i32>(ui_snapshot.fric_left_rpm));
   fig.figure2.fillIntegrate("fR_", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, 1450, 676, 20,
-                            static_cast<i32>(ui_snapshot.fric_right_rpm));
+                            static_cast<i32>(-ui_snapshot.fric_right_rpm));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
@@ -441,9 +486,9 @@ void UIWheelLeggedFricRPM_edit() {
 
 void UIWheelLeggedBulletData_add() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("spd", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1343.216),
+  fig.figure1.fillFloat("spd", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1350),
                         static_cast<u16>(644.661), 25, ui_snapshot.bullet_speed_mps);
-  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1346.347),
+  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, static_cast<u16>(1350),
                             static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -452,9 +497,9 @@ void UIWheelLeggedBulletData_add() {
 
 void UIWheelLeggedBulletData_edit() {
   static UIFigure2 fig;
-  fig.figure1.fillFloat("spd", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1343.216),
+  fig.figure1.fillFloat("spd", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1350),
                         static_cast<u16>(644.661), 25, ui_snapshot.bullet_speed_mps);
-  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1346.347),
+  fig.figure2.fillIntegrate("amm", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, static_cast<u16>(1350),
                             static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
@@ -465,40 +510,34 @@ void UIWheelLeggedBulletData_edit() {
 // Status labels (infantry variant, rotating)
 // ═══════════════════════════════════════════════════════════════════════════
 
-void UIWheelLeggedStatusLabel_add() {
-  static UICharacter status_line;
-  static u8 status_line_index = 0;
-  static u8 init_count = 0;
-
+void UIWheelLeggedStatusLabel_add_st1() {
+  UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  const auto op = init_count < 3 ? UIFigure::Operation::Add : UIFigure::Operation::Edit;
-
-  memset(status_line.data, 0, sizeof(status_line.data));
-  switch (status_line_index) {
-    case 0:
-      status_line.character.fillCharacter("st1", op, 0, UIFigure::Color::Yellow, 2, 740, 348, 20, 22);
-      memcpy(status_line.data, "DISABLE STANDBY ENABLE", 22);
-      break;
-    case 1:
-      status_line.character.fillCharacter("st2", op, 0, UIFigure::Color::Yellow, 2, 740, 308, 20, 16);
-      if (ui_snapshot.ad_active) {
-        status_line.character.fillCharacter("sa2", op, 0, UIFigure::Color::Yellow, 2, 760, 308, 6, 16);
-      } else {
-        status_line.character.fillCharacter("sa2", UIFigure::Operation::Delete, 0, UIFigure::Color::Yellow, 2, 760, 308,
-                                            6, 16);
-      }
-      memcpy(status_line.data, "SPIN CROSS AD", 13);
-      break;
-    default:
-      status_line.character.fillCharacter("st3", op, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 16);
-      memcpy(status_line.data, "NORMAL SMALL BIG", 16);
-      break;
-  }
-
-  u8 len = Referee0x301Prepare(dataBox, 0, status_line, sender, static_cast<u16>(sender) + 256);
+  fig.character.fillCharacter("st1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
+                              2, 740, 308, 20, 22);
+  memcpy(fig.data, "DISABLE STANDBY ENABLE", 22);
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
-  status_line_index = (status_line_index + 1) % 3;
-  if (init_count < 3) init_count++;
+}
+
+void UIWheelLeggedStatusLabel_add_st2() {
+  UICharacter fig;
+  const u8 sender = ui_snapshot.referee_robot_id;
+  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
+                              2, 740, 268, 20, 16);
+  memcpy(fig.data, "SPIN CROSS", 10);
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+}
+
+void UIWheelLeggedStatusLabel_add_st3() {
+  UICharacter fig;
+  const u8 sender = ui_snapshot.referee_robot_id;
+  fig.character.fillCharacter("st3", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow,
+                              2, 740, 228, 20, 16);
+  memcpy(fig.data, "NORMAL SMALL BIG", 16);
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -521,19 +560,19 @@ void UIWheelLeggedStateIndicator_add() {
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 736, 318, 872, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 736, 278, 872, 318);
   } else if (ui_snapshot.standby) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 880, 318, 1048, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 880, 278, 1048, 318);
   } else if (enabled) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 1058, 318, 1200, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Add, 1058, 278, 1200, 318);
   } else {
     fill_hidden(fig.figure1, "ps_", UIFigure::Operation::Add);
   }
 
   if (ui_snapshot.spin_active) {
-    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 736, 278, 832, 318);
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 736, 238, 832, 278);
   } else if (ui_snapshot.cross_active) {
-    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 842, 278, 965, 318);
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 842, 238, 965, 278);
   } else {
     fill_hidden(fig.figure2, "mv_", UIFigure::Operation::Add);
   }
@@ -546,7 +585,7 @@ void UIWheelLeggedStateIndicator_add() {
     } else {
       am_color = UIFigure::Color::White;
     }
-    u16 x1 = 290, y1 = 238, x2 = 290, y2 = 278;
+    u16 x1 = 290, y1 = 198, x2 = 290, y2 = 238;
     switch (ui_snapshot.aim_mode) {
       case 1:
         x1 = 876;
@@ -564,7 +603,7 @@ void UIWheelLeggedStateIndicator_add() {
     fig.figure3.fillRec("am_", UIFigure::Operation::Add, 0, am_color, 2, x1, y1, x2, y2);
   }
 
-  fill_hidden(fig.figure4, "u4_", UIFigure::Operation::Add);
+  fill_hidden(fig.figure4, "ad_", UIFigure::Operation::Add);
   fill_hidden(fig.figure5, "u5_", UIFigure::Operation::Add);
 
   u8 sender = ui_snapshot.referee_robot_id;
@@ -588,19 +627,19 @@ void UIWheelLeggedStateIndicator_edit() {
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 736, 318, 872, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 736, 278, 872, 318);
   } else if (ui_snapshot.standby) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 880, 318, 1048, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 880, 278, 1048, 318);
   } else if (enabled) {
-    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 1058, 318, 1200, 358);
+    fill_rect(fig.figure1, "ps_", UIFigure::Operation::Edit, 1058, 278, 1200, 318);
   } else {
     fill_hidden(fig.figure1, "ps_", UIFigure::Operation::Edit);
   }
 
   if (ui_snapshot.spin_active) {
-    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 736, 278, 832, 318);
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 736, 238, 802, 278);
   } else if (ui_snapshot.cross_active) {
-    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 842, 278, 965, 318);
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 842, 238, 965, 278);
   } else {
     fill_hidden(fig.figure2, "mv_", UIFigure::Operation::Edit);
   }
@@ -613,7 +652,7 @@ void UIWheelLeggedStateIndicator_edit() {
     } else {
       am_color = UIFigure::Color::White;
     }
-    u16 x1 = 290, y1 = 238, x2 = 290, y2 = 278;
+    u16 x1 = 290, y1 = 198, x2 = 290, y2 = 238;
     switch (ui_snapshot.aim_mode) {
       case 1:
         x1 = 876;
@@ -631,7 +670,11 @@ void UIWheelLeggedStateIndicator_edit() {
     fig.figure3.fillRec("am_", UIFigure::Operation::Edit, 0, am_color, 2, x1, y1, x2, y2);
   }
 
-  fill_hidden(fig.figure4, "u4_", UIFigure::Operation::Edit);
+  if (ui_snapshot.ad_active) {
+    fill_rect(fig.figure4, "ad_", UIFigure::Operation::Edit, 980, 318, 1050, 388);
+  } else {
+    fill_hidden(fig.figure4, "ad_", UIFigure::Operation::Edit);
+  }
   fill_hidden(fig.figure5, "u5_", UIFigure::Operation::Edit);
 
   u8 sender = ui_snapshot.referee_robot_id;
