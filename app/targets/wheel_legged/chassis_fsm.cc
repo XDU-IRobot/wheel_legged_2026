@@ -118,8 +118,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kHigh;
       control.target_leg_length_m = stair_step2
-                                         ? wheel_legged::params::active::chassis_fsm::kStairClimbStep2.high_leg_length_m
-                                         : wheel_legged::params::active::chassis_fsm::kHighLegLengthM;
+                                        ? wheel_legged::params::active::chassis_fsm::kStairClimbStep2.high_leg_length_m
+                                        : wheel_legged::params::active::chassis_fsm::kHighLegLengthM;
       control.jump_phase = 0U;
       break;
 
@@ -201,8 +201,8 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kHigh;
       control.target_leg_length_m = stair_step2
-                                         ? wheel_legged::params::active::chassis_fsm::kStairClimbStep2.high_leg_length_m
-                                         : wheel_legged::params::active::chassis_fsm::kStairClimb.high_leg_length_m;
+                                        ? wheel_legged::params::active::chassis_fsm::kStairClimbStep2.high_leg_length_m
+                                        : wheel_legged::params::active::chassis_fsm::kStairClimb.high_leg_length_m;
       control.jump_phase = 0U;
       break;
 
@@ -316,8 +316,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kLow;
         next_mode = State::kJumpPrep;
-      } else if (request.spin_hold &&
-                 std::fabs(request.current_s_dot) < wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
+      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+                                          wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
         next_mode = requested_stable_state;
@@ -334,8 +334,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
-      } else if (request.spin_hold &&
-                 std::fabs(request.current_s_dot) < wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
+      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+                                          wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
         next_mode = requested_stable_state;
@@ -349,8 +349,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStandby;
       } else if (request.stair_task_active) {
         next_mode = State::kStairTask;
-      } else if (request.spin_hold &&
-                 std::fabs(request.current_s_dot) < wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
+      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+                                          wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
         next_mode = requested_stable_state;

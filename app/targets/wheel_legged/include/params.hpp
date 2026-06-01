@@ -1328,7 +1328,7 @@ constexpr uint8_t kRobotId = 3U;                                     ///< 机器
 constexpr float kBulletSpeedMps = 23.0f;                             ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;                       ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 20.f;                      ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{60.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawPositionPid{70.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
 constexpr PidGains kYawSpeedPid{0.65f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
 constexpr PidGains kPitchPositionPid{40.0f, 0.f, 1.5f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
 constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
@@ -1451,6 +1451,27 @@ constexpr StairClimbParams kStairClimb{
     .retract_theta_target_rad = -0.2f,
     .retract_theta_tolerance_rad = 0.7f,
     .hook_theta_tolerance_rad = 0.3f,
+    .leg_length_tolerance_m = 0.05f,
+    .settle_theta_tolerance_rad = 0.33f,
+    .settle_theta_target_rad = 0.f,
+    .hook_stable_ms = 100U,
+    .retract_stable_ms = 200U,
+    .settle_stable_ms = 200U,
+    .hook_timeout_ms = 1000U,
+    .retract_timeout_ms = 1000U,
+    .settle_timeout_ms = 1000U,
+};
+
+constexpr StairClimbParams kStairClimbStep2{
+    .high_leg_length_m = 0.31f,
+    .hook_leg_length_m = 0.31f,
+    .retract_leg_length_m = 0.1f,
+    .settle_leg_length_m = 0.1f,
+    .contact_theta_threshold_rad = 0.40f,
+    .hook_theta_target_rad = 0.8f,
+    .retract_theta_target_rad = -0.2f,
+    .retract_theta_tolerance_rad = 0.7f,
+    .hook_theta_tolerance_rad = 1.f,
     .leg_length_tolerance_m = 0.05f,
     .settle_theta_tolerance_rad = 0.33f,
     .settle_theta_target_rad = 0.f,
@@ -1890,25 +1911,25 @@ namespace aimbot {
 constexpr uint8_t kRobotId = 4U;                 ///< 机器人 ID
 constexpr float kBulletSpeedMps = 23.0f;         ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;   ///< 默认弹速
-constexpr float kBulletBoundarySpeedMps = 20.f;  ///< 区分裁判系统返回值是否正确7
+constexpr float kBulletBoundarySpeedMps = 20.f;  ///< 区分裁判系统返回值是否正确
 
 constexpr PidGains kYawPositionPid{50.0f, 0.f, 1.5f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄偏航速度 PID（打装甲板）
-constexpr PidGains kPitchPositionPid{30.0f, 0.f, 2.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};   ///< 自瞄俯仰速度 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
+constexpr PidGains kPitchPositionPid{45.0f, 0.f, 2.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
 
-constexpr PidGains kYawPositionPidRune{60.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
-constexpr PidGains kYawSpeedPidRune{0.55f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
-constexpr PidGains kPitchPositionPidRune{45.0f, 0.f, 1.5f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
-constexpr PidGains kPitchSpeedPidRune{0.55f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打符）
+constexpr PidGains kYawPositionPidRune{50.0f, 0.f, 1.5f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
+constexpr PidGains kYawSpeedPidRune{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
+constexpr PidGains kPitchPositionPidRune{45.0f, 0.f, 2.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
+constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打符）
 }  // namespace aimbot
 
 // ── 自瞄 + 小陀螺模式 PID ──
 namespace aimbot_spin {
-constexpr PidGains kYawPositionPid{70.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄+小陀螺偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄+小陀螺偏航速度 PID
-constexpr PidGains kPitchPositionPid{40.0f, 0.f, 1.5f, 10.0f, 2.f};  ///< 自瞄+小陀螺俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄+小陀螺俯仰速度 PID
+constexpr PidGains kYawPositionPid{50.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄+小陀螺偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
+constexpr PidGains kPitchPositionPid{45.0f, 0.f, 1.6f, 10.0f, 4.f};  ///< 自瞄+小陀螺俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
 
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
