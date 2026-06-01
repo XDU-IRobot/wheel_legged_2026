@@ -93,6 +93,7 @@ class Gimbal {
     for (int i = 0; i < 9; ++i) theta(i) = wheel_legged::params::active::gimbal::kIdentTheta[i];
     dynamics_.SetTheta(theta);
     ConfigurePid();
+    current_pid_profile_ = PidProfile::kNormal;
     ClearPid();
     output_ = {};
   }
@@ -182,22 +183,12 @@ class Gimbal {
       }
       last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
 
-      if (input.aimbot_mode != last_aimbot_mode_ || input.aimbot_is_rune != last_aimbot_is_rune_ ||
-          input.spin_hold != last_spin_hold_) {
+      const PidProfile requested_pid_profile = ResolvePidProfile(input);
+      if (requested_pid_profile != current_pid_profile_) {
         ClearPid();
-        if (!input.aimbot_mode) {
-          ConfigurePid();
-        } else if (input.spin_hold) {
-          ConfigureAimbotSpinPid();
-        } else if (input.aimbot_is_rune) {
-          ConfigureAimbotRunePid();
-        } else {
-          ConfigureAimbotPid();
-        }
+        ConfigurePidProfile(requested_pid_profile);
+        current_pid_profile_ = requested_pid_profile;
       }
-      last_aimbot_mode_ = input.aimbot_mode;
-      last_aimbot_is_rune_ = input.aimbot_is_rune;
-      last_spin_hold_ = input.spin_hold;
 
       const float dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
       controller_.Enable(true);
@@ -257,7 +248,7 @@ class Gimbal {
       // const auto ff =
       //     dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
       const auto ff = dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, 0.f, 0.f, 0.f, 0.f, g_vec);
-      const float ff_p = 1.5f * std::cos(output_.pitch_pos_rad);
+      const float ff_p = 1.7f * std::cos(output_.pitch_pos_rad);
 
       // 开前馈
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
@@ -291,6 +282,43 @@ class Gimbal {
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
  private:
+  enum class PidProfile {
+    kNormal,
+    kAimbot,
+    kAimbotRune,
+    kAimbotSpin,
+  };
+
+  static PidProfile ResolvePidProfile(const UpdateInput &input) {
+    if (!input.aimbot_mode) {
+      return PidProfile::kNormal;
+    }
+    if (input.spin_hold) {
+      return PidProfile::kAimbotSpin;
+    }
+    if (input.aimbot_is_rune) {
+      return PidProfile::kAimbotRune;
+    }
+    return PidProfile::kAimbot;
+  }
+
+  void ConfigurePidProfile(const PidProfile profile) {
+    switch (profile) {
+      case PidProfile::kNormal:
+        ConfigurePid();
+        break;
+      case PidProfile::kAimbot:
+        ConfigureAimbotPid();
+        break;
+      case PidProfile::kAimbotRune:
+        ConfigureAimbotRunePid();
+        break;
+      case PidProfile::kAimbotSpin:
+        ConfigureAimbotSpinPid();
+        break;
+    }
+  }
+
   /** @brief 配置双环 PID 参数 */
   void ConfigurePid() {
     const auto &yaw_pos = wheel_legged::params::active::gimbal::kYawPositionPid;
@@ -428,9 +456,7 @@ class Gimbal {
   }
 
   bool last_use_yaw_motor_feedback_{false};
-  bool last_aimbot_mode_{false};
-  bool last_aimbot_is_rune_{false};
-  bool last_spin_hold_{false};
+  PidProfile current_pid_profile_{PidProfile::kNormal};
   bool last_ident_mode_active_{false};
 
   Gimbal2Dof controller_{};
