@@ -1340,8 +1340,8 @@ constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
 
 constexpr PidGains kYawPositionPid{30.0f, 0.0f, 0.5f, 10.0f, 1.0f};    ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 6.0f, 0.4f};         ///< 偏航速度 PID
-constexpr PidGains kPitchPositionPid{20.0f, 0.0f, 0.4f, 10.0f, 0.4f};  ///< 俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.55f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
+constexpr PidGains kPitchPositionPid{20.0f, 0.0f, 0.3f, 10.0f, 0.4f};  ///< 俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.45f, 0.0f, 0.0f, 8.0f, 0.0f};      ///< 俯仰速度 PID
 
 /// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
 constexpr float kIdentTheta[9] = {
@@ -1428,10 +1428,10 @@ constexpr StairClimbParams kStairClimbStep2{
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.40f,
-    .hook_theta_target_rad = 0.8f,
+    .hook_theta_target_rad = 1.f,
     .retract_theta_target_rad = -0.2f,
     .retract_theta_tolerance_rad = 0.7f,
-    .hook_theta_tolerance_rad = 1.f,
+    .hook_theta_tolerance_rad = 0.75f,
     .leg_length_tolerance_m = 0.05f,
     .settle_theta_tolerance_rad = 0.33f,
     .settle_theta_target_rad = 0.f,
@@ -1773,7 +1773,7 @@ constexpr float kExpectedThetaLrBiasRadMidLeg = -0.02f;     ///< 中腿长期望
 constexpr float kExpectedThetaLlBiasRadHighLeg = -0.02f;    ///< 高腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadHighLeg = -0.02f;    ///< 高腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = -0.033f;           ///< 期望机体俯仰偏置 [rad]
-constexpr float kExpectedDisplacementBiasMLowLeg = 0.121f;  ///< 低腿长期望位移偏置 [m]
+constexpr float kExpectedDisplacementBiasMLowLeg = 0.1f;  ///< 低腿长期望位移偏置 [m]
 constexpr float kExpectedDisplacementBiasMMidLeg = 0.08f;   ///< 中腿长期望位移偏置 [m]
 constexpr float kExpectedDisplacementBiasMHighLeg = 0.0f;   ///< 高腿长期望位移偏置 [m]
 
