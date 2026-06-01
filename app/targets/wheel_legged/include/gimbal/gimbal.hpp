@@ -128,9 +128,9 @@ class Gimbal {
       {
         constexpr float kPi = wheel_legged::params::common::kPi;
         const float yaw_err = std::fabs(rm::modules::Wrap(output_.yaw_target_rad - output_.yaw_pos_rad, -kPi, kPi));
-        output_.yaw_centered =
-            yaw_err <= wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad &&
-            std::fabs(output_.yaw_vel_rad_s) <= wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
+        output_.yaw_centered = yaw_err <= wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad &&
+                               std::fabs(output_.yaw_vel_rad_s) <=
+                                   wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
       }
 
       if (!input.gimbal_enable) {
