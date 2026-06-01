@@ -81,6 +81,8 @@ class Gimbal {
     bool ident_data_pending{false};      ///< 是否有待发送的辨识数据
     const char *ident_tx_data{nullptr};  ///< 待发送数据指针
     size_t ident_tx_len{0};              ///< 待发送数据长度
+
+    bool yaw_centered{false};  ///< 偏航是否已归中（误差与速度均在阈值内）
   };
 
   /**
@@ -111,6 +113,7 @@ class Gimbal {
       }
 
       output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
+      // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
       output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
       output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
@@ -120,6 +123,14 @@ class Gimbal {
       output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
                                             wheel_legged::params::active::gimbal::kPitchMaxRad);
       output_.gimbal_enabled = input.gimbal_enable;
+
+      {
+        constexpr float kPi = wheel_legged::params::common::kPi;
+        const float yaw_err = std::fabs(rm::modules::Wrap(output_.yaw_target_rad - output_.yaw_pos_rad, -kPi, kPi));
+        output_.yaw_centered =
+            yaw_err <= wheel_legged::params::active::control_loop::kGimbalStartupYawAlignErrorRad &&
+            std::fabs(output_.yaw_vel_rad_s) <= wheel_legged::params::active::control_loop::kGimbalStartupYawAlignVelRadS;
+      }
 
       if (!input.gimbal_enable) {
         controller_.Enable(false);
@@ -289,6 +300,9 @@ class Gimbal {
 
   /** @brief 获取最近一次云台控制输出 */
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
+
+  /** @brief 重置前馈微分状态（目标跳变后调用，避免速度/加速度尖峰） */
+  void ResetFf() { ff_ready_ = false; }
 
  private:
   /** @brief 配置双环 PID 参数 */

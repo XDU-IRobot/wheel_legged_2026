@@ -257,6 +257,7 @@ struct GimbalFsmInput {
   bool host_target_valid{false};  ///< 上位机目标是否有效 (NUC 启动且在线)
   GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};  ///< 云台测试子模式
   bool chassis_recovery_active{false};                                ///< 底盘是否处于恢复流程
+  bool yaw_centering_for_recovery{false};                             ///< pitch/roll 正常但 theta 异常，需要云台先归中
   bool startup_align_complete{false};                                 ///< 启动偏航归中是否完成
 };
 

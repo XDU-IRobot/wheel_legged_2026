@@ -66,6 +66,9 @@ struct ChassisStateContext {
   uint32_t gimbal_startup_align_stable_ticks{0U};  ///< 归中判稳计数器
   float gimbal_startup_align_target_rad{0.0f};     ///< 归中目标偏航角
 
+  // ── 恢复偏航归中 ──
+  bool recovery_yaw_centering_was_active{false};  ///< 上一周期是否处于恢复归中
+
   // ── 偏航跟随目标 ──
   YawFollowAlignMode yaw_follow_align_mode{YawFollowAlignMode::kForward};  ///< 当前对齐模式
   YawFollowTargetSelection yaw_follow_target{};                            ///< 当前选定的偏航目标

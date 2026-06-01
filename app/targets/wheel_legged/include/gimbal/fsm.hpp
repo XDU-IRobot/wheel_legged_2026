@@ -25,6 +25,7 @@ class Fsm {
     kServiceSafe,      ///< 维护模式，禁止发射链路
     kCombat,           ///< 战斗模式
     kRecoveryAlign,    ///< 底盘恢复时云台对齐车体前方
+    kRecoveryYawCentering,  ///< 恢复前偏航归中 + pitch 到上限
     kStartupAlign,     ///< 上电/重新使能后的偏航归中
     kIdent,            ///< 辨识模式：五次谐波轨迹 + 单位置环 PID + 串口采集
     kFfVerify,         ///< 前馈验证模式：纯动力学前馈跟随五次谐波轨迹
