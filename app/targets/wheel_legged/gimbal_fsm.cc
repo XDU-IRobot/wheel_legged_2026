@@ -23,6 +23,9 @@ gimbal::Fsm::State ResolveNormalMode(const gimbal::Fsm::Input &input) {
   if (IsInputDisabled(request)) {
     return gimbal::Fsm::State::kDisabled;
   }
+  if (request.yaw_centering_for_recovery) {
+    return gimbal::Fsm::State::kRecoveryYawCentering;
+  }
   if (request.chassis_recovery_active) {
     return gimbal::Fsm::State::kRecoveryAlign;
   }
@@ -52,6 +55,12 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
   }
 
   const gimbal::Fsm::State normal_mode = ResolveNormalMode(input);
+  // 恢复归中优先：绕过 startup_align_complete 限制，从任意状态立即切入
+  // 避免 chassis_posture_invalid 重置 startup_align_complete 后云台卡在 kStartupAlign
+  // 导致云台被禁用、yaw 无法归中、底盘 theta 恢复死锁
+  if (normal_mode == gimbal::Fsm::State::kRecoveryYawCentering) {
+    return normal_mode;
+  }
   if (current_mode == gimbal::Fsm::State::kDisabled) {
     return gimbal::Fsm::State::kStartupAlign;
   }
@@ -101,6 +110,11 @@ gimbal::Fsm::Output::ControlOutput BuildControlOutput(const gimbal::Fsm::Input &
     case gimbal::Fsm::State::kRecoveryAlign:
       control.gimbal_enable = true;
       control.align_to_chassis_forward = true;
+      break;
+
+    case gimbal::Fsm::State::kRecoveryYawCentering:
+      control.gimbal_enable = true;
+      control.align_to_chassis_forward = false;
       break;
 
     case gimbal::Fsm::State::kIdent:

@@ -249,7 +249,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       new_profile = wheel_legged::LegProfile::kHigh;
     }
     static bool lqr_dirty_from_spin = false;
-    if (input.fsm_mode == Fsm::State::kSpin) {
+    if (input.fsm_mode == Fsm::State::kSpin || input.fsm_mode == Fsm::State::kSpinExitPending) {
       UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPSpin));
       lqr_dirty_from_spin = true;
     } else if (new_profile != current_leg_profile_ || lqr_dirty_from_spin) {
@@ -306,29 +306,25 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.right_support_force_n = right_support_force_est_n_;
 
   // 状态估计与调试量已更新；不允许输出时在这里截断所有执行器命令。
-  output_.posture_valid =
+  const bool pitch_roll_valid =
       (state_output.current.theta_b >= wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
        state_output.current.theta_b <= wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
        imu_roll_ >= wheel_legged::params::active::chassis::kPostureRollMinRad &&
-       imu_roll_ <= wheel_legged::params::active::chassis::kPostureRollMaxRad &&
-       // rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi,
-       // wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       // rm::modules::Wrap(state_output.current.theta_ll, -wheel_legged::params::active::kPi,
-       // wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
-       // rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi,
-       // wheel_legged::params::active::kPi) >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       // rm::modules::Wrap(state_output.current.theta_lr, -wheel_legged::params::active::kPi,
-       // wheel_legged::params::active::kPi) <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
-       state_output.current.theta_ll >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
+       imu_roll_ <= wheel_legged::params::active::chassis::kPostureRollMaxRad);
+  const bool theta_valid =
+      (state_output.current.theta_ll >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
        state_output.current.theta_ll <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
        state_output.current.theta_lr >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
        state_output.current.theta_lr <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
+  output_.posture_valid = pitch_roll_valid && theta_valid;
+  output_.pitch_roll_valid_theta_invalid = pitch_roll_valid && !theta_valid;
 
   // 进入 kDisabled 时复位起立状态，重新上电后重走起立
   if (input.fsm_mode == Fsm::State::kDisabled) {
     standup_complete_ = false;
     standup_phase_ = 0;
     standup_theta_target_ = 0.0f;
+    standup_from_recovery_latch_ = false;
   }
 
   if (!output_.posture_valid) {
@@ -362,9 +358,14 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   // 恢复→正常过渡
   if (prev_fsm_was_recovery_ && !is_recovery_state) {
-    standup_complete_ = false;
-    standup_phase_ = 0;
-    force_low_leg_ = true;
+    if (standup_from_recovery_latch_) {
+      // theta恢复已完成并设置起立Phase 1，跳过standup复位
+      standup_from_recovery_latch_ = false;
+    } else {
+      standup_complete_ = false;
+      standup_phase_ = 0;
+      force_low_leg_ = true;
+    }
     theta_recovery_active_ = false;
   }
   prev_fsm_was_recovery_ = is_recovery_state;
@@ -728,56 +729,85 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
         imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
-      // pitch/roll正常但theta异常 → 直接摆腿恢复，不收腿
+      // pitch/roll正常但theta异常 → 先等云台归中，再摆腿恢复
       // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
       if (!theta_recovery_active_) {
         left_leg_turn_pid_.Clear();
         right_leg_turn_pid_.Clear();
         theta_recovery_active_ = true;
-      }
-      constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
-      constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
-      constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
-
-      const bool ll_in_range =
-          (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
-      const bool lr_in_range =
-          (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
-
-      float ll_pid_out = 0.0f;
-      float lr_pid_out = 0.0f;
-      if (!ll_in_range) {
-        const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-        const float prox = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
-        const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
-        left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
-        ll_pid_out = -left_leg_turn_pid_.out();
-      } else {
-        left_leg_turn_pid_.Clear();
-      }
-      if (!lr_in_range) {
-        const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-        const float prox = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
-        const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
-        right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
-        lr_pid_out = -right_leg_turn_pid_.out();
-      } else {
-        right_leg_turn_pid_.Clear();
+        theta_recovery_phase_ = 0;
       }
 
-      left_force_ = 0.0f;
-      right_force_ = 0.0f;
+      if (theta_recovery_phase_ == 0) {
+        // Phase 0: 等待云台 yaw 归中完成，不输出腿力矩
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
+        output_.lb_tau = 0.0f;
+        output_.lf_tau = 0.0f;
+        output_.rb_tau = 0.0f;
+        output_.rf_tau = 0.0f;
+        output_.lw_tau = 0.0f;
+        output_.rw_tau = 0.0f;
+        if (input.yaw_centering_complete) {
+          theta_recovery_phase_ = 1;
+        }
+      }
 
-      output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
-      output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
-      output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
-      output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
+      if (theta_recovery_phase_ == 1) {
+        // Phase 1: 云台归中完成，执行摆腿恢复
+        constexpr float kThetaLegMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
+        constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
+        constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
 
-      output_.lf_tau = -output_.lf_tau;
-      output_.lb_tau = -output_.lb_tau;
+        const bool ll_in_range =
+            (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
+        const bool lr_in_range =
+            (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
 
-      output_.lw_tau = 0.0f;
-      output_.rw_tau = 0.0f;
+        float ll_pid_out = 0.0f;
+        float lr_pid_out = 0.0f;
+        if (!ll_in_range) {
+          const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
+          const float prox = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
+          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
+          left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
+          ll_pid_out = -left_leg_turn_pid_.out();
+        } else {
+          left_leg_turn_pid_.Clear();
+        }
+        if (!lr_in_range) {
+          const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
+          const float prox = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
+          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
+          right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
+          lr_pid_out = -right_leg_turn_pid_.out();
+        } else {
+          right_leg_turn_pid_.Clear();
+        }
+
+        // 双腿回到安全范围 → 直接进起立Phase 1，跳过LQR
+        if (ll_in_range && lr_in_range) {
+          standup_complete_ = false;
+          standup_phase_ = 1;
+          standup_theta_target_ = 0.0f;
+          theta_recovery_active_ = false;
+          standup_from_recovery_latch_ = true;
+        }
+
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
+
+        output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
+        output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
+        output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
+        output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
+
+        output_.lf_tau = -output_.lf_tau;
+        output_.lb_tau = -output_.lb_tau;
+
+        output_.lw_tau = 0.0f;
+        output_.rw_tau = 0.0f;
+      }
     } else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad ||
                state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
       theta_recovery_phase_ = 0;

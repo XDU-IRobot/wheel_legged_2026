@@ -360,7 +360,8 @@ void ControlLoop() {
     prev_chassis_mode_for_recovery = chassis_output.mode;
   }
 
-  const gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
+  gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
+  gimbal_input.request.yaw_centering_for_recovery = chassis_control_output.pitch_roll_valid_theta_invalid;
   const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
   const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
 
@@ -382,9 +383,10 @@ void ControlLoop() {
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
 
-  // 底盘姿态异常时强制关闭云台输出
+  // 底盘姿态异常时强制关闭云台输出（恢复归中阶段除外）
   const bool chassis_posture_invalid = !chassis_control_output.posture_valid;
-  if (chassis_posture_invalid) {
+  const bool recovery_yaw_centering_active = gimbal_output.mode == gimbal::Fsm::State::kRecoveryYawCentering;
+  if (chassis_posture_invalid && !recovery_yaw_centering_active) {
     gimbal_update_input.gimbal_enable = false;
   }
 
@@ -410,6 +412,23 @@ void ControlLoop() {
     gimbal_update_input.align_to_chassis_forward = false;
     gimbal_update_input.target.yaw_rad = ctx.gimbal_startup_align_target_rad;
   }
+  if (recovery_yaw_centering_active) {
+    // 恢复归中：yaw 到最近车头方向，pitch 到上限
+    gimbal_update_input.align_to_chassis_forward = false;
+    gimbal_update_input.target.yaw_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
+    gimbal_update_input.use_yaw_motor_feedback = true;
+  }
+  if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
+    // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变
+    dr16_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
+    dr16_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
+    // 直接覆盖当周期目标，用上一周期 gimbal 实际输出位置，避免本周期目标跳变
+    gimbal_update_input.target.yaw_rad = gimbal_control_output.yaw_pos_rad;
+    gimbal_update_input.target.pitch_rad = gimbal_control_output.pitch_pos_rad;
+    globals->gimbal.ResetFf();
+  }
+  ctx.recovery_yaw_centering_was_active = recovery_yaw_centering_active;
   gimbal_update_input.chassis_yaw_rad = input.estimator_input.imu.yaw_rad;
   if (chassis_spin_mode) {
     const bool ref_online =
@@ -609,6 +628,7 @@ void ControlLoop() {
   chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
+  chassis_update_input.yaw_centering_complete = gimbal_control_output.yaw_centered;
 
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;

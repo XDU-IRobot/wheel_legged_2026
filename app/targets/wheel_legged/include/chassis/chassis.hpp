@@ -33,6 +33,7 @@ class Chassis {
     rm::f32 manual_left_leg_speed{0.0f};                ///< 手动模式左腿摆角速度目标 [rad/s]
     rm::f32 manual_right_leg_speed{0.0f};               ///< 手动模式右腿摆角速度目标 [rad/s]
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
+    bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
   };
 
   /**
@@ -72,13 +73,14 @@ class Chassis {
     rm::f32 raw_accel_speed_mps{0.0f};      ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};        ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
-    bool off_ground_gravity_off{false};  ///< 离地 > 0.1s 重力补偿已关闭
-    bool posture_valid{true};            ///< 底盘姿态是否在安全范围内
-    bool standup_complete{false};        ///< 起立完成：双腿 theta 均小于阈值后置 true
-    uint8_t standup_phase{0};            ///< 起立阶段：0=收腿+摆角, 1=摆角收敛, 2=完成
-    bool mid_leg_dip_active{false};      ///< 中腿长下压激活中
-    rm::f32 stair_t_bl_cmd{0.0f};        ///< 上台阶左腿摆角控制输出（PID 或 LQR）
-    rm::f32 stair_t_br_cmd{0.0f};        ///< 上台阶右腿摆角控制输出（PID 或 LQR）
+    bool off_ground_gravity_off{false};          ///< 离地 > 0.1s 重力补偿已关闭
+    bool posture_valid{true};                    ///< 底盘姿态是否在安全范围内
+    bool pitch_roll_valid_theta_invalid{false};  ///< pitch/roll 正常但腿摆角异常
+    bool standup_complete{false};                ///< 起立完成：双腿 theta 均小于阈值后置 true
+    uint8_t standup_phase{0};                    ///< 起立阶段：0=收腿+摆角, 1=摆角收敛, 2=完成
+    bool mid_leg_dip_active{false};              ///< 中腿长下压激活中
+    rm::f32 stair_t_bl_cmd{0.0f};                ///< 上台阶左腿摆角控制输出（PID 或 LQR）
+    rm::f32 stair_t_br_cmd{0.0f};                ///< 上台阶右腿摆角控制输出（PID 或 LQR）
 
     wbr::CurrentState current_state{};  ///< 当前状态向量
   };
@@ -171,12 +173,13 @@ class Chassis {
 
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
-  bool standup_complete_{false};       ///< 起立完成
-  uint8_t standup_phase_{0};           ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
-  float standup_theta_target_{0.0f};   ///< 起立摆角 PID 目标斜坡当前值 [rad]
-  uint8_t theta_recovery_phase_{0};    ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
-  bool theta_recovery_active_{false};  ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
-  bool prev_fsm_was_recovery_{false};  ///< 上一周期是否在恢复状态
+  bool standup_complete_{false};             ///< 起立完成
+  uint8_t standup_phase_{0};                 ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
+  uint8_t theta_recovery_phase_{0};          ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
+  bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
+  bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
+  bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   bool prev_in_stair_task_{false};  ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）
 #endif
