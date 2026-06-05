@@ -209,8 +209,9 @@ class Gimbal {
                             input.aimbot_mode ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
 #else
       if (input.aimbot_mode && input.spin_hold) {
-        // controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad, -input.chassis_yaw_rate_rad_s);
-        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
+        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,
+                              ResolveSpinYawSpeedFeedforward(input.chassis_yaw_rate_rad_s));
+        // controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
       } else {
         controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
       }
@@ -314,6 +315,27 @@ class Gimbal {
       return PidProfile::kAimbotRune;
     }
     return PidProfile::kAimbot;
+  }
+
+  static int ResolveSpinYawRateGear(const float chassis_yaw_rate_rad_s) {
+    const float abs_rate = std::fabs(chassis_yaw_rate_rad_s);
+    const auto &thresholds = wheel_legged::params::active::aimbot_spin::kYawTargetBiasSpeedThresholds;
+    if (abs_rate < thresholds[0]) {
+      return 0;
+    }
+    if (abs_rate < thresholds[1]) {
+      return 1;
+    }
+    if (abs_rate < thresholds[2]) {
+      return 2;
+    }
+    return 3;
+  }
+
+  static float ResolveSpinYawSpeedFeedforward(const float chassis_yaw_rate_rad_s) {
+    const int gear = ResolveSpinYawRateGear(chassis_yaw_rate_rad_s);
+    const float dir = chassis_yaw_rate_rad_s >= 0.0f ? 1.0f : -1.0f;
+    return -dir * wheel_legged::params::active::aimbot_spin::kYawSpeedFeedforwardRadS[gear];
   }
 
   void ConfigurePidProfile(const PidProfile profile) {
