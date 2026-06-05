@@ -1,5 +1,0 @@
-sympy
-pandas
-scikit-learn
-ipykernel
-pyserial
