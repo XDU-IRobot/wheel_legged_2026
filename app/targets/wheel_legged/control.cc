@@ -180,17 +180,6 @@ constexpr float kSpinTranslationGain = ns::control_loop::kSpinTranslationGain;
 constexpr float kSpinThetaLlBiasRad = ns::control_loop::kSpinThetaLlBiasRad;
 constexpr float kExpectedThetaLlBiasRadLowLeg = ns::control_loop::kExpectedThetaLlBiasRadLowLeg;
 constexpr float kExpectedThetaLrBiasRadLowLeg = ns::control_loop::kExpectedThetaLrBiasRadLowLeg;
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLegC;
-constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLegC;
-constexpr float kExpectedThetaLlBiasRadMidLegF = ns::control_loop::kExpectedThetaLlBiasRadMidLegF;
-constexpr float kExpectedThetaLrBiasRadMidLegF = ns::control_loop::kExpectedThetaLrBiasRadMidLegF;
-#else
-constexpr float kExpectedThetaLlBiasRadMidLeg = ns::control_loop::kExpectedThetaLlBiasRadMidLeg;
-constexpr float kExpectedThetaLrBiasRadMidLeg = ns::control_loop::kExpectedThetaLrBiasRadMidLeg;
-#endif
-constexpr float kExpectedThetaLlBiasRadHighLeg = ns::control_loop::kExpectedThetaLlBiasRadHighLeg;
-constexpr float kExpectedThetaLrBiasRadHighLeg = ns::control_loop::kExpectedThetaLrBiasRadHighLeg;
 constexpr float kSpinThetaLrBiasRad = ns::control_loop::kSpinThetaLrBiasRad;
 constexpr float kSpinLegLengthBiasM = ns::control_loop::kSpinLegLengthBiasM;
 constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
@@ -959,23 +948,6 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = stair_sequence_output.target.theta_ll_rad;
     chassis_update_input.expected.theta_lr = stair_sequence_output.target.theta_lr_rad;
     chassis_update_input.expected.theta_b = stair_sequence_output.target.theta_b_rad;
-  } else if (chassis_output.mode == chassis::Fsm::State::kHighLeg ||
-             chassis_output.mode == chassis::Fsm::State::kStairTask) {
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadHighLeg;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadHighLeg;
-  } else if (chassis_output.mode == chassis::Fsm::State::kMidLeg) {
-    if (chassis_control_output.mid_leg_dip_active) {
-      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
-      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    } else if (input.mode_request.mid_leg_f) {
-      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLegF;
-      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLegF;
-#endif
-    } else {
-      chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadMidLeg;
-      chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadMidLeg;
-    }
   } else {
     chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
     chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;

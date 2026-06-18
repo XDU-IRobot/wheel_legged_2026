@@ -36,9 +36,6 @@ constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chass
 constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEtaLookupLwM;
 
 constexpr const auto &kCtrlPLow = wheel_legged::params::active::chassis::kCtrlPLow;
-constexpr const auto &kCtrlPMid = wheel_legged::params::active::chassis::kCtrlPMid;
-constexpr const auto &kCtrlPHigh = wheel_legged::params::active::chassis::kCtrlPHigh;
-constexpr const auto &kCtrlPSpin = wheel_legged::params::active::chassis::kCtrlPSpin;
 
 std::array<std::array<rm::f32, 6>, 40> ToCoeffMatrix(const std::array<float, 240> &flat) {
   std::array<std::array<rm::f32, 6>, 40> result{};
@@ -187,7 +184,6 @@ void chassis::Chassis::Init() {
   right_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
 
   lqr_controller_.SetLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
-  current_leg_profile_ = wheel_legged::LegProfile::kLow;
 
   left_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
                                             wheel_legged::params::active::chassis::kL0DdotFilterCutoffHz);
@@ -218,13 +214,10 @@ void chassis::Chassis::SafeStop() {
   output_.rw_tau = 0.0f;
 }
 
-void chassis::Chassis::UpdateLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix) {
-  lqr_controller_.SetLqrCoefficients(coeff_matrix);
-}
-
 /**
  * @brief 底盘控制单步更新入口
  * @note  包含状态估计更新、腿运动学刷新、支撑力估计与力矩合成。
+
  */
 void chassis::Chassis::Update(const UpdateInput &input) {
   // 先刷新估计器，保证即使输出关闭也能持续导出传感器与状态观测。
@@ -237,37 +230,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   state_estimator_.Update(estimator_input);
   const ChassisStateEstimatorOutput &state_output = state_estimator_.GetOutput();
-
-  // 检测腿长档位变化，切换 LQR 系数矩阵
-  {
-    wheel_legged::LegProfile new_profile = current_leg_profile_;
-    if (input.fsm_mode == Fsm::State::kLowLeg) {
-      new_profile = wheel_legged::LegProfile::kLow;
-    } else if (input.fsm_mode == Fsm::State::kMidLeg) {
-      new_profile = wheel_legged::LegProfile::kMid;
-    } else if (input.fsm_mode == Fsm::State::kHighLeg || input.fsm_mode == Fsm::State::kStairTask) {
-      new_profile = wheel_legged::LegProfile::kHigh;
-    }
-    static bool lqr_dirty_from_spin = false;
-    if (input.fsm_mode == Fsm::State::kSpin || input.fsm_mode == Fsm::State::kSpinExitPending) {
-      UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPSpin));
-      lqr_dirty_from_spin = true;
-    } else if (new_profile != current_leg_profile_ || lqr_dirty_from_spin) {
-      current_leg_profile_ = new_profile;
-      lqr_dirty_from_spin = false;
-      switch (current_leg_profile_) {
-        case wheel_legged::LegProfile::kLow:
-          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
-          break;
-        case wheel_legged::LegProfile::kMid:
-          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPMid));
-          break;
-        case wheel_legged::LegProfile::kHigh:
-          UpdateLqrCoefficients(ToCoeffMatrix(kCtrlPHigh));
-          break;
-      }
-    }
-  }
 
   const CalibratedLegKinematicsInput &leg_input = state_output.calibrated_leg_input;
   // 控制器内部复用估计器已标定的腿部角度，避免二次做零位/符号转换。
@@ -533,12 +495,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  const rm::f32 displacement_bias = (input.fsm_mode == Fsm::State::kSpin) ? 0.0f
-                                    : (input.fsm_mode == Fsm::State::kHighLeg)
-                                        ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMHighLeg
-                                    : (input.fsm_mode == Fsm::State::kMidLeg && !mid_leg_dip_active_)
-                                        ? wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMMidLeg
-                                        : wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
+  const rm::f32 displacement_bias = wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
   base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());

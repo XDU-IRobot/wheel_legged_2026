@@ -105,12 +105,6 @@ class Chassis {
    */
   [[nodiscard]] const UpdateOutput &GetOutput() const { return output_; }
 
-  /**
-   * @brief 更新 LQR 多项式系数矩阵
-   * @param coeff_matrix 40x6 多项式系数矩阵
-   */
-  void UpdateLqrCoefficients(const std::array<std::array<rm::f32, 6>, 40> &coeff_matrix);
-
  private:
   /**
    * @brief 计算六个执行器最终力矩
@@ -187,16 +181,15 @@ class Chassis {
   uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};               ///< 离地后腿长过短时强制低腿长
   uint16_t force_low_leg_ticks_{0};         ///< 强制低腿长已持续时间
-  wheel_legged::LegProfile current_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 当前腿长档位
-  bool mid_leg_dip_active_{false};                                                ///< 中腿长下压激活中
-  bool mid_leg_dip_armed_{false};          ///< 中腿长下压待命（腿先低于阈值才可触发）
-  uint16_t mid_leg_dip_ticks_{0};          ///< 中腿长下压已持续时间
-  bool leg_was_high_{false};               ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
-  bool off_ground_kd_active_{false};       ///< 着地边沿后 Kd 增大锁存
-  uint16_t kd_active_ticks_{0};            ///< Kd 增大已持续时间
-  bool was_off_ground_{false};             ///< 上一周期离地状态（用于检测着地边沿）
-  float spring_compensation_scale_{1.0f};  ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
-  bool off_ground_200ms_reached_{false};   ///< 离地已持续 200ms（落地后触发强制低腿长）
+  bool mid_leg_dip_active_{false};          ///< 中腿长下压激活中
+  bool mid_leg_dip_armed_{false};           ///< 中腿长下压待命（腿先低于阈值才可触发）
+  uint16_t mid_leg_dip_ticks_{0};           ///< 中腿长下压已持续时间
+  bool leg_was_high_{false};                ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
+  bool off_ground_kd_active_{false};        ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};             ///< Kd 增大已持续时间
+  bool was_off_ground_{false};              ///< 上一周期离地状态（用于检测着地边沿）
+  float spring_compensation_scale_{1.0f};   ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
+  bool off_ground_200ms_reached_{false};    ///< 离地已持续 200ms（落地后触发强制低腿长）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
