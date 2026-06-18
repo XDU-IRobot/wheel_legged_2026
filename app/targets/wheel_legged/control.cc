@@ -434,7 +434,7 @@ void ControlLoop() {
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
     const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
-    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+    const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data().error_code : 0xFFU;
     const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err);
     gimbal_update_input.chassis_yaw_rate_rad_s = input.mode_request.spin_dir * spin_target;
   } else {
@@ -776,7 +776,7 @@ void ControlLoop() {
   }
 
   // ── 7h. 目标纵向速度 ──
-  const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data_.error_code : 0xFFU;
+  const uint8_t sc_err = globals->supercap.has_value() ? globals->supercap->rx_data().error_code : 0xFFU;
   const bool has_supercap = (sc_err & kScFatalMask) == 0;
   const float default_speed_max = has_supercap ? kTargetForwardSpeedMaxMps : kTargetForwardSpeedMaxNoScMps;
   const float forward_speed_base =
@@ -1219,10 +1219,10 @@ void ControlLoop() {
   // ── 超级电容调试 ──
   if (globals->supercap.has_value()) {
     wl_debug.supercap_enable_dcdc = 1U;
-    wl_debug.supercap_error_code = globals->supercap->rx_data_.error_code;
-    wl_debug.supercap_chassis_power = globals->supercap->rx_data_.chassis_power;
-    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data_.chassis_power_limit;
-    wl_debug.supercap_cap_energy = globals->supercap->rx_data_.cap_energy;
+    wl_debug.supercap_error_code = globals->supercap->rx_data().error_code;
+    wl_debug.supercap_chassis_power = globals->supercap->rx_data().chassis_power;
+    wl_debug.supercap_chassis_power_limit = globals->supercap->rx_data().chassis_power_limit;
+    wl_debug.supercap_cap_energy = globals->supercap->rx_data().cap_energy;
   } else {
     wl_debug.supercap_enable_dcdc = 0U;
     wl_debug.supercap_error_code = 0U;
@@ -1285,7 +1285,7 @@ void ControlLoop() {
     ui_snapshot.yaw_display_offset_rad = -ns::control_loop::kYawFollowFixedTargetRad;
 
     ui_snapshot.supercap_cap_energy =
-        globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
+        globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data().cap_energy) : 0.0f;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
     ui_snapshot.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
     ui_snapshot.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
