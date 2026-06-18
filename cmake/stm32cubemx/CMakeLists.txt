@@ -6,7 +6,6 @@ set(MX_Defines_Syms
 		USE_PWR_LDO_SUPPLY
 		USE_HAL_DRIVER
 		STM32H723xx
-		ARM_MATH_CM7
 		$<$<CONFIG:Debug>:DEBUG>
 )
 
@@ -17,7 +16,6 @@ set(MX_Include_Dirs
 		${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
 		${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32H7xx/Include
 		${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Include
-		${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/ST/ARM/DSP/Inc
 )
 
 # STM32CubeMX generated application sources
@@ -72,36 +70,6 @@ set(STM32_Drivers_Src
 
 # Drivers Midllewares
 
-# CMSIS-DSP prebuilt static library (provides arm_mat_* symbols).
-set(CMSIS_DSP_LIB "")
-foreach(_dsp_lib_name
-		libarm_cortexM7lfdp_math.a
-		libarm_cortexM7lfsp_math.a
-)
-	file(GLOB _dsp_candidates
-			"${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/DSP/Lib/GCC/${_dsp_lib_name}"
-			"${CMAKE_CURRENT_SOURCE_DIR}/../../docs/dm-mc02/*/CtrBoard-H7_ALL/Drivers/CMSIS/DSP/Lib/GCC/${_dsp_lib_name}"
-			"${CMAKE_CURRENT_SOURCE_DIR}/../../docs/dm-mc02/*/CtrBoard-H7_USB/Drivers/CMSIS/DSP/Lib/GCC/${_dsp_lib_name}"
-	)
-	if(_dsp_candidates)
-		list(SORT _dsp_candidates)
-		list(GET _dsp_candidates 0 CMSIS_DSP_LIB)
-		break()
-	endif()
-endforeach()
-if(CMSIS_DSP_LIB STREQUAL "")
-	message(FATAL_ERROR "CMSIS-DSP library (libarm_cortexM7lfdp_math.a or libarm_cortexM7lfsp_math.a) not found")
-endif()
-
-# Linker on Windows may fail with non-ASCII source paths; stage library in build dir.
-set(CMSIS_DSP_LIB_STAGING_DIR ${CMAKE_CURRENT_BINARY_DIR}/cmsis_dsp_lib)
-file(MAKE_DIRECTORY ${CMSIS_DSP_LIB_STAGING_DIR})
-file(COPY ${CMSIS_DSP_LIB} DESTINATION ${CMSIS_DSP_LIB_STAGING_DIR})
-get_filename_component(CMSIS_DSP_LIB_NAME ${CMSIS_DSP_LIB} NAME)
-set(CMSIS_DSP_LIB_LOCAL ${CMSIS_DSP_LIB_STAGING_DIR}/${CMSIS_DSP_LIB_NAME})
-message(STATUS "Using CMSIS-DSP library: ${CMSIS_DSP_LIB}")
-
-
 # Link directories setup
 set(MX_LINK_DIRS
 
@@ -109,7 +77,6 @@ set(MX_LINK_DIRS
 # Project static libraries
 set(MX_LINK_LIBS
 		STM32_Drivers
-		${CMSIS_DSP_LIB_LOCAL}
 		${TOOLCHAIN_LINK_LIBRARIES}
 
 )
