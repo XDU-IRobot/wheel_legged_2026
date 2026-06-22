@@ -1,0 +1,299 @@
+ST Edge AI Core v2.2.0-20266 2adc00962
+Created date          : 2026-06-19 13:28:36
+Parameters            : generate --target stm32h7 --name network -m D:/rm/2026_code/1/embedded-2026-h7/app/targets/wheel_legged/policy.onnx --compression none --verbosity 1 --workspace C:/Users/SF4/AppData/Local/Temp/mxAI_workspace28699165611009741564422274258442 --output C:/Users/SF4/.stm32cubemx/network_output
+
+Exec/report summary (generate)
+--------------------------------------------------------------------------------------------------------
+model file         :   D:\rm\2026_code\1\embedded-2026-h7\app\targets\wheel_legged\policy.onnx          
+type               :   onnx                                                                             
+c_name             :   network                                                                          
+compression        :   none                                                                             
+options            :   allocate-inputs, allocate-outputs                                                
+optimization       :   balanced                                                                         
+target/series      :   stm32h7                                                                          
+workspace dir      :   C:\Users\SF4\AppData\Local\Temp\mxAI_workspace28699165611009741564422274258442   
+output dir         :   C:\Users\SF4\.stm32cubemx\network_output                                         
+model_fmt          :   float                                                                            
+model_name         :   policy                                                                           
+model_hash         :   0x1d8ddfaeaf2dc18ea562d8f7e00a382c                                               
+params #           :   40,361 items (157.66 KiB)                                                        
+--------------------------------------------------------------------------------------------------------
+input 1/2          :   'observations', f32(1x27), 108 Bytes, activations                                
+input 2/2          :   'observation_history', f32(1x135), 540 Bytes, activations                        
+inputs (total)     :   648 Bytes                                                                        
+output 1/1         :   'actions', f32(1x6), 24 Bytes, activations                                       
+macc               :   44,937                                                                           
+weights (ro)       :   161,444 B (157.66 KiB) (1 segment)                                               
+activations (rw)   :   1,160 B (1.13 KiB) (1 segment) *                                                 
+ram (total)        :   1,160 B (1.13 KiB) = 1,160 + 0 + 0                                               
+--------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+
+Model name - policy
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+m_id   layer (type,original)                                oshape          param/size          macc                     connected to   | c_size          c_macc             c_type              
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+1      encoder_0_weight (Placeholder, Gemm)                 [b:128,c:135]   17,280/69,120                                               | +512(+0.7%)     +17,408(+100.0%)   Dense_[0]           
+       encoder_0_bias (Placeholder, Gemm)                   [b:128]         128/512                                                     | -512(-100.0%)                      
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+3      encoder_2_weight (Placeholder, Gemm)                 [b:64,c:128]    8,192/32,768                                                | +256(+0.8%)     +8,256(+100.0%)    Dense_[2]           
+       encoder_2_bias (Placeholder, Gemm)                   [b:64]          64/256                                                      | -256(-100.0%)                      
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+5      encoder_4_weight (Placeholder, Gemm)                 [b:3,c:64]      192/768                                                     | +12(+1.6%)      +195(+100.0%)      Dense_[4]           
+       encoder_4_bias (Placeholder, Gemm)                   [b:3]           3/12                                                        | -12(-100.0%)                       
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+7      actor_0_weight (Placeholder, Gemm)                   [b:128,c:30]    3,840/15,360                                                | +512(+3.3%)     +3,968(+100.0%)    Dense_[6]           
+       actor_0_bias (Placeholder, Gemm)                     [b:128]         128/512                                                     | -512(-100.0%)                      
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+9      actor_2_weight (Placeholder, Gemm)                   [b:64,c:128]    8,192/32,768                                                | +256(+0.8%)     +8,256(+100.0%)    Dense_[8]           
+       actor_2_bias (Placeholder, Gemm)                     [b:64]          64/256                                                      | -256(-100.0%)                      
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+11     actor_4_weight (Placeholder, Gemm)                   [b:32,c:64]     2,048/8,192                                                 | +128(+1.6%)     +2,080(+100.0%)    Dense_[10]          
+       actor_4_bias (Placeholder, Gemm)                     [b:32]          32/128                                                      | -128(-100.0%)                      
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+13     actor_6_weight (Placeholder, Gemm)                   [b:6,c:32]      192/768                                                     | +24(+3.1%)      +198(+100.0%)      Dense_[o][12]       
+       actor_6_bias (Placeholder, Gemm)                     [b:6]           6/24                                                        | -24(-100.0%)                       
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+0      observations (Input, )                               [b:1,c:27]                                                                  |                                    
+       observation_history (Input, )                        [b:1,c:135]                                                                 |                                    
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+1      _encoder_encoder_0..m_output_0 (Gemm, Gemm)          [b:1,c:128]                       17,408              observation_history   |                 -17,408(-100.0%)   
+                                                                                                                     encoder_0_weight   | 
+                                                                                                                       encoder_0_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+2      _encoder_encoder_1..u_output_0 (Nonlinearity, Elu)   [b:1,c:128]                        1,536   _encoder_encoder_0..m_output_0   |                 -128(-8.3%)        Nonlinearity_[1]    
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+3      _encoder_encoder_2..m_output_0 (Gemm, Gemm)          [b:1,c:64]                         8,256   _encoder_encoder_1..u_output_0   |                 -8,256(-100.0%)    
+                                                                                                                     encoder_2_weight   | 
+                                                                                                                       encoder_2_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+4      _encoder_encoder_1..u_output_0 (Nonlinearity, Elu)   [b:1,c:64]                           768   _encoder_encoder_2..m_output_0   |                 -64(-8.3%)         Nonlinearity_[3]    
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+5      _encoder_encoder_4..m_output_0 (Gemm, Gemm)          [b:1,c:3]                            195   _encoder_encoder_1..u_output_0   |                 -195(-100.0%)      
+                                                                                                                     encoder_4_weight   | 
+                                                                                                                       encoder_4_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+6      _Concat_output_0 (Concat, Concat)                    [b:1,c:30]                                                   observations   |                                    Concat_[5]          
+                                                                                                       _encoder_encoder_4..m_output_0   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+7      _actor_actor_0_Gemm_output_0 (Gemm, Gemm)            [b:1,c:128]                        3,968                 _Concat_output_0   |                 -3,968(-100.0%)    
+                                                                                                                       actor_0_weight   | 
+                                                                                                                         actor_0_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+8      _actor_encoder_1_Elu_output_0 (Nonlinearity, Elu)    [b:1,c:128]                        1,536     _actor_actor_0_Gemm_output_0   |                 -128(-8.3%)        Nonlinearity_[7]    
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+9      _actor_actor_2_Gemm_output_0 (Gemm, Gemm)            [b:1,c:64]                         8,256    _actor_encoder_1_Elu_output_0   |                 -8,256(-100.0%)    
+                                                                                                                       actor_2_weight   | 
+                                                                                                                         actor_2_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+10     _actor_encoder_1_1..u_output_0 (Nonlinearity, Elu)   [b:1,c:64]                           768     _actor_actor_2_Gemm_output_0   |                 -64(-8.3%)         Nonlinearity_[9]    
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+11     _actor_actor_4_Gemm_output_0 (Gemm, Gemm)            [b:1,c:32]                         2,080   _actor_encoder_1_1..u_output_0   |                 -2,080(-100.0%)    
+                                                                                                                       actor_4_weight   | 
+                                                                                                                         actor_4_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+12     _actor_encoder_1_2..u_output_0 (Nonlinearity, Elu)   [b:1,c:32]                           384     _actor_actor_4_Gemm_output_0   |                 -32(-8.3%)         Nonlinearity_[11]   
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+13     actions (Gemm, Gemm)                                 [b:1,c:6]                            198   _actor_encoder_1_2..u_output_0   |                 -198(-100.0%)      
+                                                                                                                       actor_6_weight   | 
+                                                                                                                         actor_6_bias   | 
+------ ---------------------------------------------------- --------------- --------------- -------- -------------------------------- --- --------------- ------------------ ------------------- 
+model/c-model: macc=45,353/44,937 -416(-0.9%) weights=161,444/161,444  activations=--/1,160 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : policy
+c-name                : network
+c-node #              : 13
+c-array #             : 29
+activations size      : 1160 (1 segment)
+weights size          : 161444 (1 segment)
+macc                  : 44937
+inputs                : ['observations_output', 'observation_history_output']
+outputs               : ['actions_output']
+
+C-Arrays (29)
+------ ------------------------------------------ ------------- ------------------------- ------------- --------- 
+c_id   name (*_array)                             item/size     domain/mem-pool           c-type        comment   
+------ ------------------------------------------ ------------- ------------------------- ------------- --------- 
+0      _Concat_output_0_output                    30/120        activations/**default**   float                   
+1      _actor_actor_0_Gemm_output_0_bias          128/512       weights/weights           const float             
+2      _actor_actor_0_Gemm_output_0_output        128/512       activations/**default**   float                   
+3      _actor_actor_0_Gemm_output_0_weights       3840/15360    weights/weights           const float             
+4      _actor_actor_2_Gemm_output_0_bias          64/256        weights/weights           const float             
+5      _actor_actor_2_Gemm_output_0_output        64/256        activations/**default**   float                   
+6      _actor_actor_2_Gemm_output_0_weights       8192/32768    weights/weights           const float             
+7      _actor_actor_4_Gemm_output_0_bias          32/128        weights/weights           const float             
+8      _actor_actor_4_Gemm_output_0_output        32/128        activations/**default**   float                   
+9      _actor_actor_4_Gemm_output_0_weights       2048/8192     weights/weights           const float             
+10     _actor_encoder_1_1_Elu_output_0_output     64/256        activations/**default**   float                   
+11     _actor_encoder_1_2_Elu_output_0_output     32/128        activations/**default**   float                   
+12     _actor_encoder_1_Elu_output_0_output       128/512       activations/**default**   float                   
+13     _encoder_encoder_0_Gemm_output_0_bias      128/512       weights/weights           const float             
+14     _encoder_encoder_0_Gemm_output_0_output    128/512       activations/**default**   float                   
+15     _encoder_encoder_0_Gemm_output_0_weights   17280/69120   weights/weights           const float             
+16     _encoder_encoder_1_1_Elu_output_0_output   64/256        activations/**default**   float                   
+17     _encoder_encoder_1_Elu_output_0_output     128/512       activations/**default**   float                   
+18     _encoder_encoder_2_Gemm_output_0_bias      64/256        weights/weights           const float             
+19     _encoder_encoder_2_Gemm_output_0_output    64/256        activations/**default**   float                   
+20     _encoder_encoder_2_Gemm_output_0_weights   8192/32768    weights/weights           const float             
+21     _encoder_encoder_4_Gemm_output_0_bias      3/12          weights/weights           const float             
+22     _encoder_encoder_4_Gemm_output_0_output    3/12          activations/**default**   float                   
+23     _encoder_encoder_4_Gemm_output_0_weights   192/768       weights/weights           const float             
+24     actions_bias                               6/24          weights/weights           const float             
+25     actions_output                             6/24          activations/**default**   float         /output   
+26     actions_weights                            192/768       weights/weights           const float             
+27     observation_history_output                 135/540       activations/**default**   float         /input    
+28     observations_output                        27/108        activations/**default**   float         /input    
+------ ------------------------------------------ ------------- ------------------------- ------------- --------- 
+
+C-Layers (13)
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+c_id   name (*_layer)                      id   layer_type      macc    rom     tensors                                       shape (array id)    
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+0      _encoder_encoder_0_Gemm_output_0    1    Dense           17408   69632   I: observation_history_output                 f32(1x135) (27)     
+                                                                                W: _encoder_encoder_0_Gemm_output_0_weights   f32(128x135) (15)   
+                                                                                W: _encoder_encoder_0_Gemm_output_0_bias      f32(128) (13)       
+                                                                                O: _encoder_encoder_0_Gemm_output_0_output    f32(1x128) (14)     
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+1      _encoder_encoder_1_Elu_output_0     2    Nonlinearity    1408    0       I: _encoder_encoder_0_Gemm_output_0_output    f32(1x128) (14)     
+                                                                                O: _encoder_encoder_1_Elu_output_0_output     f32(1x128) (17)     
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+2      _encoder_encoder_2_Gemm_output_0    3    Dense           8256    33024   I: _encoder_encoder_1_Elu_output_0_output     f32(1x128) (17)     
+                                                                                W: _encoder_encoder_2_Gemm_output_0_weights   f32(64x128) (20)    
+                                                                                W: _encoder_encoder_2_Gemm_output_0_bias      f32(64) (18)        
+                                                                                O: _encoder_encoder_2_Gemm_output_0_output    f32(1x64) (19)      
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+3      _encoder_encoder_1_1_Elu_output_0   4    Nonlinearity    704     0       I: _encoder_encoder_2_Gemm_output_0_output    f32(1x64) (19)      
+                                                                                O: _encoder_encoder_1_1_Elu_output_0_output   f32(1x64) (16)      
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+4      _encoder_encoder_4_Gemm_output_0    5    Dense           195     780     I: _encoder_encoder_1_1_Elu_output_0_output   f32(1x64) (16)      
+                                                                                W: _encoder_encoder_4_Gemm_output_0_weights   f32(3x64) (23)      
+                                                                                W: _encoder_encoder_4_Gemm_output_0_bias      f32(3) (21)         
+                                                                                O: _encoder_encoder_4_Gemm_output_0_output    f32(1x3) (22)       
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+5      _Concat_output_0                    6    Concat          0       0       I: observations_output                        f32(1x27) (28)      
+                                                                                I: _encoder_encoder_4_Gemm_output_0_output    f32(1x27) (28)      
+                                                                                O: _Concat_output_0_output                    f32(1x30) (0)       
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+6      _actor_actor_0_Gemm_output_0        7    Dense           3968    15872   I: _Concat_output_0_output                    f32(1x30) (0)       
+                                                                                W: _actor_actor_0_Gemm_output_0_weights       f32(128x30) (3)     
+                                                                                W: _actor_actor_0_Gemm_output_0_bias          f32(128) (1)        
+                                                                                O: _actor_actor_0_Gemm_output_0_output        f32(1x128) (2)      
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+7      _actor_encoder_1_Elu_output_0       8    Nonlinearity    1408    0       I: _actor_actor_0_Gemm_output_0_output        f32(1x128) (2)      
+                                                                                O: _actor_encoder_1_Elu_output_0_output       f32(1x128) (12)     
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+8      _actor_actor_2_Gemm_output_0        9    Dense           8256    33024   I: _actor_encoder_1_Elu_output_0_output       f32(1x128) (12)     
+                                                                                W: _actor_actor_2_Gemm_output_0_weights       f32(64x128) (6)     
+                                                                                W: _actor_actor_2_Gemm_output_0_bias          f32(64) (4)         
+                                                                                O: _actor_actor_2_Gemm_output_0_output        f32(1x64) (5)       
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+9      _actor_encoder_1_1_Elu_output_0     10   Nonlinearity    704     0       I: _actor_actor_2_Gemm_output_0_output        f32(1x64) (5)       
+                                                                                O: _actor_encoder_1_1_Elu_output_0_output     f32(1x64) (10)      
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+10     _actor_actor_4_Gemm_output_0        11   Dense           2080    8320    I: _actor_encoder_1_1_Elu_output_0_output     f32(1x64) (10)      
+                                                                                W: _actor_actor_4_Gemm_output_0_weights       f32(32x64) (9)      
+                                                                                W: _actor_actor_4_Gemm_output_0_bias          f32(32) (7)         
+                                                                                O: _actor_actor_4_Gemm_output_0_output        f32(1x32) (8)       
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+11     _actor_encoder_1_2_Elu_output_0     12   Nonlinearity    352     0       I: _actor_actor_4_Gemm_output_0_output        f32(1x32) (8)       
+                                                                                O: _actor_encoder_1_2_Elu_output_0_output     f32(1x32) (11)      
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+12     actions                             13   Dense           198     792     I: _actor_encoder_1_2_Elu_output_0_output     f32(1x32) (11)      
+                                                                                W: actions_weights                            f32(6x32) (26)      
+                                                                                W: actions_bias                               f32(6) (24)         
+                                                                                O: actions_output                             f32(1x6) (25)       
+------ ----------------------------------- ---- --------------- ------- ------- --------------------------------------------- ------------------- 
+
+
+
+Number of operations per c-layer
+------- ------ ----------------------------------------------- -------- -------------- 
+c_id    m_id   name (type)                                          #op           type 
+------- ------ ----------------------------------------------- -------- -------------- 
+0       1      _encoder_encoder_0..m_output_0 (Dense)            17,408   smul_f32_f32 
+1       2      _encoder_encoder_1..u_output_0 (Nonlinearity)      1,408     op_f32_f32 
+2       3      _encoder_encoder_2..m_output_0 (Dense)             8,256   smul_f32_f32 
+3       4      _encoder_encoder_1..u_output_0 (Nonlinearity)        704     op_f32_f32 
+4       5      _encoder_encoder_4..m_output_0 (Dense)               195   smul_f32_f32 
+5       6      _Concat_output_0 (Concat)                              0   smul_f32_f32 
+6       7      _actor_actor_0_Gemm_output_0 (Dense)               3,968   smul_f32_f32 
+7       8      _actor_encoder_1_Elu_output_0 (Nonlinearity)       1,408     op_f32_f32 
+8       9      _actor_actor_2_Gemm_output_0 (Dense)               8,256   smul_f32_f32 
+9       10     _actor_encoder_1_1..u_output_0 (Nonlinearity)        704     op_f32_f32 
+10      11     _actor_actor_4_Gemm_output_0 (Dense)               2,080   smul_f32_f32 
+11      12     _actor_encoder_1_2..u_output_0 (Nonlinearity)        352     op_f32_f32 
+12      13     actions (Dense)                                      198   smul_f32_f32 
+------- ------ ----------------------------------------------- -------- -------------- 
+total                                                            44,937 
+
+Number of operation types
+---------------- -------- ----------- 
+operation type          #           % 
+---------------- -------- ----------- 
+smul_f32_f32       40,361       89.8% 
+op_f32_f32          4,576       10.2% 
+
+Complexity report (model)
+------ ----------------------------------- ------------------------- ------------------------- ------ 
+m_id   name                                c_macc                    c_rom                     c_id   
+------ ----------------------------------- ------------------------- ------------------------- ------ 
+1      encoder_0_weight                    ||||||||||||||||  38.7%   ||||||||||||||||  43.1%   [0]    
+3      encoder_2_weight                    ||||||||          18.4%   ||||||||          20.5%   [2]    
+5      encoder_4_weight                    |                  0.4%   |                  0.5%   [4]    
+7      actor_0_weight                      ||||               8.8%   ||||               9.8%   [6]    
+9      actor_2_weight                      ||||||||          18.4%   ||||||||          20.5%   [8]    
+11     actor_4_weight                      ||                 4.6%   ||                 5.2%   [10]   
+13     actor_6_weight                      |                  0.4%   |                  0.5%   [12]   
+2      _encoder_encoder_1_Elu_output_0     ||                 3.1%   |                  0.0%   [1]    
+4      _encoder_encoder_1_1_Elu_output_0   |                  1.6%   |                  0.0%   [3]    
+6      _Concat_output_0                    |                  0.0%   |                  0.0%   [5]    
+8      _actor_encoder_1_Elu_output_0       ||                 3.1%   |                  0.0%   [7]    
+10     _actor_encoder_1_1_Elu_output_0     |                  1.6%   |                  0.0%   [9]    
+12     _actor_encoder_1_2_Elu_output_0     |                  0.8%   |                  0.0%   [11]   
+------ ----------------------------------- ------------------------- ------------------------- ------ 
+macc=44,937 weights=161,444 act=1,160 ram_io=0
+ 
+ Requested memory size by section - "stm32h7" target
+ ------------------------------ ------- --------- ------- ------- 
+ module                            text    rodata    data     bss 
+ ------------------------------ ------- --------- ------- ------- 
+ NetworkRuntime1020_CM7_GCC.a     8,312         0       0       0 
+ network.o                          832       204   3,604     240 
+ network_data.o                      48        16      88       0 
+ lib (toolchain)*                   324       328       0       0 
+ ------------------------------ ------- --------- ------- ------- 
+ RT total**                       9,516       548   3,692     240 
+ ------------------------------ ------- --------- ------- ------- 
+ weights                              0   161,448       0       0 
+ activations                          0         0       0   1,160 
+ io                                   0         0       0       0 
+ ------------------------------ ------- --------- ------- ------- 
+ TOTAL                            9,516   161,996   3,692   1,400 
+ ------------------------------ ------- --------- ------- ------- 
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  
+  Summary - "stm32h7" target
+  --------------------------------------------------
+               FLASH (ro)     %*   RAM (rw)       % 
+  --------------------------------------------------
+  RT total         13,756   7.9%      3,932   77.2% 
+  --------------------------------------------------
+  TOTAL           175,204             5,092         
+  --------------------------------------------------
+  *  rt/total
+
+
+Generated files (7)
+---------------------------------------------------------------- 
+C:\Users\SF4\.stm32cubemx\network_output\network_data_params.h   
+C:\Users\SF4\.stm32cubemx\network_output\network_data_params.c   
+C:\Users\SF4\.stm32cubemx\network_output\network_data.h          
+C:\Users\SF4\.stm32cubemx\network_output\network_data.c          
+C:\Users\SF4\.stm32cubemx\network_output\network_config.h        
+C:\Users\SF4\.stm32cubemx\network_output\network.h               
+C:\Users\SF4\.stm32cubemx\network_output\network.c               

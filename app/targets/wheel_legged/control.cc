@@ -1,11 +1,13 @@
 #include "include/globals.hpp"
 #include "include/actuators.hpp"
+#include "include/ai/policy_runner.hpp"
 #include "include/chassis/stair_climb_sequence.hpp"
 #include "include/chassis/stair_task_coordinator.hpp"
 #include "include/debug.hpp"
 #include "main.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include "ui/UIWheelLegged.hpp"
 #include "ui/UIEnemyInfo.hpp"
 #include "ui/TaskScheduler.hpp"
@@ -210,6 +212,86 @@ float ResolveSpinTargetYawDot(uint16_t chassis_power_limit, uint8_t supercap_err
   if (chassis_power_limit <= 65) return has_supercap ? kSpinTargetYawDotRadS2 : kSpinTargetYawDotRadNoScS2;
   if (chassis_power_limit <= 75) return has_supercap ? kSpinTargetYawDotRadS3 : kSpinTargetYawDotRadNoScS3;
   return has_supercap ? kSpinTargetYawDotRadS4 : kSpinTargetYawDotRadNoScS4;
+}
+
+float ClampPolicyAction(float value, std::uint32_t index) {
+  const float limit = (index == 2U || index == 5U) ? 1.3262599469496021f : 3.0f;
+  return std::clamp(value, -limit, limit);
+}
+
+wheel_legged::ai::PolicyInput BuildRealPolicyInput(const wheel_legged::control_loop::InputSnapshot &input,
+                                                   const chassis::Chassis::UpdateOutput &chassis_output,
+                                                   float vx_cmd_mps, float yaw_rate_cmd_rad_s) {
+  wheel_legged::ai::PolicyInput policy_input{};
+  static bool history_initialized = false;
+  static float history[135]{};
+  static float wheel_pos_left_rad = 0.0f;
+  static float wheel_pos_right_rad = 0.0f;
+
+  const auto &imu = input.estimator_input.imu;
+  const auto &x = chassis_output.current_state;
+  const auto &last_output = wheel_legged::ai::GetPolicyTestOutput();
+
+  constexpr float kPolicyDtS = 0.02f;
+  constexpr float kDefaultHeightCmdM = 0.23f;
+
+  wheel_pos_left_rad += input.estimator_input.wheel.left_rad_s * kPolicyDtS;
+  wheel_pos_right_rad += input.estimator_input.wheel.right_rad_s * kPolicyDtS;
+
+  const float sin_roll = std::sin(imu.roll_rad);
+  const float cos_roll = std::cos(imu.roll_rad);
+  const float sin_pitch = std::sin(imu.pitch_rad);
+  const float cos_pitch = std::cos(imu.pitch_rad);
+
+  // 注意：MCU 机体坐标系与网络训练坐标系绕 Z 差 180°
+  //   MCU +X(前) = 网络 -X, MCU +Y(左) = 网络 -Y, MCU +Z = 网络 +Z
+  //   因此 gyro_x/y 取反, projected_gravity x/y 取反, vx 取反, 左右腿/轮交换
+  float obs[27]{};
+  obs[0] = -imu.gyro_x_rad_s * 0.25f;
+  obs[1] = -imu.gyro_y_rad_s * 0.25f;
+  obs[2] = imu.gyro_z_rad_s * 0.25f;
+  obs[3] = -sin_pitch;
+  obs[4] = sin_roll * cos_pitch;
+  obs[5] = -cos_roll * cos_pitch;
+  // obs[6] = -vx_cmd_mps * 2.0f;
+  // obs[7] = yaw_rate_cmd_rad_s * 0.25f;
+  // obs[8] = kDefaultHeightCmdM * 5.0f;
+  obs[6] = -vx_cmd_mps * 0.0f;
+  obs[7] = yaw_rate_cmd_rad_s * 0.f;
+  obs[8] = kDefaultHeightCmdM * 0.0f;
+  // 左右腿交换: MCU左→网络右, MCU右→网络左，且摆角/摆角速度取反
+  obs[9] = -x.theta_lr;
+  obs[10] = -x.theta_ll;
+  obs[11] = -x.theta_lr_dot * 0.05f;
+  obs[12] = -x.theta_ll_dot * 0.05f;
+  obs[13] = x.l_r * 5.0f;
+  obs[14] = x.l_l * 5.0f;
+  obs[15] = chassis_output.right_l0_dot_mps * 0.25f;
+  obs[16] = chassis_output.left_l0_dot_mps * 0.25f;
+  // 左右轮交换
+  obs[17] = wheel_pos_right_rad;
+  obs[18] = wheel_pos_left_rad;
+  obs[19] = -input.estimator_input.wheel.right_rad_s * 0.05f;
+  obs[20] = -input.estimator_input.wheel.left_rad_s * 0.05f;
+  // last_action 是网络自身的上一帧输出，不需要交换
+  for (std::uint32_t i = 0; i < 6U; ++i) {
+    obs[21U + i] = ClampPolicyAction(last_output.actions[i], i);
+  }
+
+  std::memcpy(policy_input.observations, obs, sizeof(obs));
+
+  if (!history_initialized) {
+    for (std::uint32_t frame = 0; frame < 5U; ++frame) {
+      std::memcpy(&history[frame * 27U], obs, sizeof(obs));
+    }
+    history_initialized = true;
+  } else {
+    std::memmove(history, &history[27], sizeof(float) * 27U * 4U);
+    std::memcpy(&history[27U * 4U], obs, sizeof(obs));
+  }
+  std::memcpy(policy_input.observation_history, history, sizeof(history));
+
+  return policy_input;
 }
 
 }  // namespace
@@ -1382,6 +1464,17 @@ void ControlLoop() {
     init_flag = true;
   }
   times++;
+  {
+    static uint32_t ai_policy_tick = 0U;
+    if (++ai_policy_tick >= 10U) {
+      ai_policy_tick = 0U;
+      if (input.mode_request.leg_request == wheel_legged::LegProfile::kMid) {
+        const auto policy_input =
+            BuildRealPolicyInput(input, chassis_control_output, ctx.filtered_s_dot, ctx.filtered_yaw_dot);
+        wheel_legged::ai::PolicyTestRequest(policy_input);
+      }
+    }
+  }
   if (times % 17 == 0) {
     schedule.schedule();
     static bool last_ui_refresh = false;

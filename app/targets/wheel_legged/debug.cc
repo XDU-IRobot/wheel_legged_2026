@@ -4,6 +4,7 @@
  */
 
 #include "include/debug.hpp"
+#include "include/ai/policy_runner.hpp"
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
@@ -172,4 +173,68 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.input_host_target_valid = static_cast<uint8_t>(input.mode_request.host_target_valid);
   wl_debug.gimbal_target_yaw_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.gimbal_target_pitch_rad = -gimbal_control_output.pitch_target_rad;
+
+  // ── AI Policy 网络观测输入 ──
+  const auto &p = wheel_legged::ai::ai_policy_debug;
+  // base_ang_vel * 0.25
+  wl_debug.policy_obs_gyro_x = p.observations[0];
+  wl_debug.policy_obs_gyro_y = p.observations[1];
+  wl_debug.policy_obs_gyro_z = p.observations[2];
+  // projected_gravity
+  wl_debug.policy_obs_gravity_x = p.observations[3];
+  wl_debug.policy_obs_gravity_y = p.observations[4];
+  wl_debug.policy_obs_gravity_z = p.observations[5];
+  // command
+  wl_debug.policy_obs_cmd_vx = p.observations[6];
+  wl_debug.policy_obs_cmd_yaw = p.observations[7];
+  wl_debug.policy_obs_cmd_height = p.observations[8];
+  // leg angle
+  wl_debug.policy_obs_theta_ll = p.observations[9];
+  wl_debug.policy_obs_theta_lr = p.observations[10];
+  // leg angle dot * 0.05
+  wl_debug.policy_obs_theta_dot_ll = p.observations[11];
+  wl_debug.policy_obs_theta_dot_lr = p.observations[12];
+  // leg length * 5.0
+  wl_debug.policy_obs_l_l = p.observations[13];
+  wl_debug.policy_obs_l_r = p.observations[14];
+  // leg length dot * 0.25
+  wl_debug.policy_obs_l_dot_l = p.observations[15];
+  wl_debug.policy_obs_l_dot_r = p.observations[16];
+  // wheel pos
+  wl_debug.policy_obs_wheel_pos_l = p.observations[17];
+  wl_debug.policy_obs_wheel_pos_r = p.observations[18];
+  // wheel vel * 0.05
+  wl_debug.policy_obs_wheel_vel_l = p.observations[19];
+  wl_debug.policy_obs_wheel_vel_r = p.observations[20];
+  // last action
+  wl_debug.policy_obs_prev_a_theta_l = p.observations[21];
+  wl_debug.policy_obs_prev_a_l0_l = p.observations[22];
+  wl_debug.policy_obs_prev_a_wheel_l = p.observations[23];
+  wl_debug.policy_obs_prev_a_theta_r = p.observations[24];
+  wl_debug.policy_obs_prev_a_l0_r = p.observations[25];
+  wl_debug.policy_obs_prev_a_wheel_r = p.observations[26];
+
+  // ── AI Policy 网络动作输出 ──
+  wl_debug.policy_act_theta_l = p.actions[0];
+  wl_debug.policy_act_l0_l = p.actions[1];
+  wl_debug.policy_act_wheel_l = p.actions[2];
+  wl_debug.policy_act_theta_r = p.actions[3];
+  wl_debug.policy_act_l0_r = p.actions[4];
+  wl_debug.policy_act_wheel_r = p.actions[5];
+
+  // ── AI Policy 网络动作输出 (物理单位转换) ──
+  constexpr float kL0Min = 0.12192586f;
+  constexpr float kL0Max = 0.30063868f;
+  auto clamp_l0 = [](float v) { return v < kL0Min ? kL0Min : (v > kL0Max ? kL0Max : v); };
+  wl_debug.policy_act_theta_l_rad = p.actions[0] * 0.5f;
+  wl_debug.policy_act_theta_r_rad = p.actions[3] * 0.5f;
+  wl_debug.policy_act_l0_l_m = clamp_l0(p.actions[1] * 0.1f + 0.17f);
+  wl_debug.policy_act_l0_r_m = clamp_l0(p.actions[4] * 0.1f + 0.17f);
+  wl_debug.policy_act_wheel_l_rad_s = p.actions[2] * 52.0f;
+  wl_debug.policy_act_wheel_r_rad_s = p.actions[5] * 52.0f;
+
+  // ── AI Policy 推理状态 ──
+  wl_debug.policy_infer_us = p.last_infer_us;
+  wl_debug.policy_step_count = p.step_count;
+  wl_debug.policy_ok = static_cast<uint8_t>(p.ok);
 }

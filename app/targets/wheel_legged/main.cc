@@ -1,6 +1,7 @@
 #include "common/bsp/timer_task_scheduler.hpp"
 
 #include <etl/delegate.h>
+#include "include/ai/policy_runner.hpp"
 #include "include/globals.hpp"
 #include "include/globals_no_dtcm.hpp"
 
@@ -24,6 +25,7 @@ extern "C" {
 void AppMain() {
   globals = &g_globals;
   globals->Init();
+  wheel_legged::ai::PolicyTestInit();
 
   TimerTaskScheduler mainloop{&htim13};
   mainloop.AddTask(wheel_legged::params::active::main::kControlLoopFrequencyHz,
@@ -40,6 +42,7 @@ void AppMain() {
     if (globals->gimbal_can.has_value()) {
       (void)globals->gimbal_can->Process();
     }
+    wheel_legged::ai::PolicyTestPoll();
   }
 }
 }

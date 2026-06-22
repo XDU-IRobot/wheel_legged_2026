@@ -289,8 +289,68 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t aimbot_rx_nuc_start_flag;  // NUC 启动标志
   float aimbot_rx_yaw_rad;           // NUC 下发的偏航目标
   float aimbot_rx_pitch_rad;         // NUC 下发的俯仰目标
+
+  // ── AI Policy 网络观测输入 (27维，均为训练缩放后的值) ──
+  // base_ang_vel * 0.25 [rad/s]
+  float policy_obs_gyro_x;  // 陀螺仪 X (roll轴)
+  float policy_obs_gyro_y;  // 陀螺仪 Y (pitch轴)
+  float policy_obs_gyro_z;  // 陀螺仪 Z (yaw轴)
+  // projected_gravity [1]
+  float policy_obs_gravity_x;  // 重力投影 X
+  float policy_obs_gravity_y;  // 重力投影 Y
+  float policy_obs_gravity_z;  // 重力投影 Z
+  // command
+  float policy_obs_cmd_vx;      // 纵向速度指令 * 2.0 [m/s]
+  float policy_obs_cmd_yaw;     // 偏航角速度指令 * 0.25 [rad/s]
+  float policy_obs_cmd_height;  // 高度指令 * 5.0 [m]
+  // leg angle [rad]
+  float policy_obs_theta_ll;  // 左腿摆角 theta0_L
+  float policy_obs_theta_lr;  // 右腿摆角 theta0_R
+  // leg angle dot * 0.05 [rad/s]
+  float policy_obs_theta_dot_ll;  // 左腿摆角速度
+  float policy_obs_theta_dot_lr;  // 右腿摆角速度
+  // leg length * 5.0 [m]
+  float policy_obs_l_l;  // 左腿等效长度 L0_L
+  float policy_obs_l_r;  // 右腿等效长度 L0_R
+  // leg length dot * 0.25 [m/s]
+  float policy_obs_l_dot_l;  // 左腿腿长变化率
+  float policy_obs_l_dot_r;  // 右腿腿长变化率
+  // wheel pos [rad] (左轮取负)
+  float policy_obs_wheel_pos_l;  // -q_l_wheel
+  float policy_obs_wheel_pos_r;  //  q_r_wheel
+  // wheel vel * 0.05 [rad/s] (左轮取负)
+  float policy_obs_wheel_vel_l;  // -dq_l_wheel * 0.05
+  float policy_obs_wheel_vel_r;  //  dq_r_wheel * 0.05
+  // last action (上一帧 VMC action)
+  float policy_obs_prev_a_theta_l;  // 上帧 a_theta_L
+  float policy_obs_prev_a_l0_l;     // 上帧 a_L0_L
+  float policy_obs_prev_a_wheel_l;  // 上帧 a_wheel_L
+  float policy_obs_prev_a_theta_r;  // 上帧 a_theta_R
+  float policy_obs_prev_a_l0_r;     // 上帧 a_L0_R
+  float policy_obs_prev_a_wheel_r;  // 上帧 a_wheel_R
+
+  // ── AI Policy 网络动作输出 (6维 VMC action，原始无量纲值) ──
+  float policy_act_theta_l;  // a_theta_L, clamp ±3.0
+  float policy_act_l0_l;     // a_L0_L,   clamp ±3.0
+  float policy_act_wheel_l;  // a_wheel_L, clamp ±1.326...
+  float policy_act_theta_r;  // a_theta_R, clamp ±3.0
+  float policy_act_l0_r;     // a_L0_R,   clamp ±3.0
+  float policy_act_wheel_r;  // a_wheel_R, clamp ±1.326...
+
+  // ── AI Policy 网络动作输出 (物理单位) ──
+  float policy_act_theta_l_rad;    // a_theta_L * 0.5 [rad]
+  float policy_act_theta_r_rad;    // a_theta_R * 0.5 [rad]
+  float policy_act_l0_l_m;         // clamp(a_L0_L * 0.1 + 0.17, 0.122, 0.301) [m]
+  float policy_act_l0_r_m;         // clamp(a_L0_R * 0.1 + 0.17, 0.122, 0.301) [m]
+  float policy_act_wheel_l_rad_s;  // a_wheel_L * 52.0 [rad/s]
+  float policy_act_wheel_r_rad_s;  // a_wheel_R * 52.0 [rad/s]
+
+  // ── AI Policy 推理状态 ──
+  uint32_t policy_infer_us;    // 最近一次推理耗时 [us]
+  uint32_t policy_step_count;  // 推理步数累计
+  uint8_t policy_ok;           // 最近一次推理成功标志
 };
-static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 512 bytes for efficient DMA");
+static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 
 extern DebugSnapshot wl_debug;
 

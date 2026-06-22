@@ -8,6 +8,9 @@ target_include_directories(${TARGET_NAME} PRIVATE
         ./include
         $<TARGET_PROPERTY:${CMAKE_PROJECT_NAME},INCLUDE_DIRECTORIES>
 )
+target_link_directories(${TARGET_NAME} PRIVATE
+        $<TARGET_PROPERTY:${CMAKE_PROJECT_NAME},LINK_DIRECTORIES>
+)
 target_link_libraries(${TARGET_NAME} PRIVATE
         $<TARGET_PROPERTY:${CMAKE_PROJECT_NAME},LINK_LIBRARIES>
 )
