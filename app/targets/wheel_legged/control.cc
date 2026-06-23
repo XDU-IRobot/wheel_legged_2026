@@ -1094,7 +1094,11 @@ void ControlLoop() {
     }
     ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad, ctx.filtered_yaw_dot, kControlLoopDtS);
     const float target_yaw_dot = -ctx.yaw_follow_pid.out();
-    const float yaw_follow_step = has_supercap ? kYawFollowRampStepRadS : kYawFollowRampStepRadNoScS;
+    // 高速时缩小 yaw 斜坡步长，降低转向响应速度以减少翻倒风险
+    const float speed_norm = std::fabs(current_state.s_dot) / forward_max_speed;
+    constexpr float kMinYawRampScale = 0.4f;
+    const float yaw_ramp_scale = std::clamp(1.0f - speed_norm, kMinYawRampScale, 1.0f);
+    const float yaw_follow_step = (has_supercap ? kYawFollowRampStepRadS : kYawFollowRampStepRadNoScS) * yaw_ramp_scale;
     const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : yaw_follow_step;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
