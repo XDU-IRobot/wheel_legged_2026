@@ -56,8 +56,6 @@ struct ChassisStateContext {
   bool prev_off_ground_in_mid_leg{false};  ///< 上一周期中腿长是否离地
 
   // ── 偏航跟随 ──
-  rm::modules::PID yaw_follow_pid{};                                      ///< 偏航跟随 PID
-  bool yaw_follow_pid_initialized{false};                                 ///< 偏航跟随 PID 是否已初始化
   chassis::Fsm::State last_chassis_mode{chassis::Fsm::State::kDisabled};  ///< 上一周期底盘模式
 
   // ── 云台启动归中 ──

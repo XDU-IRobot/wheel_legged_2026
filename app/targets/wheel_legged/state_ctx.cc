@@ -33,7 +33,6 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   expected_s = current_s;
   filtered_s_dot = current_s_dot;
   filtered_yaw_dot = 0.0f;
-  yaw_follow_pid.Clear();
   integrate_position = false;
   position_hold_timeout_ticks = 0U;
   position_frozen_by_timeout = false;

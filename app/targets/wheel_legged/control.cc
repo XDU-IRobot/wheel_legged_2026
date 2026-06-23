@@ -167,6 +167,9 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
 constexpr float kYawFollowRampStepRadNoScS = ns::control_loop::kYawFollowRampStepRadNoScS;
+constexpr float kLargeTurnThresholdRad = ns::control_loop::kLargeTurnThresholdRad;
+constexpr float kSafeTurnSpeedMps = ns::control_loop::kSafeTurnSpeedMps;
+constexpr float kLargeTurnThetaThresholdRad = ns::control_loop::kLargeTurnThetaThresholdRad;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
@@ -316,12 +319,7 @@ void ControlLoop() {
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
 
   // ── 一次性初始化 ──
-  if (!ctx.yaw_follow_pid_initialized) {
-    const auto &pid = ns::control_loop::kYawFollowPid;
-    ctx.yaw_follow_pid.SetKp(pid.kp).SetKi(pid.ki).SetKd(pid.kd).SetMaxOut(pid.max_out).SetMaxIout(pid.max_iout);
-    ctx.yaw_follow_pid.SetCircular(true).SetCircularCycle(2.0f * kPi);
-    ctx.yaw_follow_pid_initialized = true;
-  }
+  (void)0;
 
   // 云台 C 板通信断开时强制退出中腿长保持
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
@@ -786,7 +784,6 @@ void ControlLoop() {
     if (!ctx.spin_exit_recovery) {
       ctx.filtered_yaw_dot = 0.0f;
     }
-    ctx.yaw_follow_pid.Clear();
   }
 
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
@@ -798,13 +795,11 @@ void ControlLoop() {
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
     ctx.filtered_yaw_dot = 0.0f;
-    ctx.yaw_follow_pid.Clear();
   }
 
   // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成
   if (input.mode_request.flip_180_request) {
     ctx.yaw_follow_target.drive_sign = -ctx.yaw_follow_target.drive_sign;
-    ctx.yaw_follow_pid.Clear();
     ctx.flip_180_in_progress = true;
     ctx.flip_180_ticks = 0U;
   }
@@ -868,7 +863,16 @@ void ControlLoop() {
       : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetSpeedBiasHighLegMps
           : 0.0f;
-  const float forward_max_speed = forward_speed_base;
+  float forward_max_speed = forward_speed_base;
+  // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
+  const float motor_error =
+      rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+  if (std::fabs(motor_error) > kLargeTurnThresholdRad &&
+      (std::fabs(current_state.s_dot) > kSafeTurnSpeedMps ||
+       std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
+       std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
+    forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
+  }
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -971,7 +975,17 @@ void ControlLoop() {
   wl_debug.expected_s_m = chassis_update_input.expected.s;
   wl_debug.filtered_s_dot_mps = ctx.filtered_s_dot;
   wl_debug.position_frozen_by_timeout = ctx.position_frozen_by_timeout ? 1U : 0U;
-  chassis_update_input.expected.phi = current_state.phi;
+  // ── φ 目标：将偏航电机角度误差映射为 LQR 的底盘朝向误差 ──
+  // motor_error = 电机当前角度偏离目标的角度，底盘偏离期望朝向的大小与之相同
+  // 非自旋、非翻转、chassis 输出使能时才生效，否则不产生朝向力矩
+  if (!spin_control_enabled && !now_is_spin_exit_pending && !ctx.flip_180_in_progress && chassis_output_enable &&
+      ctx.yaw_follow_target_initialized) {
+    const float motor_error =
+        rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    chassis_update_input.expected.phi = current_state.phi - motor_error;
+  } else {
+    chassis_update_input.expected.phi = current_state.phi;
+  }
   chassis_update_input.expected.phi_dot = 0.0f;
 
   // ── 落地减速：中腿长离地→落地边沿触发，theta_bias = k * s_dot 辅助减速 ──
@@ -1058,7 +1072,6 @@ void ControlLoop() {
   } else if (ctx.flip_180_in_progress) {
     // R 键云台 180° 旋转中：抑制偏航跟随，等待云台旋转完成
     ctx.filtered_yaw_dot = 0.0f;
-    ctx.yaw_follow_pid.Clear();
     chassis_update_input.expected.phi_dot = 0.0f;
     ++ctx.flip_180_ticks;
     // 最短等待 100 tick (200ms)，之后检测偏航电机速度归零
@@ -1078,22 +1091,8 @@ void ControlLoop() {
     ctx.spin_exit_recovery = false;
     ctx.flip_180_in_progress = false;
     ctx.filtered_yaw_dot = 0.0f;
-    ctx.yaw_follow_pid.Clear();
   } else {
-    const float yaw_motor_rad = input.estimator_input.yaw_motor_rad;
-    const float yaw_target_rad = ctx.yaw_follow_target.target_rad;
-    // 当 error ≈ ±π 时，Wrap 总是返回 -π，PID 会走长路径。
-    // 通过 ±2π unwrap 强制走短路径。
-    const float raw_err = yaw_target_rad - yaw_motor_rad;
-    float adj_target = yaw_target_rad;
-    if (const float wrapped_err = rm::modules::Wrap(raw_err, -kPi, kPi);
-        std::fabs(std::fabs(wrapped_err) - kPi) < 0.5f) {
-      if (raw_err > 0.0f) {
-        adj_target += 2.0f * kPi;
-      }
-    }
-    ctx.yaw_follow_pid.UpdateExtDiff(adj_target, yaw_motor_rad, ctx.filtered_yaw_dot, kControlLoopDtS);
-    const float target_yaw_dot = -ctx.yaw_follow_pid.out();
+    const float target_yaw_dot = 0.0f;
     // 高速时缩小 yaw 斜坡步长，降低转向响应速度以减少翻倒风险
     const float speed_norm = std::fabs(current_state.s_dot) / forward_max_speed;
     constexpr float kMinYawRampScale = 0.4f;
