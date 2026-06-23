@@ -23,6 +23,7 @@ constexpr rm::f32 kBodyMassKg = wheel_legged::params::active::chassis::kBodyMass
 constexpr rm::f32 kLegMassKg = wheel_legged::params::active::chassis::kLegMassKg;
 constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravityMps2;
 constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
+constexpr rm::f32 kWheelPhysicalRadiusM = wheel_legged::params::active::state_estimator::kWheelRadiusM;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
 constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
@@ -611,9 +612,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       right_force_ = output_.right_l0_pid_out + r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
-      const rm::f32 inertial_ff_left = effective_mass_left_kg * (left_leg_.l0() / (2.0f * wheel_radius_m)) *
+      const rm::f32 inertial_ff_left = effective_mass_left_kg *
+                                       ((left_leg_.l0() + kWheelPhysicalRadiusM) / (2.0f * wheel_radius_m)) *
                                        state_output.current.phi_dot * state_output.current.s_dot;
-      const rm::f32 inertial_ff_right = effective_mass_right_kg * (right_leg_.l0() / (2.0f * wheel_radius_m)) *
+      const rm::f32 inertial_ff_right = effective_mass_right_kg *
+                                        ((right_leg_.l0() + kWheelPhysicalRadiusM) / (2.0f * wheel_radius_m)) *
                                         state_output.current.phi_dot * state_output.current.s_dot;
 
       left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
