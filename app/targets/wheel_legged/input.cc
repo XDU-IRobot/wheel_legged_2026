@@ -19,9 +19,6 @@ constexpr int16_t kDr16AxisMaxAbs = params::active::control_loop::kDr16AxisMaxAb
 constexpr int16_t kWheelSpinThreshold = params::active::control_loop::kWheelSpinThreshold;
 constexpr int16_t kWheelActionThreshold = params::active::control_loop::kWheelActionThreshold;
 constexpr int16_t kWheelCenterThreshold = params::active::control_loop::kWheelCenterThreshold;
-constexpr uint16_t kAutoJumpDistanceThresholdMm = params::active::control_loop::kAutoJumpDistanceThresholdMm;
-constexpr float kAutoJumpHoldTimeS = params::active::control_loop::kAutoJumpHoldTimeS;
-constexpr float kAutoJumpDistanceHoldTimeS = params::active::control_loop::kAutoJumpDistanceHoldTimeS;
 constexpr float kControlLoopDtS = params::active::control_loop::kControlLoopDtS;
 constexpr float kRcStickMax = params::active::control_loop::kRcStickMax;
 constexpr float kTcMouseMax = params::active::control_loop::kTcMouseMax;
@@ -187,26 +184,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       const bool already_mid = tc_state.mid_leg_hold;
       tc_state.mid_leg_hold = !already_mid;
       tc_state.mid_leg_f = false;
-      tc_state.ctrl_c_stair_armed_flag = false;
       tc_state.stair_descend_hold = false;
-      tc_state.auto_small_jump_enabled = false;
+
       stair_task_request = wheel_legged::StairTaskRequest::kCancel;
       tc_state.mid_leg_c_armed = false;
     }
     if (!c_pressed) tc_state.mid_leg_c_armed = true;
-
-    // Ctrl+C 组合键：上台阶预备模式（0.2m腿长，theta到位后进kStairTask）
-    if (ctrl_pressed && c_pressed && tc_state.ctrl_c_stair_armed) {
-      r_yaw_reset_edge = true;
-      tc_state.ctrl_c_stair_armed_flag = !tc_state.ctrl_c_stair_armed_flag;
-      tc_state.mid_leg_hold = tc_state.ctrl_c_stair_armed_flag;
-      tc_state.mid_leg_f = tc_state.ctrl_c_stair_armed_flag;
-      tc_state.stair_descend_hold = false;
-      tc_state.auto_small_jump_enabled = false;
-      stair_task_request = wheel_legged::StairTaskRequest::kCancel;
-      tc_state.ctrl_c_stair_armed = false;
-    }
-    if (!ctrl_pressed || !c_pressed) tc_state.ctrl_c_stair_armed = true;
 
     // G 键（上升沿）：循环切换 aim_mode
     const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
@@ -241,8 +224,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       r_yaw_reset_edge = true;
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_f = false;
-      tc_state.ctrl_c_stair_armed_flag = false;
-      tc_state.auto_small_jump_enabled = false;
+
       stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
       tc_state.stair_descend_hold = false;
       tc_state.v_high_leg_armed = false;
@@ -255,21 +237,20 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       r_yaw_reset_edge = true;
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_f = false;
-      tc_state.ctrl_c_stair_armed_flag = false;
-      tc_state.auto_small_jump_enabled = false;
+
       stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
       tc_state.stair_descend_hold = false;
       tc_state.b_high_leg_armed = false;
     }
     if (!b_pressed) tc_state.b_high_leg_armed = true;
 
-    // F 键（上升沿）：切换 mid_leg_f 中腿长模式（慢速中腿长）；Ctrl+C 模式下不影响 mid_leg_hold
+    // F 键（上升沿）：切换 mid_leg_f 中腿长模式（慢速中腿长）
     const bool f_pressed = (tc_remote.keyboard_value & kRcKeyF) != 0U;
-    if (f_pressed && tc_state.f_slow_armed && !tc_state.ctrl_c_stair_armed_flag) {
+    if (f_pressed && tc_state.f_slow_armed) {
       tc_state.mid_leg_f = !tc_state.mid_leg_f;
       tc_state.mid_leg_hold = tc_state.mid_leg_f;
       tc_state.stair_descend_hold = false;
-      tc_state.auto_small_jump_enabled = false;
+
       tc_state.f_slow_armed = false;
     }
     if (!f_pressed) tc_state.f_slow_armed = true;
@@ -405,12 +386,21 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       }
     }
 
-    // 小陀螺正/反转：辨识/验证模式下不响应拨轮；战斗模式下禁用反转
-    if (request.gimbal_test_profile == wheel_legged::GimbalTestProfile::kNormal) {
-      if (dr16.dial >= kWheelSpinThreshold) {
-        request.spin_hold = true;
-      } else if (dr16.dial <= -kWheelActionThreshold &&
-                 request.domain_request != wheel_legged::DomainRequest::kCombat) {
+    // 拨轮：上拨跳跃，下拨小陀螺（仅左拨杆 kMid 时生效）
+    if (dr16.switch_l == rm::device::DR16::SwitchPosition::kMid) {
+      // 上拨触发跳跃（上升沿检测，需回中后再拨才能再次触发）
+      {
+        static bool s_dial_jump_armed = true;
+        if (dr16.dial >= kWheelSpinThreshold && s_dial_jump_armed) {
+          request.jump_trigger = true;
+          s_dial_jump_armed = false;
+        }
+        if (dr16.dial < kWheelSpinThreshold) {
+          s_dial_jump_armed = true;
+        }
+      }
+      // 下拨触发小陀螺
+      if (dr16.dial <= -kWheelActionThreshold) {
         request.spin_hold = true;
         request.spin_dir = -1.0f;
       }
@@ -472,8 +462,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
         if (entering) {
           tc_state.mid_leg_hold = false;
           tc_state.mid_leg_f = false;
-          tc_state.ctrl_c_stair_armed_flag = false;
-          tc_state.auto_small_jump_enabled = false;
+
           request.stair_task_request = wheel_legged::StairTaskRequest::kCancel;
           request.reset_yaw_request = true;
         }
@@ -529,7 +518,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.stair_task_request = wheel_legged::StairTaskRequest::kArmContinuous;
   }
   request.mid_leg_f = tc_state.mid_leg_f;
-  request.ctrl_c_stair = tc_state.ctrl_c_stair_armed_flag;
   if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
       combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
     request.standby = true;
@@ -710,8 +698,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
         predicted_domain != wheel_legged::DomainRequest::kDisabled) {
       tc_state.mid_leg_hold = false;
       tc_state.mid_leg_f = false;
-      tc_state.ctrl_c_stair_armed_flag = false;
-      tc_state.auto_small_jump_enabled = false;
+
       tc_state.aim_mode = TcSemanticState::AimMode::kAmmo;
     }
     prev_domain = predicted_domain;
@@ -720,32 +707,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 3b. 语义折叠
   ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
 
-  // 3c. 自动小跳（G 键模式 + 超声波测距触发）
-  {
-    // 模式重新开启时清除触发锁存
-    if (tc_state.auto_small_jump_enabled && !input.auto_jump_enabled) {
-      input.auto_small_jump_triggered = false;
-    }
-    const bool in_low_leg = (input.mode_request.leg_request == wheel_legged::LegProfile::kLow);
-    static float s_distance_below_timer = 0.0f;
-    const auto dyp_left = g.dyp_left.has_value() ? g.dyp_left->distance_raw() : 0U;
-    const auto dyp_right = g.dyp_right.has_value() ? g.dyp_right->distance_raw() : 0U;
-    const auto dyp_avg = static_cast<uint16_t>((static_cast<uint32_t>(dyp_left) + dyp_right) / 2U);
-    const bool distance_below_threshold = (dyp_avg <= kAutoJumpDistanceThresholdMm && dyp_avg > 0U);
-    if (tc_state.auto_small_jump_enabled && in_low_leg && distance_below_threshold) {
-      s_distance_below_timer += kControlLoopDtS;
-    } else {
-      s_distance_below_timer = 0.0f;
-    }
-    if (s_distance_below_timer >= kAutoJumpDistanceHoldTimeS) {
-      // input.mode_request.jump_trigger = true;
-      input.mode_request.auto_jump_triggered = true;
-      input.auto_small_jump_triggered = true;  // 锁存，供调试观察
-      tc_state.auto_small_jump_enabled = false;
-      s_distance_below_timer = 0.0f;
-    }
-    input.auto_jump_enabled = tc_state.auto_small_jump_enabled;
-  }
+  // 3c. 自动小跳已移除
 
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
   const bool auto_aim_active = input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimAmmo ||
@@ -809,7 +771,6 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .spin_hold = m.spin_hold,
       .spin_dir = m.spin_dir,
       .jump_trigger = m.jump_trigger,
-      .auto_jump_triggered = m.auto_jump_triggered,
       .current_leg_length_m = chassis_output.mean_leg_length_m,
       .theta_ll_rad = chassis_output.current_state.theta_ll,
       .theta_lr_rad = chassis_output.current_state.theta_lr,
@@ -822,7 +783,6 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .tick_ms = tick_ms,
   };
   fsm_input.request.current_s_dot = chassis_output.current_state.s_dot;
-  fsm_input.request.ctrl_c_stair = m.ctrl_c_stair;
   fsm_input.request.stair_step2 = m.stair_step2;
   return fsm_input;
 }

@@ -133,6 +133,12 @@ void chassis::Chassis::Init() {
   const auto &right_l0_pid = wheel_legged::params::active::chassis::kRightL0Pid;
   init_pid(right_l0_pid_, right_l0_pid.kp, right_l0_pid.ki, right_l0_pid.kd, right_l0_pid.max_out,
            right_l0_pid.max_iout);
+  const auto &left_l0_jump1 = wheel_legged::params::active::chassis::kLeftL0PidJumpOne;
+  init_pid(left_l0_pid_jump_one_, left_l0_jump1.kp, left_l0_jump1.ki, left_l0_jump1.kd, left_l0_jump1.max_out,
+           left_l0_jump1.max_iout);
+  const auto &right_l0_jump1 = wheel_legged::params::active::chassis::kRightL0PidJumpOne;
+  init_pid(right_l0_pid_jump_one_, right_l0_jump1.kp, right_l0_jump1.ki, right_l0_jump1.kd, right_l0_jump1.max_out,
+           right_l0_jump1.max_iout);
   const auto &left_l0_jump2 = wheel_legged::params::active::chassis::kLeftL0PidJumpTwo;
   init_pid(left_l0_pid_jump_two_, left_l0_jump2.kp, left_l0_jump2.ki, left_l0_jump2.kd, left_l0_jump2.max_out,
            left_l0_jump2.max_iout);
@@ -385,9 +391,14 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);
-  if (is_jump_state || !standup_complete_) {
-    // Jump 和起立阶段 bypass 正常腿长斜坡
-    // 不覆盖 params_.leg_target_length_m，由起立阶段逻辑或跳跃逻辑自行设置
+  if (is_jump_state) {
+    // 跳跃阶段直接使用 FSM 设定的各阶段目标腿长，不走斜坡
+    params_.leg_target_length_m = input.motion_target.leg_length_m;
+    smoothed_leg_target_length_m_ = params_.leg_target_length_m;
+    last_ramp_target_m_ = params_.leg_target_length_m;
+    ramp_step_per_tick_m_ = 0.0f;
+  } else if (!standup_complete_) {
+    // 起立阶段 bypass 正常腿长斜坡，由起立逻辑自行设置
     smoothed_leg_target_length_m_ = params_.leg_target_length_m;
     last_ramp_target_m_ = params_.leg_target_length_m;
     ramp_step_per_tick_m_ = 0.0f;
@@ -587,20 +598,37 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
     if (use_jump_extend) {
+      left_l0_pid_jump_two_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+      right_l0_pid_jump_two_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
+      const float left_leg_length_force = left_l0_pid_jump_two_.out();
+      const float right_leg_length_force = right_l0_pid_jump_two_.out();
+      // left_force_ = left_leg_length_force + roll_pid_.out();
+      // right_force_ = right_leg_length_force - roll_pid_.out();
+      // left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
+      // right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
+
       left_force_ = kJumpPushForceN + roll_pid_.out();
-      right_force_ = kJumpPushForceN - roll_pid_.out();
+      right_force_ = kJumpPushForceN + roll_pid_.out();
+
+      // left_force_ = 200.f;
+      // right_force_ = 200.f;
     } else if (use_jump_retract2) {
       left_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
       right_l0_pid_jump_three_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
       const float left_leg_length_force = left_l0_pid_jump_three_.out();
       const float right_leg_length_force = right_l0_pid_jump_three_.out();
+      // left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
+      // right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
+
+      left_force_ = left_leg_length_force + l_spring_torque_;
+      right_force_ = right_leg_length_force + r_spring_torque_;
+    } else if (use_jump_retract1) {
+      left_l0_pid_jump_one_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+      right_l0_pid_jump_one_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
+      const float left_leg_length_force = left_l0_pid_jump_one_.out();
+      const float right_leg_length_force = right_l0_pid_jump_one_.out();
       left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
-      // left_force_ = -100.f + roll_pid_.out() + l_spring_torque_;
-      // right_force_ = -100.f - roll_pid_.out() + r_spring_torque_;
-    } else if (use_jump_retract1) {
-      left_force_ = leg_length_force + roll_pid_.out() + l_spring_torque_;
-      right_force_ = leg_length_force - roll_pid_.out() + r_spring_torque_;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
     } else if (input.motion_target.disable_leg_force) {
       left_force_ = 0.0f;

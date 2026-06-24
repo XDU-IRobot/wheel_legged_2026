@@ -25,7 +25,6 @@ constexpr SdotRampParams kSdotRampLowLeg = params::active::control_loop::kSdotRa
 constexpr SdotRampParams kSdotRampMidLeg = params::active::control_loop::kSdotRampMidLeg;
 constexpr SdotRampParams kSdotRampMidLegF = params::active::control_loop::kSdotRampMidLegF;
 constexpr SdotRampParams kSdotRampHighLeg = params::active::control_loop::kSdotRampHighLeg;
-constexpr SdotRampParams kSdotRampCtrlCStair = params::active::control_loop::kSdotRampCtrlCStair;
 
 }  // namespace
 
@@ -37,10 +36,6 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   position_hold_timeout_ticks = 0U;
   position_frozen_by_timeout = false;
   yaw_follow_target_initialized = false;
-  landing_decel_active = false;
-  landing_theta_bias = 0.0f;
-  landing_stable_ticks = 0U;
-  off_ground_duration_ticks = 0U;
   flip_180_in_progress = false;
   flip_180_ticks = 0U;
 }
@@ -141,13 +136,6 @@ SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool 
     return kSdotRampMidLegF;
   }
   return ResolveSdotRampParams(mode);
-}
-
-SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool mid_leg_f, const bool ctrl_c_stair) {
-  if (mode == chassis::Fsm::State::kMidLeg && ctrl_c_stair) {
-    return kSdotRampCtrlCStair;
-  }
-  return ResolveSdotRampParams(mode, mid_leg_f);
 }
 
 }  // namespace wheel_legged::control_loop

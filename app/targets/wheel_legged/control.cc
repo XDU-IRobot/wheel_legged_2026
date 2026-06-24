@@ -157,12 +157,10 @@ constexpr float kTargetForwardSpeedMaxMps = ns::control_loop::kTargetForwardSpee
 constexpr float kTargetForwardSpeedMaxNoScMps = ns::control_loop::kTargetForwardSpeedMaxNoScMps;
 constexpr float kTargetForwardSpeedMaxHighLegMps = ns::control_loop::kTargetForwardSpeedMaxHighLegMps;
 constexpr float kTargetForwardSpeedMaxMidLegMps = ns::control_loop::kTargetForwardSpeedMaxMidLegMps;
-constexpr float kTargetForwardSpeedMaxCtrlCStairMps = ns::control_loop::kTargetForwardSpeedMaxCtrlCStairMps;
 constexpr float kTargetSpeedBiasLowLegMps = ns::control_loop::kTargetSpeedBiasLowLegMps;
 constexpr float kTargetSpeedBiasMidLegMps = ns::control_loop::kTargetSpeedBiasMidLegMps;
 constexpr float kTargetSpeedBiasMidLegFMps = ns::control_loop::kTargetSpeedBiasMidLegFMps;
 constexpr float kTargetSpeedBiasHighLegMps = ns::control_loop::kTargetSpeedBiasHighLegMps;
-constexpr float kTargetSpeedBiasCtrlCStairMps = ns::control_loop::kTargetSpeedBiasCtrlCStairMps;
 constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
@@ -170,6 +168,7 @@ constexpr float kYawFollowRampStepRadNoScS = ns::control_loop::kYawFollowRampSte
 constexpr float kLargeTurnThresholdRad = ns::control_loop::kLargeTurnThresholdRad;
 constexpr float kSafeTurnSpeedMps = ns::control_loop::kSafeTurnSpeedMps;
 constexpr float kLargeTurnThetaThresholdRad = ns::control_loop::kLargeTurnThetaThresholdRad;
+constexpr float kLargeTurnRecoveryAccelScale = ns::control_loop::kLargeTurnRecoveryAccelScale;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
@@ -191,12 +190,6 @@ constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
 constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
-constexpr float kLandingDecelThetaGain = ns::control_loop::kLandingDecelThetaGain;
-constexpr float kLandingDecelThetaMaxRad = ns::control_loop::kLandingDecelThetaMaxRad;
-
-constexpr float kLandingDecelThetaRampStepRad = ns::control_loop::kLandingDecelThetaRampStepRad;
-constexpr std::uint32_t kLandingDecelOffGroundMinMs = ns::control_loop::kLandingDecelOffGroundMinMs;
-constexpr std::uint32_t kLandingDecelStableDurationMs = ns::control_loop::kLandingDecelStableDurationMs;
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -424,7 +417,6 @@ void ControlLoop() {
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
       tc_state.stair_descend_hold = false;
-      tc_state.auto_small_jump_enabled = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
   }
@@ -848,15 +840,11 @@ void ControlLoop() {
   const float forward_speed_base =
       (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.ctrl_c_stair)
-          ? kTargetForwardSpeedMaxCtrlCStairMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
           : default_speed_max;
   const float forward_speed_bias =
       (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.ctrl_c_stair)
-          ? kTargetSpeedBiasCtrlCStairMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetSpeedBiasMidLegFMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kTargetSpeedBiasMidLegMps
@@ -872,6 +860,11 @@ void ControlLoop() {
        std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
        std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
     forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
+  }
+  // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
+  static bool s_large_turn_recovery = false;
+  if (forward_max_speed < forward_speed_base) {
+    s_large_turn_recovery = true;
   }
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
@@ -952,9 +945,17 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params =
-        ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f, input.mode_request.ctrl_c_stair);
-    RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
+    // 大转向限速解除后，用缓加速斜坡逐步恢复速度
+    float accel_scale = 1.0f;
+    if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
+      accel_scale = kLargeTurnRecoveryAccelScale;
+      if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
+        s_large_turn_recovery = false;
+      }
+    }
+    const SdotRampParams effective_ramp{ramp_params.accel_step * accel_scale, ramp_params.brake_step};
+    RampValueToTarget(target_s_dot, ctx.filtered_s_dot, effective_ramp);
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
@@ -987,50 +988,6 @@ void ControlLoop() {
     chassis_update_input.expected.phi = current_state.phi;
   }
   chassis_update_input.expected.phi_dot = 0.0f;
-
-  // ── 落地减速：中腿长离地→落地边沿触发，theta_bias = k * s_dot 辅助减速 ──
-  // const bool is_mid_leg = chassis_output.mode == chassis::Fsm::State::kMidLeg;
-  // const bool off_ground = chassis_control_output.off_ground_in_mid_high_leg;
-  //
-  // // 离地持续时间计数（防单帧误判）—— 先判边沿再更新计数器
-  // const uint32_t off_ground_min_ticks = kLandingDecelOffGroundMinMs / 2U;  // 2ms/tick
-  // const bool landing_edge = is_mid_leg && ctx.prev_off_ground_in_mid_leg && !off_ground &&
-  //                           ctx.off_ground_duration_ticks >= off_ground_min_ticks;
-  // ctx.prev_off_ground_in_mid_leg = off_ground;
-  //
-  // if (off_ground && is_mid_leg) {
-  //   ctx.off_ground_duration_ticks++;
-  // } else {
-  //   ctx.off_ground_duration_ticks = 0U;
-  // }
-  //
-  // if (landing_edge) {
-  //   ctx.landing_decel_active = true;
-  //   ctx.landing_stable_ticks = 0U;
-  // }
-  //
-  // if (ctx.landing_decel_active) {
-  //   const bool speed_low = std::fabs(current_state.s_dot) < ns::control_loop::kPositionFreezeSpeedThresholdMps;
-  //   if (speed_low) {
-  //     ctx.landing_stable_ticks++;
-  //   } else {
-  //     ctx.landing_stable_ticks = 0U;
-  //   }
-  //
-  //   const uint32_t stable_ticks_needed = kLandingDecelStableDurationMs / 2U;  // 500Hz → 2ms/tick
-  //   if (ctx.landing_stable_ticks >= stable_ticks_needed) {
-  //     ctx.landing_decel_active = false;
-  //   }
-  // }
-  //
-  // {
-  //   const float target_bias = ctx.landing_decel_active ? std::clamp(kLandingDecelThetaGain * current_state.s_dot,
-  //                                                                   -kLandingDecelThetaMaxRad,
-  //                                                                   kLandingDecelThetaMaxRad)
-  //                                                      : 0.0f;
-  //   const SdotRampParams theta_ramp{kLandingDecelThetaRampStepRad, kLandingDecelThetaRampStepRad};
-  //   RampValueToTarget(target_bias, ctx.landing_theta_bias, theta_ramp);
-  // }
 
   if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
@@ -1116,7 +1073,6 @@ void ControlLoop() {
     static bool prev_dip_active = false;
     if (prev_dip_active && !chassis_control_output.mid_leg_dip_active) {
       tc_state.mid_leg_hold = false;
-      tc_state.auto_small_jump_enabled = false;
     }
     prev_dip_active = chassis_control_output.mid_leg_dip_active;
   }

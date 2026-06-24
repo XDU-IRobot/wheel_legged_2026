@@ -136,9 +136,8 @@ struct ModeRequest {
       ServiceProfile::kChassisAndGimbalSafe};  ///< 维护域策略 (@todo 目前硬编码为 Safe，未来接入 DR16)
   LegProfile leg_request{LegProfile::kLow};    ///< 腿长档位请求
   bool mid_leg_f{false};                       ///< F 键触发的 mid_leg_f 中腿长（慢速斜坡参数）
-  bool ctrl_c_stair{false};  ///< Ctrl+C 触发的上台阶预备模式（0.2m腿长，theta到位后进kStairTask）
-  bool stair_step2{false};   ///< 双台阶第二步
-  bool standby{false};       ///< Standby: low-leg posture with wheel torque disabled
+  bool stair_step2{false};                     ///< 双台阶第二步
+  bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
   bool spin_hold{false};             ///< 小陀螺保持请求
@@ -146,7 +145,6 @@ struct ModeRequest {
   bool jump_trigger{false};          ///< 跳跃边沿触发请求
   bool reset_yaw_request{false};     ///< R 键重置底盘正方向
   bool flip_180_request{false};      ///< R 键云台转 180° + 底盘正方向切换
-  bool auto_jump_triggered{false};   ///< 自动跳跃触发（DYP 测距）
   float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈 (回灌自上周期底盘输出)
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
   float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)
@@ -206,7 +204,6 @@ struct ChassisFsmInput {
   float spin_dir{1.0f};                                    ///< 小陀螺方向（+1 正转，-1 反转）
   bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
-  bool auto_jump_triggered{false};                         ///< 自动跳跃触发（DYP 测距）
   float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
   float current_s_dot{0.0f};                               ///< 当前纵向速度 [m/s]
   float theta_ll_rad{0.0f};                                ///< 当前左腿摆角
@@ -217,7 +214,6 @@ struct ChassisFsmInput {
   bool off_ground{false};                                  ///< 是否离地（支撑力过低）
   bool stair_task_active{false};                           ///< 上台阶任务处于待命或执行中
   bool stair_task_recovery_required{false};                ///< 台阶任务姿态异常，立即进入恢复
-  bool ctrl_c_stair{false};                                ///< Ctrl+C 上台阶预备模式
   bool stair_step2{false};                                 ///< 双台阶第二步（使用 kStairClimbStep2 参数）
   bool recovery_manual_mode{false};                        ///< 倒地自启手动模式
   float manual_left_leg_speed{0.0f};                       ///< 手动模式左腿摆角速度目标 [rad/s]

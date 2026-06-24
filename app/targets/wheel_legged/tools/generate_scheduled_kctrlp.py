@@ -14,9 +14,49 @@ Workflow:
 This mirrors HerKules_VOCAL_SJ_LQR_v4_with_data.m, but keeps the online
 controller's current 2-D kCtrlP structure while letting you tune Q/R on the
 mostly equal-leg-length real robot.
-"""
 
-# python app\targets\wheel_legged\tools\generate_scheduled_kctrlp.py --leg-min 0.15 --leg-max 0.35 --grid-step 0.01 --output app\targets\wheel_legged\tools\kctrlp_generated.hpp --html-report app\targets\wheel_legged\tools\kctrlp_fit_report.html
+---------------------------------------------------------------------
+Usage examples (run from this script's directory):
+
+  # 1) Dry run: print on-screen C++ header & fit statistics (default params)
+  python generate_scheduled_kctrlp.py
+
+  # 2) Generate the C++ header file (overwrites kctrlp_generated.hpp)
+  python generate_scheduled_kctrlp.py --output kctrlp_generated.hpp
+
+  # 3) Custom leg-length range & finer grid step (header only)
+  python generate_scheduled_kctrlp.py \\
+      --leg-min 0.14 --leg-max 0.34 --grid-step 0.005 \\
+      --output kctrlp_generated.hpp
+
+  # 4) Generate HTML fit-visualisation reports for all three robot variants
+  python generate_scheduled_kctrlp.py \\
+      --html-report kctrlp_fit_reports/ --report-variant all
+
+  # 5) Generate only the infantry3 HTML report (single file)
+  python generate_scheduled_kctrlp.py \\
+      --html-report kctrlp_fit_report_infantry3.html --report-variant infantry3
+
+  # 6) ★ Final one-shot: C++ header + all HTML reports, full leg range, fine grid
+  python generate_scheduled_kctrlp.py \\
+      --leg-min 0.14 --leg-max 0.35 --grid-step 0.005 \\
+      --output kctrlp_generated.hpp \\
+      --html-report kctrlp_fit_reports/ --report-variant all
+
+      python generate_scheduled_kctrlp.py --leg-min 0.14 --leg-max 0.35 --grid-step 0.005 --output kctrlp_generated.hpp --html-report kctrlp_fit_reports/ --report-variant all
+
+Arguments summary:
+  --leg-min FLOAT       Min leg length for 2-D fit grid        [default: 0.15]
+  --leg-max FLOAT       Max leg length for 2-D fit grid        [default: 0.35]
+  --grid-step FLOAT     Leg length grid step                   [default: 0.01]
+  --output PATH         Write C++ constexpr header to PATH
+  --html-report PATH    Write HTML/SVG fit report(s):
+                        - a directory  → one .html per variant inside it
+                        - a .html file → single variant report (see next arg)
+  --report-variant STR  Variant(s) for --html-report:
+                        hero | infantry3 | infantry4 | all     [default: infantry3]
+---------------------------------------------------------------------
+"""
 
 from __future__ import annotations
 
@@ -72,8 +112,8 @@ HERO_QR_POINTS: list[QrPoint] = [
 INFANTRY3_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.16,
-        np.diag([200.0, 120.0, 200.0, 1.0, 1000.0, 1.0, 1000.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.2, 2.2, 0.4, 0.4]),
+        np.diag([200.0, 120.0, 200.0, 1.0, 1500.0, 1.0, 1500.0, 1.0, 3200.0, 1.0]),
+        np.diag([2.2, 2.2, 0.2, 0.2]),
     ),
     QrPoint(
         0.18,
@@ -95,13 +135,18 @@ INFANTRY3_QR_POINTS: list[QrPoint] = [
 INFANTRY4_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.16,
-        np.diag([200.0, 120.0, 200.0, 50.0, 1000.0, 1.0, 1000.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.2, 2.2, 0.4, 0.4]),
+        np.diag([200.0, 100.0, 200.0, 1.0, 800.0, 1.0, 800.0, 1.0, 3200.0, 1.0]),
+        np.diag([2.4, 2.4, 1.0, 1.0]),
     ),
     QrPoint(
-        0.18,
-        np.diag([200.0, 120.0, 200.0, 50.0, 1000.0, 1.0, 1000.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.2, 2.2, 0.4, 0.4]),
+        0.23,
+        np.diag([200.0, 120.0, 200.0, 1.0, 1200.0, 4.0, 1200.0, 4.0, 3200.0, 1.0]),
+        np.diag([3.5, 3.5, 0.5, 0.5]),
+    ),
+    QrPoint(
+        0.33,
+        np.diag([150.0, 60.0, 200.0, 1.0, 1200.0, 1.0, 1200.0, 1.0, 3200.0, 1.0]),
+        np.diag([4.0, 4.0, 0.5, 0.5]),
     ),
 ]
 

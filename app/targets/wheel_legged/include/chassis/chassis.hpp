@@ -193,6 +193,8 @@ class Chassis {
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
+  rm::modules::PID left_l0_pid_jump_one_{};
+  rm::modules::PID right_l0_pid_jump_one_{};
   rm::modules::PID left_l0_pid_jump_two_{};
   rm::modules::PID right_l0_pid_jump_two_{};
   rm::modules::PID left_l0_pid_jump_three_{};

@@ -48,13 +48,6 @@ struct ChassisStateContext {
   uint32_t position_hold_timeout_ticks{0U};  ///< 位置锚定超时计数器（斜坡归零后累积，超时强制冻结）
   bool position_frozen_by_timeout{false};  ///< true=超时强冻, false=速度低于阈值正常冻结
 
-  // ── 落地减速（离地→落地边沿触发）──
-  bool landing_decel_active{false};        ///< 落地减速是否激活
-  float landing_theta_bias{0.0f};          ///< 落地减速腿摆角偏置 [rad]
-  uint32_t landing_stable_ticks{0U};       ///< 落地减速稳定计数器
-  uint32_t off_ground_duration_ticks{0U};  ///< 离地持续时间计数器（防单帧误判）
-  bool prev_off_ground_in_mid_leg{false};  ///< 上一周期中腿长是否离地
-
   // ── 偏航跟随 ──
   chassis::Fsm::State last_chassis_mode{chassis::Fsm::State::kDisabled};  ///< 上一周期底盘模式
 
@@ -158,6 +151,6 @@ bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_
  */
 SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode);
 SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f);
-SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f, bool ctrl_c_stair);
+SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f);
 
 }  // namespace wheel_legged::control_loop
