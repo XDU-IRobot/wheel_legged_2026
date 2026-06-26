@@ -1,32 +1,32 @@
 ST Edge AI Core v2.2.0-20266 2adc00962
-Created date          : 2026-06-19 13:28:36
-Parameters            : generate --target stm32h7 --name network -m D:/rm/2026_code/1/embedded-2026-h7/app/targets/wheel_legged/policy.onnx --compression none --verbosity 1 --workspace C:/Users/SF4/AppData/Local/Temp/mxAI_workspace28699165611009741564422274258442 --output C:/Users/SF4/.stm32cubemx/network_output
+Created date          : 2026-06-24 19:17:33
+Parameters            : generate --target stm32h7 --name network -m D:/rm/2026_code/1/embedded-2026-h7/app/targets/wheel_legged/policy.onnx --compression none --verbosity 1 --workspace C:/Users/SF4/AppData/Local/Temp/mxAI_workspace346047651094009546143625527757173 --output C:/Users/SF4/.stm32cubemx/network_output
 
 Exec/report summary (generate)
---------------------------------------------------------------------------------------------------------
-model file         :   D:\rm\2026_code\1\embedded-2026-h7\app\targets\wheel_legged\policy.onnx          
-type               :   onnx                                                                             
-c_name             :   network                                                                          
-compression        :   none                                                                             
-options            :   allocate-inputs, allocate-outputs                                                
-optimization       :   balanced                                                                         
-target/series      :   stm32h7                                                                          
-workspace dir      :   C:\Users\SF4\AppData\Local\Temp\mxAI_workspace28699165611009741564422274258442   
-output dir         :   C:\Users\SF4\.stm32cubemx\network_output                                         
-model_fmt          :   float                                                                            
-model_name         :   policy                                                                           
-model_hash         :   0x1d8ddfaeaf2dc18ea562d8f7e00a382c                                               
-params #           :   40,361 items (157.66 KiB)                                                        
---------------------------------------------------------------------------------------------------------
-input 1/2          :   'observations', f32(1x27), 108 Bytes, activations                                
-input 2/2          :   'observation_history', f32(1x135), 540 Bytes, activations                        
-inputs (total)     :   648 Bytes                                                                        
-output 1/1         :   'actions', f32(1x6), 24 Bytes, activations                                       
-macc               :   44,937                                                                           
-weights (ro)       :   161,444 B (157.66 KiB) (1 segment)                                               
-activations (rw)   :   1,160 B (1.13 KiB) (1 segment) *                                                 
-ram (total)        :   1,160 B (1.13 KiB) = 1,160 + 0 + 0                                               
---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+model file         :   D:\rm\2026_code\1\embedded-2026-h7\app\targets\wheel_legged\policy.onnx           
+type               :   onnx                                                                              
+c_name             :   network                                                                           
+compression        :   none                                                                              
+options            :   allocate-inputs, allocate-outputs                                                 
+optimization       :   balanced                                                                          
+target/series      :   stm32h7                                                                           
+workspace dir      :   C:\Users\SF4\AppData\Local\Temp\mxAI_workspace346047651094009546143625527757173   
+output dir         :   C:\Users\SF4\.stm32cubemx\network_output                                          
+model_fmt          :   float                                                                             
+model_name         :   policy                                                                            
+model_hash         :   0x1d8ddfaeaf2dc18ea562d8f7e00a382c                                                
+params #           :   40,361 items (157.66 KiB)                                                         
+---------------------------------------------------------------------------------------------------------
+input 1/2          :   'observations', f32(1x27), 108 Bytes, activations                                 
+input 2/2          :   'observation_history', f32(1x135), 540 Bytes, activations                         
+inputs (total)     :   648 Bytes                                                                         
+output 1/1         :   'actions', f32(1x6), 24 Bytes, activations                                        
+macc               :   44,937                                                                            
+weights (ro)       :   161,444 B (157.66 KiB) (1 segment)                                                
+activations (rw)   :   1,160 B (1.13 KiB) (1 segment) *                                                  
+ram (total)        :   1,160 B (1.13 KiB) = 1,160 + 0 + 0                                                
+---------------------------------------------------------------------------------------------------------
 (*) 'input'/'output' buffers are allocated in the activations buffer
 
 Model name - policy

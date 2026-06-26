@@ -220,6 +220,16 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dyp_result_right;              // 右测量状态
   uint32_t dyp_frame_count;              // 接收帧计数
 
+  // VL53L4CD ToF distance sensor
+  uint8_t vl53l4cd_driver_status;  // 0=OK, 2=I2C error, 3=timeout, 4=wrong device
+  uint8_t vl53l4cd_range_status;   // 0 means the current distance is valid
+  uint16_t vl53l4cd_model_id;      // Expected value: 0xEBAA
+  uint16_t vl53l4cd_distance_mm;   // Measured distance [mm]
+  uint16_t vl53l4cd_signal_kcps;   // Target signal rate [kcps]
+  uint16_t vl53l4cd_ambient_kcps;  // Ambient light rate [kcps]
+  uint16_t vl53l4cd_sigma_mm;      // Estimated measurement deviation [mm]
+  uint32_t vl53l4cd_sample_count;  // Number of received samples
+
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;            // 发射使能（云台处于 Combat）
   uint8_t shoot_fric_ready;         // 摩擦轮达速标志（转速达到目标±阈值）

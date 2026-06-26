@@ -5,6 +5,7 @@
 
 #include "include/debug.hpp"
 #include "include/ai/policy_runner.hpp"
+#include "common/device/vl53l4cd.hpp"
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
@@ -18,6 +19,15 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_fsm_state = static_cast<uint8_t>(gimbal_output.mode);
   wl_debug.chassis_fsm_state_changed = static_cast<uint8_t>(chassis_output.state_changed);
   wl_debug.gimbal_fsm_state_changed = static_cast<uint8_t>(gimbal_output.state_changed);
+
+  wl_debug.vl53l4cd_driver_status = ::device::g_vl53l4cd_state.driver_status;
+  wl_debug.vl53l4cd_range_status = ::device::g_vl53l4cd_state.range_status;
+  wl_debug.vl53l4cd_model_id = ::device::g_vl53l4cd_state.model_id;
+  wl_debug.vl53l4cd_distance_mm = ::device::g_vl53l4cd_state.distance_mm;
+  wl_debug.vl53l4cd_signal_kcps = ::device::g_vl53l4cd_state.signal_rate_kcps;
+  wl_debug.vl53l4cd_ambient_kcps = ::device::g_vl53l4cd_state.ambient_rate_kcps;
+  wl_debug.vl53l4cd_sigma_mm = ::device::g_vl53l4cd_state.sigma_mm;
+  wl_debug.vl53l4cd_sample_count = ::device::g_vl53l4cd_state.sample_count;
 
   // ── DR16 原始输入 ──
   wl_debug.dr16_online = static_cast<uint8_t>(input.dr16.online);
