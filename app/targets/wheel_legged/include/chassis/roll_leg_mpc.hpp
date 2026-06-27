@@ -42,8 +42,8 @@ class RollLegMpc {
     rm::f32 roll_inertia_kg_m2{0.0f};
     rm::f32 roll_balance_target_rad{wheel_legged::params::active::chassis::kRollBalanceTargetRad};
 
-    rm::f32 force_min_n{0.0f};
-    rm::f32 force_max_n{600.0f};
+    rm::f32 force_min_n{-300.0f};
+    rm::f32 force_max_n{300.0f};
     rm::f32 force_slew_rate_n_per_s{20000.0f};
 
     rm::f32 leg_safe_min_m{0.08f};
