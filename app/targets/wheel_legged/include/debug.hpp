@@ -357,6 +357,22 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t policy_infer_us;    // 最近一次推理耗时 [us]
   uint32_t policy_step_count;  // 推理步数累计
   uint8_t policy_ok;           // 最近一次推理成功标志
+  uint8_t mpc_active;
+  uint8_t mpc_solved;
+  uint8_t mpc_fallback_reason;
+  uint8_t mpc_solver_iterations;
+  float mpc_left_force_n;
+  float mpc_right_force_n;
+  float mpc_dF_left_n;
+  float mpc_dF_right_n;
+  float mpc_gravity_left_n;
+  float mpc_gravity_right_n;
+  float mpc_e_L;
+  float mpc_D;
+  float mpc_e_roll;
+  float mpc_a_y;
+  float mpc_model_h_m;
+  float mpc_model_I_roll;
 };
 static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 

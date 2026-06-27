@@ -155,6 +155,24 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.filtered_theta_lr_dot_rad_s = chassis_control_output.filtered_theta_lr_dot;
   wl_debug.chassis_left_l0_pid_out = chassis_control_output.left_l0_pid_out;
   wl_debug.chassis_right_l0_pid_out = chassis_control_output.right_l0_pid_out;
+  const auto &mpc = chassis_control_output.roll_leg_mpc_shadow;
+  wl_debug.mpc_active = static_cast<uint8_t>(mpc.active);
+  wl_debug.mpc_solved = static_cast<uint8_t>(mpc.solved);
+  wl_debug.mpc_fallback_reason = static_cast<uint8_t>(mpc.fallback_reason);
+  wl_debug.mpc_solver_iterations =
+      static_cast<uint8_t>(mpc.solver_iterations > 255 ? 255 : (mpc.solver_iterations < 0 ? 0 : mpc.solver_iterations));
+  wl_debug.mpc_left_force_n = mpc.left_force_n;
+  wl_debug.mpc_right_force_n = mpc.right_force_n;
+  wl_debug.mpc_dF_left_n = mpc.dF_left_n;
+  wl_debug.mpc_dF_right_n = mpc.dF_right_n;
+  wl_debug.mpc_gravity_left_n = mpc.gravity_left_n;
+  wl_debug.mpc_gravity_right_n = mpc.gravity_right_n;
+  wl_debug.mpc_e_L = mpc.e_L;
+  wl_debug.mpc_D = mpc.D;
+  wl_debug.mpc_e_roll = mpc.e_roll;
+  wl_debug.mpc_a_y = mpc.a_y;
+  wl_debug.mpc_model_h_m = mpc.model_com_height_m;
+  wl_debug.mpc_model_I_roll = mpc.model_roll_inertia_kg_m2;
 
   // ── 云台反馈与电机 ──
   wl_debug.yaw_cmd_target_rad = gimbal_control_output.yaw_target_rad;

@@ -3,6 +3,7 @@
 #include "state.hpp"
 #include "fsm.hpp"
 #include "lqr.hpp"
+#include "roll_leg_mpc.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
 
@@ -40,6 +41,7 @@ class Chassis {
    * @brief 单次控制更新输出
    */
   struct UpdateOutput {
+    RollLegMpc::Output roll_leg_mpc_shadow{};
     rm::f32 lf_tau{0.0f};  ///< 左前关节电机力矩
     rm::f32 lb_tau{0.0f};  ///< 左后关节电机力矩
     rm::f32 rf_tau{0.0f};  ///< 右前关节电机力矩
@@ -122,6 +124,9 @@ class Chassis {
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
+  RollLegMpc roll_leg_mpc_{};
+  RollLegMpc::Config roll_leg_mpc_config_{};
+  rm::f32 roll_leg_mpc_model_height_m_{0.0f};
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,

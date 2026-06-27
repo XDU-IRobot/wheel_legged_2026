@@ -16,5 +16,9 @@ target_include_directories(wheel_legged PRIVATE ${CMAKE_CURRENT_LIST_DIR}/target
 set(WHEEL_LEGGED_ROBOT_VARIANT "2" CACHE STRING "Wheel-legged robot parameter set: 1=hero, 2=infantry3(default), 3=infantry4")
 set_property(CACHE WHEEL_LEGGED_ROBOT_VARIANT PROPERTY STRINGS 1 2 3)
 target_compile_definitions(wheel_legged PRIVATE WHEEL_LEGGED_ROBOT_VARIANT=${WHEEL_LEGGED_ROBOT_VARIANT})
+set_source_files_properties(
+        ${CMAKE_CURRENT_LIST_DIR}/targets/wheel_legged/roll_leg_mpc.cc
+        PROPERTIES COMPILE_OPTIONS -Os
+)
 
 ## add targets here...
