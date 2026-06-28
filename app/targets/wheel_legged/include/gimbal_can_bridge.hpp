@@ -91,6 +91,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       ReportStatus(kOk);
     } else if (msg->rx_std_id == kRxStdIdE && msg->dlc >= kPayloadSizeE) {
       robot_hp_.sentry_7_HP = UnpackU16(&msg->data[0]);
+      fric_left_rpm_ = UnpackI16(&msg->data[2]);
+      fric_right_rpm_ = UnpackI16(&msg->data[4]);
       frame_count_++;
       ReportStatus(kOk);
     } else {
@@ -115,6 +117,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] rm::u32 frame_count() const { return frame_count_; }
   [[nodiscard]] rm::u32 keyboard_frame_count() const { return kbd_frame_count_; }
   [[nodiscard]] const EmyRobotHP &robot_hp() const { return robot_hp_; }
+  [[nodiscard]] rm::i16 fric_left_rpm() const { return fric_left_rpm_; }
+  [[nodiscard]] rm::i16 fric_right_rpm() const { return fric_right_rpm_; }
 
  private:
   static rm::i16 UnpackI16(const rm::u8 *in) {
@@ -149,4 +153,37 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   rm::u32 frame_count_{0};
   rm::u32 kbd_frame_count_{0};
   EmyRobotHP robot_hp_{};
+  rm::i16 fric_left_rpm_{0};
+  rm::i16 fric_right_rpm_{0};
+};
+
+/**
+ * @brief 底盘→云台 CAN 发送桥
+ * @note  发送 combat_mode 标志位给云台控制摩擦轮
+ *        - 0x120: [0] combat_mode (1=kCombat, 0=其他)
+ */
+class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
+ public:
+  static constexpr rm::u16 kTxStdId = 0x120;
+  static constexpr rm::usize kPayloadSize = 8U;
+
+  explicit ChassisToGimbalTxBridge(rm::hal::CanInterface &can) : CanDevice(can, kTxStdId) {}
+
+  void SetCombatMode(bool combat) { combat_mode_ = combat; }
+
+  void RxCallback(const rm::hal::CanFrame *msg) override {}
+
+  bool QueueSend() {
+    tx_data_[0] = combat_mode_ ? 1 : 0;
+    for (rm::usize i = 1; i < kPayloadSize; ++i) {
+      tx_data_[i] = 0;
+    }
+    can_->Write(kTxStdId, tx_data_.data(), tx_data_.size());
+    ReportStatus(kOk);
+    return true;
+  }
+
+ private:
+  bool combat_mode_{false};
+  std::array<rm::u8, kPayloadSize> tx_data_{};
 };

@@ -90,22 +90,12 @@ class Actuators {
 
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
   /**
-   * @brief 下发双摩擦轮发射机构电流
+   * @brief 下发射机构电流（仅拨盘）
    */
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
-    if (g.fric_left.has_value()) {
-      g.fric_left->SetCurrent(static_cast<int16_t>(output.fric_left_current));
-      // g.fric_left->SetCurrent(static_cast<int16_t>(0));
-    }
-    if (g.fric_right.has_value()) {
-      g.fric_right->SetCurrent(static_cast<int16_t>(output.fric_right_current));
-      // g.fric_right->SetCurrent(static_cast<int16_t>(0));
-    }
     if (g.dial.has_value()) {
       g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
-      // g.dial->SetCurrent(static_cast<int16_t>(0));
     }
-    rm::device::DjiMotorBase::SendCommand(*g.gimbal_can);
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }
 #endif
