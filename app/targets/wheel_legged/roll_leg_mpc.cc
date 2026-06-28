@@ -3,14 +3,12 @@
 #include <algorithm>
 #include <cmath>
 
-#include <tinympc/tiny_api.hpp>
-
 namespace {
 
-constexpr tinytype kLargeBound = 1.0e17;
-constexpr rm::f32 kMinPositive = 1.0e-5f;
-
 using Mpc = chassis::RollLegMpc;
+namespace StaticData = chassis::roll_leg_mpc_static_data;
+
+constexpr rm::f32 kMinPositive = 1.0e-5f;
 
 enum StateIndex : int {
   kEL = 0,
@@ -51,32 +49,21 @@ bool IsSafeLegLength(const Mpc::Input &input, const Mpc::Config &config) {
          input.right_leg_length_m > config.leg_safe_min_m && input.right_leg_length_m < config.leg_safe_max_m;
 }
 
-tinyMatrix BuildContinuousA(const Mpc::Config &config) {
-  tinyMatrix a = tinyMatrix::Zero(Mpc::kNumStates, Mpc::kNumStates);
-  a(kEL, kDL) = 1.0;
-  a(kDL, kDL) = config.a_dL;
-  a(kD, kDD) = 1.0;
-  a(kDD, kDD) = config.a_dD;
-  a(kERoll, kDRoll) = 1.0;
-  a(kDRoll, kD) = config.a_Drho;
-  a(kDRoll, kERoll) = config.a_rho;
-  a(kDRoll, kDRoll) = config.a_drho;
-  a(kDRoll, kAy) = config.b_ay;
-  return a;
+const StaticData::ModelData &SelectModelForLegLength(const rm::f32 leg_length_m) {
+  const rm::f32 leg = std::clamp(leg_length_m, StaticData::kLegLengthMinM, StaticData::kLegLengthMaxM);
+  int best_index = 0;
+  rm::f32 best_error = std::fabs(leg - StaticData::kModels[0].nominal_leg_length_m);
+  for (int i = 1; i < StaticData::kNumModels; ++i) {
+    const rm::f32 error = std::fabs(leg - StaticData::kModels[i].nominal_leg_length_m);
+    if (error < best_error) {
+      best_index = i;
+      best_error = error;
+    }
+  }
+  return StaticData::kModels[best_index];
 }
 
-tinyMatrix BuildContinuousB(const Mpc::Config &config) {
-  tinyMatrix b = tinyMatrix::Zero(Mpc::kNumStates, Mpc::kNumInputs);
-  b(kDL, kDFLeft) = config.b_sum;
-  b(kDL, kDFRight) = config.b_sum;
-  b(kDD, kDFLeft) = -config.b_D;
-  b(kDD, kDFRight) = config.b_D;
-  b(kDRoll, kDFLeft) = config.b_lrho;
-  b(kDRoll, kDFRight) = config.b_rrho;
-  return b;
-}
-
-tinyVector BuildState(const Mpc::Input &input) {
+void BuildState(const Mpc::Input &input, rm::f32 (&x)[Mpc::kNumStates]) {
   const rm::f32 L_c = 0.5f * (input.left_leg_length_m + input.right_leg_length_m);
   const rm::f32 dL_c = 0.5f * (input.left_leg_length_dot_mps + input.right_leg_length_dot_mps);
   const rm::f32 D = input.right_leg_length_m - input.left_leg_length_m;
@@ -84,126 +71,48 @@ tinyVector BuildState(const Mpc::Input &input) {
   const rm::f32 e_roll = input.roll_rad - input.target_roll_rad;
   const rm::f32 a_y = input.forward_speed_mps * input.yaw_rate_rad_s;
 
-  tinyVector x = tinyVector::Zero(Mpc::kNumStates);
-  x(kEL) = L_c - input.target_leg_length_m;
-  x(kDL) = dL_c;
-  x(kD) = D;
-  x(kDD) = dD;
-  x(kERoll) = e_roll;
-  x(kDRoll) = input.roll_rate_rad_s;
-  x(kAy) = a_y;
-  return x;
+  x[kEL] = L_c - input.target_leg_length_m;
+  x[kDL] = dL_c;
+  x[kD] = D;
+  x[kDD] = dD;
+  x[kERoll] = e_roll;
+  x[kDRoll] = input.roll_rate_rad_s;
+  x[kAy] = a_y;
 }
 
-void FillStateDebug(const tinyVector &x, Mpc::Output &output) {
-  output.e_L = static_cast<rm::f32>(x(kEL));
-  output.dL_c = static_cast<rm::f32>(x(kDL));
-  output.D = static_cast<rm::f32>(x(kD));
-  output.dD = static_cast<rm::f32>(x(kDD));
-  output.e_roll = static_cast<rm::f32>(x(kERoll));
-  output.droll = static_cast<rm::f32>(x(kDRoll));
-  output.a_y = static_cast<rm::f32>(x(kAy));
-}
-
-void DeleteSolver(TinySolver *solver) {
-  if (solver == nullptr) {
-    return;
-  }
-  delete solver->solution;
-  delete solver->settings;
-  delete solver->cache;
-  delete solver->work;
-  delete solver;
+void FillStateDebug(const rm::f32 (&x)[Mpc::kNumStates], Mpc::Output &output) {
+  output.e_L = x[kEL];
+  output.dL_c = x[kDL];
+  output.D = x[kD];
+  output.dD = x[kDD];
+  output.e_roll = x[kERoll];
+  output.droll = x[kDRoll];
+  output.a_y = x[kAy];
 }
 
 }  // namespace
 
 namespace chassis {
 
-RollLegMpc::~RollLegMpc() { ReleaseSolver(); }
-
 RollLegMpc::Config RollLegMpc::MakeDefaultConfig() {
   Config config{};
-  ApplyPhysicalModel(config, config.com_height_m);
   return config;
 }
 
-void RollLegMpc::ApplyPhysicalModel(Config &config, const rm::f32 com_height_m) {
-  const rm::f32 body_mass_kg = std::max(config.body_mass_kg, kMinPositive);
-  const rm::f32 leg_mass_kg = std::max(config.leg_mass_kg, kMinPositive);
-  const rm::f32 total_mass_kg = body_mass_kg + 2.0f * leg_mass_kg;
-  const rm::f32 half_width_m = std::max(config.support_half_width_m, 0.05f);
-  const rm::f32 model_height_m = std::max(com_height_m, 0.05f);
-  const rm::f32 default_roll_inertia_kg_m2 = total_mass_kg * half_width_m * half_width_m;
-  const rm::f32 roll_inertia_kg_m2 =
-      std::max(config.roll_inertia_kg_m2 > kMinPositive ? config.roll_inertia_kg_m2 : default_roll_inertia_kg_m2, 0.1f);
-
-  config.com_height_m = model_height_m;
-  config.roll_inertia_kg_m2 = roll_inertia_kg_m2;
-  config.b_sum = 1.0f / total_mass_kg;
-  config.b_D = 1.0f / std::max(leg_mass_kg, 1.0f);
-  config.a_rho = total_mass_kg * config.gravity_mps2 * model_height_m / roll_inertia_kg_m2;
-  config.a_Drho = -config.a_rho / half_width_m;
-  config.b_lrho = -half_width_m / roll_inertia_kg_m2;
-  config.b_rrho = half_width_m / roll_inertia_kg_m2;
-  config.b_ay = total_mass_kg * model_height_m / roll_inertia_kg_m2;
-}
-
 bool RollLegMpc::Init(const Config &config) {
-  ReleaseSolver();
   config_ = config;
   last_output_ = {};
   last_output_.initialized = false;
   last_output_.fallback_reason = FallbackReason::kSetupFailed;
   last_left_force_n_ = 0.0f;
   last_right_force_n_ = 0.0f;
+  static_solver_.Reset();
 
-  if (config_.dt_s <= 0.0f || config_.horizon < 2) {
+  if (StaticData::kDtS <= 0.0f || StaticData::kHorizon < 2 || config_.max_iter < 0) {
     initialized_ = false;
     return false;
   }
 
-  const tinyMatrix a_continuous = BuildContinuousA(config_);
-  const tinyMatrix b_continuous = BuildContinuousB(config_);
-  const tinyMatrix a_discrete =
-      tinyMatrix::Identity(kNumStates, kNumStates) + static_cast<tinytype>(config_.dt_s) * a_continuous;
-  const tinyMatrix b_discrete = static_cast<tinytype>(config_.dt_s) * b_continuous;
-  const tinyVector f_discrete = tinyVector::Zero(kNumStates);
-
-  tinyVector q_diag(kNumStates);
-  q_diag << config_.q_L, config_.q_dL, config_.q_D, config_.q_dD, config_.q_roll, config_.q_droll, config_.q_ay;
-
-  tinyVector r_diag(kNumInputs);
-  r_diag << config_.r_left, config_.r_right;
-
-  TinySolver *solver = nullptr;
-  const int setup_status = tiny_setup(&solver, a_discrete, b_discrete, f_discrete, q_diag.asDiagonal(),
-                                      r_diag.asDiagonal(), config_.rho, kNumStates, kNumInputs, config_.horizon, 0);
-  if (setup_status != 0 || solver == nullptr) {
-    DeleteSolver(solver);
-    initialized_ = false;
-    return false;
-  }
-
-  const tinyMatrix x_min = tinyMatrix::Constant(kNumStates, config_.horizon, -kLargeBound);
-  const tinyMatrix x_max = tinyMatrix::Constant(kNumStates, config_.horizon, kLargeBound);
-  const tinyMatrix u_min = tinyMatrix::Constant(kNumInputs, config_.horizon - 1, -kLargeBound);
-  const tinyMatrix u_max = tinyMatrix::Constant(kNumInputs, config_.horizon - 1, kLargeBound);
-  const int bound_status = tiny_set_bound_constraints(solver, x_min, x_max, u_min, u_max);
-  if (bound_status != 0) {
-    DeleteSolver(solver);
-    initialized_ = false;
-    return false;
-  }
-
-  solver->settings->max_iter = config_.max_iter;
-  solver->settings->abs_pri_tol = config_.abs_pri_tol;
-  solver->settings->abs_dua_tol = config_.abs_dua_tol;
-  solver->settings->check_termination = 1;
-  solver->settings->en_state_bound = 0;
-  solver->settings->en_input_bound = 1;
-
-  solver_ = solver;
   initialized_ = true;
   last_output_.initialized = true;
   last_output_.fallback_reason = FallbackReason::kNone;
@@ -216,22 +125,27 @@ void RollLegMpc::Reset() {
   last_output_.fallback_reason = initialized_ ? FallbackReason::kNone : FallbackReason::kNotInitialized;
   last_left_force_n_ = 0.0f;
   last_right_force_n_ = 0.0f;
+  static_solver_.Reset();
 }
 
 RollLegMpc::Output RollLegMpc::Update(const Input &input) {
   Output output{};
   output.initialized = initialized_;
-  output.model_com_height_m = config_.com_height_m;
-  output.model_roll_inertia_kg_m2 = config_.roll_inertia_kg_m2;
 
-  if (!initialized_ || solver_ == nullptr) {
+  if (!initialized_) {
     output.fallback_reason = FallbackReason::kNotInitialized;
     last_output_ = output;
     return output;
   }
 
-  auto *solver = static_cast<TinySolver *>(solver_);
-  const tinyVector x0 = BuildState(input);
+  const rm::f32 avg_leg_length_m = 0.5f * (input.left_leg_length_m + input.right_leg_length_m);
+  const StaticData::ModelData &model = SelectModelForLegLength(avg_leg_length_m);
+  output.model_leg_length_m = model.nominal_leg_length_m;
+  output.model_com_height_m = model.model_com_height_m;
+  output.model_roll_inertia_kg_m2 = model.model_roll_inertia_kg_m2;
+
+  rm::f32 x0[kNumStates]{};
+  BuildState(input, x0);
   FillStateDebug(x0, output);
 
   const bool input_finite = std::isfinite(input.left_leg_length_m) && std::isfinite(input.right_leg_length_m) &&
@@ -284,48 +198,39 @@ RollLegMpc::Output RollLegMpc::Update(const Input &input) {
   output.u_min_right_n = config_.force_min_n - output.gravity_right_n;
   output.u_max_right_n = config_.force_max_n - output.gravity_right_n;
 
-  tinyMatrix u_min = tinyMatrix::Zero(kNumInputs, config_.horizon - 1);
-  tinyMatrix u_max = tinyMatrix::Zero(kNumInputs, config_.horizon - 1);
-  for (int i = 0; i < config_.horizon - 1; ++i) {
-    u_min(kDFLeft, i) = output.u_min_left_n;
-    u_min(kDFRight, i) = output.u_min_right_n;
-    u_max(kDFLeft, i) = output.u_max_left_n;
-    u_max(kDFRight, i) = output.u_max_right_n;
+  RollLegMpcStaticSolver::Input static_input{};
+  for (int i = 0; i < kNumStates; ++i) {
+    static_input.x0[i] = x0[i];
   }
+  static_input.u_min[kDFLeft] = output.u_min_left_n;
+  static_input.u_min[kDFRight] = output.u_min_right_n;
+  static_input.u_max[kDFLeft] = output.u_max_left_n;
+  static_input.u_max[kDFRight] = output.u_max_right_n;
 
-  const tinyMatrix x_min = tinyMatrix::Constant(kNumStates, config_.horizon, -kLargeBound);
-  const tinyMatrix x_max = tinyMatrix::Constant(kNumStates, config_.horizon, kLargeBound);
-  if (tiny_set_bound_constraints(solver, x_min, x_max, u_min, u_max) != 0) {
-    output.fallback_reason = FallbackReason::kBoundUpdateFailed;
-    last_output_ = output;
-    return output;
-  }
-
-  const int x0_status = tiny_set_x0(solver, x0);
-  if (x0_status != 0) {
-    output.fallback_reason = FallbackReason::kInvalidInput;
-    last_output_ = output;
-    return output;
-  }
-
-  const int solve_status = tiny_solve(solver);
-  output.solver_status = solver->work != nullptr ? solver->work->status : solve_status;
-  output.solver_iterations = solver->solution != nullptr ? solver->solution->iter : 0;
-  if (solve_status != 0 || solver->solution == nullptr || solver->solution->solved == 0 ||
-      solver->solution->u.cols() <= 0) {
+  RollLegMpcStaticSolver::Settings settings{};
+  settings.max_iter = config_.max_iter;
+  settings.abs_pri_state_tol = config_.abs_pri_state_tol;
+  settings.abs_pri_input_tol_n = config_.abs_pri_input_tol_n;
+  settings.abs_dua_state_tol = config_.abs_dua_state_tol;
+  settings.abs_dua_input_tol_n = config_.abs_dua_input_tol_n;
+  settings.always_return_last_iterate = true;
+  const RollLegMpcStaticSolver::Output solve_output = static_solver_.Solve(model, static_input, settings);
+  output.solver_status = solve_output.converged ? 1 : 11;
+  output.solver_iterations = solve_output.iterations;
+  if (!solve_output.usable) {
     output.fallback_reason = FallbackReason::kSolveFailed;
     last_output_ = output;
     return output;
   }
 
-  output.dF_left_n = ClampFinite(static_cast<rm::f32>(solver->solution->u(kDFLeft, 0)));
-  output.dF_right_n = ClampFinite(static_cast<rm::f32>(solver->solution->u(kDFRight, 0)));
+  output.dF_left_n = ClampFinite(solve_output.u0[kDFLeft]);
+  output.dF_right_n = ClampFinite(solve_output.u0[kDFRight]);
 
   rm::f32 left_force = std::clamp(output.gravity_left_n + output.dF_left_n, config_.force_min_n, config_.force_max_n);
   rm::f32 right_force =
       std::clamp(output.gravity_right_n + output.dF_right_n, config_.force_min_n, config_.force_max_n);
 
-  const rm::f32 dt_s = (input.dt_s > 0.0f) ? input.dt_s : config_.dt_s;
+  const rm::f32 dt_s = (input.dt_s > 0.0f) ? input.dt_s : StaticData::kDtS;
   const rm::f32 max_force_delta = std::max(config_.force_slew_rate_n_per_s * dt_s, 0.0f);
   if (last_output_.active) {
     left_force = SlewLimit(left_force, last_left_force_n_, max_force_delta);
@@ -337,19 +242,13 @@ RollLegMpc::Output RollLegMpc::Update(const Input &input) {
   output.dF_left_n = output.left_force_n - output.gravity_left_n;
   output.dF_right_n = output.right_force_n - output.gravity_right_n;
   output.active = true;
-  output.solved = true;
+  output.solved = solve_output.converged;
   output.fallback_reason = FallbackReason::kNone;
 
   last_left_force_n_ = output.left_force_n;
   last_right_force_n_ = output.right_force_n;
   last_output_ = output;
   return output;
-}
-
-void RollLegMpc::ReleaseSolver() {
-  DeleteSolver(static_cast<TinySolver *>(solver_));
-  solver_ = nullptr;
-  initialized_ = false;
 }
 
 }  // namespace chassis
