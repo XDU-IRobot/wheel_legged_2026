@@ -4,6 +4,7 @@
 #include "include/chassis/stair_climb_sequence.hpp"
 #include "include/chassis/stair_task_coordinator.hpp"
 #include "include/debug.hpp"
+#include "tools/theta_bias_generated.hpp"
 #include "main.h"
 #include <algorithm>
 #include <cmath>
@@ -16,6 +17,21 @@
 #include "include/state_ctx.hpp"
 bool init_flag;
 uint32_t times = 0;
+
+namespace {
+float LookupThetaBiasSingle(float leg_length, const float table[][2]) {
+  constexpr int N = 50;
+  const float t_min = table[0][0];
+  const float t_max = table[N - 1][0];
+  if (leg_length <= t_min) return table[0][1];
+  if (leg_length >= t_max) return table[N - 1][1];
+  const float step = (t_max - t_min) / static_cast<float>(N - 1);
+  const float idx_f = (leg_length - t_min) / step;
+  const int idx = static_cast<int>(idx_f);
+  const float alpha = idx_f - static_cast<float>(idx);
+  return table[idx][1] * (1.0f - alpha) + table[idx + 1][1] * alpha;
+}
+}  // namespace
 
 // ── UI task scheduler & task objects (drone_gb_new style) ──
 static auto schedule = rm::device::UITaskScheduler(30);
@@ -557,9 +573,6 @@ void ControlLoop() {
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
-    wl_debug.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
@@ -572,9 +585,9 @@ void ControlLoop() {
       globals->shoot.Disable();
     }
     wl_debug.shoot_enabled = globals->shoot.enabled() ? 1U : 0U;
-    const float fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
-    const float fric_right_rpm =
-        globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
+    const bool gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
+    const float fric_left_rpm = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
+    const float fric_right_rpm = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
     wl_debug.fric_left_rpm = fric_left_rpm;
     wl_debug.fric_right_rpm = -fric_right_rpm;
     wl_debug.shoot_fric_ready = globals->shoot.fric_ready() ? 1U : 0U;
@@ -630,6 +643,17 @@ void ControlLoop() {
 #endif
 
   wl_debug.fric_speed_target_rpm = tc_state.fric_speed_target_rpm;
+
+  // ── 发送 combat_mode 到云台（100Hz，每5个控制周期发一次）──
+  if (globals->chassis_tx.has_value()) {
+    static uint32_t chassis_tx_counter = 0;
+    if (chassis_tx_counter % 5 == 0) {
+      const bool combat_mode = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+      globals->chassis_tx->SetCombatMode(combat_mode);
+      globals->chassis_tx->QueueSend();
+    }
+    chassis_tx_counter++;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 6：云台启动归中判稳
@@ -1002,8 +1026,10 @@ void ControlLoop() {
     chassis_update_input.expected.theta_lr = stair_sequence_output.target.theta_lr_rad;
     chassis_update_input.expected.theta_b = stair_sequence_output.target.theta_b_rad;
   } else {
-    chassis_update_input.expected.theta_ll = kExpectedThetaLlBiasRadLowLeg;
-    chassis_update_input.expected.theta_lr = kExpectedThetaLrBiasRadLowLeg;
+    const float l_l = chassis_control_output.current_state.l_l;
+    const float l_r = chassis_control_output.current_state.l_r;
+    chassis_update_input.expected.theta_ll = LookupThetaBiasSingle(l_l, wheel_legged::params::generated::kThetaBiasLl);
+    chassis_update_input.expected.theta_lr = LookupThetaBiasSingle(l_r, wheel_legged::params::generated::kThetaBiasLr);
   }
   if (!spin_control_enabled &&
       !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
@@ -1300,18 +1326,13 @@ void ControlLoop() {
     ui_snapshot.supercap_cap_energy =
         globals->supercap.has_value() ? static_cast<float>(globals->supercap->rx_data_.cap_energy) : 0.0f;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    ui_snapshot.fw_raw_rpm_1 = globals->fw_motor_1.has_value() ? static_cast<float>(globals->fw_motor_1->rpm()) : 0.0f;
-    ui_snapshot.fw_raw_rpm_2 = globals->fw_motor_2.has_value() ? static_cast<float>(globals->fw_motor_2->rpm()) : 0.0f;
-    ui_snapshot.fw_raw_rpm_3 = globals->fw_motor_3.has_value() ? static_cast<float>(globals->fw_motor_3->rpm()) : 0.0f;
-    ui_snapshot.fric_left_rpm = 0.0f;
-    ui_snapshot.fric_right_rpm = 0.0f;
+    const bool ui_gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
+    ui_snapshot.fric_left_rpm = ui_gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
+    ui_snapshot.fric_right_rpm = ui_gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
 #else
-    ui_snapshot.fric_left_rpm = globals->fric_left.has_value() ? static_cast<float>(globals->fric_left->rpm()) : 0.0f;
-    ui_snapshot.fric_right_rpm =
-        globals->fric_right.has_value() ? static_cast<float>(globals->fric_right->rpm()) : 0.0f;
-    ui_snapshot.fw_raw_rpm_1 = 0.0f;
-    ui_snapshot.fw_raw_rpm_2 = 0.0f;
-    ui_snapshot.fw_raw_rpm_3 = 0.0f;
+    const bool ui_gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
+    ui_snapshot.fric_left_rpm = ui_gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
+    ui_snapshot.fric_right_rpm = ui_gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
 #endif
     if (referee_online) {
       ui_snapshot.bullet_speed_mps = globals->referee->data().shoot_data.initial_speed;

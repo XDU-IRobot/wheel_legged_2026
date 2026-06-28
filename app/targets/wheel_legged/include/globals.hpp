@@ -57,6 +57,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};             ///< 右轮 M3508
   std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
+  std::optional<ChassisToGimbalTxBridge> chassis_tx{};       ///< 底盘→云台 CAN 桥（combat标志）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
   std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
@@ -68,14 +69,9 @@ struct SharedResources {
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  std::optional<rm::device::M3508> fw_motor_1{};  ///< 摩擦轮1 (gimbal_can, hero)
-  std::optional<rm::device::M3508> fw_motor_2{};  ///< 摩擦轮2 (gimbal_can, hero)
-  std::optional<rm::device::M3508> fw_motor_3{};  ///< 摩擦轮3 (gimbal_can, hero)
   std::optional<DmMitMotor> booster_motor{};      ///< DM 拨盘 (wheel_can, hero)
   wheel_legged::ShootController shoot_controller{};
 #else
-  std::optional<rm::device::M3508> fric_left{};   ///< 左摩擦轮 (gimbal_can)
-  std::optional<rm::device::M3508> fric_right{};  ///< 右摩擦轮 (gimbal_can)
   std::optional<rm::device::M3508> dial{};        ///< 拨盘 (wheel_can)
   Shoot shoot{};                                  ///< 发射机构状态机
 #endif
@@ -162,6 +158,9 @@ struct SharedResources {
     if (!gimbal_rx.has_value()) {
       gimbal_rx.emplace(*gimbal_can);
     }
+    if (!chassis_tx.has_value()) {
+      chassis_tx.emplace(*gimbal_can);
+    }
     if (!aimbot.has_value()) {
       aimbot.emplace(*gimbal_can);
     }
@@ -211,18 +210,12 @@ struct SharedResources {
     }
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    if (!fw_motor_1.has_value()) {
-      fw_motor_1.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor1Id);
-      fw_motor_2.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor2Id, true);
-      fw_motor_3.emplace(*gimbal_can, wheel_legged::params::active::shoot::kFwMotor3Id, true);
+    if (!booster_motor.has_value()) {
       booster_motor.emplace(*wheel_can, wheel_legged::params::active::shoot::kBoosterDmSettings, true);
-      shoot_controller.Attach(&*fw_motor_1, &*fw_motor_2, &*fw_motor_3, &*booster_motor);
       shoot_controller.Init();
     }
 #else
-    if (!fric_left.has_value()) {
-      fric_left.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricLeftId);
-      fric_right.emplace(*gimbal_can, wheel_legged::params::active::globals::kFricRightId);
+    if (!dial.has_value()) {
       dial.emplace(*wheel_can, wheel_legged::params::active::globals::kDialId);
     }
 #endif
