@@ -167,8 +167,7 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
   static constexpr rm::u16 kTxStdId = 0x120;
   static constexpr rm::usize kPayloadSize = 8U;
 
-  explicit ChassisToGimbalTxBridge(rm::hal::CanInterface &can)
-      : CanDevice(can, kTxStdId) {}
+  explicit ChassisToGimbalTxBridge(rm::hal::CanInterface &can) : CanDevice(can, kTxStdId) {}
 
   void SetCombatMode(bool combat) { combat_mode_ = combat; }
 

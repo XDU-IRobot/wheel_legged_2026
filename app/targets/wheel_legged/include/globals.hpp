@@ -57,7 +57,7 @@ struct SharedResources {
   std::optional<rm::device::M3508> right_wheel{};             ///< 右轮 M3508
   std::optional<rm::device::HipnucImu> chassis_imu{};         ///< 底盘惯导
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
-  std::optional<ChassisToGimbalTxBridge> chassis_tx{};       ///< 底盘→云台 CAN 桥（combat标志）
+  std::optional<ChassisToGimbalTxBridge> chassis_tx{};        ///< 底盘→云台 CAN 桥（combat标志）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
   std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
@@ -69,11 +69,11 @@ struct SharedResources {
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  std::optional<DmMitMotor> booster_motor{};      ///< DM 拨盘 (wheel_can, hero)
+  std::optional<DmMitMotor> booster_motor{};  ///< DM 拨盘 (wheel_can, hero)
   wheel_legged::ShootController shoot_controller{};
 #else
-  std::optional<rm::device::M3508> dial{};        ///< 拨盘 (wheel_can)
-  Shoot shoot{};                                  ///< 发射机构状态机
+  std::optional<rm::device::M3508> dial{};  ///< 拨盘 (wheel_can)
+  Shoot shoot{};                            ///< 发射机构状态机
 #endif
 
   chassis::Fsm chassis_fsm{};          ///< 底盘状态机
