@@ -2,9 +2,9 @@
 
 #include <cstdint>
 
-#include <librm.hpp>
+#include <librm/core/typedefs.hpp>
 
-#include "../params.hpp"
+#include "roll_leg_mpc_static_solver.hpp"
 
 namespace chassis {
 
@@ -26,21 +26,16 @@ class RollLegMpc {
   };
 
   struct Config {
-    rm::f32 dt_s{0.01f};
-    int horizon{15};
-    rm::f32 rho{1.0f};
     int max_iter{60};
-    rm::f32 abs_pri_tol{1e-3f};
-    rm::f32 abs_dua_tol{1e-3f};
+    rm::f32 abs_pri_state_tol{0.05f};
+    rm::f32 abs_pri_input_tol_n{5.0f};
+    rm::f32 abs_dua_state_tol{0.05f};
+    rm::f32 abs_dua_input_tol_n{5.0f};
 
-    rm::f32 body_mass_kg{wheel_legged::params::active::chassis::kBodyMassKg};
-    rm::f32 leg_mass_kg{wheel_legged::params::active::chassis::kLegMassKg};
-    rm::f32 gravity_mps2{wheel_legged::params::active::chassis::kGravityMps2};
-    rm::f32 support_half_width_m{wheel_legged::params::active::chassis::kWheelRadiusM};
-    rm::f32 com_height_m{0.28f};
-    rm::f32 body_com_height_offset_m{0.0f};
-    rm::f32 roll_inertia_kg_m2{0.0f};
-    rm::f32 roll_balance_target_rad{wheel_legged::params::active::chassis::kRollBalanceTargetRad};
+    rm::f32 body_mass_kg{22.0f};
+    rm::f32 leg_mass_kg{2.3f};
+    rm::f32 gravity_mps2{9.81f};
+    rm::f32 roll_balance_target_rad{0.0f};
 
     rm::f32 force_min_n{-300.0f};
     rm::f32 force_max_n{300.0f};
@@ -51,27 +46,6 @@ class RollLegMpc {
     rm::f32 cos_min{0.5f};
     rm::f32 theta_mpc_max_rad{0.7853982f};
     rm::f32 roll_mpc_max_rad{0.35f};
-
-    rm::f32 a_dL{-8.0f};
-    rm::f32 b_sum{0.0f};
-    rm::f32 a_dD{-10.0f};
-    rm::f32 b_D{0.0f};
-    rm::f32 a_Drho{0.0f};
-    rm::f32 a_rho{0.0f};
-    rm::f32 a_drho{-4.0f};
-    rm::f32 b_lrho{0.0f};
-    rm::f32 b_rrho{0.0f};
-    rm::f32 b_ay{0.0f};
-
-    rm::f32 q_L{500.0f};
-    rm::f32 q_dL{50.0f};
-    rm::f32 q_D{300.0f};
-    rm::f32 q_dD{30.0f};
-    rm::f32 q_roll{5000.0f};
-    rm::f32 q_droll{300.0f};
-    rm::f32 q_ay{0.0f};
-    rm::f32 r_left{0.01f};
-    rm::f32 r_right{0.01f};
   };
 
   struct Input {
@@ -90,7 +64,7 @@ class RollLegMpc {
     rm::f32 yaw_rate_rad_s{0.0f};
 
     rm::f32 target_leg_length_m{0.0f};
-    rm::f32 target_roll_rad{wheel_legged::params::active::chassis::kRollBalanceTargetRad};
+    rm::f32 target_roll_rad{0.0f};
     rm::f32 left_effective_mass_kg{0.0f};
     rm::f32 right_effective_mass_kg{0.0f};
     rm::f32 dt_s{0.0f};
@@ -125,18 +99,18 @@ class RollLegMpc {
     rm::f32 u_max_left_n{0.0f};
     rm::f32 u_min_right_n{0.0f};
     rm::f32 u_max_right_n{0.0f};
+    rm::f32 model_leg_length_m{0.0f};
     rm::f32 model_com_height_m{0.0f};
     rm::f32 model_roll_inertia_kg_m2{0.0f};
   };
 
   RollLegMpc() = default;
-  ~RollLegMpc();
+  ~RollLegMpc() = default;
 
   RollLegMpc(const RollLegMpc &) = delete;
   RollLegMpc &operator=(const RollLegMpc &) = delete;
 
   [[nodiscard]] static Config MakeDefaultConfig();
-  static void ApplyPhysicalModel(Config &config, rm::f32 com_height_m);
 
   bool Init(const Config &config = MakeDefaultConfig());
   void Reset();
@@ -144,12 +118,11 @@ class RollLegMpc {
 
   [[nodiscard]] bool initialized() const { return initialized_; }
   [[nodiscard]] const Config &config() const { return config_; }
+  [[nodiscard]] rm::f32 solver_dt_s() const { return roll_leg_mpc_static_data::kDtS; }
   [[nodiscard]] const Output &last_output() const { return last_output_; }
 
  private:
-  void ReleaseSolver();
-
-  void *solver_{nullptr};
+  RollLegMpcStaticSolver static_solver_{};
   Config config_{};
   Output last_output_{};
   bool initialized_{false};

@@ -14,6 +14,8 @@ uint8_t debug_posture_valid;
 f32 left_, right_;
 namespace {
 
+constexpr uint8_t kRollLegMpcUpdatePeriodTicks = 5U;  // 100Hz MPC inside the 500Hz chassis loop.
+
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
 
 constexpr rm::f32 kLegL1M = wheel_legged::params::active::chassis::kLegL1M;
@@ -204,9 +206,11 @@ void chassis::Chassis::Init() {
   ChassisStateEstimatorConfig cfg{};
   state_estimator_.Init(cfg);
   roll_leg_mpc_config_ = RollLegMpc::MakeDefaultConfig();
-  roll_leg_mpc_config_.dt_s = kControlDtS;
+  roll_leg_mpc_config_.body_mass_kg = kBodyMassKg;
+  roll_leg_mpc_config_.leg_mass_kg = kLegMassKg;
+  roll_leg_mpc_config_.gravity_mps2 = kGravityMps2;
+  roll_leg_mpc_config_.roll_balance_target_rad = wheel_legged::params::active::chassis::kRollBalanceTargetRad;
   roll_leg_mpc_.Init(roll_leg_mpc_config_);
-  roll_leg_mpc_model_height_m_ = roll_leg_mpc_config_.com_height_m;
   SafeStop();
   smoothed_leg_target_length_m_ = params_.leg_target_length_m;
   last_ramp_target_m_ = params_.leg_target_length_m;
@@ -217,6 +221,7 @@ void chassis::Chassis::Init() {
  * @brief 将所有执行器输出清零
  */
 void chassis::Chassis::SafeStop() {
+  roll_leg_mpc_update_divider_ = 0U;
   output_.roll_leg_mpc_shadow = {};
   output_.lf_tau = 0.0f;
   output_.lb_tau = 0.0f;
@@ -525,18 +530,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
-  const rm::f32 mpc_model_height_m =
-      avg_leg_length_m + kWheelPhysicalRadiusM + roll_leg_mpc_config_.body_com_height_offset_m;
-  if (std::isfinite(mpc_model_height_m) &&
-      (!roll_leg_mpc_.initialized() || std::fabs(mpc_model_height_m - roll_leg_mpc_model_height_m_) > 0.01f)) {
-    auto mpc_config = roll_leg_mpc_config_;
-    RollLegMpc::ApplyPhysicalModel(mpc_config, mpc_model_height_m);
-    if (roll_leg_mpc_.Init(mpc_config)) {
-      roll_leg_mpc_config_ = mpc_config;
-      roll_leg_mpc_model_height_m_ = mpc_model_height_m;
-    }
-  }
-
   RollLegMpc::Input roll_leg_mpc_input{};
   roll_leg_mpc_input.left_leg_length_m = left_leg_.l0();
   roll_leg_mpc_input.right_leg_length_m = right_leg_.l0();
@@ -552,8 +545,16 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   roll_leg_mpc_input.target_roll_rad = roll_leg_mpc_config_.roll_balance_target_rad;
   roll_leg_mpc_input.left_effective_mass_kg = effective_mass_left_kg;
   roll_leg_mpc_input.right_effective_mass_kg = effective_mass_right_kg;
-  roll_leg_mpc_input.dt_s = kControlDtS;
-  output_.roll_leg_mpc_shadow = roll_leg_mpc_.Update(roll_leg_mpc_input);
+  roll_leg_mpc_input.dt_s = roll_leg_mpc_.solver_dt_s();
+  if (roll_leg_mpc_update_divider_ == 0U) {
+    output_.roll_leg_mpc_shadow = roll_leg_mpc_.Update(roll_leg_mpc_input);
+  } else {
+    output_.roll_leg_mpc_shadow = roll_leg_mpc_.last_output();
+  }
+  ++roll_leg_mpc_update_divider_;
+  if (roll_leg_mpc_update_divider_ >= kRollLegMpcUpdatePeriodTicks) {
+    roll_leg_mpc_update_divider_ = 0U;
+  }
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // 着地后腿长 PID D 项输入放大

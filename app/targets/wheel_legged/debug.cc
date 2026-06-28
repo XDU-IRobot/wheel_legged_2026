@@ -171,6 +171,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.mpc_D = mpc.D;
   wl_debug.mpc_e_roll = mpc.e_roll;
   wl_debug.mpc_a_y = mpc.a_y;
+  wl_debug.mpc_model_leg_length_m = mpc.model_leg_length_m;
   wl_debug.mpc_model_h_m = mpc.model_com_height_m;
   wl_debug.mpc_model_I_roll = mpc.model_roll_inertia_kg_m2;
 

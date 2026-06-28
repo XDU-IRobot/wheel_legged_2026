@@ -126,7 +126,7 @@ class Chassis {
   wbr::WbrController lqr_controller_{};
   RollLegMpc roll_leg_mpc_{};
   RollLegMpc::Config roll_leg_mpc_config_{};
-  rm::f32 roll_leg_mpc_model_height_m_{0.0f};
+  uint8_t roll_leg_mpc_update_divider_{0U};
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,

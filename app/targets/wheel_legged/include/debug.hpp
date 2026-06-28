@@ -371,6 +371,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float mpc_D;
   float mpc_e_roll;
   float mpc_a_y;
+  float mpc_model_leg_length_m;
   float mpc_model_h_m;
   float mpc_model_I_roll;
 };
