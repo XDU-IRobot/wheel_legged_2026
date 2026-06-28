@@ -4,3 +4,6 @@
 [submodule "docs/dm-mc02"]
 	path = docs/dm-mc02
 	url = https://gitee.com/kit-miao/dm-mc02.git
+[submodule "libs/tinympc"]
+	path = libs/tinympc
+	url = https://github.com/TinyMPC/TinyMPC.git
