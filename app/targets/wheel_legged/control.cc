@@ -1278,12 +1278,20 @@ void ControlLoop() {
     wl_debug.aimbot_rx_nuc_start_flag = globals->aimbot->nuc_start_flag();
     wl_debug.aimbot_rx_yaw_rad = globals->aimbot->yaw() * kDegToRad;
     wl_debug.aimbot_rx_pitch_rad = globals->aimbot->pitch() * kDegToRad;
+    wl_debug.aimbot_rx_yaw_vel_rad_s = -globals->aimbot->yaw_vel() * kDegToRad;
+    wl_debug.aimbot_rx_pitch_vel_rad_s = globals->aimbot->pitch_vel() * kDegToRad;
+    wl_debug.aimbot_rx_yaw_acc_rad_s2 = -globals->aimbot->yaw_acc() * kDegToRad;
+    wl_debug.aimbot_rx_pitch_acc_rad_s2 = globals->aimbot->pitch_acc() * kDegToRad;
   } else {
     wl_debug.aimbot_rx_state = 0U;
     wl_debug.aimbot_rx_target = 0U;
     wl_debug.aimbot_rx_nuc_start_flag = 0U;
     wl_debug.aimbot_rx_yaw_rad = 0.0f;
     wl_debug.aimbot_rx_pitch_rad = 0.0f;
+    wl_debug.aimbot_rx_yaw_vel_rad_s = 0.0f;
+    wl_debug.aimbot_rx_pitch_vel_rad_s = 0.0f;
+    wl_debug.aimbot_rx_yaw_acc_rad_s2 = 0.0f;
+    wl_debug.aimbot_rx_pitch_acc_rad_s2 = 0.0f;
   }
 
   {

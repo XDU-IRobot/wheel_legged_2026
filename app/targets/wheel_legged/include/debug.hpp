@@ -297,6 +297,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t aimbot_rx_nuc_start_flag;  // NUC 启动标志
   float aimbot_rx_yaw_rad;           // NUC 下发的偏航目标
   float aimbot_rx_pitch_rad;         // NUC 下发的俯仰目标
+  float aimbot_rx_yaw_vel_rad_s;     // NUC 下发的偏航目标角速度（前馈）
+  float aimbot_rx_pitch_vel_rad_s;   // NUC 下发的俯仰目标角速度（前馈）
+  float aimbot_rx_yaw_acc_rad_s2;    // NUC 下发的偏航目标角加速度（前馈）
+  float aimbot_rx_pitch_acc_rad_s2;  // NUC 下发的俯仰目标角加速度（前馈）
 
   // ── AI Policy 网络观测输入 (27维，均为训练缩放后的值) ──
   // base_ang_vel * 0.25 [rad/s]
