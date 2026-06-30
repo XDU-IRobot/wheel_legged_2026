@@ -57,7 +57,7 @@ class Config:
     q_D: float = 300.0
     q_dD: float = 30.0
     q_roll: float = 5000.0
-    q_droll: float = 300.0
+    q_droll: float = 50.0
     q_ay: float = 0.0
     r_left: float = 0.01
     r_right: float = 0.01

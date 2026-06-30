@@ -877,19 +877,19 @@ void ControlLoop() {
           : 0.0f;
   float forward_max_speed = forward_speed_base;
   // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
-  // const float motor_error =
-  //     rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-  // if (std::fabs(motor_error) > kLargeTurnThresholdRad &&
-  //     (std::fabs(current_state.s_dot) > kSafeTurnSpeedMps ||
-  //      std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
-  //      std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
-  //   forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
-  // }
-  // // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
-  // static bool s_large_turn_recovery = false;
-  // if (forward_max_speed < forward_speed_base) {
-  //   s_large_turn_recovery = true;
-  // }
+  const float motor_error =
+      rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+  if (std::fabs(motor_error) > kLargeTurnThresholdRad &&
+      (std::fabs(current_state.s_dot) > kSafeTurnSpeedMps ||
+       std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
+       std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
+    forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
+  }
+  // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
+  static bool s_large_turn_recovery = false;
+  if (forward_max_speed < forward_speed_base) {
+    s_large_turn_recovery = true;
+  }
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -971,14 +971,14 @@ void ControlLoop() {
   } else {
     const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
     // 大转向限速解除后，用缓加速斜坡逐步恢复速度
-    // float accel_scale = 1.0f;
-    // if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
-    //   accel_scale = kLargeTurnRecoveryAccelScale;
-    //   if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
-    //     s_large_turn_recovery = false;
-    //   }
-    // }
-    const SdotRampParams effective_ramp{ramp_params.accel_step /* * accel_scale */, ramp_params.brake_step};
+    float accel_scale = 1.0f;
+    if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
+      accel_scale = kLargeTurnRecoveryAccelScale;
+      if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
+        s_large_turn_recovery = false;
+      }
+    }
+    const SdotRampParams effective_ramp{ramp_params.accel_step * accel_scale, ramp_params.brake_step};
     RampValueToTarget(target_s_dot, ctx.filtered_s_dot, effective_ramp);
   }
 
