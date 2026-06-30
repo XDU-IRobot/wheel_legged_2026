@@ -414,20 +414,21 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     ramp_step_per_tick_m_ = 0.0f;
   } else {
     // 目标变化时重新计算斜坡步长，保证每次腿长切换都走完 kLegLengthRampTimeS
-    if (input.motion_target.leg_length_m != last_ramp_target_m_) {
-      const float initial_error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
-      constexpr float kRampTotalTicks = wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
-      ramp_step_per_tick_m_ = std::fabs(initial_error) / kRampTotalTicks;
-      last_ramp_target_m_ = input.motion_target.leg_length_m;
-    }
-    const float error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
-    if (std::fabs(error) <= ramp_step_per_tick_m_ || ramp_step_per_tick_m_ == 0.0f) {
-      smoothed_leg_target_length_m_ = input.motion_target.leg_length_m;
-      ramp_step_per_tick_m_ = 0.0f;
-    } else {
-      smoothed_leg_target_length_m_ += (error > 0.0f ? ramp_step_per_tick_m_ : -ramp_step_per_tick_m_);
-    }
-    params_.leg_target_length_m = smoothed_leg_target_length_m_;
+    // if (input.motion_target.leg_length_m != last_ramp_target_m_) {
+    //   const float initial_error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
+    //   constexpr float kRampTotalTicks = wheel_legged::params::active::chassis_fsm::kLegLengthRampTimeS / kControlDtS;
+    //   ramp_step_per_tick_m_ = std::fabs(initial_error) / kRampTotalTicks;
+    //   last_ramp_target_m_ = input.motion_target.leg_length_m;
+    // }
+    // const float error = input.motion_target.leg_length_m - smoothed_leg_target_length_m_;
+    // if (std::fabs(error) <= ramp_step_per_tick_m_ || ramp_step_per_tick_m_ == 0.0f) {
+    //   smoothed_leg_target_length_m_ = input.motion_target.leg_length_m;
+    //   ramp_step_per_tick_m_ = 0.0f;
+    // } else {
+    //   smoothed_leg_target_length_m_ += (error > 0.0f ? ramp_step_per_tick_m_ : -ramp_step_per_tick_m_);
+    // }
+    // params_.leg_target_length_m = smoothed_leg_target_length_m_;
+    params_.leg_target_length_m = input.motion_target.leg_length_m;
   }
   if (force_low_leg_) {
     constexpr uint16_t kLowLegHoldTicks = 100;  // 4s @ 500Hz
@@ -683,8 +684,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                         ((right_leg_.l0() + kWheelPhysicalRadiusM) / (2.0f * wheel_radius_m)) *
                                         state_output.current.phi_dot * state_output.current.s_dot;
 
-      left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
-      right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
+      output_.left_force_no_spring_n = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left;
+      output_.right_force_no_spring_n = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right;
+
+      // left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
+      // right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
+
+      left_force_ = output_.roll_leg_mpc_shadow.left_force_n + l_spring_torque_;
+      right_force_ = output_.roll_leg_mpc_shadow.right_force_n + r_spring_torque_;
     }
 
     const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&

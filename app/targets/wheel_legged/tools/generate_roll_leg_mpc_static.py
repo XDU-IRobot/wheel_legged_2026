@@ -52,7 +52,7 @@ class Config:
     b_rrho: float = 0.0
     b_ay: float = 0.0
 
-    q_L: float = 500.0
+    q_L: float = 200000.0
     q_dL: float = 50.0
     q_D: float = 300.0
     q_dD: float = 30.0

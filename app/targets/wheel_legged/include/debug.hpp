@@ -184,6 +184,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_raw_accel_speed_mps;      // 原始加速度积分速度
   float chassis_left_force_n;             // 左腿竖直力
   float chassis_right_force_n;            // 右腿竖直力
+  float chassis_left_force_no_spring_n;   // 左腿竖直力（不含弹簧补偿）
+  float chassis_right_force_no_spring_n;  // 右腿竖直力（不含弹簧补偿）
   float chassis_left_support_force_n;     // 左腿支撑力
   float chassis_right_support_force_n;    // 右腿支撑力
   float chassis_left_F_bh_n;              // 左腿雅可比反力

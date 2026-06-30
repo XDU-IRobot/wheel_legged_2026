@@ -83,6 +83,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_raw_accel_speed_mps = chassis_control_output.raw_accel_speed_mps;
   wl_debug.chassis_left_force_n = chassis_control_output.left_force_n;
   wl_debug.chassis_right_force_n = chassis_control_output.right_force_n;
+  wl_debug.chassis_left_force_no_spring_n = chassis_control_output.left_force_no_spring_n;
+  wl_debug.chassis_right_force_no_spring_n = chassis_control_output.right_force_no_spring_n;
   wl_debug.chassis_left_support_force_n = chassis_control_output.left_support_force_n;
   wl_debug.chassis_right_support_force_n = chassis_control_output.right_support_force_n;
   wl_debug.chassis_left_F_bh_n = chassis_control_output.left_F_bh_n;
