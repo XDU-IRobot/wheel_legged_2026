@@ -4,6 +4,7 @@
 
 #include <librm/core/typedefs.hpp>
 
+#include "roll_leg_mpc_params.hpp"
 #include "roll_leg_mpc_static_solver.hpp"
 
 namespace chassis {
@@ -21,31 +22,30 @@ class RollLegMpc {
     kUnsafeLegAngle,
     kUnsafeRoll,
     kSetupFailed,
-    kBoundUpdateFailed,
     kSolveFailed,
   };
 
   struct Config {
-    int max_iter{60};
-    rm::f32 abs_pri_state_tol{0.05f};
-    rm::f32 abs_pri_input_tol_n{5.0f};
-    rm::f32 abs_dua_state_tol{0.05f};
-    rm::f32 abs_dua_input_tol_n{5.0f};
+    int max_iter{roll_leg_mpc_params::kMaxIter};
+    rm::f32 abs_pri_state_tol{roll_leg_mpc_params::kAbsPriStateTol};
+    rm::f32 abs_pri_input_tol_n{roll_leg_mpc_params::kAbsPriInputTolN};
+    rm::f32 abs_dua_state_tol{roll_leg_mpc_params::kAbsDuaStateTol};
+    rm::f32 abs_dua_input_tol_n{roll_leg_mpc_params::kAbsDuaInputTolN};
 
     rm::f32 body_mass_kg{22.0f};
     rm::f32 leg_mass_kg{2.3f};
     rm::f32 gravity_mps2{9.81f};
     rm::f32 roll_balance_target_rad{0.0f};
 
-    rm::f32 force_min_n{-300.0f};
-    rm::f32 force_max_n{300.0f};
-    rm::f32 force_slew_rate_n_per_s{20000.0f};
+    rm::f32 force_min_n{roll_leg_mpc_params::kForceMinN};
+    rm::f32 force_max_n{roll_leg_mpc_params::kForceMaxN};
+    rm::f32 force_slew_rate_n_per_s{roll_leg_mpc_params::kForceSlewRateNPerS};
 
-    rm::f32 leg_safe_min_m{0.08f};
-    rm::f32 leg_safe_max_m{0.42f};
-    rm::f32 cos_min{0.5f};
-    rm::f32 theta_mpc_max_rad{0.7853982f};
-    rm::f32 roll_mpc_max_rad{0.35f};
+    rm::f32 leg_safe_min_m{roll_leg_mpc_params::kLegSafeMinM};
+    rm::f32 leg_safe_max_m{roll_leg_mpc_params::kLegSafeMaxM};
+    rm::f32 cos_min{roll_leg_mpc_params::kCosMin};
+    rm::f32 theta_mpc_max_rad{roll_leg_mpc_params::kThetaMpcMaxRad};
+    rm::f32 roll_mpc_max_rad{roll_leg_mpc_params::kRollMpcMaxRad};
   };
 
   struct Input {
@@ -75,7 +75,6 @@ class RollLegMpc {
     bool active{false};
     bool solved{false};
     FallbackReason fallback_reason{FallbackReason::kNotInitialized};
-    int solver_status{0};
     int solver_iterations{0};
 
     rm::f32 left_force_n{0.0f};

@@ -191,10 +191,6 @@ namespace chassis {
 
 void RollLegMpcStaticSolver::Reset() { ZeroWorkspace(workspace_); }
 
-RollLegMpcStaticSolver::Output RollLegMpcStaticSolver::Solve(const ModelData &model, const Input &input) {
-  return Solve(model, input, Settings{});
-}
-
 RollLegMpcStaticSolver::Output RollLegMpcStaticSolver::Solve(const ModelData &model, const Input &input,
                                                              const Settings &settings) {
   Output output{};

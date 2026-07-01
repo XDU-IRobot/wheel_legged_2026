@@ -215,7 +215,6 @@ RollLegMpc::Output RollLegMpc::Update(const Input &input) {
   settings.abs_dua_input_tol_n = config_.abs_dua_input_tol_n;
   settings.always_return_last_iterate = true;
   const RollLegMpcStaticSolver::Output solve_output = static_solver_.Solve(model, static_input, settings);
-  output.solver_status = solve_output.converged ? 1 : 11;
   output.solver_iterations = solve_output.iterations;
   if (!solve_output.usable) {
     output.fallback_reason = FallbackReason::kSolveFailed;

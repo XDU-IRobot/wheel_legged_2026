@@ -14,7 +14,7 @@ uint8_t debug_posture_valid;
 f32 left_, right_;
 namespace {
 
-constexpr uint8_t kRollLegMpcUpdatePeriodTicks = 5U;  // 100Hz MPC inside the 500Hz chassis loop.
+constexpr uint8_t kRollLegMpcUpdatePeriodTicks = chassis::roll_leg_mpc_params::kUpdatePeriodTicks;
 
 constexpr rm::f32 kControlDtS = wheel_legged::params::active::chassis::kControlDtS;  ///< 搴曠洏鎺у埗鍛ㄦ湡锛?00Hz锛?
 
@@ -687,11 +687,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.left_force_no_spring_n = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left;
       output_.right_force_no_spring_n = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right;
 
-      // left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
-      // right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
-
-      left_force_ = output_.roll_leg_mpc_shadow.left_force_n + l_spring_torque_;
-      right_force_ = output_.roll_leg_mpc_shadow.right_force_n + r_spring_torque_;
+      if (output_.roll_leg_mpc_shadow.active) {
+        left_force_ = output_.roll_leg_mpc_shadow.left_force_n + l_spring_torque_;
+        right_force_ = output_.roll_leg_mpc_shadow.right_force_n + r_spring_torque_;
+      } else {
+        left_force_ = output_.left_force_no_spring_n + l_spring_torque_;
+        right_force_ = output_.right_force_no_spring_n + r_spring_torque_;
+      }
     }
 
     const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&

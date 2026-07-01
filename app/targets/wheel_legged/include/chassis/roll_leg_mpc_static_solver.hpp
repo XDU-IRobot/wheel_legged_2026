@@ -59,9 +59,7 @@ class RollLegMpcStaticSolver {
   RollLegMpcStaticSolver() = default;
 
   void Reset();
-  [[nodiscard]] Output Solve(const ModelData &model, const Input &input);
   [[nodiscard]] Output Solve(const ModelData &model, const Input &input, const Settings &settings);
-  [[nodiscard]] const Workspace &workspace() const { return workspace_; }
 
  private:
   Workspace workspace_{};
