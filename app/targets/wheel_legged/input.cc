@@ -164,11 +164,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
   const bool has_any_input = dr16.online || tc_remote.valid;
 
-  // ── 摩擦轮目标转速初始化（首次从参数表加载，后续由 Z/X 键调整）──
-  if (tc_state.fric_speed_target_rpm == 0.0f) {
-    tc_state.fric_speed_target_rpm = params::active::shoot::kFricSpeedTargetRpm;
-  }
-
   // ── 图传键上升沿检测（图传在线时生效）──
   bool r_yaw_reset_edge = false;
   bool r_flip_180_edge = false;

@@ -12,7 +12,6 @@
 namespace wheel_legged {
 
 class ShootController {
-  using FwMotor = rm::device::M3508;
   using BoosterMotor = rm::device::DmMotor<rm::device::DmMotorControlMode::kMit>;
 
   enum class State : uint8_t { kStop, kInitialize, kReady, kShooting, kCooling };
@@ -24,15 +23,11 @@ class ShootController {
   static constexpr uint16_t kShootTicks = params::active::shoot::kShootDelayTicks;
   static constexpr float kStallThres = params::active::shoot::kStallThresholdRad;
   static constexpr float kStallFallback = params::active::shoot::kStallFallbackRad;
-  static constexpr float kFwReadyRpm = params::active::shoot::kFwReadySpeedThresholdRpm;
 
  public:
   ShootController() = default;
 
-  void Attach(FwMotor *fw1, FwMotor *fw2, FwMotor *fw3, BoosterMotor *booster) {
-    fw_[0] = fw1;
-    fw_[1] = fw2;
-    fw_[2] = fw3;
+  void Attach( BoosterMotor *booster) {
     booster_ = booster;
   }
 
@@ -43,11 +38,6 @@ class ShootController {
     booster_speed_pid_.emplace(sp.kp, sp.ki, sp.kd, sp.max_out, sp.max_iout);
     booster_pos_pid_->SetCircular(true);
     booster_pos_pid_->SetCircularCycle(2.0f * kPi);
-
-    constexpr auto &fp = params::active::shoot::kFwSpeedPid;
-    fw_speed_pid_[0].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
-    fw_speed_pid_[1].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
-    fw_speed_pid_[2].emplace(fp.kp, fp.ki, fp.kd, fp.max_out, fp.max_iout);
   }
 
   /**
@@ -108,8 +98,7 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else if (fire_trigger && curHeatDelta >= 100 && fw_[0]->rpm() >= kFwReadyRpm &&
-                   fw_[1]->rpm() >= kFwReadyRpm && fw_[2]->rpm() >= kFwReadyRpm) {
+        } else {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
@@ -150,25 +139,6 @@ class ShootController {
         break;
     }
 
-    // 摩擦轮速度 PID
-    {
-      constexpr float kFwBrakeTargetRpm = -100.0f;
-      constexpr float kFwBrakeThresholdRpm = 500.0f;
-
-      for (int i = 0; i < 3; ++i) {
-        if (enter_shoot) {
-          fw_speed_pid_[i]->Update(fric_speed_target_rpm, fw_[i]->rpm());
-          fw_[i]->SetCurrent(fw_speed_pid_[i]->out());
-        } else if (fw_[i]->rpm() >= kFwBrakeThresholdRpm) {
-          fw_speed_pid_[i]->Update(kFwBrakeTargetRpm, fw_[i]->rpm());
-          fw_[i]->SetCurrent(fw_speed_pid_[i]->out());
-        } else {
-          fw_speed_pid_[i]->Clear();
-          fw_[i]->SetCurrent(0);
-        }
-      }
-    }
-
     // 拨盘 PID 计算
     booster_pos_pid_->Update(now_angle_, booster_->pos());
     booster_speed_pid_->Update(booster_pos_pid_->out(), booster_->vel());
@@ -202,11 +172,7 @@ class ShootController {
   float init_time_{0.0f};
   float shoot_time_{0.0f};
   float booster_pos_{0.0f};
-
-  FwMotor *fw_[3]{nullptr};
   BoosterMotor *booster_{nullptr};
-
-  std::optional<rm::modules::PID> fw_speed_pid_[3];
   std::optional<rm::modules::PID> booster_pos_pid_{};
   std::optional<rm::modules::PID> booster_speed_pid_{};
 };
