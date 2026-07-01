@@ -561,6 +561,10 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
+  const bool gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
+  float fric_speed_target = gimbal_rx_valid
+                                ? static_cast<float>(globals->gimbal_rx->fric_speed_target_rpm())
+                                : 0.0f;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
@@ -569,7 +573,7 @@ void ControlLoop() {
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag, tc_state.fric_speed_target_rpm,
+    globals->shoot_controller.Update(shooter_enter, fire_flag,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
@@ -585,7 +589,6 @@ void ControlLoop() {
       globals->shoot.Disable();
     }
     wl_debug.shoot_enabled = globals->shoot.enabled() ? 1U : 0U;
-    const bool gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
     const float fric_left_rpm = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
     const float fric_right_rpm = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
     wl_debug.fric_left_rpm = fric_left_rpm;
@@ -620,7 +623,7 @@ void ControlLoop() {
         ref_online ? globals->referee->data().power_heat_data.shooter_17mm_1_barrel_heat : 0U;
     const auto shoot_output =
         globals->shoot.Update(fric_left_rpm, fric_right_rpm, dial_encoder, dial_rpm, kControlLoopDtS, fire_flag,
-                              in_combat, tc_state.fric_speed_target_rpm, single_shot, ref_barrel_heat);
+                              in_combat, fric_speed_target, single_shot, ref_barrel_heat);
     g_actuators.ApplyShootOutput(*globals, shoot_output);
     wl_debug.shot_count = globals->shoot.shot_count();
     wl_debug.shoot_dial_current = shoot_output.dial_current;
@@ -642,7 +645,7 @@ void ControlLoop() {
   }
 #endif
 
-  wl_debug.fric_speed_target_rpm = tc_state.fric_speed_target_rpm;
+  wl_debug.fric_speed_target_rpm = fric_speed_target;
 
   // ── 发送 combat_mode 到云台（100Hz，每5个控制周期发一次）──
   if (globals->chassis_tx.has_value()) {
@@ -1457,10 +1460,8 @@ void ControlLoop() {
   }
   if (times % 17 == 0) {
     schedule.schedule();
-    static bool last_ui_refresh = false;
     if (globals->ui_refresh_key) {
       static_UI_add();
     }
-    last_ui_refresh = globals->ui_refresh_key;
   }
 }

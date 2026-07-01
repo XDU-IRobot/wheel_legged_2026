@@ -47,9 +47,6 @@ constexpr uint16_t kRcKeyC = 0x2000;
 constexpr uint16_t kRcKeyB = 0x8000;
 constexpr uint16_t kRcKeyG = 0x0400;
 constexpr uint16_t kRcKeyZ = 0x0800;
-constexpr uint16_t kRcKeyX = 0x1000;
-
-constexpr float kFricSpeedStepRpm = params::active::shoot::kFricSpeedStepRpm;
 
 }  // namespace
 
@@ -169,7 +166,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_flip_180_edge = false;
   wheel_legged::StairTaskRequest stair_task_request = wheel_legged::StairTaskRequest::kNone;
   if (tc_remote_active) {
-    // Ctrl 键状态（用于 Ctrl+Z/X 摩擦轮调速组合键）
+    // Ctrl 键状态（用于 Ctrl+C/Q/Z 等组合键）
     const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
 
     // C 键（无 Ctrl）：任意状态按 C → 中腿长；已在中腿长则回低腿长（同时重置底盘正方向）
@@ -260,21 +257,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     }
     if (!r_pressed) tc_state.r_flip_armed = true;
 
-    // Ctrl+Z 组合键：摩擦轮目标转速 -20 rpm（上升沿）
     const bool z_pressed = (tc_remote.keyboard_value & kRcKeyZ) != 0U;
-    if (ctrl_pressed && z_pressed && tc_state.z_fric_dec_armed) {
-      tc_state.fric_speed_target_rpm -= kFricSpeedStepRpm;
-      tc_state.z_fric_dec_armed = false;
-    }
-    if (!ctrl_pressed || !z_pressed) tc_state.z_fric_dec_armed = true;
-
-    // Ctrl+X 组合键：摩擦轮目标转速 +20 rpm（上升沿）
-    const bool x_pressed = (tc_remote.keyboard_value & kRcKeyX) != 0U;
-    if (ctrl_pressed && x_pressed && tc_state.x_fric_inc_armed) {
-      tc_state.fric_speed_target_rpm += kFricSpeedStepRpm;
-      tc_state.x_fric_inc_armed = false;
-    }
-    if (!ctrl_pressed || !x_pressed) tc_state.x_fric_inc_armed = true;
 
     // E 键：UI 刷新使能（电平有效，按住时为 true）
     tc_state.e_ui_refresh = (tc_remote.keyboard_value & kRcKeyE) != 0U;

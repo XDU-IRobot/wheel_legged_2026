@@ -44,10 +44,9 @@ class ShootController {
    * @brief 射击状态机 + PID，每 500Hz 控制周期调用一次
    * @param enter_shoot  true = 进入射击模式
    * @param fire_trigger true = 触发发射（dial > 阈值）
-   * @param fric_speed_target_rpm 摩擦轮目标转速 [rpm]（运行时可调）
-   * @param curHeatDelta 当前热量
+   * @param curHeatDelta 当前剩余热量
    */
-  void Update(bool enter_shoot, bool fire_trigger, float fric_speed_target_rpm, int curHeatDelta) {
+  void Update(bool enter_shoot, bool fire_trigger, int curHeatDelta) {
     booster_pos_ = booster_->pos();
 
     switch (state_) {

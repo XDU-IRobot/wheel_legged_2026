@@ -93,6 +93,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
       robot_hp_.sentry_7_HP = UnpackU16(&msg->data[0]);
       fric_left_rpm_ = UnpackI16(&msg->data[2]);
       fric_right_rpm_ = UnpackI16(&msg->data[4]);
+      fric_speed_target_rpm_ = UnpackU16(&msg->data[6]);
       frame_count_++;
       ReportStatus(kOk);
     } else {
@@ -119,6 +120,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   [[nodiscard]] const EmyRobotHP &robot_hp() const { return robot_hp_; }
   [[nodiscard]] rm::i16 fric_left_rpm() const { return fric_left_rpm_; }
   [[nodiscard]] rm::i16 fric_right_rpm() const { return fric_right_rpm_; }
+  [[nodiscard]] rm::u16 fric_speed_target_rpm() const { return fric_speed_target_rpm_; }
 
  private:
   static rm::i16 UnpackI16(const rm::u8 *in) {
@@ -155,6 +157,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   EmyRobotHP robot_hp_{};
   rm::i16 fric_left_rpm_{0};
   rm::i16 fric_right_rpm_{0};
+  rm::u16 fric_speed_target_rpm_{0};
 };
 
 /**

@@ -7,8 +7,6 @@
 #include "common/controllers/shoot_2firc.hpp"
 #include "include/params.hpp"
 
-int flag1 = 0;
-
 namespace ns = wheel_legged::params::active::shoot;
 
 void Shoot::Init() {
@@ -50,12 +48,9 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
     } else {
       prev_fire_flag_ = false;
       if (fire_flag && !heat_suppressed_) {
-        // if (fire_flag) {
-        flag1 = 1;
         controller_.SetMode(Shoot2Fric::kFullAuto);
         controller_.SetShootFrequency(low_heat_mode ? ns::kLowHeatShootFrequencyHz : ns::kNormalShootFrequencyHz);
       } else {
-        flag1 = 0;
         controller_.SetMode(Shoot2Fric::kStop);
       }
     }
