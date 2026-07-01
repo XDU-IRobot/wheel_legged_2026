@@ -9,6 +9,7 @@ the dynamic TinyMPC implementation with the same problem data.
 from __future__ import annotations
 
 import argparse
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,40 +28,61 @@ K_AY = 6
 K_DF_LEFT = 0
 K_DF_RIGHT = 1
 
+SCRIPT_PATH = Path(__file__).resolve()
+REPO_ROOT = SCRIPT_PATH.parents[4]
+PARAMS_HEADER = REPO_ROOT / "app" / "targets" / "wheel_legged" / "include" / "chassis" / "roll_leg_mpc_params.hpp"
+
+
+def load_cpp_params(path: Path = PARAMS_HEADER) -> dict[str, float]:
+    text = path.read_text(encoding="utf-8")
+    values: dict[str, float] = {}
+    pattern = re.compile(r"inline\s+constexpr\s+(?:std::uint8_t|int|float)\s+(\w+)\s*=\s*([^;]+);")
+    for name, raw_value in pattern.findall(text):
+        token = raw_value.split("//", 1)[0].strip()
+        token = token.rstrip("fFuU")
+        if token.startswith("0x"):
+            values[name] = float(int(token, 16))
+        else:
+            values[name] = float(token)
+    return values
+
+
+CPP_PARAMS = load_cpp_params()
+
 
 @dataclass
 class Config:
-    dt_s: float = 0.01
-    horizon: int = 15
-    rho: float = 1.0
+    dt_s: float = CPP_PARAMS["kModelDtS"]
+    horizon: int = int(CPP_PARAMS["kModelHorizon"])
+    rho: float = CPP_PARAMS["kModelRho"]
 
     body_mass_kg: float = 22.0
     leg_mass_kg: float = 2.3
     gravity_mps2: float = 9.81
-    support_half_width_m: float = 0.2025
+    support_half_width_m: float = CPP_PARAMS["kSupportHalfWidthM"]
     com_height_m: float = 0.28
-    roll_inertia_kg_m2: float = 0.0
+    roll_inertia_kg_m2: float = CPP_PARAMS["kRollInertiaKgM2"]
 
-    a_dL: float = -8.0
+    a_dL: float = CPP_PARAMS["kADl"]
     b_sum: float = 0.0
-    a_dD: float = -10.0
+    a_dD: float = CPP_PARAMS["kADd"]
     b_D: float = 0.0
     a_Drho: float = 0.0
     a_rho: float = 0.0
-    a_drho: float = -4.0
+    a_drho: float = CPP_PARAMS["kADroll"]
     b_lrho: float = 0.0
     b_rrho: float = 0.0
     b_ay: float = 0.0
 
-    q_L: float = 200000.0
-    q_dL: float = 50.0
-    q_D: float = 300.0
-    q_dD: float = 30.0
-    q_roll: float = 5000.0
-    q_droll: float = 50.0
-    q_ay: float = 0.0
-    r_left: float = 0.01
-    r_right: float = 0.01
+    q_L: float = CPP_PARAMS["kQL"]
+    q_dL: float = CPP_PARAMS["kQDl"]
+    q_D: float = CPP_PARAMS["kQD"]
+    q_dD: float = CPP_PARAMS["kQDd"]
+    q_roll: float = CPP_PARAMS["kQRoll"]
+    q_droll: float = CPP_PARAMS["kQDroll"]
+    q_ay: float = CPP_PARAMS["kQAy"]
+    r_left: float = CPP_PARAMS["kRLeft"]
+    r_right: float = CPP_PARAMS["kRRight"]
 
 
 def zeros(rows: int, cols: int) -> list[list[float]]:
@@ -192,10 +214,10 @@ def precompute(config: Config) -> dict[str, object]:
     q_diag = [config.q_L, config.q_dL, config.q_D, config.q_dD, config.q_roll, config.q_droll, config.q_ay]
     r_diag = [config.r_left, config.r_right]
 
-    work_q = [q + config.rho for q in q_diag]
-    work_r = [r + config.rho for r in r_diag]
-    riccati_q = diag([q + config.rho for q in work_q])
-    riccati_r = diag([r + config.rho for r in work_r])
+    augmented_q = [q + config.rho for q in q_diag]
+    augmented_r = [r + config.rho for r in r_diag]
+    riccati_q = diag([q + config.rho for q in augmented_q])
+    riccati_r = diag([r + config.rho for r in augmented_r])
 
     b_t = transpose(b_dyn)
     a_t = transpose(a_dyn)
@@ -203,13 +225,11 @@ def precompute(config: Config) -> dict[str, object]:
     p_prev = diag([config.rho for _ in range(NX)])
     k_inf = zeros(NU, NX)
     p_inf = zeros(NX, NX)
-    riccati_iterations = 1000
 
     for i in range(1000):
         rbpb = matadd(riccati_r, matmul(matmul(b_t, p_prev), b_dyn))
         k_inf = matmul(matmul(inv2(rbpb), b_t), matmul(p_prev, a_dyn))
         p_inf = matadd(riccati_q, matmul(matmul(a_t, p_prev), matsub(a_dyn, matmul(b_dyn, k_inf))))
-        riccati_iterations = i + 1
         if max_abs_diff(k_inf, k_prev) < 1.0e-5:
             break
         k_prev = k_inf
@@ -227,15 +247,11 @@ def precompute(config: Config) -> dict[str, object]:
         "a_dyn": a_dyn,
         "b_dyn": b_dyn,
         "f_dyn": f_dyn,
-        "work_q": work_q,
-        "work_r": work_r,
         "k_inf": k_inf,
-        "p_inf": p_inf,
         "quu_inv": quu_inv,
         "am_bk_t": am_bk_t,
         "apf": apf,
         "bpf": bpf,
-        "riccati_iterations": riccati_iterations,
     }
 
 
@@ -266,14 +282,10 @@ def format_model(data: dict[str, object], indent: str = "    ") -> str:
 {inner}.nominal_leg_length_m = {format_float(data["nominal_leg_length_m"])},
 {inner}.model_com_height_m = {format_float(config.com_height_m)},
 {inner}.model_roll_inertia_kg_m2 = {format_float(config.roll_inertia_kg_m2)},
-{inner}.riccati_iterations = {data["riccati_iterations"]},
 {inner}.adyn = {format_matrix(data["a_dyn"], inner)},
 {inner}.bdyn = {format_matrix(data["b_dyn"], inner)},
 {inner}.fd = {format_vector(data["f_dyn"], inner)},
-{inner}.work_q = {format_vector(data["work_q"], inner)},
-{inner}.work_r = {format_vector(data["work_r"], inner)},
 {inner}.kinf = {format_matrix(data["k_inf"], inner)},
-{inner}.pinf = {format_matrix(data["p_inf"], inner)},
 {inner}.quu_inv = {format_matrix(data["quu_inv"], inner)},
 {inner}.am_bk_t = {format_matrix(data["am_bk_t"], inner)},
 {inner}.apf = {format_vector(data["apf"], inner)},
@@ -305,14 +317,10 @@ struct ModelData {{
   float nominal_leg_length_m;
   float model_com_height_m;
   float model_roll_inertia_kg_m2;
-  int riccati_iterations;
   float adyn[kNumStates][kNumStates];
   float bdyn[kNumStates][kNumInputs];
   float fd[kNumStates];
-  float work_q[kNumStates];
-  float work_r[kNumInputs];
   float kinf[kNumInputs][kNumStates];
-  float pinf[kNumStates][kNumStates];
   float quu_inv[kNumInputs][kNumInputs];
   float am_bk_t[kNumStates][kNumStates];
   float apf[kNumStates];
@@ -330,23 +338,22 @@ inline constexpr ModelData kModels[kNumModels] = {{
 
 
 def parse_args() -> argparse.Namespace:
-    repo_root = Path(__file__).resolve().parents[4]
-    default_output = repo_root / "app" / "targets" / "wheel_legged" / "include" / "chassis" / "roll_leg_mpc_static_data.hpp"
+    default_output = REPO_ROOT / "app" / "targets" / "wheel_legged" / "include" / "chassis" / "roll_leg_mpc_static_data.hpp"
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=default_output)
-    parser.add_argument("--dt", type=float, default=0.01)
-    parser.add_argument("--horizon", type=int, default=15)
-    parser.add_argument("--rho", type=float, default=1.0)
+    parser.add_argument("--dt", type=float, default=CPP_PARAMS["kModelDtS"])
+    parser.add_argument("--horizon", type=int, default=int(CPP_PARAMS["kModelHorizon"]))
+    parser.add_argument("--rho", type=float, default=CPP_PARAMS["kModelRho"])
     parser.add_argument("--body-mass", type=float, default=22.0)
     parser.add_argument("--leg-mass", type=float, default=2.3)
     parser.add_argument("--gravity", type=float, default=9.81)
-    parser.add_argument("--support-half-width", type=float, default=0.2025)
-    parser.add_argument("--leg-min", type=float, default=0.14)
-    parser.add_argument("--leg-max", type=float, default=0.35)
-    parser.add_argument("--leg-step", type=float, default=0.03)
-    parser.add_argument("--wheel-radius", type=float, default=0.0575)
-    parser.add_argument("--body-com-height-offset", type=float, default=0.0)
-    parser.add_argument("--roll-inertia", type=float, default=0.0)
+    parser.add_argument("--support-half-width", type=float, default=CPP_PARAMS["kSupportHalfWidthM"])
+    parser.add_argument("--leg-min", type=float, default=CPP_PARAMS["kModelLegMinM"])
+    parser.add_argument("--leg-max", type=float, default=CPP_PARAMS["kModelLegMaxM"])
+    parser.add_argument("--leg-step", type=float, default=CPP_PARAMS["kModelLegStepM"])
+    parser.add_argument("--wheel-radius", type=float, default=CPP_PARAMS["kWheelRadiusM"])
+    parser.add_argument("--body-com-height-offset", type=float, default=CPP_PARAMS["kBodyComHeightOffsetM"])
+    parser.add_argument("--roll-inertia", type=float, default=CPP_PARAMS["kRollInertiaKgM2"])
     return parser.parse_args()
 
 
