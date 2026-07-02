@@ -3,7 +3,6 @@
 #include <optional>
 
 #include "librm/device/actuator/dm_motor.hpp"
-#include "librm/device/actuator/dji_motor.hpp"
 #include "librm/modules/pid.hpp"
 #include "librm/modules/angle.hpp"
 
@@ -27,11 +26,8 @@ class ShootController {
  public:
   ShootController() = default;
 
-  void Attach( BoosterMotor *booster) {
+  void Init(BoosterMotor *booster) {
     booster_ = booster;
-  }
-
-  void Init() {
     constexpr auto &pp = params::active::shoot::kBoosterPositionPid;
     constexpr auto &sp = params::active::shoot::kBoosterSpeedPid;
     booster_pos_pid_.emplace(pp.kp, pp.ki, pp.kd, pp.max_out, pp.max_iout);
@@ -44,9 +40,10 @@ class ShootController {
    * @brief 射击状态机 + PID，每 500Hz 控制周期调用一次
    * @param enter_shoot  true = 进入射击模式
    * @param fire_trigger true = 触发发射（dial > 阈值）
-   * @param curHeatDelta 当前剩余热量
+   * @param fric_ready   true = 摩擦轮已就绪（RPM 来自云台 CAN 桥）
+   * @param heat_delta   热量余量（heat_limit - current_heat）
    */
-  void Update(bool enter_shoot, bool fire_trigger, int curHeatDelta) {
+  void Update(bool enter_shoot, bool fire_trigger, bool fric_ready, int32_t heat_delta) {
     booster_pos_ = booster_->pos();
 
     switch (state_) {
@@ -97,10 +94,11 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else {
+        } else if (fire_trigger && heat_delta >= 100 && fric_ready) {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
+          shot_count_++;
         }
         break;
 
@@ -126,7 +124,7 @@ class ShootController {
           state_ = State::kStop;
           break;
         }
-        if (curHeatDelta >= 100) {
+        if (heat_delta >= 100) {
           state_ = State::kReady;
         } else {
           state_ = State::kCooling;
@@ -153,16 +151,15 @@ class ShootController {
       booster_disable_ = false;
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
-      // booster_->SetMitCommand(0, 0.0f, 0, 0.0f, 0.0f);
     }
   }
 
   [[nodiscard]] State state() const { return state_; }
   [[nodiscard]] float booster_pos() const { return booster_pos_; }
-
-  State state_{State::kStop};
+  [[nodiscard]] uint32_t shot_count() const { return shot_count_; }
 
  private:
+  State state_{State::kStop};
   bool booster_enable_{false};
   bool booster_disable_{false};
 
@@ -171,7 +168,10 @@ class ShootController {
   float init_time_{0.0f};
   float shoot_time_{0.0f};
   float booster_pos_{0.0f};
+  uint32_t shot_count_{0};
+
   BoosterMotor *booster_{nullptr};
+
   std::optional<rm::modules::PID> booster_pos_pid_{};
   std::optional<rm::modules::PID> booster_speed_pid_{};
 };

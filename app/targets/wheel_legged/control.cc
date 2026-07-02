@@ -573,7 +573,8 @@ void ControlLoop() {
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag,
+    globals->shoot_controller.Update(shooter_enter, fire_flag,true
+      ,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
