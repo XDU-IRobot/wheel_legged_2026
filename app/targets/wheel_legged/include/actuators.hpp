@@ -64,14 +64,14 @@ class Actuators {
     const float lb_tau = enable_dm ? output.lb_tau : 0.0f;
     const float rf_tau = enable_dm ? output.rf_tau : 0.0f;
     const float rb_tau = enable_dm ? output.rb_tau : 0.0f;
-   SendDmMitCommand(g, lf_tau, lb_tau, rf_tau, rb_tau);
+    SendDmMitCommand(g, lf_tau, lb_tau, rf_tau, rb_tau);
     // SendDmMitCommand(g, 0.0f, 0.0f, 0.0f, 0.0f);
     // M3508 接收电流命令，底盘控制器输出的轮端力矩在此做比例换算。
     const float lw_current =
         enable_dm ? output.lw_tau * wheel_legged::params::active::actuators::kLeftWheelTorqueToCurrent : 0.0f;
     const float rw_current =
         enable_dm ? output.rw_tau * wheel_legged::params::active::actuators::kRightWheelTorqueToCurrent : 0.0f;
-     SendWheelCurrent(g, lw_current, rw_current);
+    SendWheelCurrent(g, lw_current, rw_current);
     // SendWheelCurrent(g, 0.0f, 0.0f);
   }
 

@@ -562,9 +562,7 @@ void ControlLoop() {
   // 阶段 5：发射机构控制（变体分支）
   // ═══════════════════════════════════════════════════════════════════════
   const bool gimbal_rx_valid = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0;
-  float fric_speed_target = gimbal_rx_valid
-                                ? static_cast<float>(globals->gimbal_rx->fric_speed_target_rpm())
-                                : 0.0f;
+  float fric_speed_target = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_speed_target_rpm()) : 0.0f;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
@@ -573,8 +571,7 @@ void ControlLoop() {
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag,true
-      ,
+    globals->shoot_controller.Update(shooter_enter, fire_flag, true,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
