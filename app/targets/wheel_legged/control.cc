@@ -707,9 +707,6 @@ void ControlLoop() {
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.motion_target = stair_sequence_output.target;
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
-#endif
   }
   chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
   chassis_update_input.estimator_input = input.estimator_input;

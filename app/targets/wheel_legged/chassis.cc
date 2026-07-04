@@ -185,6 +185,12 @@ void chassis::Chassis::Init() {
   init_pid(right_leg_turn_pid_manual_, right_leg_turn_pid_manual.kp, right_leg_turn_pid_manual.ki,
            right_leg_turn_pid_manual.kd, right_leg_turn_pid_manual.max_out, right_leg_turn_pid_manual.max_iout);
 
+  const auto &left_leg_angle_pid_stair = wheel_legged::params::active::chassis::kLeftLegAnglePidStandup;
+  init_pid(left_stair_theta_pid_, left_leg_angle_pid_stair.kp, left_leg_angle_pid_stair.ki, left_leg_angle_pid_stair.kd,
+           left_leg_angle_pid_stair.max_out, left_leg_angle_pid_stair.max_iout);
+  const auto &right_leg_angle_pid_stair = wheel_legged::params::active::chassis::kRightLegAnglePidStandup;
+  init_pid(right_stair_theta_pid_, right_leg_angle_pid_stair.kp, right_leg_angle_pid_stair.ki,
+           right_leg_angle_pid_stair.kd, right_leg_angle_pid_stair.max_out, right_leg_angle_pid_stair.max_iout);
   left_stair_theta_pid_.SetCircular(true);
   right_stair_theta_pid_.SetCircular(true);
   left_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
@@ -293,7 +299,19 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     standup_complete_ = false;
     standup_phase_ = 0;
     standup_theta_target_ = 0.0f;
+    trigger_standup_latched_ = false;
     standup_from_recovery_latch_ = false;
+  }
+
+  // 台阶 step2 hook 完成后触发起立
+  if (input.motion_target.trigger_standup && !trigger_standup_latched_ && standup_complete_) {
+    standup_complete_ = false;
+    standup_phase_ = 0;
+    force_low_leg_ = true;
+    trigger_standup_latched_ = true;
+  }
+  if (standup_complete_) {
+    trigger_standup_latched_ = false;
   }
 
   if (!output_.posture_valid) {
@@ -366,9 +384,10 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         standup_theta_target_ -= kRampStep;
         if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
       }
-      // 摆角收敛到 0 ± 容许范围内算完成
-      if (std::fabs(state_output.current.theta_ll) < kThetaTol &&
-          std::fabs(state_output.current.theta_lr) < kThetaTol) {
+      const float theta_tol =
+          trigger_standup_latched_ ? wheel_legged::params::active::chassis::kStandupPhase1ThetaTolStairRad : kThetaTol;
+      if (std::fabs(state_output.current.theta_ll) < theta_tol &&
+          std::fabs(state_output.current.theta_lr) < theta_tol) {
         standup_complete_ = true;
         standup_phase_ = 2;
         force_low_leg_ = false;
@@ -379,7 +398,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
-
 
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);
@@ -512,6 +530,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
 
+  const bool use_stair_target = input.motion_target.use_stair_theta_controller;
+
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // 着地后腿长 PID D 项输入放大
   if (input.fsm_mode == Fsm::State::kSpin) {
@@ -523,6 +543,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   } else if (!standup_complete_) {
     left_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
     right_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
+  } else if (use_stair_target) {
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
   } else {
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
@@ -535,6 +558,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
                                 -right_leg_.l0_dot(), 2);
+  } else if (use_stair_target) {
+    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
   } else {
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
@@ -575,8 +601,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
   const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
   const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
-  const bool use_stair_target = input.motion_target.use_stair_theta_controller;
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
+
+  // 台阶序列摆角 PID
+  if (use_stair_target) {
+    left_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_ll_rad, state_output.current.theta_ll,
+                                        -state_output.current.theta_ll_dot, 2);
+    right_stair_theta_pid_.UpdateExtDiff(input.motion_target.theta_lr_rad, state_output.current.theta_lr,
+                                         -state_output.current.theta_lr_dot, 2);
+  }
 
   // 离地 > 0.1s 后去掉重力补偿
   constexpr uint16_t kGravityOffDelayTicks = 50;  // 0.1s @ 500Hz
@@ -626,8 +659,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = 0.0f;
       right_force_ = 0.0f;
 #endif
-    } else if (!standup_complete_) {
-      // 起立 Phase 0/1：腿长PID + 弹簧补偿，不用重力/roll/惯性；髋关节力矩走 LQR（目标摆角在 control.cc 中设为起立值）
+    } else if (!standup_complete_ || use_stair_target) {
+      // 起立 / 台阶序列：腿长PID + 弹簧补偿，不用重力/roll/惯性
       left_force_ = output_.left_l0_pid_out + l_spring_torque_;
       right_force_ = output_.right_l0_pid_out + r_spring_torque_;
     } else {
@@ -669,9 +702,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     rm::f32 t_br_cmd;
 
     if (!standup_complete_) {
-      // 起立：摆角 PID 控制
       t_bl_cmd = -left_leg_angle_pid_standup_.out();
       t_br_cmd = -right_leg_angle_pid_standup_.out();
+    } else if (use_stair_target) {
+      t_bl_cmd = -left_stair_theta_pid_.out();
+      t_br_cmd = -right_stair_theta_pid_.out();
     } else {
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;

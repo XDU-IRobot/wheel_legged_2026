@@ -81,6 +81,7 @@ struct ChassisMotionTarget {
   bool disable_wheel_torque{false};
   bool use_stair_theta_controller{false};
   bool disable_leg_force{false};
+  bool trigger_standup{false};
 };
 
 /**
@@ -149,11 +150,11 @@ struct ModeRequest {
   float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
   float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)
 
-  CombatProfile combat_profile{CombatProfile::kNormal};  ///< 战斗域子模式
-  TargetSource target_source{TargetSource::kRc};         ///< 当前目标来源偏好
-  GimbalTarget rc_target{};                              ///< 遥控器积分得到的目标
-  GimbalTarget host_target{};                            ///< 上位机目标 (NUC 自瞄 CAN 反馈)
-  bool host_target_valid{false};                         ///< 上位机目标是否有效 (NUC 启动且在线)
+  CombatProfile combat_profile{CombatProfile::kNormal};               ///< 战斗域子模式
+  TargetSource target_source{TargetSource::kRc};                      ///< 当前目标来源偏好
+  GimbalTarget rc_target{};                                           ///< 遥控器积分得到的目标
+  GimbalTarget host_target{};                                         ///< 上位机目标 (NUC 自瞄 CAN 反馈)
+  bool host_target_valid{false};                                      ///< 上位机目标是否有效 (NUC 启动且在线)
   GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};  ///< 云台测试子模式
 
   bool fall_detected{false};          ///< 是否检测到姿态异常
@@ -250,9 +251,9 @@ struct GimbalFsmInput {
   TargetSource target_source{TargetSource::kRc};                          ///< 当前目标来源偏好
   GimbalTarget rc_target{};                                               ///< 遥控器积分目标
   GimbalTarget host_target{};                                             ///< 上位机目标 (NUC 自瞄 CAN 反馈)
-  bool host_target_valid{false};  ///< 上位机目标是否有效 (NUC 启动且在线)
-  GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};  ///< 云台测试子模式
-  bool chassis_recovery_active{false};                                ///< 底盘是否处于恢复流程
+  bool host_target_valid{false};                                          ///< 上位机目标是否有效 (NUC 启动且在线)
+  GimbalTestProfile gimbal_test_profile{GimbalTestProfile::kNormal};      ///< 云台测试子模式
+  bool chassis_recovery_active{false};                                    ///< 底盘是否处于恢复流程
   bool yaw_centering_for_recovery{false};  ///< pitch/roll 正常但 theta 异常，需要云台先归中
   bool startup_align_complete{false};      ///< 启动偏航归中是否完成
 };
