@@ -380,14 +380,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
 
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  if (prev_in_stair_task_ && input.fsm_mode != Fsm::State::kStairTask) {
-    standup_complete_ = false;
-    standup_phase_ = 0;
-    force_low_leg_ = true;
-  }
-  prev_in_stair_task_ = (input.fsm_mode == Fsm::State::kStairTask);
-#endif
 
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);

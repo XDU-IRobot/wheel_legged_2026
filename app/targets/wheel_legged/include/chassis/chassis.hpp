@@ -174,9 +174,6 @@ class Chassis {
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
   bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  bool prev_in_stair_task_{false};  ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）
-#endif
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};               ///< 离地后腿长过短时强制低腿长
