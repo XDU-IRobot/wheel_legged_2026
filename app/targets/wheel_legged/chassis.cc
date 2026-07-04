@@ -719,26 +719,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
-  } else if (input.recovery_manual_mode) {
-    // 手动倒地自启：键盘 A/D/Ctrl+A/D 直接控制腿摆速度，使用独立 PID
-    left_leg_turn_pid_manual_.Update(input.manual_left_leg_speed, state_output.current.theta_ll_dot);
-    right_leg_turn_pid_manual_.Update(input.manual_right_leg_speed, state_output.current.theta_lr_dot);
-
-    left_force_ = 0.0f;
-    right_force_ = 0.0f;
-
-    output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * (-left_leg_turn_pid_manual_.out());
-    output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * (-left_leg_turn_pid_manual_.out());
-    output_.rb_tau =
-        right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * (-right_leg_turn_pid_manual_.out());
-    output_.rf_tau =
-        right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * (-right_leg_turn_pid_manual_.out());
-
-    output_.lf_tau = -output_.lf_tau;
-    output_.lb_tau = -output_.lb_tau;
-
-    output_.lw_tau = 0.0f;
-    output_.rw_tau = 0.0f;
   } else {
     if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&

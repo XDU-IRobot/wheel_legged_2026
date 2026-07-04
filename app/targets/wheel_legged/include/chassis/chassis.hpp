@@ -29,9 +29,6 @@ class Chassis {
     bool run_chassis_update{false};                     ///< 是否执行底盘控制计算
     bool spin_enable{false};                            ///< 是否开启小陀螺
     bool keyboard_active{false};                        ///< 图传键鼠是否在线
-    bool recovery_manual_mode{false};                   ///< 倒地自启手动模式
-    rm::f32 manual_left_leg_speed{0.0f};                ///< 手动模式左腿摆角速度目标 [rad/s]
-    rm::f32 manual_right_leg_speed{0.0f};               ///< 手动模式右腿摆角速度目标 [rad/s]
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
   };

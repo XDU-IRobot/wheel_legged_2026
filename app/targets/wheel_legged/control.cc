@@ -324,6 +324,8 @@ void ControlLoop() {
   static Dr16SemanticState dr16_state{};
   static TcSemanticState tc_state{};
   static ChassisStateContext ctx{};
+  static uint32_t fall_start_ms = 0;
+  static bool was_posture_invalid = false;
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
 
@@ -389,7 +391,7 @@ void ControlLoop() {
       .tick_ms = now_ms,
   });
 
-  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
+  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output, fall_start_ms, was_posture_invalid);
   if (stair_task_output.request_high_leg) {
     chassis_input.request.leg_request = wheel_legged::LegProfile::kHigh;
   }
@@ -701,9 +703,6 @@ void ControlLoop() {
   chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
-  chassis_update_input.recovery_manual_mode = chassis_input.request.recovery_manual_mode;
-  chassis_update_input.manual_left_leg_speed = chassis_input.request.manual_left_leg_speed;
-  chassis_update_input.manual_right_leg_speed = chassis_input.request.manual_right_leg_speed;
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.motion_target = stair_sequence_output.target;
@@ -761,7 +760,8 @@ void ControlLoop() {
     input.tc_remote.keyboard_value &= ~0x000Cu;
   }
 
-  const auto drive = ResolveDriveInput(input.dr16, input.tc_remote, tc_state.dr16_parallel);
+  static DriveInputRampState drive_ramp{};
+  const auto drive = ResolveDriveInput(input.dr16, input.tc_remote, drive_ramp);
   const float forward_input_norm = drive.forward;
   const float side_input_norm = drive.side;
   const bool forward_input_active = std::fabs(forward_input_norm) > kVxInputDeadbandNorm;

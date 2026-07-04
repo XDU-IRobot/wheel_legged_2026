@@ -65,6 +65,38 @@ struct DriveInputNorm {
 };
 
 /**
+ * @brief 驾驶输入斜坡状态（跨周期保持）
+ */
+struct DriveInputRampState {
+  float forward{0.0f};  ///< 前进斜坡当前值
+  float side{0.0f};     ///< 平移斜坡当前值
+};
+
+/**
+ * @brief DR16 拨杆→模式解析结果
+ */
+struct Dr16ModeResult {
+  wheel_legged::DomainRequest domain{wheel_legged::DomainRequest::kDisabled};
+  wheel_legged::LegProfile leg{wheel_legged::LegProfile::kLow};
+  wheel_legged::CombatProfile combat{wheel_legged::CombatProfile::kNormal};
+  wheel_legged::GimbalTestProfile gimbal_test{wheel_legged::GimbalTestProfile::kNormal};
+  bool spin_hold{false};
+  float spin_dir{0.0f};
+  bool jump_trigger{false};
+};
+
+/**
+ * @brief TC 键鼠→模式解析结果
+ */
+struct TcModeResult {
+  wheel_legged::DomainRequest domain{wheel_legged::DomainRequest::kDisabled};
+  wheel_legged::LegProfile leg{wheel_legged::LegProfile::kLow};
+  wheel_legged::CombatProfile combat{wheel_legged::CombatProfile::kNormal};
+  bool spin_hold{false};
+  bool jump_trigger{false};
+};
+
+/**
  * @brief 单周期控制输入快照
  * @note  每个控制周期由 UpdateRawFeedbackAndInputSnapshot() 完整填充一次，
  *        后续所有模块从此结构体消费数据，不直接访问硬件。
@@ -110,17 +142,16 @@ struct TcSemanticState {
   bool v_high_leg_armed{true};      ///< V 键是否已就绪（上升沿检测）
   bool b_high_leg_armed{true};      ///< B 键是否已就绪（上升沿检测）
   bool f_slow_armed{true};          ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）
-  bool dr16_parallel{false};        ///< DR16 是否并行生效
   bool e_ui_refresh{false};         ///< E 键是否按下（UI 刷新控制）
   bool auto_aim_hold{false};        ///< 鼠标右键按住时自瞄模式（电平有效）
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
-  bool recovery_manual_mode{false};  ///< 倒地自启手动模式（Z 键长按切换）
-  bool z_recovery_armed{true};       ///< Z 键是否已就绪（长按防抖）
-  float z_hold_ms{0.0f};             ///< Z 键已按住时长 [ms]
   bool ad_enabled{false};            ///< AD 功能开关（Z 键短按切换，默认关闭）
   bool z_ad_armed{true};             ///< Z 键 AD 切换是否已就绪（上升沿检测）
+  bool dial_jump_armed{true};        ///< DR16 拨轮跳跃边沿检测
+  bool mouse_z_jump_armed{true};     ///< 鼠标滚轮跳跃边沿检测
+  wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用
 };
 
 /**
@@ -135,11 +166,12 @@ float NormalizeDr16Axis(int16_t axis, int16_t axis_max_abs);
  * @brief 综合 DR16 摇杆与图传键盘解析驾驶方向
  * @param dr16         DR16 原始输入
  * @param tc_remote    图传键鼠输入
- * @param dr16_parallel DR16 是否并行生效
+ * @param ramp         键盘速度斜坡状态（跨周期保持）
  * @return 归一化驾驶方向（forward, side）
- * @note  图传 WASD 优先于 DR16 摇杆；并行模式下键鼠无输入时降级到 DR16
+ * @note  图传 WASD 优先于 DR16 摇杆；键鼠无输入时若数据来自 DR16 回退则降级到摇杆
  */
-DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, bool dr16_parallel);
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
+                                  DriveInputRampState &ramp);
 
 /**
  * @brief 将 DR16 右拨杆映射为腿长档位
@@ -182,13 +214,16 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
 /**
  * @brief 从 InputSnapshot 构建底盘 FSM 输入
- * @param input           输入快照
- * @param tick_ms         当前系统 tick
- * @param chassis_output  上周期底盘控制输出（回灌腿长、摆角）
+ * @param input               输入快照
+ * @param tick_ms             当前系统 tick
+ * @param chassis_output      上周期底盘控制输出（回灌腿长、摆角）
+ * @param fall_start_ms       倒地开始时刻 [ms]（跨周期保持）
+ * @param was_posture_invalid 上一周期姿态是否异常（跨周期保持）
  * @return 底盘 FSM 输入
  */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output);
+                                         const chassis::Chassis::UpdateOutput &chassis_output,
+                                         uint32_t& fall_start_ms, bool& was_posture_invalid);
 
 /**
  * @brief 从 InputSnapshot 和底盘 FSM 输出构建云台 FSM 输入
