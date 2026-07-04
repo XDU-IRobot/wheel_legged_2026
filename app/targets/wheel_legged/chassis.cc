@@ -380,7 +380,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
 
-
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);
   if (is_jump_state) {
