@@ -277,9 +277,9 @@ class Gimbal {
       //                -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
       //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm =
-        std::clamp(-0.880538f*input.gimbal_imu_pitch_rad*input.gimbal_imu_pitch_rad*input.gimbal_imu_pitch_rad
-          -1.720819f*input.gimbal_imu_pitch_rad*input.gimbal_imu_pitch_rad
-          +0.827059f*input.gimbal_imu_pitch_rad + 2.490684f ,
+          std::clamp(-0.880538f * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad -
+                         1.720819f * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad +
+                         0.827059f * input.gimbal_imu_pitch_rad + 2.490684f,
                      -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       // output_.pitch_cmd_torque_nm =
