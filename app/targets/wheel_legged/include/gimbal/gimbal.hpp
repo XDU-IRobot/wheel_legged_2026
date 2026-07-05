@@ -116,8 +116,8 @@ class Gimbal {
       output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
       // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
-      // output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
-      output_.pitch_pos_rad = input.pitch_motor->pos();
+      output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
+      // output_.pitch_pos_rad = input.pitch_motor->pos();
       output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
 
       const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;

@@ -93,7 +93,7 @@ using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode
 constexpr float kDefaultDtS = 0.002f;      ///< 云台控制默认周期 [s]
 constexpr float kDmTorqueLimitNm = 10.0f;  ///< DM 电机力矩上限 [Nm]
 
-const DmMitSettings kPitchMotorSettings{0x11, 0x01, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
+const DmMitSettings kPitchMotorSettings{0x17, 0x07, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 }  // namespace gimbal
 
