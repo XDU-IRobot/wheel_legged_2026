@@ -86,8 +86,7 @@ float ResolveKeyboardAxis(uint16_t keys, uint16_t key_pos, uint16_t key_neg, flo
 
 /// 判断 combat_profile 是否为自瞄模式
 bool IsAutoAimProfile(const CombatProfile p) {
-  return p == CombatProfile::kAutoAimAmmo || p == CombatProfile::kAutoAimFuSmall ||
-         p == CombatProfile::kAutoAimFuBig;
+  return p == CombatProfile::kAutoAimAmmo || p == CombatProfile::kAutoAimFuSmall || p == CombatProfile::kAutoAimFuBig;
 }
 
 /// 将 aim_mode 映射为 CombatProfile
@@ -108,9 +107,8 @@ wheel_legged::CombatProfile ResolveAutoAimProfile(const TcSemanticState::AimMode
 // ═════════════════════════════════════════════════════════════════════════════
 
 void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_state,
-                            Dr16SemanticState &semantic_state,
-                            wheel_legged::StairTaskRequest &stair_task_request, bool &r_yaw_reset_edge,
-                            bool &r_flip_180_edge) {
+                            Dr16SemanticState &semantic_state, wheel_legged::StairTaskRequest &stair_task_request,
+                            bool &r_yaw_reset_edge, bool &r_flip_180_edge) {
   const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
 
   // C 键（无 Ctrl）：按 C → 中腿长；已在中腿长则回低腿长
@@ -191,7 +189,7 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   const bool r_pressed = (tc_remote.keyboard_value & kRcKeyR) != 0U;
   if (r_pressed && tc_state.r_flip_armed) {
     semantic_state.rc_target.yaw_rad = rm::modules::Wrap(semantic_state.rc_target.yaw_rad + params::active::kPi,
-                                                          -params::active::kPi, params::active::kPi);
+                                                         -params::active::kPi, params::active::kPi);
     r_flip_180_edge = true;
     tc_state.r_flip_armed = false;
   }
@@ -342,9 +340,9 @@ TcModeResult ResolveTcMode(const TcRemoteInput &tc_remote, TcSemanticState &tc_s
 // 子函数 4：云台 yaw/pitch 目标积分（原 ResolveInputSemantics:529-580）
 // ═════════════════════════════════════════════════════════════════════════════
 
-void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput &dr16,
-                           const TcRemoteInput &tc_remote, bool tc_remote_active, float gimbal_imu_yaw_rad,
-                           float gimbal_imu_pitch_rad, bool host_controls_gimbal) {
+void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
+                           bool tc_remote_active, float gimbal_imu_yaw_rad, float gimbal_imu_pitch_rad,
+                           bool host_controls_gimbal) {
   if (!semantic_state.gimbal_target_initialized) {
     semantic_state.rc_target.yaw_rad = gimbal_imu_yaw_rad;
     semantic_state.rc_target.pitch_rad = -gimbal_imu_pitch_rad;
@@ -359,8 +357,7 @@ void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput
       const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
       if (dr16_mouse_active) {
         yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta +=
-            static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
       } else {
         yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
         pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
@@ -389,8 +386,7 @@ void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput
 // 公开接口
 // ═════════════════════════════════════════════════════════════════════════════
 
-DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
-                                  DriveInputRampState &ramp) {
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, DriveInputRampState &ramp) {
   DriveInputNorm out{};
 
   // DR16 优先 > VT03 键鼠
@@ -444,7 +440,7 @@ wheel_legged::DomainRequest ResolveDomainRequest(const rm::device::DR16::SwitchP
 }
 
 void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, Dr16SemanticState &semantic_state,
-                            TcSemanticState &tc_state, InputSnapshot &input) {
+                           TcSemanticState &tc_state, InputSnapshot &input) {
   const bool tc_remote_active = tc_remote.valid && !tc_remote.tc_from_dr16;
   const bool has_any_input = dr16.online || tc_remote.valid;
 
@@ -524,9 +520,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.combat_profile = combat_profile;
 
   // 目标来源
-  request.target_source = is_auto_aim ? (request.host_target_valid ? wheel_legged::TargetSource::kHost
-                                                                    : wheel_legged::TargetSource::kRc)
-                                      : wheel_legged::TargetSource::kRc;
+  request.target_source =
+      is_auto_aim ? (request.host_target_valid ? wheel_legged::TargetSource::kHost : wheel_legged::TargetSource::kRc)
+                  : wheel_legged::TargetSource::kRc;
 
   // 自瞄切出时重置积分
   if (!is_auto_aim && semantic_state.last_auto_aim) {
@@ -553,7 +549,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 }
 
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
-                                        Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
+                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
   const bool previous_host_target_active =
       input.mode_request.target_source == wheel_legged::TargetSource::kHost && input.mode_request.host_target_valid;
 
@@ -647,8 +643,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
   const bool auto_aim_active = IsAutoAimProfile(input.mode_request.combat_profile);
   const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
-                                      g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
-                                      g.aimbot->aimbot_state() != 0;
+                                     g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
+                                     g.aimbot->aimbot_state() != 0;
   if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
     semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
     semantic_state.rc_target.pitch_rad = -g.gimbal_rx->pitch_rad();
@@ -671,8 +667,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 }
 
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
-                                          const chassis::Chassis::UpdateOutput &chassis_output,
-                                          uint32_t& fall_start_ms, bool& was_posture_invalid) {
+                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
+                                         bool &was_posture_invalid) {
   // 倒地检测：基于上周期底盘姿态（posture_valid 在 Chassis::Update 中计算，FSM 之前运行，因此用上一周期值）
 
   const bool fall_detected = !chassis_output.posture_valid;
@@ -716,7 +712,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
 }
 
 gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
-                                        const bool startup_align_complete) {
+                                       const bool startup_align_complete) {
   gimbal::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
   fsm_input.request = {
@@ -730,7 +726,7 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
       .host_target_valid = m.host_target_valid,
       .gimbal_test_profile = m.gimbal_test_profile,
       .chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                                  chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
+                                 chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
       .startup_align_complete = startup_align_complete,
   };
   return fsm_input;

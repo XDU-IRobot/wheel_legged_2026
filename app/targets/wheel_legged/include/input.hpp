@@ -170,8 +170,7 @@ float NormalizeDr16Axis(int16_t axis, int16_t axis_max_abs);
  * @return 归一化驾驶方向（forward, side）
  * @note  图传 WASD 优先于 DR16 摇杆；键鼠无输入时若数据来自 DR16 回退则降级到摇杆
  */
-DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
-                                  DriveInputRampState &ramp);
+DriveInputNorm ResolveDriveInput(const Dr16RawInput &dr16, const TcRemoteInput &tc_remote, DriveInputRampState &ramp);
 
 /**
  * @brief 将 DR16 右拨杆映射为腿长档位
@@ -222,8 +221,8 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
  * @return 底盘 FSM 输入
  */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output,
-                                         uint32_t& fall_start_ms, bool& was_posture_invalid);
+                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
+                                         bool &was_posture_invalid);
 
 /**
  * @brief 从 InputSnapshot 和底盘 FSM 输出构建云台 FSM 输入
