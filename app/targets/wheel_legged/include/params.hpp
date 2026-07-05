@@ -161,7 +161,7 @@ using namespace common::gimbal;
 
 constexpr float kPitchMinRad = -0.35f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.7f;    ///< 俯仰角上限 [rad]
-constexpr float kPitchGravityCompensationNm = 0.65f;
+constexpr float kPitchGravityCompensationNm = 2.35f;
 
 constexpr PidGains kYawPositionPid{27.0f, 0.0f, 0.0f, 1000.0f, 1.0f};    ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{1.1f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
@@ -448,7 +448,7 @@ constexpr float kTcMousePitchRateMaxRadS = 3.0f;    ///< 图传鼠标满偏时�
 constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
 constexpr float kDr16MouseYawRateMaxRadS = -6.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kDr16MousePitchRateMaxRadS = 3.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.f;          ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMinRad = -0.2f;          ///< RC 积分俯仰目标下限 [rad]
 constexpr float kPitchTargetMaxRad = 0.7f;          ///< RC 积分俯仰目标上限 [rad]
 constexpr float kKeyboardAccelRampStep = 0.004f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.008f;    ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）

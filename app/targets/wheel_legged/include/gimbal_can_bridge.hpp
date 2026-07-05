@@ -178,9 +178,9 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
 
   bool QueueSend() {
     tx_data_[0] = combat_mode_ ? 1 : 0;
-    for (rm::usize i = 1; i < kPayloadSize; ++i) {
-      tx_data_[i] = 0;
-    }
+    // for (rm::usize i = 1; i < kPayloadSize; ++i) {
+    //   tx_data_[i] = 0;
+    // }
     can_->Write(kTxStdId, tx_data_.data(), tx_data_.size());
     ReportStatus(kOk);
     return true;
