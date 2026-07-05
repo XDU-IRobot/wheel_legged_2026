@@ -212,7 +212,7 @@ struct SharedResources {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
     if (!booster_motor.has_value()) {
       booster_motor.emplace(*wheel_can, wheel_legged::params::active::shoot::kBoosterDmSettings, true);
-      shoot_controller.Init();
+      shoot_controller.Init(&*booster_motor);
     }
 #else
     if (!dial.has_value()) {

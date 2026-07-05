@@ -194,6 +194,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_right_dyn_support_n;      // 右腿动力学补偿
   uint8_t chassis_posture_valid;          // 姿态有效
   uint8_t chassis_off_ground;             // 离地
+  uint8_t chassis_standup_complete;       // 起立完成
+  uint8_t chassis_standup_phase;          // 起立阶段 (0=收腿, 1=摆角收敛, 2=完成)
   uint8_t dm_enabled_latched;             // DM 电机使能锁存
   uint8_t gimbal_motors_enabled_latched;  // 云台电机使能锁存
   uint8_t position_frozen_by_timeout;     // 位置锚定原因: 0=速度低于阈值, 1=超时强冻

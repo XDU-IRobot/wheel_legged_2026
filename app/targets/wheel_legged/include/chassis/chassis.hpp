@@ -29,9 +29,6 @@ class Chassis {
     bool run_chassis_update{false};                     ///< 是否执行底盘控制计算
     bool spin_enable{false};                            ///< 是否开启小陀螺
     bool keyboard_active{false};                        ///< 图传键鼠是否在线
-    bool recovery_manual_mode{false};                   ///< 倒地自启手动模式
-    rm::f32 manual_left_leg_speed{0.0f};                ///< 手动模式左腿摆角速度目标 [rad/s]
-    rm::f32 manual_right_leg_speed{0.0f};               ///< 手动模式右腿摆角速度目标 [rad/s]
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
   };
@@ -174,22 +171,20 @@ class Chassis {
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
   bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  bool prev_in_stair_task_{false};  ///< 上一周期是否在 kStairTask（hero hook 后起立复位用）
-#endif
-  uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
-  uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
-  bool force_low_leg_{false};               ///< 离地后腿长过短时强制低腿长
-  uint16_t force_low_leg_ticks_{0};         ///< 强制低腿长已持续时间
-  bool mid_leg_dip_active_{false};          ///< 中腿长下压激活中
-  bool mid_leg_dip_armed_{false};           ///< 中腿长下压待命（腿先低于阈值才可触发）
-  uint16_t mid_leg_dip_ticks_{0};           ///< 中腿长下压已持续时间
-  bool leg_was_high_{false};                ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
-  bool off_ground_kd_active_{false};        ///< 着地边沿后 Kd 增大锁存
-  uint16_t kd_active_ticks_{0};             ///< Kd 增大已持续时间
-  bool was_off_ground_{false};              ///< 上一周期离地状态（用于检测着地边沿）
-  float spring_compensation_scale_{1.0f};   ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
-  bool off_ground_200ms_reached_{false};    ///< 离地已持续 200ms（落地后触发强制低腿长）
+  bool trigger_standup_latched_{false};      ///< 台阶 step2 触发起立的防重锁
+  uint16_t standup_phase_stable_ticks_{0};   ///< 起立阶段切换所需的连续满足周期数
+  uint16_t off_ground_duration_ticks_{0};    ///< 离地持续时间（用于衰减气弹簧补偿）
+  bool force_low_leg_{false};                ///< 离地后腿长过短时强制低腿长
+  uint16_t force_low_leg_ticks_{0};          ///< 强制低腿长已持续时间
+  bool mid_leg_dip_active_{false};           ///< 中腿长下压激活中
+  bool mid_leg_dip_armed_{false};            ///< 中腿长下压待命（腿先低于阈值才可触发）
+  uint16_t mid_leg_dip_ticks_{0};            ///< 中腿长下压已持续时间
+  bool leg_was_high_{false};                 ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
+  bool off_ground_kd_active_{false};         ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};              ///< Kd 增大已持续时间
+  bool was_off_ground_{false};               ///< 上一周期离地状态（用于检测着地边沿）
+  float spring_compensation_scale_{1.0f};    ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
+  bool off_ground_200ms_reached_{false};     ///< 离地已持续 200ms（落地后触发强制低腿长）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};

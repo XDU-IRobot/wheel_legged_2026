@@ -171,6 +171,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_yaw_ddq_rad_s2 = gimbal_control_output.yaw_ddq;
   wl_debug.gimbal_pitch_ddq_rad_s2 = gimbal_control_output.pitch_ddq;
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
+  wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
+  wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
   wl_debug.input_domain_request = static_cast<uint8_t>(input.mode_request.domain_request);

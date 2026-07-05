@@ -80,11 +80,7 @@ const StairTaskCoordinator::Output &StairTaskCoordinator::Update(const Input &in
 
   switch (mode_) {
     case wheel_legged::StairTaskMode::kArmed:
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-      if (input.high_leg_ready && input.contact_detected) {
-#else
       if (contact_released_ && input.high_leg_ready && input.contact_detected) {
-#endif
         mode_ = wheel_legged::StairTaskMode::kExecuting;
         output_.start_sequence = true;
         contact_released_ = false;

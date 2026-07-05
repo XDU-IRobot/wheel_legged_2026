@@ -33,6 +33,7 @@ class StairClimbSequence {
     bool running{false};
     bool succeeded{false};
     bool aborted{false};
+    bool trigger_standup{false};
     uint32_t phase_elapsed_ms{0U};
     uint32_t stable_elapsed_ms{0U};
     float theta_ll_error_rad{0.0f};
@@ -56,6 +57,7 @@ class StairClimbSequence {
   uint32_t phase_enter_tick_ms_{0U};
   uint32_t stable_start_tick_ms_{0U};
   bool stable_active_{false};
+  float settle_theta_ramp_target_{0.0f};
   Output output_{};
 };
 
