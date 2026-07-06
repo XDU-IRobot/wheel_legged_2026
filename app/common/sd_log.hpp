@@ -49,30 +49,30 @@ class SdLogger {
   };
 
   struct Config {
-    uint32_t decimation = 10;          ///< 降采样因子（Hz =循环频率/decimation）
-    uint32_t max_records = 0;          ///< 最大记录数（0 = 根据容量和时长自动计算）
-    uint32_t max_duration_s = 300;     ///< 时长限制秒数（仅 max_records==0 时生效）
-    uint32_t base_lba = 2048;          ///< 起始 LBA，header 写在此地址
-    SdSpi* sd = nullptr;              ///< SD 卡驱动指针（外部初始化好的 SdSpi 实例）
+    uint32_t decimation = 10;       ///< 降采样因子（Hz =循环频率/decimation）
+    uint32_t max_records = 0;       ///< 最大记录数（0 = 根据容量和时长自动计算）
+    uint32_t max_duration_s = 300;  ///< 时长限制秒数（仅 max_records==0 时生效）
+    uint32_t base_lba = 2048;       ///< 起始 LBA，header 写在此地址
+    SdSpi* sd = nullptr;            ///< SD 卡驱动指针（外部初始化好的 SdSpi 实例）
   };
 
   struct Stats {
-    uint32_t records_buffered;   ///< ring buffer 中待刷写的记录数
-    uint32_t sectors_written;    ///< 累计写入 SD 的扇区数
-    uint32_t write_errors;       ///< WriteBlock 失败次数
-    uint32_t ring_overruns;      ///< ring buffer 满导致丢弃的记录数
+    uint32_t records_buffered;  ///< ring buffer 中待刷写的记录数
+    uint32_t sectors_written;   ///< 累计写入 SD 的扇区数
+    uint32_t write_errors;      ///< WriteBlock 失败次数
+    uint32_t ring_overruns;     ///< ring buffer 满导致丢弃的记录数
   };
 
   // ── 常量 ──────────────────────────────────────────────────
 
-  static constexpr uint32_t kMagic = 0x53444C47;    // "SDLG"
+  static constexpr uint32_t kMagic = 0x53444C47;  // "SDLG"
   static constexpr uint16_t kVersion = 0x0001;
-  static constexpr uint32_t kMaxFields = 26;          // 受 header 480 字节限制
+  static constexpr uint32_t kMaxFields = 26;  // 受 header 480 字节限制
   static constexpr uint32_t kMaxNameLen = 15;
   static constexpr uint32_t kSectorSize = 512;
-  static constexpr uint32_t kRingSectors = 4;         // ring buffer = 4 × 512 = 2048 字节
+  static constexpr uint32_t kRingSectors = 4;  // ring buffer = 4 × 512 = 2048 字节
   static constexpr uint32_t kRingSize = kRingSectors * kSectorSize;
-  static constexpr uint32_t kFieldDescSize = 18;      // 单个字段描述符大小
+  static constexpr uint32_t kFieldDescSize = 18;  // 单个字段描述符大小
 
   // ── 生命周期 ──────────────────────────────────────────────
 
@@ -130,14 +130,14 @@ class SdLogger {
   /// @param decimation       降采样因子
   /// @param max_duration_s   最大时长（秒）
   /// @param sd_block_count   SD 卡总块数
-  static uint32_t CalculateMaxRecords(uint32_t record_size, uint32_t decimation,
-                                      uint32_t max_duration_s, uint32_t sd_block_count);
+  static uint32_t CalculateMaxRecords(uint32_t record_size, uint32_t decimation, uint32_t max_duration_s,
+                                      uint32_t sd_block_count);
 
  private:
   // ── 内部字段描述符 ────────────────────────────────────────
 
   struct FieldDesc {
-    char name[16]{};          // 15 字符 + null
+    char name[16]{};  // 15 字符 + null
     FieldType type{FieldType::kFloat32};
     uint8_t reserved{};
     const void* ptr{nullptr};  // 指向外部变量的指针
@@ -166,19 +166,19 @@ class SdLogger {
   // ── 字段注册 ──────────────────────────────────────────────
   FieldDesc fields_[kMaxFields]{};
   uint16_t num_fields_{0};
-  uint32_t record_size_{0};    // = 4 + num_fields * 4
+  uint32_t record_size_{0};  // = 4 + num_fields * 4
 
   // ── 计数 ──────────────────────────────────────────────────
   uint32_t recorded_count_{0};
   uint32_t tick_counter_{0};
   uint32_t current_data_lba_{0};
-  uint32_t flushed_records_{0};    // 已安全写入 SD 的记录数（用于断电恢复）
+  uint32_t flushed_records_{0};  // 已安全写入 SD 的记录数（用于断电恢复）
 
   // ── Ring Buffer（4 × 512 = 2048 字节） ────────────────────
   uint8_t ring_[kRingSize]{};
-  uint32_t ring_head_{0};       // 写游标（字节偏移）
-  uint32_t ring_tail_{0};       // 刷游标（字节偏移）
-  bool sector_ready_{false};    // ring_head_ 跨过扇区边界标志
+  uint32_t ring_head_{0};     // 写游标（字节偏移）
+  uint32_t ring_tail_{0};     // 刷游标（字节偏移）
+  bool sector_ready_{false};  // ring_head_ 跨过扇区边界标志
 
   // ── 刷写暂存 ──────────────────────────────────────────────
   uint8_t flush_buf_[kSectorSize]{};

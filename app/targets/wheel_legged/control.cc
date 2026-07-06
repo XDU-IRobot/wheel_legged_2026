@@ -1443,11 +1443,11 @@ void ControlLoop() {
   // ── SD Logger 测试：自增变量 + 开机 1s 后自动开始记录 ──
   sdlog_test_val_a += 0.01f;
 
-const bool start_flag =  now_ms >= 1000;
+  const bool start_flag = now_ms >= 1000;
 
   if (globals->sd_logger.has_value()) {
     static bool sdlog_auto_started = false;
-    if (!sdlog_auto_started &&start_flag) {
+    if (!sdlog_auto_started && start_flag) {
       sdlog_auto_started = true;
       globals->sd_logger->Start();
     }

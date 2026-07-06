@@ -10,8 +10,7 @@
 namespace {
 
 /// @brief 向 ring buffer 写入 len 字节，自动处理首尾回绕
-void RingWriteBytes(uint8_t* ring, uint32_t ring_size, uint32_t& head, const uint8_t* data,
-                    uint32_t len) {
+void RingWriteBytes(uint8_t* ring, uint32_t ring_size, uint32_t& head, const uint8_t* data, uint32_t len) {
   uint32_t first = ring_size - head;
   if (len <= first) {
     std::memcpy(&ring[head], data, len);
@@ -79,8 +78,7 @@ bool SdLogger::Start() {
   // 若 max_records == 0，根据容量和时长自动计算
   if (config_.max_records == 0) {
     uint32_t sd_blocks = config_.sd->GetBlockCount();
-    config_.max_records =
-        CalculateMaxRecords(record_size_, config_.decimation, config_.max_duration_s, sd_blocks);
+    config_.max_records = CalculateMaxRecords(record_size_, config_.decimation, config_.max_duration_s, sd_blocks);
     if (config_.max_records == 0) return false;  // SD 卡太小或参数无效
   }
 
@@ -251,7 +249,7 @@ bool SdLogger::ProcessWrite() {
   if (used >= kSectorSize) {
     flushed_records_ += kSectorSize / record_size_;  // 完整扇区
   } else {
-    flushed_records_ += used / record_size_;          // 尾部部分扇区
+    flushed_records_ += used / record_size_;  // 尾部部分扇区
   }
 
   // 每次刷写后更新 header 中的 total_records，保证断电时数据可恢复
@@ -269,8 +267,8 @@ bool SdLogger::ProcessWrite() {
 // 查询 / 计算
 // ═══════════════════════════════════════════════════════════════════════════
 
-uint32_t SdLogger::CalculateMaxRecords(uint32_t record_size, uint32_t decimation,
-                                       uint32_t max_duration_s, uint32_t sd_block_count) {
+uint32_t SdLogger::CalculateMaxRecords(uint32_t record_size, uint32_t decimation, uint32_t max_duration_s,
+                                       uint32_t sd_block_count) {
   if (record_size == 0 || decimation == 0) return 0;
 
   // 按空间计算

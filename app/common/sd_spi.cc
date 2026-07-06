@@ -19,13 +19,9 @@ SdSpi::SdSpi(SPI_HandleTypeDef &hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin, ui
 // CS 片选控制
 // ═══════════════════════════════════════════════════════════════
 
-void SdSpi::CsLow() {
-  HAL_GPIO_WritePin(cs_port_, cs_pin_, GPIO_PIN_RESET);
-}
+void SdSpi::CsLow() { HAL_GPIO_WritePin(cs_port_, cs_pin_, GPIO_PIN_RESET); }
 
-void SdSpi::CsHigh() {
-  HAL_GPIO_WritePin(cs_port_, cs_pin_, GPIO_PIN_SET);
-}
+void SdSpi::CsHigh() { HAL_GPIO_WritePin(cs_port_, cs_pin_, GPIO_PIN_SET); }
 
 // ═══════════════════════════════════════════════════════════════
 // SPI 底层封装
@@ -37,9 +33,7 @@ uint8_t SdSpi::SpiTxRx(uint8_t data) {
   return rx;
 }
 
-void SdSpi::SpiTx(const uint8_t *data, uint32_t size) {
-  spi_.Write(data, size);
-}
+void SdSpi::SpiTx(const uint8_t *data, uint32_t size) { spi_.Write(data, size); }
 
 void SdSpi::SpiRx(uint8_t *dst, uint32_t size) {
   // 使用全双工发送 0xFF 确保 MOSI 在读取期间保持高电平，
@@ -79,7 +73,7 @@ void SdSpi::SpiDummy(uint32_t count) {
  */
 uint8_t SdSpi::SendCmd(uint8_t cmd, uint32_t arg) {
   uint8_t tx[6];
-  tx[0] = 0x40 | cmd;            // 命令码 + 起始位
+  tx[0] = 0x40 | cmd;  // 命令码 + 起始位
   tx[1] = static_cast<uint8_t>(arg >> 24);
   tx[2] = static_cast<uint8_t>(arg >> 16);
   tx[3] = static_cast<uint8_t>(arg >> 8);
@@ -109,9 +103,7 @@ uint8_t SdSpi::SendCmd(uint8_t cmd, uint32_t arg) {
 /**
  * @brief 发送 CMD8（SEND_IF_COND），检测电压和 SDHC
  */
-uint8_t SdSpi::SendCmd8(uint32_t arg) {
-  return SendCmd(kCmd8, arg);
-}
+uint8_t SdSpi::SendCmd8(uint32_t arg) { return SendCmd(kCmd8, arg); }
 
 /**
  * @brief 发送 ACMD41（APP_CMD + SD_SEND_OP_COND）
@@ -228,17 +220,15 @@ SdSpi::Error SdSpi::Init() {
   uint8_t csd_ver = (csd[0] >> 6) & 0x03;  // CSD_STRUCTURE
   if (csd_ver == 0) {
     // CSD V1.0 (SDSC)
-    uint32_t c_size = ((static_cast<uint32_t>(csd[6]) & 0x03) << 10) |
-                      (static_cast<uint32_t>(csd[7]) << 2) |
+    uint32_t c_size = ((static_cast<uint32_t>(csd[6]) & 0x03) << 10) | (static_cast<uint32_t>(csd[7]) << 2) |
                       ((static_cast<uint32_t>(csd[8]) >> 6) & 0x03);
-    uint32_t c_size_mult = ((static_cast<uint32_t>(csd[9]) & 0x03) << 1) |
-                            ((static_cast<uint32_t>(csd[10]) >> 7) & 0x01);
+    uint32_t c_size_mult =
+        ((static_cast<uint32_t>(csd[9]) & 0x03) << 1) | ((static_cast<uint32_t>(csd[10]) >> 7) & 0x01);
     uint32_t read_bl_len = csd[5] & 0x0F;
     block_count_ = (c_size + 1) << (c_size_mult + read_bl_len - 7);
   } else if (csd_ver == 1) {
     // CSD V2.0 (SDHC/SDXC)
-    uint32_t c_size = (static_cast<uint32_t>(csd[7]) & 0x3F) << 16 |
-                      (static_cast<uint32_t>(csd[8]) << 8) |
+    uint32_t c_size = (static_cast<uint32_t>(csd[7]) & 0x3F) << 16 | (static_cast<uint32_t>(csd[8]) << 8) |
                       static_cast<uint32_t>(csd[9]);
     block_count_ = (c_size + 1) << 10;  // 每块 512 字节
   } else {

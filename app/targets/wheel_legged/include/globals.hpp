@@ -66,8 +66,8 @@ struct SharedResources {
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
   std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
   std::optional<rm::device::DypA22> dyp_right{};     ///< DYP 右超声波 (UART9)
-  std::optional<SdSpi> sd_card{};                   ///< SD 卡 (SPI1 + PE15 CS)
-  std::optional<SdLogger> sd_logger{};              ///< SD 卡日志记录器
+  std::optional<SdSpi> sd_card{};                    ///< SD 卡 (SPI1 + PE15 CS)
+  std::optional<SdLogger> sd_logger{};               ///< SD 卡日志记录器
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -239,7 +239,6 @@ struct SharedResources {
     shoot.Init();
 #endif
 
-
     if (!sd_card.has_value()) {
       sd_card.emplace(hspi1, MCP_CS_GPIO_Port, MCP_CS_Pin);
 
@@ -279,8 +278,8 @@ struct SharedResources {
         // ── SD Logger 测试配置：100Hz / 60s / 开机 1s 后 auto-start ──
         {
           SdLogger::Config log_cfg;
-          log_cfg.decimation = 5;       // 500Hz / 5 = 100Hz
-          log_cfg.max_records = 0;      // auto-calc
+          log_cfg.decimation = 5;        // 500Hz / 5 = 100Hz
+          log_cfg.max_records = 0;       // auto-calc
           log_cfg.max_duration_s = 120;  // 120 秒
           log_cfg.base_lba = 2048;
           log_cfg.sd = &*sd_card;

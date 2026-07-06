@@ -24,14 +24,14 @@ class SdSpi {
  public:
   /// @brief 错误码
   enum class Error : uint8_t {
-    kNone = 0,          ///< 成功
-    kTimeout,           ///< 超时
-    kInitFailed,        ///< 初始化失败（未检测到 SD 卡或 CMD0/CMD8/ACMD41 失败）
-    kWriteFailed,       ///< 写入失败
-    kReadFailed,        ///< 读取失败
-    kAddrOutOfRange,    ///< 地址超出范围
-    kCrcError,          ///< CRC 校验错误
-    kNotInitialized,    ///< 未初始化
+    kNone = 0,        ///< 成功
+    kTimeout,         ///< 超时
+    kInitFailed,      ///< 初始化失败（未检测到 SD 卡或 CMD0/CMD8/ACMD41 失败）
+    kWriteFailed,     ///< 写入失败
+    kReadFailed,      ///< 读取失败
+    kAddrOutOfRange,  ///< 地址超出范围
+    kCrcError,        ///< CRC 校验错误
+    kNotInitialized,  ///< 未初始化
   };
 
   /// @brief SD 卡类型
@@ -138,25 +138,25 @@ class SdSpi {
   uint32_t block_count_{0};
 
   // ── 常量 ──
-  static constexpr uint8_t kCmd0 = 0x00;        ///< GO_IDLE_STATE
-  static constexpr uint8_t kCmd1 = 0x01;        ///< SEND_OP_COND (MMC)
-  static constexpr uint8_t kCmd8 = 0x08;        ///< SEND_IF_COND
-  static constexpr uint8_t kCmd9 = 0x09;        ///< SEND_CSD
-  static constexpr uint8_t kCmd10 = 0x0A;       ///< SEND_CID
-  static constexpr uint8_t kCmd12 = 0x0C;       ///< STOP_TRANSMISSION
-  static constexpr uint8_t kCmd16 = 0x10;       ///< SET_BLOCKLEN
-  static constexpr uint8_t kCmd17 = 0x11;       ///< READ_SINGLE_BLOCK
-  static constexpr uint8_t kCmd18 = 0x12;       ///< READ_MULTIPLE_BLOCK
-  static constexpr uint8_t kCmd24 = 0x18;       ///< WRITE_BLOCK
-  static constexpr uint8_t kCmd25 = 0x19;       ///< WRITE_MULTIPLE_BLOCK
-  static constexpr uint8_t kCmd41 = 0x29;       ///< SD_SEND_OP_COND (ACMD41 prefix)
-  static constexpr uint8_t kCmd55 = 0x37;       ///< APP_CMD
-  static constexpr uint8_t kCmd58 = 0x3A;       ///< READ_OCR
+  static constexpr uint8_t kCmd0 = 0x00;   ///< GO_IDLE_STATE
+  static constexpr uint8_t kCmd1 = 0x01;   ///< SEND_OP_COND (MMC)
+  static constexpr uint8_t kCmd8 = 0x08;   ///< SEND_IF_COND
+  static constexpr uint8_t kCmd9 = 0x09;   ///< SEND_CSD
+  static constexpr uint8_t kCmd10 = 0x0A;  ///< SEND_CID
+  static constexpr uint8_t kCmd12 = 0x0C;  ///< STOP_TRANSMISSION
+  static constexpr uint8_t kCmd16 = 0x10;  ///< SET_BLOCKLEN
+  static constexpr uint8_t kCmd17 = 0x11;  ///< READ_SINGLE_BLOCK
+  static constexpr uint8_t kCmd18 = 0x12;  ///< READ_MULTIPLE_BLOCK
+  static constexpr uint8_t kCmd24 = 0x18;  ///< WRITE_BLOCK
+  static constexpr uint8_t kCmd25 = 0x19;  ///< WRITE_MULTIPLE_BLOCK
+  static constexpr uint8_t kCmd41 = 0x29;  ///< SD_SEND_OP_COND (ACMD41 prefix)
+  static constexpr uint8_t kCmd55 = 0x37;  ///< APP_CMD
+  static constexpr uint8_t kCmd58 = 0x3A;  ///< READ_OCR
 
-  static constexpr uint8_t kR1Idle = 0x01;      ///< R1: IDLE 状态
-  static constexpr uint8_t kR1Ready = 0x00;      ///< R1: 就绪
-  static constexpr uint8_t kDataToken = 0xFE;    ///< 数据起始令牌
-  static constexpr uint8_t kDataAccept = 0x05;   ///< 写入数据被接受
-  static constexpr uint8_t kDataRejectCrc = 0x0B;///< 写入数据因 CRC 被拒绝
-  static constexpr uint8_t kDataRejectWrite = 0x0D;///< 写入数据被拒绝
+  static constexpr uint8_t kR1Idle = 0x01;           ///< R1: IDLE 状态
+  static constexpr uint8_t kR1Ready = 0x00;          ///< R1: 就绪
+  static constexpr uint8_t kDataToken = 0xFE;        ///< 数据起始令牌
+  static constexpr uint8_t kDataAccept = 0x05;       ///< 写入数据被接受
+  static constexpr uint8_t kDataRejectCrc = 0x0B;    ///< 写入数据因 CRC 被拒绝
+  static constexpr uint8_t kDataRejectWrite = 0x0D;  ///< 写入数据被拒绝
 };
