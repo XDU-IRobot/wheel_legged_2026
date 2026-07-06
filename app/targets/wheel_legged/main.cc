@@ -35,6 +35,10 @@ void AppMain() {
   (void)mainloop.Start();
 
   for (;;) {
+    // SD Logger: 后台刷写一个扇区到 SD 卡
+    if (globals->sd_logger.has_value()) {
+      globals->sd_logger->ProcessWrite();
+    }
     if (globals->joint_can.has_value()) {
       (void)globals->joint_can->Process();
     }

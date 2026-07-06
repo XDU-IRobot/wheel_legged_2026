@@ -5,7 +5,7 @@
 #include "fdcan.h"
 #include "stm32h7xx_it.h"
 #include "usart.h"
-
+#include "spi.h"
 #include <librm.hpp>
 
 #include "params.hpp"
@@ -23,6 +23,8 @@
 #include "gimbal/gimbal.hpp"
 #include "gimbal/gimbal_ident.hpp"
 #include "librm/device/remote/dr16.hpp"
+#include "common/sd_spi.hpp"
+#include "common/sd_log.hpp"
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
 #include "gimbal/shoot_3fric.hpp"
 #else
@@ -64,6 +66,8 @@ struct SharedResources {
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
   std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
   std::optional<rm::device::DypA22> dyp_right{};     ///< DYP 右超声波 (UART9)
+  std::optional<SdSpi> sd_card{};                   ///< SD 卡 (SPI1 + PE15 CS)
+  std::optional<SdLogger> sd_logger{};              ///< SD 卡日志记录器
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -234,6 +238,61 @@ struct SharedResources {
 #if WHEEL_LEGGED_ROBOT_VARIANT != 1
     shoot.Init();
 #endif
+
+
+    if (!sd_card.has_value()) {
+      sd_card.emplace(hspi1, MCP_CS_GPIO_Port, MCP_CS_Pin);
+
+      // ── 修复 SPI1 配置以适应外接 SD 卡模块 ──
+      // 1. 启用 KeepIOState：HAL 调用间引脚不浮空，SD 卡不会误判总线错误
+      // 2. 关闭 NSSPulse：软件 CS 模式下脉冲会干扰时序
+      const uint32_t saved_br = hspi1.Init.BaudRatePrescaler;
+      const uint32_t saved_keepio = hspi1.Init.MasterKeepIOState;
+      const uint32_t saved_nsspulse = hspi1.Init.NSSPMode;
+
+      hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;  // ~390kHz, SD 初始化要求 ≤400kHz
+      hspi1.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
+      hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+      HAL_SPI_Init(&hspi1);
+
+      // 3. MISO (PB4) 启用内部上拉，防止无卡或卡不驱动时浮空
+      GPIO_InitTypeDef miso_cfg = {};
+      miso_cfg.Pin = GPIO_PIN_4;
+      miso_cfg.Mode = GPIO_MODE_AF_PP;
+      miso_cfg.Pull = GPIO_PULLUP;
+      miso_cfg.Speed = GPIO_SPEED_FREQ_LOW;
+      miso_cfg.Alternate = GPIO_AF5_SPI1;
+      HAL_GPIO_Init(GPIOB, &miso_cfg);
+
+      if (sd_card->Init() != SdSpi::Error::kNone) {
+        // SD 卡初始化失败：卡不在位或硬件问题，静默降级
+        hspi1.Init.BaudRatePrescaler = saved_br;
+        hspi1.Init.MasterKeepIOState = saved_keepio;
+        hspi1.Init.NSSPMode = saved_nsspulse;
+        HAL_SPI_Init(&hspi1);
+        sd_card.reset();
+      } else {
+        // 初始化完成，恢复高速分频（保持 KeepIOState 和 NSSPulse 修复）
+        hspi1.Init.BaudRatePrescaler = saved_br;
+        HAL_SPI_Init(&hspi1);
+
+        // ── SD Logger 测试配置：100Hz / 60s / 开机 1s 后 auto-start ──
+        {
+          SdLogger::Config log_cfg;
+          log_cfg.decimation = 5;       // 500Hz / 5 = 100Hz
+          log_cfg.max_records = 0;      // auto-calc
+          log_cfg.max_duration_s = 120;  // 120 秒
+          log_cfg.base_lba = 2048;
+          log_cfg.sd = &*sd_card;
+
+          sd_logger.emplace();
+          sd_logger->Configure(log_cfg);
+
+          extern float sdlog_test_val_a;
+          sd_logger->RegisterField("test_val_a", SdLogger::FieldType::kFloat32, &sdlog_test_val_a);
+        }
+      }
+    }
   }
 };
 

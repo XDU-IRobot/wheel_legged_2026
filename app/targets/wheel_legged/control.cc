@@ -18,6 +18,9 @@
 bool init_flag;
 uint32_t times = 0;
 
+// SD Logger 测试：自增浮点变量（每控制周期 +0.01f）
+float sdlog_test_val_a = 0.0f;
+
 namespace {
 float LookupThetaBiasSingle(float leg_length, const float table[][2]) {
   constexpr int N = 50;
@@ -1436,6 +1439,20 @@ void ControlLoop() {
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output,
                       stair_task_output, stair_sequence_output);
+
+  // ── SD Logger 测试：自增变量 + 开机 1s 后自动开始记录 ──
+  sdlog_test_val_a += 0.01f;
+
+const bool start_flag =  now_ms >= 1000;
+
+  if (globals->sd_logger.has_value()) {
+    static bool sdlog_auto_started = false;
+    if (!sdlog_auto_started &&start_flag) {
+      sdlog_auto_started = true;
+      globals->sd_logger->Start();
+    }
+    globals->sd_logger->Tick(now_ms);
+  }
 
   if (!init_flag) {
     static_UI_add();
