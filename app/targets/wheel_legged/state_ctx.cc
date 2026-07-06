@@ -115,24 +115,21 @@ bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad
   return yaw_err_rad <= kYawFollowDriveReadyErrorRad && std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
 }
 
-SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
+SdotRampParams ResolveSdotRampParams(const fsm::ChassisState mode) {
   switch (mode) {
-    case chassis::Fsm::State::kLowLeg:
+    case fsm::ChassisState::kNormal:
       return kSdotRampLowLeg;
-    case chassis::Fsm::State::kHighLeg:
-    case chassis::Fsm::State::kStairTask:
+    case fsm::ChassisState::kUpstairs:
       return kSdotRampHighLeg;
-    case chassis::Fsm::State::kMidLeg:
-    case chassis::Fsm::State::kJumpPrep:
-    case chassis::Fsm::State::kJumpPush:
-    case chassis::Fsm::State::kJumpRecover:
+    case fsm::ChassisState::kFly:
+    case fsm::ChassisState::kJump:
     default:
       return kSdotRampMidLeg;
   }
 }
 
-SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode, const bool mid_leg_f) {
-  if (mode == chassis::Fsm::State::kMidLeg && mid_leg_f) {
+SdotRampParams ResolveSdotRampParams(const fsm::ChassisState mode, const bool mid_leg_f) {
+  if (mode == fsm::ChassisState::kFly && mid_leg_f) {
     return kSdotRampMidLegF;
   }
   return ResolveSdotRampParams(mode);

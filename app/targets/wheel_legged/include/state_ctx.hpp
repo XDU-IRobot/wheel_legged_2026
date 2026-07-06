@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "chassis/fsm.hpp"
+#include "../fsm/chassis/chassis_types.hpp"
 #include "params.hpp"
 #include "librm/modules/pid.hpp"
 
@@ -49,7 +49,10 @@ struct ChassisStateContext {
   bool position_frozen_by_timeout{false};  ///< true=超时强冻, false=速度低于阈值正常冻结
 
   // ── 偏航跟随 ──
-  chassis::Fsm::State last_chassis_mode{chassis::Fsm::State::kDisabled};  ///< 上一周期底盘模式
+  fsm::ChassisState last_chassis_mode{fsm::ChassisState::kDisable};  ///< 上一周期底盘模式
+  fsm::SpinPhase last_spin_phase{fsm::SpinPhase::kRunning};          ///< 上一周期小陀螺阶段
+  fsm::JumpPhase last_jump_phase{fsm::JumpPhase::kPrepare};          ///< 上一周期跳跃阶段
+  fsm::FallPhase last_fall_phase{fsm::FallPhase::kConfirm};          ///< 上一周期恢复阶段
 
   // ── 云台启动归中 ──
   bool gimbal_startup_align_complete{false};       ///< 归中是否完成
@@ -149,8 +152,7 @@ bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_
  * @param mode 底盘模式
  * @return 对应该模式的 SdotRampParams
  */
-SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode);
-SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f);
-SdotRampParams ResolveSdotRampParams(chassis::Fsm::State mode, bool mid_leg_f);
+SdotRampParams ResolveSdotRampParams(fsm::ChassisState mode);
+SdotRampParams ResolveSdotRampParams(fsm::ChassisState mode, bool mid_leg_f);
 
 }  // namespace wheel_legged::control_loop

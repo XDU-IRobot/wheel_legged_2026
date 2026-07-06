@@ -93,9 +93,13 @@ rm::f32 ComputeRightSpringTorque(const rm::f32 leg_length_m) {
 /**
  * @brief 是否处于强制安全零输出模式
  */
-bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kDisabled; }
+bool IsSafeStopMode(const wheel_legged::fsm::ChassisState mode) {
+  return mode == wheel_legged::fsm::ChassisState::kDisable;
+}
 
-bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kStandby; }
+bool IsStandbyMode(const wheel_legged::fsm::ChassisState mode) {
+  return mode == wheel_legged::fsm::ChassisState::kStandby;
+}
 
 constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecoveryDecelZoneRad;
 constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
@@ -295,7 +299,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.pitch_roll_valid_theta_invalid = pitch_roll_valid && !theta_valid;
 
   // 进入 kDisabled 时复位起立状态，重新上电后重走起立
-  if (input.fsm_mode == Fsm::State::kDisabled) {
+  if (input.fsm_mode == wheel_legged::fsm::ChassisState::kDisable) {
     standup_complete_ = false;
     standup_phase_ = 0;
     standup_theta_target_ = 0.0f;
@@ -340,8 +344,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     return;
   }
 
-  const bool is_recovery_state =
-      (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight);
+  const bool is_recovery_state = input.fsm_mode == wheel_legged::fsm::ChassisState::kFall;
 
   // 恢复→正常过渡
   if (prev_fsm_was_recovery_ && !is_recovery_state) {
@@ -399,8 +402,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
 
-  const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
-                              input.fsm_mode == Fsm::State::kJumpRecover);
+  const bool is_jump_state = input.fsm_mode == wheel_legged::fsm::ChassisState::kJump;
   if (is_jump_state) {
     // 跳跃阶段直接使用 FSM 设定的各阶段目标腿长，不走斜坡
     params_.leg_target_length_m = input.motion_target.leg_length_m;
@@ -445,7 +447,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   // 中腿长下压：腿长达到阈值后收腿到目标，维持一段时间再恢复
   // 键盘控制时离地后永久锁定低腿长（不自动过期），直到切换模式
-  const bool is_mid_leg = (input.fsm_mode == Fsm::State::kMidLeg);
+  const bool is_mid_leg = input.fsm_mode == wheel_legged::fsm::ChassisState::kFly;
   if (is_mid_leg) {
     if (!mid_leg_dip_active_) {
       // 上升沿触发：腿必须先在阈值以下（armed），再超过阈值才触发下压
@@ -534,7 +536,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // 着地后腿长 PID D 项输入放大
-  if (input.fsm_mode == Fsm::State::kSpin) {
+  if (input.fsm_mode == wheel_legged::fsm::ChassisState::kSpin ||
+      input.fsm_mode == wheel_legged::fsm::ChassisState::kSpecialSpin) {
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
                                2);
@@ -552,7 +555,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   }
 #else
   // 着地后腿长 PID D 项输入放大
-  if (input.fsm_mode == Fsm::State::kSpin) {
+  if (input.fsm_mode == wheel_legged::fsm::ChassisState::kSpin ||
+      input.fsm_mode == wheel_legged::fsm::ChassisState::kSpecialSpin) {
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
                                2);
@@ -598,9 +602,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                                -state_output.current.theta_lr_dot, 2);
   }
 
-  const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
-  const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
-  const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
+  const bool use_jump_retract1 = input.fsm_mode == wheel_legged::fsm::ChassisState::kJump &&
+                                 input.jump_phase == wheel_legged::fsm::JumpPhase::kPrepare;
+  const bool use_jump_extend = input.fsm_mode == wheel_legged::fsm::ChassisState::kJump &&
+                               input.jump_phase == wheel_legged::fsm::JumpPhase::kPush;
+  const bool use_jump_retract2 = input.fsm_mode == wheel_legged::fsm::ChassisState::kJump &&
+                                 input.jump_phase == wheel_legged::fsm::JumpPhase::kRecover;
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
   // 台阶序列摆角 PID
@@ -677,7 +684,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     }
 
     const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&
-                                            input.fsm_mode == Fsm::State::kMidLeg &&
+                                            input.fsm_mode == wheel_legged::fsm::ChassisState::kFly &&
                                             (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;

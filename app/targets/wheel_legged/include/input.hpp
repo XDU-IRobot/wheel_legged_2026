@@ -6,9 +6,9 @@
 
 #include "chassis/chassis.hpp"
 #include "chassis/state.hpp"
-#include "chassis/fsm.hpp"
+#include "../fsm/chassis/chassis_fsm.hpp"
 #include "fsm_common.hpp"
-#include "gimbal/fsm.hpp"
+#include "../fsm/gimbal/gimbal_fsm.hpp"
 
 struct SharedResources;
 
@@ -220,9 +220,9 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
  * @param was_posture_invalid 上一周期姿态是否异常（跨周期保持）
  * @return 底盘 FSM 输入
  */
-chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
-                                         bool &was_posture_invalid);
+fsm::ChassisFsmRequest BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
+                                            const chassis::Chassis::UpdateOutput &chassis_output,
+                                            uint32_t &fall_start_ms, bool &was_posture_invalid);
 
 /**
  * @brief 从 InputSnapshot 和底盘 FSM 输出构建云台 FSM 输入
@@ -231,7 +231,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t ti
  * @param startup_align_complete 云台启动归中是否完成
  * @return 云台 FSM 输入
  */
-gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
-                                       bool startup_align_complete);
+fsm::GimbalFsmRequest BuildGimbalFsmInput(const InputSnapshot &input, const fsm::ChassisFsmOutput &chassis_output,
+                                          bool startup_align_complete, uint32_t tick_ms);
 
 }  // namespace wheel_legged::control_loop

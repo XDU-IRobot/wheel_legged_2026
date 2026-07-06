@@ -8,15 +8,16 @@
 #include "common/device/vl53l4cd.hpp"
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
-                         const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
+                         const wheel_legged::fsm::ChassisFsmOutput &chassis_output,
+                         const wheel_legged::fsm::GimbalFsmOutput &gimbal_output,
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
                          const chassis::StairClimbSequence::Output &stair_sequence_output) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
-  wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
-  wl_debug.gimbal_fsm_state = static_cast<uint8_t>(gimbal_output.mode);
+  wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.state);
+  wl_debug.gimbal_fsm_state = static_cast<uint8_t>(gimbal_output.state);
   wl_debug.chassis_fsm_state_changed = static_cast<uint8_t>(chassis_output.state_changed);
   wl_debug.gimbal_fsm_state_changed = static_cast<uint8_t>(gimbal_output.state_changed);
 

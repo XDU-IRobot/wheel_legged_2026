@@ -12,14 +12,14 @@
 #include "globals_no_dtcm.hpp"
 
 #include "chassis/chassis.hpp"
-#include "chassis/fsm.hpp"
+#include "../fsm/chassis/chassis_fsm.hpp"
 #include "gimbal_can_bridge.hpp"
 #include "utils/dyp_a22.hpp"
 #include "utils/aimbot_can.hpp"
 #include "librm/device/supercap/gk_supercap.hpp"
 #include "librm/device/referee/referee.hpp"
 #include "../ui/referee_user.hpp"
-#include "gimbal/fsm.hpp"
+#include "../fsm/gimbal/gimbal_fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "gimbal/gimbal_ident.hpp"
 #include "librm/device/remote/dr16.hpp"
@@ -59,7 +59,7 @@ struct SharedResources {
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<ChassisToGimbalTxBridge> chassis_tx{};        ///< 底盘→云台 CAN 桥（combat标志）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
-  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口
   std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
   std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
@@ -76,11 +76,11 @@ struct SharedResources {
   Shoot shoot{};                            ///< 发射机构状态机
 #endif
 
-  chassis::Fsm chassis_fsm{};          ///< 底盘状态机
-  chassis::Chassis chassis{};          ///< 底盘控制器
-  gimbal::Fsm gimbal_fsm{};            ///< 云台状态机
-  gimbal::Gimbal gimbal{};             ///< 云台控制器
-  gimbal::GimbalIdent gimbal_ident{};  ///< 云台辨识/前馈验证控制器
+  wheel_legged::fsm::ChassisFsm chassis_fsm{};  ///< ETL 底盘状态机
+  chassis::Chassis chassis{};                   ///< 底盘控制器
+  wheel_legged::fsm::GimbalFsm gimbal_fsm{};    ///< ETL 云台状态机
+  gimbal::Gimbal gimbal{};                      ///< 云台控制器
+  gimbal::GimbalIdent gimbal_ident{};           ///< 云台辨识/前馈验证控制器
 
   bool ui_refresh_key{false};  ///< E 键按下时 UI 刷新使能（由 input 语义折叠设置）
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "state.hpp"
-#include "fsm.hpp"
+#include "../../fsm/chassis/chassis_types.hpp"
 #include "lqr.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
@@ -22,9 +22,10 @@ class Chassis {
    * @brief 单次控制更新输入
    */
   struct UpdateInput {
-    ChassisStateEstimatorInput estimator_input{};       ///< 传感器反馈
-    wbr::ExpectedState expected{};                      ///< 期望状态
-    Fsm::State fsm_mode{Fsm::State::kDisabled};         ///< 当前状态机模式
+    ChassisStateEstimatorInput estimator_input{};                                         ///< 传感器反馈
+    wbr::ExpectedState expected{};                                                        ///< 期望状态
+    wheel_legged::fsm::ChassisState fsm_mode{wheel_legged::fsm::ChassisState::kDisable};  ///< 当前状态机模式
+    wheel_legged::fsm::JumpPhase jump_phase{wheel_legged::fsm::JumpPhase::kPrepare};      ///< 跳跃内部阶段
     bool enable_output{false};                          ///< 是否允许输出电机命令
     bool run_chassis_update{false};                     ///< 是否执行底盘控制计算
     bool spin_enable{false};                            ///< 是否开启小陀螺

@@ -23,6 +23,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t gimbal_fsm_state;           // 云台状态机当前状态
   uint8_t chassis_fsm_state_changed;  // 底盘状态机本周期是否切换
   uint8_t gimbal_fsm_state_changed;   // 云台状态机本周期是否切换
+  uint8_t chassis_etl_state;          // 新 ETL 底盘顶层状态
+  uint8_t chassis_etl_spin_phase;     // ETL Spin 内部阶段
+  uint8_t chassis_etl_jump_phase;     // ETL Jump 内部阶段
+  uint8_t chassis_etl_fall_phase;     // ETL Fall 内部阶段
+  uint8_t chassis_etl_reason;         // ETL 底盘本周期迁移原因
+  uint8_t gimbal_etl_state;           // 新 ETL 云台顶层状态
+  uint8_t gimbal_etl_reason;          // ETL 云台本周期迁移原因
 
   // ── 遥控器原始输入 ──
   uint8_t dr16_online;        // DR16 在线
@@ -374,7 +381,8 @@ extern DebugSnapshot wl_debug;
  * @param gimbal_control_output  云台控制器输出
  */
 void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
-                         const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
+                         const wheel_legged::fsm::ChassisFsmOutput &chassis_output,
+                         const wheel_legged::fsm::GimbalFsmOutput &gimbal_output,
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,

@@ -393,56 +393,57 @@ void ControlLoop() {
 
   auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output, fall_start_ms, was_posture_invalid);
   if (stair_task_output.request_high_leg) {
-    chassis_input.request.leg_request = wheel_legged::LegProfile::kHigh;
+    chassis_input.requested_state = wheel_legged::fsm::ChassisState::kUpstairs;
   }
   if (stair_task_output.force_low_leg) {
-    chassis_input.request.leg_request = wheel_legged::LegProfile::kLow;
+    chassis_input.requested_state = wheel_legged::fsm::ChassisState::kNormal;
   }
-  chassis_input.request.stair_task_active = stair_task_output.task_active;
-  chassis_input.request.stair_step2 = stair_task_output.completed_attempts > 0U;
-  chassis_input.request.stair_task_recovery_required = stair_task_output.recovery_required;
+  chassis_input.upstairs_active = stair_task_output.task_active;
+  chassis_input.upstairs_mode = stair_task_output.completed_attempts > 0U ? wheel_legged::fsm::UpstairsMode::kDouble
+                                                                          : wheel_legged::fsm::UpstairsMode::kSingle;
+  chassis_input.upstairs_finished = stair_task_output.mode == wheel_legged::StairTaskMode::kSucceeded;
+  chassis_input.upstairs_aborted = stair_task_output.mode == wheel_legged::StairTaskMode::kAborted;
+  chassis_input.upstairs_recovery_required = stair_task_output.recovery_required;
   {
     const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-    chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
+    chassis_input.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
   if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk &&
       globals->referee->data().robot_status.power_management_chassis_output == 0) {
-    chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+    chassis_input.requested_state = wheel_legged::fsm::ChassisState::kDisable;
   }
   // 只有 Q 键 / Ctrl+Q 或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
   {
     static uint8_t prev_domain_state = 0U;
     const bool q_just_pressed = (prev_domain_state == 0U && tc_state.domain_state != 0U);
     const bool dr16_drives_domain = input.dr16.online;
-    if (globals->chassis_fsm.mode() == chassis::Fsm::State::kDisabled &&
-        chassis_input.request.domain_request != wheel_legged::DomainRequest::kDisabled && !q_just_pressed &&
+    if (globals->chassis_fsm.state() == wheel_legged::fsm::ChassisState::kDisable &&
+        chassis_input.requested_state != wheel_legged::fsm::ChassisState::kDisable && !q_just_pressed &&
         !dr16_drives_domain) {
-      chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+      chassis_input.requested_state = wheel_legged::fsm::ChassisState::kDisable;
     }
     prev_domain_state = tc_state.domain_state;
   }
-  const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+  const wheel_legged::fsm::ChassisFsmOutput chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
-    static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
-    const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                              chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
-    const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
-                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
+    static wheel_legged::fsm::ChassisState prev_chassis_mode_for_recovery = wheel_legged::fsm::ChassisState::kDisable;
+    const bool is_recovery = chassis_output.state == wheel_legged::fsm::ChassisState::kFall;
+    const bool was_recovery = prev_chassis_mode_for_recovery == wheel_legged::fsm::ChassisState::kFall;
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
       tc_state.stair_descend_hold = false;
     }
-    prev_chassis_mode_for_recovery = chassis_output.mode;
+    prev_chassis_mode_for_recovery = chassis_output.state;
   }
 
-  gimbal::Fsm::Input gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete);
-  gimbal_input.request.yaw_centering_for_recovery = chassis_control_output.pitch_roll_valid_theta_invalid;
-  const gimbal::Fsm::Output gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
-  const bool gimbal_startup_align_active = gimbal_output.mode == gimbal::Fsm::State::kStartupAlign;
+  auto gimbal_input = BuildGimbalFsmInput(input, chassis_output, ctx.gimbal_startup_align_complete, now_ms);
+  gimbal_input.yaw_centering_required = chassis_control_output.pitch_roll_valid_theta_invalid;
+  const wheel_legged::fsm::GimbalFsmOutput gimbal_output = globals->gimbal_fsm.Update(gimbal_input);
+  const bool gimbal_startup_align_active = gimbal_output.state == wheel_legged::fsm::GimbalState::kStartupAlign;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 3：云台启动归中初始化
@@ -460,24 +461,27 @@ void ControlLoop() {
   gimbal::Gimbal::UpdateInput gimbal_update_input{};
   gimbal_update_input.yaw_motor = globals->yaw_motor.has_value() ? &(*globals->yaw_motor) : nullptr;
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
-  gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
+  gimbal_update_input.gimbal_enable = gimbal_output.gimbal_enable;
 
   // 底盘姿态异常时强制关闭云台输出（恢复归中阶段除外）
   const bool chassis_posture_invalid = !chassis_control_output.posture_valid;
-  const bool recovery_yaw_centering_active = gimbal_output.mode == gimbal::Fsm::State::kRecoveryYawCentering;
+  const bool recovery_yaw_centering_active =
+      gimbal_output.state == wheel_legged::fsm::GimbalState::kRecoveryYawCentering;
   if (chassis_posture_invalid && !recovery_yaw_centering_active) {
     gimbal_update_input.gimbal_enable = false;
   }
 
-  gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
-  gimbal_update_input.target = gimbal_output.control.gimbal_target;
+  gimbal_update_input.align_to_chassis_forward = gimbal_output.align_to_chassis_forward;
+  gimbal_update_input.target = gimbal_output.target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
-  gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+  gimbal_update_input.aimbot_mode = gimbal_output.active_target_source == wheel_legged::TargetSource::kHost;
   gimbal_update_input.aimbot_is_rune =
-      (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
-       chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
-  const bool chassis_spin_mode = chassis_output.mode == chassis::Fsm::State::kSpin;
-  const bool chassis_spin_exit_pending = chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+      (input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+       input.mode_request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+  const bool chassis_spin_mode = chassis_output.state == wheel_legged::fsm::ChassisState::kSpin &&
+                                 chassis_output.spin_phase == wheel_legged::fsm::SpinPhase::kRunning;
+  const bool chassis_spin_exit_pending = chassis_output.state == wheel_legged::fsm::ChassisState::kSpin &&
+                                         chassis_output.spin_phase == wheel_legged::fsm::SpinPhase::kExitPending;
   gimbal_update_input.spin_hold = chassis_spin_mode || chassis_spin_exit_pending;
   if (gimbal_update_input.aimbot_mode && globals->aimbot.has_value()) {
     constexpr float kDegToRad = ns::kPi / 180.0f;
@@ -527,7 +531,7 @@ void ControlLoop() {
   gimbal_update_input.gimbal_imu_gyro_x_rad_s = -input.gimbal_imu_gyro_x_rad_s;
   gimbal_update_input.dt_s = kControlLoopDtS;
   gimbal_update_input.ident = &globals->gimbal_ident;
-  gimbal_update_input.test_profile = gimbal_output.control.gimbal_test_profile;
+  gimbal_update_input.test_profile = gimbal_output.test_profile;
   globals->gimbal.Update(gimbal_update_input);
   gimbal_control_output = globals->gimbal.GetOutput();
   g_actuators.ApplyGimbalOutput(*globals, gimbal_control_output);
@@ -568,11 +572,10 @@ void ControlLoop() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
-    const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+    const bool shooter_enter = gimbal_output.state == wheel_legged::fsm::GimbalState::kAimbot;
     const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
-    const bool fire_flag =
-        manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                        (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
+    const bool fire_flag = manual_fire || (gimbal_output.active_target_source == wheel_legged::TargetSource::kHost &&
+                                           (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
     globals->shoot_controller.Update(shooter_enter, fire_flag, true,
                                      globals->referee->data().robot_status.shooter_barrel_heat_limit -
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
@@ -582,7 +585,7 @@ void ControlLoop() {
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
   {
-    const bool in_combat = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+    const bool in_combat = gimbal_output.state == wheel_legged::fsm::GimbalState::kAimbot;
     if (in_combat && !globals->shoot.enabled()) {
       globals->shoot.Enable();
     } else if (!in_combat && globals->shoot.enabled()) {
@@ -602,9 +605,8 @@ void ControlLoop() {
     const float dial_rpm = globals->dial.has_value() ? -static_cast<float>(globals->dial->rpm()) : 0.0f;
     const bool manual_fire =
         input.dr16.dial < wheel_legged::params::active::shoot::kDialFireThreshold || input.tc_remote.left_button;
-    const bool fire_flag =
-        manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
-                        globals->aimbot->aimbot_state() >> 1 & 1);
+    const bool fire_flag = manual_fire || (gimbal_output.active_target_source == wheel_legged::TargetSource::kHost &&
+                                           globals->aimbot->aimbot_state() >> 1 & 1);
 
     wl_debug.shoot_manual_fire = manual_fire ? 1U : 0U;
 
@@ -651,7 +653,7 @@ void ControlLoop() {
   if (globals->chassis_tx.has_value()) {
     static uint32_t chassis_tx_counter = 0;
     if (chassis_tx_counter % 5 == 0) {
-      const bool combat_mode = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+      const bool combat_mode = gimbal_output.state == wheel_legged::fsm::GimbalState::kAimbot;
       globals->chassis_tx->SetCombatMode(combat_mode);
       globals->chassis_tx->QueueSend();
     }
@@ -661,7 +663,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 6：云台启动归中判稳
   // ═══════════════════════════════════════════════════════════════════════
-  if (!gimbal_output.control.gimbal_enable || chassis_posture_invalid) {
+  if (!gimbal_output.gimbal_enable || chassis_posture_invalid) {
     ctx.gimbal_startup_align_complete = false;
     ctx.gimbal_startup_align_was_active = false;
     ctx.gimbal_startup_align_stable_ticks = 0U;
@@ -677,7 +679,7 @@ void ControlLoop() {
     if (ctx.gimbal_startup_align_stable_ticks >= kGimbalStartupYawAlignStableTicks) {
       ctx.gimbal_startup_align_complete = true;
       // 归中完成后，将 RC 积分目标对齐到当前云台惯导角（消除归中过程的目标漂移）
-      if (gimbal_input.request.target_source == wheel_legged::TargetSource::kRc) {
+      if (gimbal_input.preferred_target_source == wheel_legged::TargetSource::kRc) {
         dr16_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
       }
     }
@@ -688,10 +690,10 @@ void ControlLoop() {
   }
 
   // ── 底盘输出使能条件 ──
-  const bool chassis_startup_ready = !gimbal_output.control.gimbal_enable || !gimbal_startup_align_active;
+  const bool chassis_startup_ready = !gimbal_output.gimbal_enable || !gimbal_startup_align_active;
   const bool chassis_output_enable = chassis_posture_invalid
-                                         ? chassis_output.control.enable_dm
-                                         : chassis_output.control.enable_dm && chassis_startup_ready;
+                                         ? chassis_output.chassis_motor_enable
+                                         : chassis_output.chassis_motor_enable && chassis_startup_ready;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 7：底盘控制
@@ -699,12 +701,14 @@ void ControlLoop() {
 
   // ── 7a. 底盘控制器输入组装 ──
   chassis::Chassis::UpdateInput chassis_update_input{};
-  chassis_update_input.fsm_mode = chassis_output.mode;
+  chassis_update_input.fsm_mode = chassis_output.state;
+  chassis_update_input.jump_phase = chassis_output.jump_phase;
   chassis_update_input.enable_output = chassis_output_enable;
-  chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
-  chassis_update_input.spin_enable = chassis_output.control.spin_enable;
-  chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
-  if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
+  chassis_update_input.run_chassis_update = chassis_output.run_controller;
+  chassis_update_input.spin_enable = chassis_output.state == wheel_legged::fsm::ChassisState::kSpin ||
+                                     chassis_output.state == wheel_legged::fsm::ChassisState::kSpecialSpin;
+  chassis_update_input.motion_target.leg_length_m = chassis_output.target_leg_length_m;
+  if (stair_sequence_output.controls_motion && chassis_output.state == wheel_legged::fsm::ChassisState::kUpstairs) {
     chassis_update_input.motion_target = stair_sequence_output.target;
   }
   chassis_update_input.keyboard_active = input.tc_remote.valid && !input.tc_remote.tc_from_dr16;
@@ -714,22 +718,25 @@ void ControlLoop() {
 
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;
-  const bool mode_changed = (chassis_output.mode != ctx.last_chassis_mode);
-  const auto is_spin_like = [](chassis::Fsm::State s) {
-    return s == chassis::Fsm::State::kSpin || s == chassis::Fsm::State::kSpinExitPending;
+  const bool phase_changed = chassis_output.spin_phase != ctx.last_spin_phase ||
+                             chassis_output.jump_phase != ctx.last_jump_phase ||
+                             chassis_output.fall_phase != ctx.last_fall_phase;
+  const bool mode_changed = chassis_output.state != ctx.last_chassis_mode || phase_changed;
+  const auto is_spin_like = [](const wheel_legged::fsm::ChassisState state) {
+    return state == wheel_legged::fsm::ChassisState::kSpin || state == wheel_legged::fsm::ChassisState::kSpecialSpin;
   };
   const bool last_was_spin = is_spin_like(ctx.last_chassis_mode);
-  const bool now_is_spin = is_spin_like(chassis_output.mode);
-  const bool now_is_spin_running = chassis_output.mode == chassis::Fsm::State::kSpin;
-  const bool now_is_spin_exit_pending = chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
-  const bool now_is_standby = chassis_output.mode == chassis::Fsm::State::kStandby;
+  const bool now_is_spin = is_spin_like(chassis_output.state);
+  const bool now_is_spin_running = now_is_spin && chassis_output.spin_phase == wheel_legged::fsm::SpinPhase::kRunning;
+  const bool now_is_spin_exit_pending =
+      now_is_spin && chassis_output.spin_phase == wheel_legged::fsm::SpinPhase::kExitPending;
+  const bool now_is_standby = chassis_output.state == wheel_legged::fsm::ChassisState::kStandby;
   const bool cross_spin = (last_was_spin != now_is_spin);
   if (mode_changed) {
-    const auto previous_mode = ctx.last_chassis_mode;
     ctx.ResetOnModeChange(current_state.s, current_state.s_dot);
     if (cross_spin) {
       if (!now_is_spin) {
-        if (previous_mode == chassis::Fsm::State::kSpinExitPending) {
+        if (ctx.last_spin_phase == wheel_legged::fsm::SpinPhase::kExitPending) {
           ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
           ctx.spin_exit_recovery = true;
           ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
@@ -740,12 +747,16 @@ void ControlLoop() {
         ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
         ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
       }
-    } else if (previous_mode == chassis::Fsm::State::kSpin && now_is_spin_exit_pending) {
+    } else if (last_was_spin && ctx.last_spin_phase == wheel_legged::fsm::SpinPhase::kRunning &&
+               now_is_spin_exit_pending) {
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       ctx.spin_exit_recovery = true;
       ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     }
-    ctx.last_chassis_mode = chassis_output.mode;
+    ctx.last_chassis_mode = chassis_output.state;
+    ctx.last_spin_phase = chassis_output.spin_phase;
+    ctx.last_jump_phase = chassis_output.jump_phase;
+    ctx.last_fall_phase = chassis_output.fall_phase;
   }
 
   // ── 7c. 驾驶输入解析 ──
@@ -754,8 +765,7 @@ void ControlLoop() {
   const bool has_drive_input = dr16_online || tc_remote_active;
 
   // AD 屏蔽：AD 关闭时清除键盘 A/D 键位（小陀螺模式或 Z 键开启时不屏蔽）
-  if (!tc_state.ad_enabled && chassis_output.mode != chassis::Fsm::State::kSpin &&
-      chassis_output.mode != chassis::Fsm::State::kSpinExitPending) {
+  if (!tc_state.ad_enabled && !now_is_spin) {
     input.dr16.keyboard &= ~0x000Cu;
     input.tc_remote.keyboard_value &= ~0x000Cu;
   }
@@ -769,7 +779,7 @@ void ControlLoop() {
 
   // ── 7d. 偏航跟随模式选择（非自旋模式专用，自旋期间侧向指令由 7h 全向投影独立处理）──
   YawFollowAlignMode requested_yaw_follow_align_mode = ctx.yaw_follow_align_mode;
-  if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if (!has_drive_input || chassis_input.requested_state == wheel_legged::fsm::ChassisState::kDisable) {
     requested_yaw_follow_align_mode = YawFollowAlignMode::kForward;
   } else if (now_is_spin_running || now_is_spin_exit_pending) {
     // 自旋期间冻结 yaw follow 模式，不处理方向性输入
@@ -783,7 +793,7 @@ void ControlLoop() {
 
   // ── 7e. 偏航目标更新 ──
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
-  if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if (!has_drive_input || chassis_input.requested_state == wheel_legged::fsm::ChassisState::kDisable) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
@@ -826,17 +836,14 @@ void ControlLoop() {
 
   // ── 7f. 纵向速度目标计算 ──
   const float yaw_follow_drive_sign = YawFollowDriveSign(ctx.yaw_follow_align_mode, ctx.yaw_follow_target.drive_sign);
-  const bool spin_control_enabled = chassis_output.mode == chassis::Fsm::State::kSpin && chassis_output_enable &&
-                                    chassis_output.control.run_chassis_update;
-  const bool jump_control_enabled =
-      (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
-       chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
-      chassis_output_enable && chassis_output.control.run_chassis_update;
+  const bool spin_control_enabled = now_is_spin_running && chassis_output_enable && chassis_output.run_controller;
+  const bool jump_control_enabled = chassis_output.state == wheel_legged::fsm::ChassisState::kJump &&
+                                    chassis_output_enable && chassis_output.run_controller;
 
   // ── 7g. 偏航就绪判稳 ──
-  const bool yaw_follow_control_enabled = chassis_output.mode != chassis::Fsm::State::kDisabled && !now_is_standby &&
-                                          chassis_output_enable && chassis_output.control.run_chassis_update &&
-                                          gimbal_output.control.gimbal_enable;
+  const bool yaw_follow_control_enabled = chassis_output.state != wheel_legged::fsm::ChassisState::kDisable &&
+                                          !now_is_standby && chassis_output_enable && chassis_output.run_controller &&
+                                          gimbal_output.gimbal_enable;
   if (!spin_control_enabled && !ctx.yaw_follow_drive_ready) {
     const bool yaw_motor_ready = globals->yaw_motor.has_value();
     const float yaw_motor_vel_rad_s = yaw_motor_ready ? globals->yaw_motor->vel() : 0.0f;
@@ -860,19 +867,17 @@ void ControlLoop() {
   const bool has_supercap = (sc_err & kScFatalMask) == 0;
   const float default_speed_max = has_supercap ? kTargetForwardSpeedMaxMps : kTargetForwardSpeedMaxNoScMps;
   const float forward_speed_base =
-      (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
-          ? kTargetForwardSpeedMaxHighLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
+      (chassis_output.state == wheel_legged::fsm::ChassisState::kUpstairs) ? kTargetForwardSpeedMaxHighLegMps
+      : (chassis_output.state == wheel_legged::fsm::ChassisState::kFly && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
           : default_speed_max;
   const float forward_speed_bias =
-      (chassis_output.mode == chassis::Fsm::State::kLowLeg) ? kTargetSpeedBiasLowLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
+      (chassis_output.state == wheel_legged::fsm::ChassisState::kNormal) ? kTargetSpeedBiasLowLegMps
+      : (chassis_output.state == wheel_legged::fsm::ChassisState::kFly && input.mode_request.mid_leg_f)
           ? kTargetSpeedBiasMidLegFMps
-      : (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kTargetSpeedBiasMidLegMps
-      : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
-          ? kTargetSpeedBiasHighLegMps
-          : 0.0f;
+      : (chassis_output.state == wheel_legged::fsm::ChassisState::kFly)      ? kTargetSpeedBiasMidLegMps
+      : (chassis_output.state == wheel_legged::fsm::ChassisState::kUpstairs) ? kTargetSpeedBiasHighLegMps
+                                                                             : 0.0f;
   float forward_max_speed = forward_speed_base;
   // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
   const float motor_error =
@@ -938,8 +943,9 @@ void ControlLoop() {
   //   2. 已锚定 → 保持冻结（跳过后续判断）
   //   3. 斜坡归零但车速超阈值 → 递增超时计数器，超时强冻，否则继续跟随
   //   4. 斜坡归零 且 车速低于阈值 → 正常冻结锚点
-  const bool can_hold_position = chassis_output_enable && chassis_output.mode != chassis::Fsm::State::kDisabled &&
-                                 !now_is_standby && chassis_output.mode != chassis::Fsm::State::kSpin;
+  const bool can_hold_position = chassis_output_enable &&
+                                 chassis_output.state != wheel_legged::fsm::ChassisState::kDisable && !now_is_standby &&
+                                 !now_is_spin;
   const bool driver_command_active = forward_input_active || side_input_active;
   if (!can_hold_position || driver_command_active || ctx.filtered_s_dot != 0.0f) {
     ctx.position_hold_timeout_ticks = 0U;
@@ -967,7 +973,7 @@ void ControlLoop() {
   if (spin_control_enabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
-    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
+    const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.state, input.mode_request.mid_leg_f);
     // 大转向限速解除后，用缓加速斜坡逐步恢复速度
     float accel_scale = 1.0f;
     if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
@@ -1019,7 +1025,8 @@ void ControlLoop() {
     chassis_update_input.expected.theta_ll = kJumpThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kJumpThetaLrBiasRad;
     chassis_update_input.expected.theta_b = 0.0f;
-  } else if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
+  } else if (stair_sequence_output.controls_motion &&
+             chassis_output.state == wheel_legged::fsm::ChassisState::kUpstairs) {
     chassis_update_input.expected.theta_ll = stair_sequence_output.target.theta_ll_rad;
     chassis_update_input.expected.theta_lr = stair_sequence_output.target.theta_lr_rad;
     chassis_update_input.expected.theta_b = stair_sequence_output.target.theta_b_rad;
@@ -1030,7 +1037,7 @@ void ControlLoop() {
     chassis_update_input.expected.theta_lr = LookupThetaBiasSingle(l_r, wheel_legged::params::generated::kThetaBiasLr);
   }
   if (!spin_control_enabled &&
-      !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
+      !(stair_sequence_output.controls_motion && chassis_output.state == wheel_legged::fsm::ChassisState::kUpstairs)) {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
     chassis_update_input.expected.theta_b =
         kExpectedThetaBBiasRad + wheel_legged::params::hero::control_loop::kExpectedThetaBSpeedK * ctx.filtered_s_dot;
@@ -1119,7 +1126,7 @@ void ControlLoop() {
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
-  if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
+  if (chassis_output.state == wheel_legged::fsm::ChassisState::kDisable) {
     g_actuators.ResetDmMotorsLatch();
   }
   g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
@@ -1147,7 +1154,7 @@ void ControlLoop() {
     const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
-    switch (chassis_input.request.combat_profile) {
+    switch (input.mode_request.combat_profile) {
       case wheel_legged::CombatProfile::kAutoAimAmmo:
         aimbot_mode = 1;
         break;
@@ -1308,17 +1315,15 @@ void ControlLoop() {
         (ctx.yaw_follow_align_mode == YawFollowAlignMode::kForward && ctx.yaw_follow_target.drive_sign < 0.0f) ||
         (ctx.yaw_follow_align_mode == YawFollowAlignMode::kSidePositive);
 
-    ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
+    ui_snapshot.chassis_fsm_state = static_cast<uint8_t>(chassis_output.state);
     ui_snapshot.domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
     ui_snapshot.combat_profile = static_cast<uint8_t>(input.mode_request.combat_profile);
     ui_snapshot.aim_mode = static_cast<uint8_t>(tc_state.aim_mode);
     ui_snapshot.auto_aim_hold = tc_state.auto_aim_hold;
-    ui_snapshot.standby = chassis_output.mode == chassis::Fsm::State::kStandby;
-    ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
-                              chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.standby = chassis_output.state == wheel_legged::fsm::ChassisState::kStandby;
+    ui_snapshot.spin_active = now_is_spin;
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
-    ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
-                            chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.ad_active = tc_state.ad_enabled || now_is_spin;
     ui_snapshot.yaw_display_offset_rad = -ns::control_loop::kYawFollowFixedTargetRad;
 
     ui_snapshot.supercap_cap_energy =
@@ -1436,6 +1441,15 @@ void ControlLoop() {
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output,
                       stair_task_output, stair_sequence_output);
+  {
+    wl_debug.chassis_etl_state = static_cast<uint8_t>(chassis_output.state);
+    wl_debug.chassis_etl_spin_phase = static_cast<uint8_t>(chassis_output.spin_phase);
+    wl_debug.chassis_etl_jump_phase = static_cast<uint8_t>(chassis_output.jump_phase);
+    wl_debug.chassis_etl_fall_phase = static_cast<uint8_t>(chassis_output.fall_phase);
+    wl_debug.chassis_etl_reason = static_cast<uint8_t>(chassis_output.transition_reason);
+    wl_debug.gimbal_etl_state = static_cast<uint8_t>(gimbal_output.state);
+    wl_debug.gimbal_etl_reason = static_cast<uint8_t>(gimbal_output.transition_reason);
+  }
 
   if (!init_flag) {
     static_UI_add();

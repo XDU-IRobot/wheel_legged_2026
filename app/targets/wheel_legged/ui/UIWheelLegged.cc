@@ -218,13 +218,12 @@ void UIWheelLeggedLegBox_add() {
   UIFigure1 fig;
   u16 rec_x_start = 735, rec_x_end = 785;
   {
-    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
-      case chassis::Fsm::State::kMidLeg:
+    switch (static_cast<wheel_legged::fsm::ChassisState>(ui_snapshot.chassis_fsm_state)) {
+      case wheel_legged::fsm::ChassisState::kFly:
         rec_x_start = 785;
         rec_x_end = 845;
         break;
-      case chassis::Fsm::State::kHighLeg:
-      case chassis::Fsm::State::kStairTask:
+      case wheel_legged::fsm::ChassisState::kUpstairs:
         rec_x_start = 850;
         rec_x_end = 910;
         break;
@@ -242,13 +241,12 @@ void UIWheelLeggedLegBox_edit() {
   UIFigure1 fig;
   u16 rec_x_start = 735, rec_x_end = 785;
   {
-    switch (static_cast<chassis::Fsm::State>(ui_snapshot.chassis_fsm_state)) {
-      case chassis::Fsm::State::kMidLeg:
+    switch (static_cast<wheel_legged::fsm::ChassisState>(ui_snapshot.chassis_fsm_state)) {
+      case wheel_legged::fsm::ChassisState::kFly:
         rec_x_start = 785;
         rec_x_end = 845;
         break;
-      case chassis::Fsm::State::kHighLeg:
-      case chassis::Fsm::State::kStairTask:
+      case wheel_legged::fsm::ChassisState::kUpstairs:
         rec_x_start = 850;
         rec_x_end = 910;
         break;
@@ -551,7 +549,7 @@ void UIWheelLeggedStateIndicator_add() {
   };
 
   const bool disabled = ui_snapshot.domain_request == static_cast<u8>(wheel_legged::DomainRequest::kDisabled) ||
-                        ui_snapshot.chassis_fsm_state == static_cast<u8>(chassis::Fsm::State::kDisabled);
+                        ui_snapshot.chassis_fsm_state == static_cast<u8>(wheel_legged::fsm::ChassisState::kDisable);
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {
@@ -618,7 +616,7 @@ void UIWheelLeggedStateIndicator_edit() {
   };
 
   const bool disabled = ui_snapshot.domain_request == static_cast<u8>(wheel_legged::DomainRequest::kDisabled) ||
-                        ui_snapshot.chassis_fsm_state == static_cast<u8>(chassis::Fsm::State::kDisabled);
+                        ui_snapshot.chassis_fsm_state == static_cast<u8>(wheel_legged::fsm::ChassisState::kDisable);
   const bool enabled = !disabled && !ui_snapshot.standby;
 
   if (disabled) {

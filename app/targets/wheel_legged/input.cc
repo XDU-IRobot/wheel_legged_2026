@@ -666,9 +666,9 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   input.gimbal_imu_gyro_x_rad_s = gimbal_rx_valid ? g.gimbal_rx->gyro_x_rad_s() : 0.0f;
 }
 
-chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
-                                         bool &was_posture_invalid) {
+fsm::ChassisFsmRequest BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
+                                            const chassis::Chassis::UpdateOutput &chassis_output,
+                                            uint32_t &fall_start_ms, bool &was_posture_invalid) {
   // 倒地检测：基于上周期底盘姿态（posture_valid 在 Chassis::Update 中计算，FSM 之前运行，因此用上一周期值）
 
   const bool fall_detected = !chassis_output.posture_valid;
@@ -685,51 +685,61 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   }
   was_posture_invalid = fall_detected;
 
-  chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
-  fsm_input.request = {
-      .stair_descend_active = m.stair_descend_active,
-      .theta_b_rad = chassis_output.current_state.theta_b,
-      .input_valid = m.input_valid,
-      .domain_request = m.domain_request,
-      .leg_request = m.leg_request,
-      .combat_profile = m.combat_profile,
-      .standby = m.standby,
-      .spin_hold = m.spin_hold,
-      .spin_dir = m.spin_dir,
-      .jump_trigger = m.jump_trigger,
-      .current_leg_length_m = chassis_output.mean_leg_length_m,
-      .theta_ll_rad = chassis_output.current_state.theta_ll,
-      .theta_lr_rad = chassis_output.current_state.theta_lr,
-      .fall_detected = fall_detected,
-      .fall_detected_hold_ms = fall_detected_hold_ms,
-      .upright_stable = upright_stable,
-      .tick_ms = tick_ms,
-  };
-  fsm_input.request.current_s_dot = chassis_output.current_state.s_dot;
-  fsm_input.request.stair_step2 = m.stair_step2;
-  return fsm_input;
+  fsm::ChassisState requested_state = fsm::ChassisState::kNormal;
+  if (!m.input_valid || m.domain_request == DomainRequest::kDisabled) {
+    requested_state = fsm::ChassisState::kDisable;
+  } else if (m.standby) {
+    requested_state = fsm::ChassisState::kStandby;
+  } else if (m.leg_request == LegProfile::kHigh) {
+    requested_state = fsm::ChassisState::kUpstairs;
+  } else if (m.leg_request == LegProfile::kMid) {
+    requested_state = fsm::ChassisState::kFly;
+  }
+
+  fsm::ChassisFsmRequest request{};
+  request.input_valid = m.input_valid;
+  request.requested_state = requested_state;
+  request.spin_hold = m.spin_hold;
+  request.jump_trigger = m.jump_trigger;
+  request.jump_mode = fsm::JumpMode::kManual;
+  request.upstairs_mode = m.stair_step2 ? fsm::UpstairsMode::kDouble : fsm::UpstairsMode::kSingle;
+  request.fall_detected = fall_detected;
+  request.fall_hold_ms = fall_detected_hold_ms;
+  request.upright_stable = upright_stable;
+  request.standup_complete = chassis_output.standup_complete;
+  request.off_ground = chassis_output.off_ground_in_mid_high_leg;
+  request.current_speed_mps = chassis_output.current_state.s_dot;
+  request.current_leg_length_m = chassis_output.mean_leg_length_m;
+  request.tick_ms = tick_ms;
+  return request;
 }
 
-gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis::Fsm::Output &chassis_output,
-                                       const bool startup_align_complete) {
-  gimbal::Fsm::Input fsm_input{};
+fsm::GimbalFsmRequest BuildGimbalFsmInput(const InputSnapshot &input, const fsm::ChassisFsmOutput &chassis_output,
+                                          const bool startup_align_complete, const uint32_t tick_ms) {
   const auto &m = input.mode_request;
-  fsm_input.request = {
-      .input_valid = m.input_valid,
-      .domain_request = m.domain_request,
-      .service_profile = m.service_profile,
-      .combat_profile = m.combat_profile,
-      .target_source = m.target_source,
-      .rc_target = m.rc_target,
-      .host_target = m.host_target,
-      .host_target_valid = m.host_target_valid,
-      .gimbal_test_profile = m.gimbal_test_profile,
-      .chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                                 chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
-      .startup_align_complete = startup_align_complete,
-  };
-  return fsm_input;
+  fsm::GimbalState requested_state = fsm::GimbalState::kManual;
+  if (!m.input_valid || m.domain_request == DomainRequest::kDisabled) {
+    requested_state = fsm::GimbalState::kDisable;
+  } else if (m.gimbal_test_profile == GimbalTestProfile::kIdent) {
+    requested_state = fsm::GimbalState::kIdent;
+  } else if (m.gimbal_test_profile == GimbalTestProfile::kFfVerify) {
+    requested_state = fsm::GimbalState::kFfVerify;
+  } else if (m.domain_request == DomainRequest::kCombat) {
+    requested_state = fsm::GimbalState::kAimbot;
+  }
+
+  fsm::GimbalFsmRequest request{};
+  request.input_valid = m.input_valid && m.domain_request != DomainRequest::kDisabled;
+  request.requested_state = requested_state;
+  request.preferred_target_source = m.target_source;
+  request.rc_target = m.rc_target;
+  request.host_target = m.host_target;
+  request.host_target_valid = m.host_target_valid;
+  request.chassis_fall_active = chassis_output.state == fsm::ChassisState::kFall;
+  request.startup_align_complete = startup_align_complete;
+  request.tick_ms = tick_ms;
+  return request;
 }
 
 }  // namespace wheel_legged::control_loop
