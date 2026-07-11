@@ -1,30 +1,51 @@
 import serial
 import csv
 import sys
+import argparse
 
-PORT = 'COM11'
+PORT = 'COM6'
 BAUDRATE = 115200
-OUTPUT_FILE = 'ident_data.csv'
+OUTPUT_FILES = {
+    'gravity': 'gravity_static.csv',
+    'friction': 'friction_sweep.csv',
+    'dynamic': 'dynamic_harmonics.csv',
+}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='采集云台辨识数据并按辨识阶段保存到不同 CSV 文件。')
+    parser.add_argument(
+        'mode',
+        choices=OUTPUT_FILES.keys(),
+        help='采集阶段: gravity=静态重力, friction=低速摩擦, dynamic=谐波动态项',
+    )
+    parser.add_argument('--port', default=PORT, help=f'串口号，默认 {PORT}')
+    parser.add_argument('--baudrate', type=int, default=BAUDRATE, help=f'波特率，默认 {BAUDRATE}')
+    parser.add_argument('--output', help='自定义输出文件名；不填则按 mode 自动选择')
+    return parser.parse_args()
 
 
 def main():
-    print(f"正在打开串口 {PORT} @ {BAUDRATE}...")
+    args = parse_args()
+    output_file = args.output or OUTPUT_FILES[args.mode]
+
+    print(f"采集模式: {args.mode}")
+    print(f"输出文件: {output_file}")
+    print(f"正在打开串口 {args.port} @ {args.baudrate}...")
     try:
-        ser = serial.Serial(PORT, BAUDRATE, timeout=1.0)
+        ser = serial.Serial(args.port, args.baudrate, timeout=1.0)
     except serial.SerialException as e:
         print(f"无法打开串口: {e}")
         sys.exit(1)
 
-    print(f"已连接串口。开始将数据记录到 {OUTPUT_FILE} ...")
+    print(f"已连接串口。开始将数据记录到 {output_file} ...")
     print("按 Ctrl+C 停止记录并保存文件。")
 
     try:
-        with open(OUTPUT_FILE, mode='w', newline='') as csvfile:
+        with open(output_file, mode='w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            # 写入辨识脚本需要的表头顺序
             writer.writerow(['time', 'q1', 'q2', 'dq1', 'dq2', 'tau1', 'tau2'])
 
-            # 刷新一下串口旧数据
             ser.reset_input_buffer()
 
             count = 0
@@ -34,23 +55,13 @@ def main():
                     continue
 
                 try:
-                    # 解码并去除两端空白符
                     line_str = line.decode('utf-8').strip()
-                    # 分割数据
                     data = line_str.split(',')
 
                     if len(data) == 7:
-                        # 解析STM32发来的数据顺序：
-                        # 0: timestamp_ms
-                        # 1: tau_yaw
-                        # 2: q_yaw
-                        # 3: tau_pitch
-                        # 4: dq_yaw
-                        # 5: q_pitch
-                        # 6: dq_pitch
-
+                        # STM32 发送顺序: timestamp_ms, tau_yaw, q_yaw, dq_yaw, tau_pitch, q_pitch, dq_pitch
                         t_ms = float(data[0])
-                        time_s = t_ms / 1000.0  # 毫秒转秒
+                        time_s = t_ms / 1000.0
 
                         tau1 = float(data[1])
                         q1 = float(data[2])
@@ -59,15 +70,14 @@ def main():
                         q2 = float(data[5])
                         dq2 = float(data[6])
 
-                        # 按照列名表头顺序写入 CSV ['time', 'q1', 'q2', 'dq1', 'dq2', 'tau1', 'tau2']
+                        # CSV 表头顺序: time, q1, q2, dq1, dq2, tau1, tau2
                         writer.writerow([time_s, q1, q2, dq1, dq2, tau1, tau2])
 
                         count += 1
                         if count % 100 == 0:
-                            print(f"已记录 {count} 条数据列...")
+                            print(f"已记录 {count} 条数据...")
 
                 except ValueError:
-                    # 处理偶发的串口乱码
                     print(f"解析错误，跳过该行: {line_str}")
                     continue
                 except UnicodeDecodeError:
@@ -77,7 +87,7 @@ def main():
         print("\n\nCtrl+C 已按下，停止记录。")
     finally:
         ser.close()
-        print(f"串口已关闭，数据已安全保存至 {OUTPUT_FILE}。")
+        print(f"串口已关闭，数据已安全保存至 {output_file}。")
 
 
 if __name__ == '__main__':

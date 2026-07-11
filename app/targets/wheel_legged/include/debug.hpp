@@ -138,6 +138,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float gimbal_pitch_dq_rad_s;    // 俯仰目标角速度
   float gimbal_yaw_ddq_rad_s2;    // 偏航目标角加速度
   float gimbal_pitch_ddq_rad_s2;  // 俯仰目标角加速度
+  float ff_yaw_inertia;           // 偏航惯性力矩
+  float ff_yaw_gravity;           // 偏航重力项
+  float ff_yaw_friction;          // 偏航摩擦项
+  float ff_pitch_coupling;        // 俯仰耦合项
+  float ff_pitch_inertia;         // 俯仰惯性项
+  float ff_pitch_gravity;         // 俯仰重力项
+  float ff_pitch_friction;        // 俯仰摩擦项
 
   // ── 底盘模型状态向量 ──
   float state_s_m;                 // 纵向位置

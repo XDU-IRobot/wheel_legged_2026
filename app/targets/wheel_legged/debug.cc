@@ -170,6 +170,13 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_pitch_dq_rad_s = gimbal_control_output.pitch_dq;
   wl_debug.gimbal_yaw_ddq_rad_s2 = gimbal_control_output.yaw_ddq;
   wl_debug.gimbal_pitch_ddq_rad_s2 = gimbal_control_output.pitch_ddq;
+  wl_debug.ff_yaw_inertia = gimbal_control_output.ff_yaw_inertia;
+  wl_debug.ff_yaw_gravity = gimbal_control_output.ff_yaw_gravity;
+  wl_debug.ff_yaw_friction = gimbal_control_output.ff_yaw_friction;
+  wl_debug.ff_pitch_coupling = gimbal_control_output.ff_pitch_coupling;
+  wl_debug.ff_pitch_inertia = gimbal_control_output.ff_pitch_inertia;
+  wl_debug.ff_pitch_gravity = gimbal_control_output.ff_pitch_gravity;
+  wl_debug.ff_pitch_friction = gimbal_control_output.ff_pitch_friction;
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;

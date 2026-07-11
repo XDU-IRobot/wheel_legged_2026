@@ -663,6 +663,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // 起立 / 台阶序列：腿长PID + 弹簧补偿，不用重力/roll/惯性
       left_force_ = output_.left_l0_pid_out + l_spring_torque_;
       right_force_ = output_.right_l0_pid_out + r_spring_torque_;
+      // left_force_ =  l_spring_torque_;
+      // right_force_ =  r_spring_torque_;
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg *
