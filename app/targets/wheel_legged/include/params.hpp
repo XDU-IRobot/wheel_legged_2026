@@ -592,8 +592,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;       ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;     ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]
@@ -1096,8 +1096,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;       ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;     ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]
@@ -1599,8 +1599,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
-constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;       ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;     ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]
