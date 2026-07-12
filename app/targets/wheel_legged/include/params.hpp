@@ -371,7 +371,7 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 
 // ==== 姿态安全/倒地恢复 ====
 constexpr float kStandupThetaThresholdRad = 1.1f;  ///< 起立完成判定：双腿摆角绝对值低于此值后允许轮端输出 [rad]
-constexpr float kStandupPhase0ThetaTargetRad = 1.5f;  ///< 起立 Phase 0/1 腿摆角目标 [rad]
+constexpr float kStandupPhase0ThetaTargetRad = 1.2f;  ///< 起立 Phase 0/1 腿摆角目标 [rad]
 constexpr float kStandupPhase1TargetLengthM = 0.1f;   ///< 起立 Phase 1 目标腿长 [m]
 constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 1 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 1 容许 [rad]

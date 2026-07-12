@@ -116,6 +116,23 @@ inline float ApplyRecoveryDecel(const float raw_target, const float proximity, c
   return std::copysign(abs_target, raw_target);
 }
 
+/// 检查 theta 是否在环形区间 [min, max] 内（跨 2π 等价角也正确处理）
+inline bool ThetaInRange(const float theta, const float min, const float max) {
+  constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+  float a = std::fmod(theta - min, kTwoPi);
+  if (a < 0) a += kTwoPi;
+  return a <= (max - min);
+}
+
+/// 返回 theta 到环形区间 [min, max] 较近边界值的距离（带符号：正=往max方向）
+inline float ThetaDistToNearestBoundary(const float theta, const float min, const float max) {
+  if (ThetaInRange(theta, min, max)) return 0.0f;
+  constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+  const float dist_to_min = std::fmod(theta - min + kTwoPi, kTwoPi);
+  const float dist_to_max = std::fmod(max - theta + kTwoPi, kTwoPi);
+  return dist_to_min < dist_to_max ? -dist_to_min : dist_to_max;
+}
+
 }  // namespace
 
 /**
@@ -287,10 +304,10 @@ void chassis::Chassis::Update(const UpdateInput &input) {
        imu_roll_ >= wheel_legged::params::active::chassis::kPostureRollMinRad &&
        imu_roll_ <= wheel_legged::params::active::chassis::kPostureRollMaxRad);
   const bool theta_valid =
-      (state_output.current.theta_ll >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       state_output.current.theta_ll <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad &&
-       state_output.current.theta_lr >= wheel_legged::params::active::chassis::kPostureThetaLegMinRad &&
-       state_output.current.theta_lr <= wheel_legged::params::active::chassis::kPostureThetaLegMaxRad);
+      (ThetaInRange(state_output.current.theta_ll, wheel_legged::params::active::chassis::kPostureThetaLegMinRad,
+                    wheel_legged::params::active::chassis::kPostureThetaLegMaxRad) &&
+       ThetaInRange(state_output.current.theta_lr, wheel_legged::params::active::chassis::kPostureThetaLegMinRad,
+                    wheel_legged::params::active::chassis::kPostureThetaLegMaxRad));
   output_.posture_valid = pitch_roll_valid && theta_valid;
   output_.pitch_roll_valid_theta_invalid = pitch_roll_valid && !theta_valid;
 
@@ -365,7 +382,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     constexpr float kThetaInit = wheel_legged::params::active::chassis::kStandupPhase0ThetaTargetRad;
     constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
     constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
-    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.01f;
+    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
 
     if (standup_phase_ == 0) {
       force_low_leg_ = true;
@@ -386,8 +403,13 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       }
       const float theta_tol =
           trigger_standup_latched_ ? wheel_legged::params::active::chassis::kStandupPhase1ThetaTolStairRad : kThetaTol;
-      if (std::fabs(state_output.current.theta_ll) < theta_tol &&
-          std::fabs(state_output.current.theta_lr) < theta_tol) {
+      constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+      const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
+      const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
+      const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;
+      const float theta_lr_pos = theta_lr_0_2pi < 0 ? theta_lr_0_2pi + kTwoPi : theta_lr_0_2pi;
+      if (std::min(theta_ll_pos, kTwoPi - theta_ll_pos) < theta_tol &&
+          std::min(theta_lr_pos, kTwoPi - theta_lr_pos) < theta_tol) {
         standup_complete_ = true;
         standup_phase_ = 2;
         force_low_leg_ = false;
@@ -590,11 +612,23 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
   r_spring_torque_ = ComputeRightSpringTorque(right_leg_.l0());
 
-  // 起立摆角 PID
+  // 起立摆角 PID：将测量值 wrap 到目标角附近，避免 2π 跳变导致 PID 绕远路
   if (!standup_complete_) {
-    left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, state_output.current.theta_ll,
+    auto wrap_near_target = [](float theta, float target) {
+      constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+      constexpr float kPi = static_cast<float>(M_PI);
+      float a = std::fmod(theta, kTwoPi);
+      if (a < 0) a += kTwoPi;
+      float diff = a - target;
+      if (diff > kPi) a -= kTwoPi;
+      else if (diff < -kPi) a += kTwoPi;
+      return a;
+    };
+    const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
+    const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_theta_target_);
+    left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_ll_wrapped,
                                               -state_output.current.theta_ll_dot, 2);
-    right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, state_output.current.theta_lr,
+    right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_lr_wrapped,
                                                -state_output.current.theta_lr_dot, 2);
   }
 
@@ -757,15 +791,30 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
 
         const bool ll_in_range =
-            (state_output.current.theta_ll >= kThetaLegMin && state_output.current.theta_ll <= kThetaLegMax);
+            ThetaInRange(state_output.current.theta_ll, kThetaLegMin, kThetaLegMax);
         const bool lr_in_range =
-            (state_output.current.theta_lr >= kThetaLegMin && state_output.current.theta_lr <= kThetaLegMax);
+            ThetaInRange(state_output.current.theta_lr, kThetaLegMin, kThetaLegMax);
+
+        auto wrap_near = [](float theta, float target) {
+          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+          constexpr float kPi = static_cast<float>(M_PI);
+          float a = std::fmod(theta, kTwoPi);
+          if (a < 0) a += kTwoPi;
+          float diff = a - target;
+          if (diff > kPi) a -= kTwoPi;
+          else if (diff < -kPi) a += kTwoPi;
+          return a;
+        };
 
         float ll_pid_out = 0.0f;
         float lr_pid_out = 0.0f;
         if (!ll_in_range) {
-          const float boundary = (state_output.current.theta_ll < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-          const float prox = RecoveryProximityScale(state_output.current.theta_ll, boundary, kDecelZoneRad);
+          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+          float a = std::fmod(state_output.current.theta_ll - kThetaLegMin, kTwoPi);
+          if (a < 0) a += kTwoPi;
+          const float boundary = (a - (kThetaLegMax - kThetaLegMin) < kTwoPi - a) ? kThetaLegMax : kThetaLegMin;
+          const float theta_near = wrap_near(state_output.current.theta_ll, boundary);
+          const float prox = RecoveryProximityScale(theta_near, boundary, kDecelZoneRad);
           const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
           left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
           ll_pid_out = -left_leg_turn_pid_.out();
@@ -773,8 +822,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           left_leg_turn_pid_.Clear();
         }
         if (!lr_in_range) {
-          const float boundary = (state_output.current.theta_lr < kThetaLegMin) ? kThetaLegMin : kThetaLegMax;
-          const float prox = RecoveryProximityScale(state_output.current.theta_lr, boundary, kDecelZoneRad);
+          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+          float a = std::fmod(state_output.current.theta_lr - kThetaLegMin, kTwoPi);
+          if (a < 0) a += kTwoPi;
+          const float boundary = (a - (kThetaLegMax - kThetaLegMin) < kTwoPi - a) ? kThetaLegMax : kThetaLegMin;
+          const float theta_near = wrap_near(state_output.current.theta_lr, boundary);
+          const float prox = RecoveryProximityScale(theta_near, boundary, kDecelZoneRad);
           const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
           right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
           lr_pid_out = -right_leg_turn_pid_.out();
@@ -827,8 +880,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
       const rm::f32 dir = is_front ? kVel : -kVel;
 
-      const bool l_in = (lw >= tgt_min && lw <= tgt_max);
-      const bool r_in = (rw >= tgt_min && rw <= tgt_max);
+      const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
+      const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
 
       if (l_in && r_in) {
         left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);

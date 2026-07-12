@@ -420,7 +420,7 @@ class ChassisStateEstimator {
     }
 
     output_.current.s_dot = output_.fused_speed_mps;
-    output_.current.s += output_.current.s_dot * dt_s;
+    output_.current.s += output_.wheel_speed_mps * dt_s;
   }
 
   /** @brief 左腿前关节角度标定 */
