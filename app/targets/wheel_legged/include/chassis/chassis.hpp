@@ -65,8 +65,9 @@ class Chassis {
     rm::f32 filtered_theta_ll_dot{0.0f};    ///< 滤波后左腿摆角速度
     rm::f32 filtered_theta_lr_dot{0.0f};    ///< 滤波后右腿摆角速度
     rm::f32 speed_mps{0.0f};                ///< 融合车速
-    rm::f32 wheel_speed_mps{0.0f};          ///< 轮系解算车速
-    rm::f32 raw_wheel_speed_mps{0.0f};      ///< 原始轮速观测
+    rm::f32 wheel_speed_mps{0.0f};               ///< 轮系解算车速
+    rm::f32 filtered_wheel_speed_mps{0.0f};      ///< 低通滤波后轮速
+    rm::f32 raw_wheel_speed_mps{0.0f};           ///< 原始轮速观测
     rm::f32 raw_accel_speed_mps{0.0f};      ///< 原始加速度积分速度
     rm::f32 current_speed_mps{0.0f};        ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};

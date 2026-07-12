@@ -124,8 +124,9 @@ struct CalibratedLegKinematicsInput {
 struct ChassisStateEstimatorOutput {
   wbr::CurrentState current{};  ///< LQR 使用的当前状态向量
 
-  rm::f32 wheel_speed_mps{0.0f};      ///< 由轮速和腿部运动学解算的车速
-  rm::f32 fused_speed_mps{0.0f};      ///< 轮速/惯导融合后的车速
+  rm::f32 wheel_speed_mps{0.0f};             ///< 由轮速和腿部运动学解算的车速
+  rm::f32 filtered_wheel_speed_mps{0.0f};  ///< 低通滤波后的轮速
+  rm::f32 fused_speed_mps{0.0f};           ///< 轮速/惯导融合后的车速
   rm::f32 raw_wheel_speed_mps{0.0f};  ///< 速度滤波器中的原始轮速
   rm::f32 raw_accel_speed_mps{0.0f};  ///< 加速度积分得到的原始速度
   rm::f32 current_speed_mps{0.0f};    ///< 速度滤波器当前输出
@@ -286,6 +287,8 @@ class ChassisStateEstimator {
                                               config_.theta_dot_filter_cutoff_hz);
     theta_lr_dot_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kImuAccelFilterSampleHz,
                                               config_.theta_dot_filter_cutoff_hz);
+    wheel_speed_filter_.set_cutoff_frequency(wheel_legged::params::active::state_estimator::kWheelSpeedFilterSampleHz,
+                                             wheel_legged::params::active::state_estimator::kWheelSpeedFilterCutoffHz);
     speed_estimator_.Init();
     Reset();
   }
@@ -392,9 +395,10 @@ class ChassisStateEstimator {
     const rm::f32 right_speed = right_wheel_vel;
 
     output_.wheel_speed_mps = 0.5f * (left_speed + right_speed);
+    output_.filtered_wheel_speed_mps = wheel_speed_filter_.apply(output_.wheel_speed_mps);
 
     if (input.use_wheel_speed_direct) {
-      output_.raw_wheel_speed_mps = output_.wheel_speed_mps;
+      output_.raw_wheel_speed_mps = output_.filtered_wheel_speed_mps;
       output_.raw_accel_speed_mps = 0.0f;
       output_.current_speed_mps = output_.wheel_speed_mps;
       output_.fused_speed_mps = output_.wheel_speed_mps;
@@ -404,7 +408,7 @@ class ChassisStateEstimator {
     }
 
     SpeedEstimatorInput speed_input{};
-    speed_input.wheel_speed_mps = output_.wheel_speed_mps;
+    speed_input.wheel_speed_mps = output_.filtered_wheel_speed_mps;
     speed_input.imu_acc_x_mps2 = input.imu.acc_x_mps2;
     speed_input.imu_pitch_rad = input.imu.pitch_rad;
     speed_input.dt_s = dt_s;
@@ -420,7 +424,7 @@ class ChassisStateEstimator {
     }
 
     output_.current.s_dot = output_.fused_speed_mps;
-    output_.current.s += output_.wheel_speed_mps * dt_s;
+    output_.current.s += output_.filtered_wheel_speed_mps * dt_s;
   }
 
   /** @brief 左腿前关节角度标定 */
@@ -450,6 +454,7 @@ class ChassisStateEstimator {
                                 wheel_legged::params::active::state_estimator::kLegL2M};
   rm::modules::LowPassFilterConstDt<rm::f32> theta_ll_dot_filter_{};
   rm::modules::LowPassFilterConstDt<rm::f32> theta_lr_dot_filter_{};
+  rm::modules::LowPassFilterConstDt<rm::f32> wheel_speed_filter_{};
 };
 
 }  // namespace chassis

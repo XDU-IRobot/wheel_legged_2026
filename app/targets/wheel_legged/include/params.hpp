@@ -274,12 +274,12 @@ constexpr StairClimbParams kStairClimb{
     .retract_theta_tolerance_rad = 0.6f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.08f,
-    .settle_theta_tolerance_rad = 0.4f,
-    .settle_theta_target_rad = 0.f,
+    .settle_theta_tolerance_rad = 0.5f,
+    .settle_theta_target_rad = -0.1f,
     .settle_theta_ramp_step_rad = 0.02f,
-    .hook_stable_ms = 100U,
-    .retract_stable_ms = 100U,
-    .settle_stable_ms = 200U,
+    .hook_stable_ms = 50U,
+    .retract_stable_ms = 50U,
+    .settle_stable_ms = 100U,
     .hook_timeout_ms = 2000U,
     .retract_timeout_ms = 2000U,
     .settle_timeout_ms = 2000U,
@@ -592,6 +592,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]
@@ -1094,6 +1096,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]
@@ -1595,6 +1599,8 @@ constexpr float kWheelRadiusM = 0.0575f;                ///< 驱动轮半径 [m]
 constexpr float kWheelReductionRatio = 17.0f / 268.0f;  ///< 轮电机到车轮的速度换算比
 constexpr float kMaxValidSpeedMps = 8.0f;               ///< 速度融合可信上限 [m/s]
 constexpr float kThetaDotFilterCutoffHz = 8.0f;         ///< 腿摆角速度低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterCutoffHz = 5.0f;      ///< 轮速低通滤波截止频率 [Hz]
+constexpr float kWheelSpeedFilterSampleHz = 500.0f;    ///< 轮速低通滤波采样频率 [Hz]
 
 // -- IMU 加速度融合 --
 constexpr float kImuAccelFilterSampleHz = 500.0f;          ///< 加速度低通滤波器采样频率 [Hz]

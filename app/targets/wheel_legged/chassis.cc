@@ -288,6 +288,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.left_l0_dot_mps = left_leg_.l0_dot();
   output_.right_l0_dot_mps = right_leg_.l0_dot();
   output_.wheel_speed_mps = state_output.wheel_speed_mps;
+  output_.filtered_wheel_speed_mps = state_output.filtered_wheel_speed_mps;
   output_.speed_mps = state_output.fused_speed_mps;
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
   output_.raw_accel_speed_mps = state_output.raw_accel_speed_mps;

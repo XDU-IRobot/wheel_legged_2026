@@ -187,7 +187,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_left_l0_pid_out;          // 左腿腿长 PID 输出
   float chassis_right_l0_pid_out;         // 右腿腿长 PID 输出
   float chassis_speed_mps;                // 车体融合速度
-  float chassis_raw_wheel_speed_mps;      // 原始轮速观测
+  float chassis_raw_wheel_speed_mps;         // 原始轮速观测
+  float chassis_filtered_wheel_speed_mps;   // 低通滤波后轮速
   float chassis_raw_accel_speed_mps;      // 原始加速度积分速度
   float chassis_left_force_n;             // 左腿竖直力
   float chassis_right_force_n;            // 右腿竖直力
