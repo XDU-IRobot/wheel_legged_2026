@@ -269,8 +269,7 @@ class Gimbal {
       const float pitch_q_enc = input.pitch_motor->pos() - ns_ident::kIdentPitchCenter;
       // const float pitch_q_enc = output_.pitch_target_rad ;
       const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
-      const auto ff = dynamics_.ComputeFfDecomposed(output_.yaw_target_rad, pitch_q_enc,
-                                                      0.f, 0.f, 0.f, 0.f, g_vec);
+      const auto ff = dynamics_.ComputeFfDecomposed(output_.yaw_target_rad, pitch_q_enc, 0.f, 0.f, 0.f, 0.f, g_vec);
       output_.ff_yaw = ff.yaw;
       output_.ff_pitch = ff.pitch;
       output_.ff_yaw_inertia = ff.yaw_inertia;
@@ -284,10 +283,9 @@ class Gimbal {
       output_.yaw_cmd_torque_nm =
           std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm =
-          std::clamp(controller_.output().pitch +ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm,
-                     -28.f,
-                     28.f);
+      output_.pitch_cmd_torque_nm = std::clamp(
+          controller_.output().pitch + ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
+          28.f);
     }
   }
 

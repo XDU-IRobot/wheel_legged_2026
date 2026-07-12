@@ -620,8 +620,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       float a = std::fmod(theta, kTwoPi);
       if (a < 0) a += kTwoPi;
       float diff = a - target;
-      if (diff > kPi) a -= kTwoPi;
-      else if (diff < -kPi) a += kTwoPi;
+      if (diff > kPi)
+        a -= kTwoPi;
+      else if (diff < -kPi)
+        a += kTwoPi;
       return a;
     };
     const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
@@ -790,10 +792,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         constexpr float kThetaLegMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
         constexpr float kRecoverVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
 
-        const bool ll_in_range =
-            ThetaInRange(state_output.current.theta_ll, kThetaLegMin, kThetaLegMax);
-        const bool lr_in_range =
-            ThetaInRange(state_output.current.theta_lr, kThetaLegMin, kThetaLegMax);
+        const bool ll_in_range = ThetaInRange(state_output.current.theta_ll, kThetaLegMin, kThetaLegMax);
+        const bool lr_in_range = ThetaInRange(state_output.current.theta_lr, kThetaLegMin, kThetaLegMax);
 
         auto wrap_near = [](float theta, float target) {
           constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
@@ -801,8 +801,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           float a = std::fmod(theta, kTwoPi);
           if (a < 0) a += kTwoPi;
           float diff = a - target;
-          if (diff > kPi) a -= kTwoPi;
-          else if (diff < -kPi) a += kTwoPi;
+          if (diff > kPi)
+            a -= kTwoPi;
+          else if (diff < -kPi)
+            a += kTwoPi;
           return a;
         };
 
