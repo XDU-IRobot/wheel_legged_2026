@@ -162,8 +162,8 @@ class GimbalIdent {
   float grav_phase_time_{0.0f};
 
   // Friction 模式
-  int fric_axis_{0};        // 0=yaw+, 1=yaw-, 2=pitch+, 3=pitch-, 4=done
-  int fric_phase_{0};       // 0=匀速, 1=暂停
+  int fric_axis_{0};   // 0=yaw+, 1=yaw-, 2=pitch+, 3=pitch-, 4=done
+  int fric_phase_{0};  // 0=匀速, 1=暂停
   float fric_phase_time_{0.0f};
   float fric_travel_{0.0f};  // 累计角位移 [rad] (绝对值)
 
@@ -282,7 +282,9 @@ class GimbalIdent {
     if (grav_phase_ == 1) {
       if (++data_tick_counter_ >= 5) {
         data_tick_counter_ = 0;
-        PrepareCsvData(input, out, grav_phase_time_ + grav_angle_idx_ * (ns_ident::kGravityHoldDuration + ns_ident::kGravitySettleDuration));
+        PrepareCsvData(
+            input, out,
+            grav_phase_time_ + grav_angle_idx_ * (ns_ident::kGravityHoldDuration + ns_ident::kGravitySettleDuration));
         out.data_pending = true;
         out.tx_data = tx_buf_;
         out.tx_len = tx_len_;
@@ -312,8 +314,8 @@ class GimbalIdent {
     // axis 0=yaw+, 1=yaw-, 2=pitch+, 3=pitch-
     const float v = (fric_axis_ == 1 || fric_axis_ == 3) ? -v_abs : v_abs;
     const float target_dist = (fric_axis_ <= 1)
-        ? (2.0f * ns::common::kPi)                                                   // yaw 一圈
-        : (ns_ident::kIdentPitchBottomLimit - ns_ident::kIdentPitchTopLimit);         // pitch 全程
+                                  ? (2.0f * ns::common::kPi)                                             // yaw 一圈
+                                  : (ns_ident::kIdentPitchBottomLimit - ns_ident::kIdentPitchTopLimit);  // pitch 全程
 
     const float vel_ref = (fric_phase_ == 0) ? v : 0.0f;
 
@@ -324,8 +326,8 @@ class GimbalIdent {
     if (fric_axis_ <= 1) {
       // Yaw 速度环, Pitch 位置保持
       yaw_target = input.yaw_motor_pos_rad;
-      pitch_target = std::clamp(ns_ident::kIdentPitchCenter, ns_ident::kIdentPitchTopLimit,
-                                ns_ident::kIdentPitchBottomLimit);
+      pitch_target =
+          std::clamp(ns_ident::kIdentPitchCenter, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
       ident_vel_pid_yaw_.Update(vel_ref, input.yaw_motor_vel_rad_s, input.dt_s);
       ident_pid_pitch_.Update(pitch_target, input.pitch_motor_pos_rad, input.dt_s);
       cmd_yaw = ident_vel_pid_yaw_.out();
@@ -348,8 +350,12 @@ class GimbalIdent {
 
     bool advance = false;
     switch (fric_phase_) {
-      case 0: if (fric_travel_ >= target_dist) advance = true; break;
-      case 1: if (fric_phase_time_ >= ns_ident::kFrictionPauseDuration) advance = true; break;
+      case 0:
+        if (fric_travel_ >= target_dist) advance = true;
+        break;
+      case 1:
+        if (fric_phase_time_ >= ns_ident::kFrictionPauseDuration) advance = true;
+        break;
     }
 
     if (advance) {
@@ -605,12 +611,18 @@ class GimbalIdent {
   /** @brief 主辨识入口，根据编译时选择的子模式分发 */
   Output IdentUpdate(const Input &input) {
     switch (submode_) {
-      case IdentSubMode::kGravity:      return GravityUpdate(input);
-      case IdentSubMode::kFriction:     return FrictionUpdate(input);
-      case IdentSubMode::kPitchInertia: return PitchInertiaUpdate(input);
-      case IdentSubMode::kCoupling:    return CouplingUpdate(input);
-      case IdentSubMode::kHarmonic:    return HarmonicUpdate(input);
-      default:                         return HarmonicUpdate(input);
+      case IdentSubMode::kGravity:
+        return GravityUpdate(input);
+      case IdentSubMode::kFriction:
+        return FrictionUpdate(input);
+      case IdentSubMode::kPitchInertia:
+        return PitchInertiaUpdate(input);
+      case IdentSubMode::kCoupling:
+        return CouplingUpdate(input);
+      case IdentSubMode::kHarmonic:
+        return HarmonicUpdate(input);
+      default:
+        return HarmonicUpdate(input);
     }
   }
 
