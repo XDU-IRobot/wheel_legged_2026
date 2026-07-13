@@ -51,6 +51,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
     }
     if (msg->rx_std_id == kRxStdIdA && msg->dlc >= kPayloadSizeA) {
       vt03_online_ = (msg->data[0] != 0);
+      shot_detected_ |= (msg->data[1] != 0);
       gyro_z_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[2]));
       gyro_x_rad_s_ = MilliI16ToRad(UnpackI16(&msg->data[4]));
       left_button_ = (msg->data[6] != 0);
@@ -102,6 +103,11 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   }
 
   [[nodiscard]] bool vt03_online() const { return vt03_online_; }
+  bool PopShotDetected() {
+    bool v = shot_detected_;
+    shot_detected_ = false;
+    return v;
+  }
   [[nodiscard]] rm::f32 pitch_rad() const { return pitch_rad_; }
   [[nodiscard]] rm::f32 yaw_rad() const { return yaw_rad_; }
   [[nodiscard]] rm::f32 gyro_z_rad_s() const { return gyro_z_rad_s_; }
@@ -139,6 +145,7 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
   static constexpr rm::f32 kDegToRad = wheel_legged::params::active::kPi / 180.0f;
 
   bool vt03_online_{false};
+  bool shot_detected_{false};
   rm::f32 pitch_rad_{0.0f};
   rm::f32 yaw_rad_{0.0f};
   rm::f32 gyro_z_rad_s_{0.0f};

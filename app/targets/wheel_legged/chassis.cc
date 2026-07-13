@@ -540,8 +540,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  const rm::f32 displacement_bias = wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
-  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
+  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());

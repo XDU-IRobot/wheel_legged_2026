@@ -328,6 +328,9 @@ void ControlLoop() {
   static bool was_posture_invalid = false;
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
+#endif
 
   // ── 一次性初始化 ──
   (void)0;
@@ -578,6 +581,12 @@ void ControlLoop() {
                                          globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+
+    if (gimbal_rx_valid && globals->gimbal_rx->PopShotDetected()) {
+      if (hero_remaining_ammo > 0) {
+        --hero_remaining_ammo;
+      }
+    }
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -1089,6 +1098,15 @@ void ControlLoop() {
   }
 
   // ── 7m. 底盘控制器执行 ──
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  {
+    const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
+    chassis_update_input.displacement_bias =
+        ns::control_loop::kExpectedDisplacementBiasMLowLeg + shots_fired * ns::control_loop::kDisplacementBiasPerShot;
+    wl_debug.hero_remaining_ammo = hero_remaining_ammo;
+    wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
+  }
+#endif
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 

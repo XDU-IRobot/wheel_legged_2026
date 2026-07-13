@@ -271,6 +271,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
   uint8_t shoot_hero_enter;         // Hero 进入射击模式
   int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）
+  int32_t hero_remaining_ammo;      // Hero 剩余弹量（本地跟踪）
+  float hero_displacement_bias;     // Hero 动态位移偏置 [m]
 
   // ── 本地热量闭环 ──
   float shoot_local_heat;         // 本地估算枪口热量

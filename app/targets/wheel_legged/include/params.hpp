@@ -498,7 +498,7 @@ constexpr float kDr16MouseYawRateMaxRadS = -6.0f;   ///< DR16 鼠标满偏时偏
 constexpr float kDr16MousePitchRateMaxRadS = 3.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kPitchTargetMinRad = -0.2f;         ///< RC 积分俯仰目标下限 [rad]
 constexpr float kPitchTargetMaxRad = 0.7f;          ///< RC 积分俯仰目标上限 [rad]
-constexpr float kKeyboardAccelRampStep = 0.004f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
+constexpr float kKeyboardAccelRampStep = 0.008f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.008f;    ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
 // -- 云台启动归中判稳 --
@@ -543,7 +543,9 @@ constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;      ///< 低腿长期望�
 constexpr float kExpectedThetaBBiasRad = -0.108f;         ///< 期望机体俯仰偏置 [rad]
 constexpr float kExpectedThetaBSpeedK = -0.03f;           ///< 期望机体俯仰速度系数（theta_b += k * s_dot）
 constexpr float kExpectedDisplacementBiasM = 0.0f;        ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = 0.2f;  ///< 低腿长期望位移偏置 [m]
+constexpr float kExpectedDisplacementBiasMLowLeg = -0.3f;  ///< 低腿长期望位移偏置 [m]（满弹量时）
+constexpr int kInitialAmmoCount = 60;                    ///< 初始弹量 [发]
+constexpr float kDisplacementBiasPerShot = 1.f/120.f;         ///< 每发弹的位移偏置变化量 [m/发]（待标定）
 
 // ==== 速度斜坡参数（按腿长档位分级）====
 constexpr SdotRampParams kSdotRampLowLeg{0.007f, 0.007f};     ///< 低腿长速度斜坡（加速/制动步长）

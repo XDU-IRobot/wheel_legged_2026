@@ -284,7 +284,7 @@ class Gimbal {
           std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm = std::clamp(
-           ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
+          controller_.output().pitch+ ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
           28.f);
     }
   }
