@@ -124,12 +124,12 @@ struct CalibratedLegKinematicsInput {
 struct ChassisStateEstimatorOutput {
   wbr::CurrentState current{};  ///< LQR 使用的当前状态向量
 
-  rm::f32 wheel_speed_mps{0.0f};             ///< 由轮速和腿部运动学解算的车速
+  rm::f32 wheel_speed_mps{0.0f};           ///< 由轮速和腿部运动学解算的车速
   rm::f32 filtered_wheel_speed_mps{0.0f};  ///< 低通滤波后的轮速
   rm::f32 fused_speed_mps{0.0f};           ///< 轮速/惯导融合后的车速
-  rm::f32 raw_wheel_speed_mps{0.0f};  ///< 速度滤波器中的原始轮速
-  rm::f32 raw_accel_speed_mps{0.0f};  ///< 加速度积分得到的原始速度
-  rm::f32 current_speed_mps{0.0f};    ///< 速度滤波器当前输出
+  rm::f32 raw_wheel_speed_mps{0.0f};       ///< 速度滤波器中的原始轮速
+  rm::f32 raw_accel_speed_mps{0.0f};       ///< 加速度积分得到的原始速度
+  rm::f32 current_speed_mps{0.0f};         ///< 速度滤波器当前输出
 
   rm::f32 left_leg_length_m{0.0f};    ///< 左腿长
   rm::f32 right_leg_length_m{0.0f};   ///< 右腿长
