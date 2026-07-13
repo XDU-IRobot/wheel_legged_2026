@@ -163,8 +163,8 @@ class GimbalIdent {
   float grav_phase_time_{0.0f};
 
   // Friction 模式
-  int fric_axis_{0};         // 0=yaw+, 1=yaw-, 2=pitch, 4=done
-  int fric_phase_{0};        // 0=匀速, 1=暂停
+  int fric_axis_{0};   // 0=yaw+, 1=yaw-, 2=pitch, 4=done
+  int fric_phase_{0};  // 0=匀速, 1=暂停
   float fric_phase_time_{0.0f};
   float fric_travel_{0.0f};  // 累计角位移 [rad] (绝对值, yaw 用)
   int fric_pitch_cycle_{0};  // pitch 半程计数: 0-5, 共6个半程=3个往返
@@ -395,9 +395,8 @@ class GimbalIdent {
 
       fric_phase_time_ += input.dt_s;
 
-      const bool reached_limit = toward_bottom
-                                     ? (input.pitch_motor_pos_rad >= ns_ident::kIdentPitchBottomLimit)
-                                     : (input.pitch_motor_pos_rad <= ns_ident::kIdentPitchTopLimit);
+      const bool reached_limit = toward_bottom ? (input.pitch_motor_pos_rad >= ns_ident::kIdentPitchBottomLimit)
+                                               : (input.pitch_motor_pos_rad <= ns_ident::kIdentPitchTopLimit);
 
       bool advance = false;
       switch (fric_phase_) {
