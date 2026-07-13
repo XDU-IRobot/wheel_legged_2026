@@ -218,7 +218,7 @@ def cmd_gravity(args):
         print(f"      可能原因: 电流零偏 / 线缆拉力 / 编码器零位 / 力矩方向")
 
     print(f"\n  下一步 (friction) 请使用:")
-    print(f"    --theta34 {theta3:.6f},{theta4:.6f}")
+    print(f"    --theta34 {theta3:.6f},{theta4:.6f} --pitch-bias {C:.6f}")
 
     return theta3, theta4
 
@@ -240,9 +240,9 @@ def cmd_friction(args):
     tau1 = df['tau1'].values
     tau2 = df['tau2'].values
 
-    # Pitch 先扣重力
+    # Pitch 先扣重力再扣常值偏置
     tau2_gravity = -g * (theta3 * np.cos(q2) + theta4 * np.sin(q2))
-    tau2_no_g = tau2 - tau2_gravity
+    tau2_no_g = tau2 - tau2_gravity - args.pitch_bias
 
     # ── Yaw 摩擦 ──
     print(f"\n{'=' * 60}")
@@ -282,7 +282,7 @@ def cmd_friction(args):
     print(f"Step 2b: Pitch 摩擦辨识  →  theta[7] (fv2), theta[8] (fc2)")
     print(f"{'=' * 60}")
 
-    pitch_segs = find_const_vel_segments(dq2, args.dq_stability, args.min_duration, dt)
+    pitch_segs = find_const_vel_segments(dq2, args.pitch_dq_stability, args.pitch_min_duration, dt)
 
     if len(pitch_segs) < 3:
         print(f"  警告: 仅找到 {len(pitch_segs)} 个 Pitch 匀速段，theta[7]/theta[8] 置零")
@@ -609,8 +609,11 @@ def main():
     p.add_argument('csv', help='Yaw/Pitch 低速匀速扫角数据 CSV')
     p.add_argument('--theta34', required=True, help='theta[3],theta[4] (来自 gravity 步骤)')
     p.add_argument('--g', type=float, default=G_DEFAULT)
-    p.add_argument('--dq-stability', type=float, default=0.03, help='匀速判定的 dq 标准差阈值 (rad/s)')
-    p.add_argument('--min-duration', type=float, default=0.5, help='匀速段最短持续时间 (s)')
+    p.add_argument('--dq-stability', type=float, default=0.03, help='Yaw 匀速判定的 dq 标准差阈值 (rad/s)')
+    p.add_argument('--min-duration', type=float, default=0.5, help='Yaw 匀速段最短持续时间 (s)')
+    p.add_argument('--pitch-dq-stability', type=float, default=0.06, help='Pitch 匀速判定的 dq 标准差阈值 (rad/s)')
+    p.add_argument('--pitch-min-duration', type=float, default=0.3, help='Pitch 匀速段最短持续时间 (s)')
+    p.add_argument('--pitch-bias', type=float, default=0.0, help='Pitch 常值力矩偏置 (Nm)，即 gravity 步骤的 C 值')
 
     # --- pitch-inertia ---
     p = sub.add_parser('pitch-inertia', help='Step 3: Pitch 惯量辨识 (theta[2])')

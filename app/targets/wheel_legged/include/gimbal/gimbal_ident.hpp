@@ -26,6 +26,7 @@ namespace gimbal {
 
 namespace ns = wheel_legged::params;
 namespace ns_ident = wheel_legged::params::active::gimbal_ident;
+namespace ns_gimbal = wheel_legged::params::active::gimbal;
 
 class GimbalIdent {
  public:
@@ -162,10 +163,11 @@ class GimbalIdent {
   float grav_phase_time_{0.0f};
 
   // Friction 模式
-  int fric_axis_{0};   // 0=yaw+, 1=yaw-, 2=pitch+, 3=pitch-, 4=done
-  int fric_phase_{0};  // 0=匀速, 1=暂停
+  int fric_axis_{0};         // 0=yaw+, 1=yaw-, 2=pitch, 4=done
+  int fric_phase_{0};        // 0=匀速, 1=暂停
   float fric_phase_time_{0.0f};
-  float fric_travel_{0.0f};  // 累计角位移 [rad] (绝对值)
+  float fric_travel_{0.0f};  // 累计角位移 [rad] (绝对值, yaw 用)
+  int fric_pitch_cycle_{0};  // pitch 半程计数: 0-5, 共6个半程=3个往返
 
   // Coupling 模式
   int coup_angle_idx_{0};
@@ -210,6 +212,7 @@ class GimbalIdent {
     fric_phase_ = 0;
     fric_phase_time_ = 0.0f;
     fric_travel_ = 0.0f;
+    fric_pitch_cycle_ = 0;
     ident_active_ = true;
     data_tick_counter_ = 0;
   }
@@ -310,21 +313,16 @@ class GimbalIdent {
       return out;
     }
 
-    const float v_abs = (fric_axis_ <= 1) ? ns_ident::kFrictionVelocityRadS : ns_ident::kFrictionPitchVelocityRadS;
-    // axis 0=yaw+, 1=yaw-, 2=pitch+, 3=pitch-
-    const float v = (fric_axis_ == 1 || fric_axis_ == 3) ? -v_abs : v_abs;
-    const float target_dist = (fric_axis_ <= 1)
-                                  ? (2.0f * ns::common::kPi)                                             // yaw 一圈
-                                  : (ns_ident::kIdentPitchBottomLimit - ns_ident::kIdentPitchTopLimit);  // pitch 全程
-
-    const float vel_ref = (fric_phase_ == 0) ? v : 0.0f;
-
     float cmd_yaw = 0.0f, cmd_pitch = 0.0f;
     float yaw_target, pitch_target;
-    float actual_vel;  // 用于累加位移
 
     if (fric_axis_ <= 1) {
-      // Yaw 速度环, Pitch 位置保持
+      // ── Yaw: 正/反各一圈, Pitch 位置保持 ──
+      const float v_abs = ns_ident::kFrictionVelocityRadS;
+      const float v = (fric_axis_ == 1) ? -v_abs : v_abs;
+      const float target_dist = 2.0f * ns::common::kPi;
+      const float vel_ref = (fric_phase_ == 0) ? v : 0.0f;
+
       yaw_target = input.yaw_motor_pos_rad;
       pitch_target =
           std::clamp(ns_ident::kIdentPitchCenter, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
@@ -332,47 +330,95 @@ class GimbalIdent {
       ident_pid_pitch_.Update(pitch_target, input.pitch_motor_pos_rad, input.dt_s);
       cmd_yaw = ident_vel_pid_yaw_.out();
       cmd_pitch = ident_pid_pitch_.out();
-      actual_vel = input.yaw_motor_vel_rad_s;
+
+      // Yaw 摩擦前馈 + Pitch 重力补偿
+      {
+        const float pitch_q_model = input.pitch_motor_pos_rad - ns_ident::kIdentPitchCenter;
+        const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
+        const auto ff =
+            dynamics_.ComputeFfDecomposed(input.yaw_motor_pos_rad, pitch_q_model, 0.f, 0.f, 0.f, 0.f, g_vec);
+        cmd_yaw += ff.yaw;
+        cmd_pitch += ff.pitch;
+      }
+
+      fric_travel_ += std::fabs(input.yaw_motor_vel_rad_s) * input.dt_s;
+      fric_phase_time_ += input.dt_s;
+
+      bool advance = false;
+      switch (fric_phase_) {
+        case 0:
+          if (fric_travel_ >= target_dist) advance = true;
+          break;
+        case 1:
+          if (fric_phase_time_ >= ns_ident::kFrictionPauseDuration) advance = true;
+          break;
+      }
+
+      if (advance) {
+        fric_phase_++;
+        fric_phase_time_ = 0.0f;
+        if (fric_phase_ > 1) {
+          fric_phase_ = 0;
+          fric_travel_ = 0.0f;
+          fric_axis_++;
+          if (fric_axis_ == 1) {
+            ident_vel_pid_yaw_.Clear();
+          } else if (fric_axis_ == 2) {
+            ident_vel_pid_yaw_.Clear();
+            ident_pid_pitch_.Clear();
+            fric_pitch_cycle_ = 0;
+          }
+        }
+      }
     } else {
-      // Pitch 速度环, Yaw 位置保持
+      // ── Pitch: 在上下限之间匀速往返, 共 3 个来回 (6 个半程) ──
+      const float v_abs = ns_ident::kFrictionPitchVelocityRadS;
+      const bool toward_bottom = (fric_pitch_cycle_ % 2 == 0);  // 偶数→BottomLimit, 奇数→TopLimit
+      const float v = toward_bottom ? v_abs : -v_abs;
+      const float vel_ref = (fric_phase_ == 0) ? v : 0.0f;
+
       yaw_target = WrapYawTarget(input.yaw_motor_pos_rad, input.yaw_motor_pos_rad);
-      pitch_target = (fric_axis_ == 2) ? ns_ident::kIdentPitchBottomLimit : ns_ident::kIdentPitchTopLimit;
+      pitch_target = toward_bottom ? ns_ident::kIdentPitchBottomLimit : ns_ident::kIdentPitchTopLimit;
       ident_pid_yaw_.Update(yaw_target, input.yaw_motor_pos_rad, input.dt_s);
       ident_vel_pid_pitch_.Update(vel_ref, input.pitch_motor_vel_rad_s, input.dt_s);
       cmd_yaw = ident_pid_yaw_.out();
       cmd_pitch = ident_vel_pid_pitch_.out();
-      actual_vel = input.pitch_motor_vel_rad_s;
-    }
 
-    // 累加实际角位移 (绝对值)
-    fric_travel_ += std::fabs(actual_vel) * input.dt_s;
-    fric_phase_time_ += input.dt_s;
+      // Pitch 重力+摩擦前馈 + 常值偏置
+      {
+        const float pitch_q_model = input.pitch_motor_pos_rad - ns_ident::kIdentPitchCenter;
+        const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
+        const auto ff = dynamics_.ComputeFfDecomposed(yaw_target, pitch_q_model, 0.f, 0.f, 0.f, 0.f, g_vec);
+        cmd_yaw += ff.yaw;
+        cmd_pitch += ff.pitch + ns_gimbal::kPitchFeedforwardBiasNm;
+      }
 
-    bool advance = false;
-    switch (fric_phase_) {
-      case 0:
-        if (fric_travel_ >= target_dist) advance = true;
-        break;
-      case 1:
-        if (fric_phase_time_ >= ns_ident::kFrictionPauseDuration) advance = true;
-        break;
-    }
+      fric_phase_time_ += input.dt_s;
 
-    if (advance) {
-      fric_phase_++;
-      fric_phase_time_ = 0.0f;
+      const bool reached_limit = toward_bottom
+                                     ? (input.pitch_motor_pos_rad >= ns_ident::kIdentPitchBottomLimit)
+                                     : (input.pitch_motor_pos_rad <= ns_ident::kIdentPitchTopLimit);
 
-      if (fric_phase_ > 1) {
-        fric_phase_ = 0;
-        fric_travel_ = 0.0f;
-        fric_axis_++;  // yaw+ → yaw- → pitch+ → pitch- → done
-        if (fric_axis_ == 1) {
-          ident_vel_pid_yaw_.Clear();  // yaw 反转前清积分
-        } else if (fric_axis_ == 2) {
-          ident_vel_pid_yaw_.Clear();
-          ident_pid_pitch_.Clear();
-        } else if (fric_axis_ == 3) {
-          ident_vel_pid_pitch_.Clear();  // pitch 反转前清积分
+      bool advance = false;
+      switch (fric_phase_) {
+        case 0:
+          if (reached_limit) advance = true;
+          break;
+        case 1:
+          if (fric_phase_time_ >= ns_ident::kFrictionPauseDuration) advance = true;
+          break;
+      }
+
+      if (advance) {
+        fric_phase_++;
+        fric_phase_time_ = 0.0f;
+        if (fric_phase_ > 1) {
+          fric_phase_ = 0;
+          fric_pitch_cycle_++;
+          ident_vel_pid_pitch_.Clear();
+          if (fric_pitch_cycle_ >= 6) {  // 6 个半程 = 3 个往返
+            fric_axis_ = 4;
+          }
         }
       }
     }
