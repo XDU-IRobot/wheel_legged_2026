@@ -547,8 +547,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
   const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
   const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
-  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias,
-                                                 pos_scale, vel_scale);
+  base_torque_ =
+      lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias, pos_scale, vel_scale);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());

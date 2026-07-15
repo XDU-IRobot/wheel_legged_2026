@@ -785,8 +785,7 @@ void ControlLoop() {
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       ctx.spin_exit_recovery = true;
       ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
-      ctx.yaw_follow_target =
-          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
+      ctx.yaw_follow_target = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
       ctx.yaw_follow_target_initialized = true;
     }
     ctx.last_chassis_mode = chassis_output.mode;
