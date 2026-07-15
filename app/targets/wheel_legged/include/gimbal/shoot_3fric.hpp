@@ -151,6 +151,7 @@ class ShootController {
       booster_disable_ = false;
     } else if (state_ == State::kReady || state_ == State::kCooling || state_ == State::kShooting) {
       booster_->SetMitCommand(0, 0.0f, booster_speed_pid_->out(), 0.0f, 0.0f);
+      // booster_->SetMitCommand(0, 0.0f, 0.f, 0.0f, 0.0f);
     }
   }
 

@@ -29,6 +29,7 @@ import sys
 import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
+from scipy.optimize import lsq_linear
 from sklearn.linear_model import LinearRegression
 
 G_DEFAULT = 9.81
@@ -493,6 +494,166 @@ def cmd_pitch_inertia(args):
 # Step 4: Yaw-Pitch 耦合惯量辨识
 # ---------------------------------------------------------------------------
 
+def cmd_pitch_inertia_multifrequency(args):
+    """Identify pitch inertia from extended, real-time, multi-frequency CSV data."""
+    required = {
+        'dt', 'q2_ref', 'dq2_ref', 'ddq2_ref', 'frequency_hz',
+        'frequency_index', 'cycle_index', 'valid_for_fit',
+    }
+    df = load_csv(args.csv)
+    if not required.issubset(df.columns) or df['frequency_hz'].fillna(0).max() <= 0:
+        print("\n警告: 检测到旧版 CSV，回退到原始速度差分算法；该结果仅供诊断。")
+        return cmd_pitch_inertia(args)
+
+    if args.friction_velocity_scale <= 0.0:
+        raise ValueError("--friction-velocity-scale 必须大于 0")
+
+    valid = df['valid_for_fit'].fillna(0).astype(int).to_numpy() > 0
+    valid &= np.isfinite(df['time'].to_numpy()) & np.isfinite(df['q2'].to_numpy())
+    valid &= np.abs(df['dq1'].to_numpy()) < 0.15
+    valid &= np.abs(df['tau2'].to_numpy()) < 9.5
+
+    q = df['q2'].to_numpy(dtype=float)
+    t = df['time'].to_numpy(dtype=float)
+    dq_motor = df['dq2'].to_numpy(dtype=float)
+    tau = df['tau2'].to_numpy(dtype=float)
+    freq_index = df['frequency_index'].fillna(-1).astype(int).to_numpy()
+    frequency = df['frequency_hz'].fillna(0).to_numpy(dtype=float)
+    dq_hat = np.full(len(df), np.nan)
+    ddq_hat = np.full(len(df), np.nan)
+
+    block_diagnostics = []
+    active_indices = sorted(set(freq_index[valid]))
+    for index in active_indices:
+        mask = valid & (freq_index == index)
+        if np.sum(mask) < 30:
+            continue
+        f = float(np.median(frequency[mask]))
+        w = 2.0 * np.pi * f
+        tb = t[mask]
+        basis = np.column_stack([np.sin(w * tb), np.cos(w * tb), np.ones(np.sum(mask))])
+        coef, *_ = np.linalg.lstsq(basis, q[mask], rcond=None)
+        q_fit = basis @ coef
+        dq_fit = w * (coef[0] * np.cos(w * tb) - coef[1] * np.sin(w * tb))
+        ddq_fit = -(w ** 2) * (coef[0] * np.sin(w * tb) + coef[1] * np.cos(w * tb))
+        dq_hat[mask] = dq_fit
+        ddq_hat[mask] = ddq_fit
+        ss_res = float(np.sum((q[mask] - q_fit) ** 2))
+        ss_tot = float(np.sum((q[mask] - np.mean(q[mask])) ** 2))
+        q_r2 = 1.0 - ss_res / max(ss_tot, 1e-12)
+        dq_scale = float(np.dot(dq_motor[mask], dq_fit) /
+                         max(np.dot(dq_motor[mask], dq_motor[mask]), 1e-12))
+        block_diagnostics.append((index, f, np.sum(mask), np.hypot(coef[0], coef[1]), q_r2, dq_scale))
+
+    fit_mask = valid & np.isfinite(dq_hat) & np.isfinite(ddq_hat) & (np.abs(ddq_hat) > 0.2)
+    if np.sum(fit_mask) < 100 or len(block_diagnostics) < 2:
+        print("错误: 有效多频数据不足；至少需要两个完整频率段和 100 个有效样本。")
+        return None
+
+    qf = q[fit_mask]
+    vf = dq_hat[fit_mask]
+    af = ddq_hat[fit_mask]
+    yf = tau[fit_mask]
+    group = freq_index[fit_mask]
+    X = np.column_stack([
+        np.cos(qf), np.sin(qf), np.ones(len(qf)), af, vf,
+        np.tanh(vf / args.friction_velocity_scale),
+    ])
+
+    # Equal total weight per frequency, followed by Huber IRLS.  Constrain the
+    # physical inertia and friction coefficients to be non-negative.
+    weights = np.zeros(len(yf))
+    for index in np.unique(group):
+        count = np.sum(group == index)
+        weights[group == index] = 1.0 / max(count, 1)
+    robust = np.ones(len(yf))
+    lower = np.array([-np.inf, -np.inf, -np.inf, 0.0, 0.0, 0.0])
+    upper = np.full(6, np.inf)
+    beta = np.zeros(6)
+    for _ in range(6):
+        total_weight = weights * robust
+        sw = np.sqrt(total_weight)
+        beta = lsq_linear(X * sw[:, None], yf * sw, bounds=(lower, upper)).x
+        residual = yf - X @ beta
+        scale = 1.4826 * np.median(np.abs(residual - np.median(residual))) + 1e-9
+        robust = np.minimum(1.0, 1.5 * scale / np.maximum(np.abs(residual), 1e-12))
+
+    A, B, bias, inertia, fv, fc = beta
+    pred = X @ beta
+    final_weight = weights * robust
+    y_mean = np.average(yf, weights=final_weight)
+    r2 = 1.0 - np.sum(final_weight * (yf - pred) ** 2) / max(
+        np.sum(final_weight * (yf - y_mean) ** 2), 1e-12)
+    rmse = float(np.sqrt(np.average((yf - pred) ** 2, weights=final_weight)))
+    col_norm = np.linalg.norm(X, axis=0)
+    condition = float(np.linalg.cond(X / np.maximum(col_norm, 1e-12)))
+    dynamic_columns = X[:, [1, 3, 4, 5]]
+    dynamic_norm = np.linalg.norm(dynamic_columns, axis=0)
+    inertia_condition = float(np.linalg.cond(dynamic_columns / np.maximum(dynamic_norm, 1e-12)))
+
+    def inertia_diagnostic(mask):
+        residual_i = yf[mask] - (
+            A * np.cos(qf[mask]) + B * np.sin(qf[mask]) + bias +
+            fv * vf[mask] + fc * np.tanh(vf[mask] / args.friction_velocity_scale)
+        )
+        design = np.column_stack([af[mask], np.ones(np.sum(mask))])
+        coef, *_ = np.linalg.lstsq(design, residual_i, rcond=None)
+        return float(coef[0]), float(coef[1])
+
+    i_pos, c_pos = inertia_diagnostic(af > 0.2)
+    i_neg, c_neg = inertia_diagnostic(af < -0.2)
+    asymmetry = abs(i_pos - i_neg) / max(abs(inertia), 1e-6)
+    per_frequency = []
+    for index in np.unique(group):
+        i_f, c_f = inertia_diagnostic(group == index)
+        per_frequency.append((int(index), float(np.median(frequency[fit_mask][group == index])), i_f, c_f))
+    inertia_values = np.array([item[2] for item in per_frequency])
+    frequency_variation = float(np.std(inertia_values) / max(abs(np.mean(inertia_values)), 1e-6))
+
+    print(f"\n{'=' * 60}")
+    print("Step 3: Pitch 多频联合辨识")
+    print("  tau2 = A*cos(q2)+B*sin(q2)+C+I*ddq2+fv*dq2+fc*tanh(dq2/vs)")
+    print(f"{'=' * 60}")
+    if 'dt' in df:
+        dt_values = df.loc[df['dt'].notna(), 'dt'].to_numpy(dtype=float)
+        if len(dt_values):
+            print(f"  实测控制周期: mean={np.mean(dt_values)*1e3:.3f} ms, "
+                  f"std={np.std(dt_values)*1e3:.3f} ms, "
+                  f"min={np.min(dt_values)*1e3:.3f} ms, max={np.max(dt_values)*1e3:.3f} ms")
+    print("\n  各频率位置谐波拟合:")
+    for index, f, count, amplitude, q_r2, dq_scale in block_diagnostics:
+        print(f"    [{index}] f={f:.3f} Hz  n={count}  A={amplitude:.4f} rad  "
+              f"q-R²={q_r2:.4f}  dq位置/电机比例={dq_scale:.3f}")
+
+    print(f"\n  有效样本: {np.sum(fit_mask)} / {len(df)}")
+    print(f"    theta[2] I2yy = {inertia:.6f} kg*m²")
+    print(f"    theta[3]      = {-A / args.g:.6f}")
+    print(f"    theta[4]      = {-B / args.g:.6f}")
+    print(f"    pitch-bias C  = {bias:.6f} Nm")
+    print(f"    theta[7] fv2  = {fv:.6f}")
+    print(f"    theta[8] fc2  = {fc:.6f}")
+    print(f"    R²={r2:.4f}, RMSE={rmse:.4f} Nm")
+    print(f"    条件数: full={condition:.1f}, inertia-related={inertia_condition:.1f}")
+    if condition > 100:
+        print("    注意: full 条件数偏高主要表示 cos(q) 与常值 C 耦合；theta[3]/C 不宜由本实验单独更新。")
+    print("\n  分频率惯量检查:")
+    for index, f, i_f, c_f in per_frequency:
+        print(f"    [{index}] f={f:.3f} Hz: I={i_f:.6f}, residual bias={c_f:.6f} Nm")
+    print(f"    分频率相对标准差={frequency_variation:.1%}")
+    print(f"\n  正负加速度检查:")
+    print(f"    ddq>0: I={i_pos:.6f}, residual bias={c_pos:.6f} Nm")
+    print(f"    ddq<0: I={i_neg:.6f}, residual bias={c_neg:.6f} Nm")
+    print(f"    相对不对称度={asymmetry:.1%}")
+
+    passed = (r2 > 0.3 and inertia > 0 and asymmetry < 0.20 and
+              frequency_variation < 0.20 and inertia_condition < 50)
+    if passed:
+        print("\n  结果通过基础质量检查，可继续结合机械量级复核。")
+    else:
+        print("\n  *** 结果未通过质量检查，暂不要写入 theta[2] 或继续 coupling。***")
+    return inertia
+
+
 def cmd_coupling(args):
     if args.friction_velocity_scale <= 0.0:
         raise ValueError("--friction-velocity-scale 必须大于 0")
@@ -771,7 +932,7 @@ def main():
     elif args.cmd == 'friction':
         cmd_friction(args)
     elif args.cmd == 'pitch-inertia':
-        cmd_pitch_inertia(args)
+        cmd_pitch_inertia_multifrequency(args)
     elif args.cmd == 'coupling':
         cmd_coupling(args)
     elif args.cmd == 'verify':

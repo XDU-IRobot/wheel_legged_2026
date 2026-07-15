@@ -215,15 +215,16 @@ python identify_gimbal.py friction friction_sweep.csv
 
 ## Step 3 — Pitch 惯量辨识 (theta[2])
 
-**目的**：Yaw 轴固定不动，Pitch 轴做正弦加减速运动，从扣除了重力和摩擦的力矩残差中辨识 Pitch 等效惯量。
+**目的**：Yaw 轴固定不动，Pitch 轴依次执行多个频率的正弦运动，通过同一角度下不同加速度幅值解除重力与惯量耦合。
 
 **原理**：
 
 ```
-tau2_residual = tau2 - tau2_gravity - C - tau2_friction = I2yy_com * ddq2
+tau2 = A*cos(q2) + B*sin(q2) + C
+     + I2yy_com*ddq2 + fv2*dq2 + fc2*tanh(dq2/vs)
 ```
 
-线性回归 ddq2 → tau2_residual，斜率即为 theta[2]。
+固件记录 DWT 实测控制周期、目标位置/速度/加速度、频率和周期编号。脚本对实际位置做逐频率谐波拟合并解析求导，不再直接差分原始 DM 速度；随后对全部频率做带物理约束的鲁棒联合回归。
 
 ### 操作步骤
 
@@ -236,13 +237,15 @@ static constexpr IdentSubMode kIdentSubMode = IdentSubMode::kPitchInertia;
 确认参数：
 
 ```cpp
-constexpr float kPitchInertiaFreqHz = 0.2f;     // 正弦频率 (Hz)
-constexpr float kPitchInertiaAmplitude = 0.25f;  // 正弦幅值 (rad)
+constexpr float kPitchInertiaFrequenciesHz[] = {0.4f, 0.7f, 1.0f};
+constexpr float kPitchInertiaAmplitude = 0.15f;
+constexpr uint16_t kPitchInertiaWarmupCycles = 2;
+constexpr uint16_t kPitchInertiaRecordCycles = 6;
 ```
 
 #### 3.2 编译烧录，上电运行
 
-上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。云台 Yaw 锁定在 0 位，Pitch 绕中心角做正弦摆动。
+上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。Pitch 先平滑回中，然后依次执行 0.4/0.7/1.0 Hz；每档前 2 个周期只用于稳定，随后 6 个周期标记为有效数据。
 
 #### 3.3 采集数据
 
@@ -260,9 +263,9 @@ python identify_gimbal.py pitch-inertia dynamic_pitch.csv \
     --pitch-bias 0.10
 ```
 
-`--theta78` 填入 Step 2 辨识得到的 theta[7], theta[8]（Pitch 摩擦）。
+PowerShell 中负数逗号参数应使用 `--theta34=-0.1,0.09` 形式，续行符应使用反引号而不是反斜杠。`--theta34/--theta78/--pitch-bias` 用于旧 CSV 回退和结果对照；新版 CSV 的主结果来自多频联合回归。
 
-**输出将打印 theta[2]**。如果结果为负值，检查 ddq 信号质量（是否由噪声差分得到）或重力/摩擦扣除是否正确。
+脚本会同时打印实测控制周期、各频率位置拟合质量、位置导数与 DM 速度比例、分频率惯量、正负加速度惯量和残差偏置。只有这些检查通过时才建议采用 theta[2]。
 
 ---
 

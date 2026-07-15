@@ -38,6 +38,7 @@ class GimbalIdent {
     float pitch_motor_pos_rad{0.0f};
     float pitch_motor_vel_rad_s{0.0f};
     float dt_s{ns_ident::kDefaultDtS};
+    bool timing_valid{false};
   };
 
   struct Output {
@@ -45,12 +46,21 @@ class GimbalIdent {
     float pitch_cmd_tau{0.0f};
     float yaw_target_rad{0.0f};
     float pitch_target_rad{0.0f};
+    float yaw_target_vel_rad_s{0.0f};
+    float pitch_target_vel_rad_s{0.0f};
+    float yaw_target_acc_rad_s2{0.0f};
+    float pitch_target_acc_rad_s2{0.0f};
+    float excitation_frequency_hz{0.0f};
+    uint16_t excitation_index{0};
+    uint16_t cycle_index{0};
+    bool valid_for_fit{false};
     bool data_pending{false};
     const char *tx_data{nullptr};
     size_t tx_len{0};
   };
 
  private:
+  static constexpr uint8_t kCsvDecimation = 10;  // 500 Hz control -> 50 Hz extended CSV
   // ──────────────────────────────────────────────────────────────────────────
   // 轨迹计算
   // ──────────────────────────────────────────────────────────────────────────
@@ -108,6 +118,25 @@ class GimbalIdent {
     len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, input.pitch_motor_pos_rad - ns_ident::kIdentPitchCenter);
     len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
     len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, input.pitch_motor_vel_rad_s);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, input.dt_s);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.yaw_target_rad);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.pitch_target_rad - ns_ident::kIdentPitchCenter);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.yaw_target_vel_rad_s);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.pitch_target_vel_rad_s);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.yaw_target_acc_rad_s2);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.pitch_target_acc_rad_s2);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",");
+    len += AppendFloat(tx_buf_ + len, sizeof(tx_buf_) - len, output.excitation_frequency_hz);
+    len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, ",%u,%u,%u",
+                         static_cast<unsigned>(output.excitation_index), static_cast<unsigned>(output.cycle_index),
+                         static_cast<unsigned>(output.valid_for_fit && input.timing_valid));
     len += std::snprintf(tx_buf_ + len, sizeof(tx_buf_) - len, "\r\n");
     if (len <= 0) return;
     if (static_cast<size_t>(len) >= sizeof(tx_buf_)) len = sizeof(tx_buf_) - 1;
@@ -155,6 +184,12 @@ class GimbalIdent {
   float ident_time_s_{0.0f};
   float ident_yaw_center_{0.0f};
   float ident_pitch_center_{0.0f};
+
+  size_t pitch_inertia_frequency_idx_{0};
+  float pitch_inertia_block_time_s_{0.0f};
+  float pitch_inertia_prepare_time_s_{0.0f};
+  float pitch_inertia_target_rad_{0.0f};
+  bool pitch_inertia_preparing_{true};
 
   // Gravity 模式
   int grav_angle_idx_{0};
@@ -233,8 +268,14 @@ class GimbalIdent {
     data_tick_counter_ = 0;
   }
 
-  void StartPitchInertia() {
+  void StartPitchInertia(const Input &input) {
     ResetIdentState();
+    pitch_inertia_frequency_idx_ = 0;
+    pitch_inertia_block_time_s_ = 0.0f;
+    pitch_inertia_prepare_time_s_ = 0.0f;
+    pitch_inertia_target_rad_ =
+        std::clamp(input.pitch_motor_pos_rad, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
+    pitch_inertia_preparing_ = true;
     ident_active_ = true;
     data_tick_counter_ = 0;
   }
@@ -311,7 +352,7 @@ class GimbalIdent {
 
     // 仅在测量阶段发送 CSV
     if (grav_phase_ == 1) {
-      if (++data_tick_counter_ >= 1) {
+      if (++data_tick_counter_ >= kCsvDecimation) {
         data_tick_counter_ = 0;
         PrepareCsvData(input, out,
                        grav_phase_time_ +
@@ -537,7 +578,7 @@ class GimbalIdent {
     out.yaw_target_rad = yaw_target;
     out.pitch_target_rad = pitch_target;
 
-    if (emit_data && ++data_tick_counter_ >= 1) {
+    if (emit_data && ++data_tick_counter_ >= kCsvDecimation) {
       data_tick_counter_ = 0;
       PrepareCsvData(input, out, ident_time_s_);
       out.data_pending = true;
@@ -554,29 +595,71 @@ class GimbalIdent {
   // ──────────────────────────────────────────────────────────────────────────
 
   Output PitchInertiaUpdate(const Input &input) {
-    if (!ident_active_) StartPitchInertia();
-
-    const float w = 2.0f * ns::common::kPi * ns_ident::kPitchInertiaFreqHz;
-    const float A = ns_ident::kPitchInertiaAmplitude;
+    if (!ident_active_) StartPitchInertia(input);
     const float center = ns_ident::kIdentPitchCenter;
-
-    const float phase = w * ident_time_s_;
-    const float q2_ref = center + A * std::sin(phase);
-    const float pitch_target = std::clamp(q2_ref, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
     const float yaw_target = WrapYawTarget(0.0f, input.yaw_motor_pos_rad);
 
+    Output out{};
+    out.yaw_target_rad = yaw_target;
+
+    if (pitch_inertia_preparing_) {
+      const float delta = center - pitch_inertia_target_rad_;
+      const float step = ns_ident::kPitchInertiaPrepareVelocityRadS * input.dt_s;
+      if (std::fabs(delta) <= step) {
+        pitch_inertia_target_rad_ = center;
+      } else {
+        pitch_inertia_target_rad_ += (delta > 0.0f ? step : -step);
+      }
+      const bool centered =
+          std::fabs(input.pitch_motor_pos_rad - center) < 0.02f && std::fabs(input.pitch_motor_vel_rad_s) < 0.08f;
+      pitch_inertia_prepare_time_s_ = centered ? pitch_inertia_prepare_time_s_ + input.dt_s : 0.0f;
+      if (centered && pitch_inertia_prepare_time_s_ >= ns_ident::kPitchInertiaPrepareDurationS) {
+        pitch_inertia_preparing_ = false;
+        pitch_inertia_block_time_s_ = 0.0f;
+        pitch_inertia_prepare_time_s_ = 0.0f;
+        ident_pid_pitch_.Clear();
+      }
+      out.pitch_target_rad = pitch_inertia_target_rad_;
+    } else if (pitch_inertia_frequency_idx_ < ns_ident::kPitchInertiaFrequencyCount) {
+      const float frequency = ns_ident::kPitchInertiaFrequenciesHz[pitch_inertia_frequency_idx_];
+      const float w = 2.0f * ns::common::kPi * frequency;
+      const float phase = w * pitch_inertia_block_time_s_;
+      const float amplitude = ns_ident::kPitchInertiaAmplitude;
+      const float q2_ref = center + amplitude * std::sin(phase);
+      out.pitch_target_rad = std::clamp(q2_ref, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
+      out.pitch_target_vel_rad_s = amplitude * w * std::cos(phase);
+      out.pitch_target_acc_rad_s2 = -amplitude * w * w * std::sin(phase);
+      out.excitation_frequency_hz = frequency;
+      out.excitation_index = static_cast<uint16_t>(pitch_inertia_frequency_idx_);
+      const uint16_t cycle = static_cast<uint16_t>(pitch_inertia_block_time_s_ * frequency);
+      out.cycle_index = cycle;
+      out.valid_for_fit = cycle >= ns_ident::kPitchInertiaWarmupCycles &&
+                          cycle < ns_ident::kPitchInertiaWarmupCycles + ns_ident::kPitchInertiaRecordCycles;
+
+      pitch_inertia_block_time_s_ += input.dt_s;
+      const float block_duration =
+          static_cast<float>(ns_ident::kPitchInertiaWarmupCycles + ns_ident::kPitchInertiaRecordCycles) / frequency;
+      if (pitch_inertia_block_time_s_ >= block_duration) {
+        ++pitch_inertia_frequency_idx_;
+        pitch_inertia_block_time_s_ = 0.0f;
+        ident_pid_pitch_.Clear();
+      }
+    } else {
+      out.pitch_target_rad = center;
+      out.valid_for_fit = false;
+    }
+
     ident_pid_yaw_.Update(yaw_target, input.yaw_motor_pos_rad, input.dt_s);
-    ident_pid_pitch_.Update(pitch_target, input.pitch_motor_pos_rad, input.dt_s);
+    ident_pid_pitch_.Update(out.pitch_target_rad, input.pitch_motor_pos_rad, input.dt_s);
 
     ident_time_s_ += input.dt_s;
 
-    Output out{};
     out.yaw_cmd_tau = std::clamp(ident_pid_yaw_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.pitch_cmd_tau = std::clamp(ident_pid_pitch_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
-    out.yaw_target_rad = yaw_target;
-    out.pitch_target_rad = pitch_target;
 
-    if (++data_tick_counter_ >= 1) {
+    // The extended CSV line is larger than the legacy seven-column line.
+    // 50 Hz is sufficient for the 1 Hz excitation and stays below 115200-baud throughput.
+    if (++data_tick_counter_ >= kCsvDecimation) {
       data_tick_counter_ = 0;
       PrepareCsvData(input, out, ident_time_s_);
       out.data_pending = true;
@@ -634,7 +717,7 @@ class GimbalIdent {
     out.yaw_target_rad = yaw_target;
     out.pitch_target_rad = pitch_target;
 
-    if (++data_tick_counter_ >= 1) {
+    if (++data_tick_counter_ >= kCsvDecimation) {
       data_tick_counter_ = 0;
       PrepareCsvData(input, out, ident_time_s_);
       out.data_pending = true;
@@ -683,7 +766,7 @@ class GimbalIdent {
     out.yaw_target_rad = yaw_target;
     out.pitch_target_rad = pitch_target;
 
-    if (++data_tick_counter_ >= 1) {
+    if (++data_tick_counter_ >= kCsvDecimation) {
       data_tick_counter_ = 0;
       PrepareCsvData(input, out, ident_time_s_);
       out.data_pending = true;

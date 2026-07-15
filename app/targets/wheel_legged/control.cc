@@ -319,6 +319,22 @@ void ControlLoop() {
 
   const uint32_t now_ms = HAL_GetTick();
 
+  // DWT CYCCNT runs at the Cortex-M7 core clock.  Measure the real interval
+  // between control-loop invocations instead of assuming that the timer ISR
+  // always executes at exactly 500 Hz.  The unsigned subtraction is safe
+  // across the 32-bit CYCCNT wrap as long as adjacent calls are less than one
+  // wrap period apart.
+  static uint32_t last_control_cycles = 0U;
+  const uint32_t now_control_cycles = DWT->CYCCNT;
+  float measured_control_dt_s = kControlLoopDtS;
+  bool measured_control_dt_valid = false;
+  if (last_control_cycles != 0U && SystemCoreClock != 0U) {
+    const uint32_t delta_cycles = now_control_cycles - last_control_cycles;
+    measured_control_dt_s = static_cast<float>(delta_cycles) / static_cast<float>(SystemCoreClock);
+    measured_control_dt_valid = measured_control_dt_s >= 0.0005f && measured_control_dt_s <= 0.020f;
+  }
+  last_control_cycles = now_control_cycles;
+
   // ── 跨周期状态（static 保持值语义，避免堆分配）──
   static InputSnapshot input{};
   static Dr16SemanticState dr16_state{};
@@ -526,6 +542,8 @@ void ControlLoop() {
   gimbal_update_input.gimbal_imu_gyro_z_rad_s = input.gimbal_imu_gyro_z_rad_s;
   gimbal_update_input.gimbal_imu_gyro_x_rad_s = -input.gimbal_imu_gyro_x_rad_s;
   gimbal_update_input.dt_s = kControlLoopDtS;
+  gimbal_update_input.measured_dt_s = measured_control_dt_s;
+  gimbal_update_input.measured_dt_valid = measured_control_dt_valid;
   gimbal_update_input.ident = &globals->gimbal_ident;
   gimbal_update_input.test_profile = gimbal_output.control.gimbal_test_profile;
   globals->gimbal.Update(gimbal_update_input);
@@ -545,8 +563,12 @@ void ControlLoop() {
 
   // 辨识模式串口数据发送
   if (gimbal_control_output.ident_data_pending && gimbal_control_output.ident_tx_data != nullptr) {
-    globals->no_dtcm->ident_uart.Write(reinterpret_cast<const rm::u8 *>(gimbal_control_output.ident_tx_data),
-                                       gimbal_control_output.ident_tx_len, 5);
+    // Do not block the 500 Hz ISR while a full CSV line is shifted out.
+    if (!globals->no_dtcm->ident_uart.IsTxBusy()) {
+      const size_t tx_len = std::min(gimbal_control_output.ident_tx_len, globals->no_dtcm->ident_tx_buffer.size());
+      std::memcpy(globals->no_dtcm->ident_tx_buffer.data(), gimbal_control_output.ident_tx_data, tx_len);
+      globals->no_dtcm->ident_uart.WriteAsync(globals->no_dtcm->ident_tx_buffer.data(), tx_len, {});
+    }
   }
 
   // 超级电容 TX：每周期从裁判系统读取功率上限和缓冲能量，下发给超级电容
@@ -582,6 +604,9 @@ void ControlLoop() {
     wl_debug.shoot_hero_fire_trigger = fire_flag ? 1U : 0U;
     wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
     wl_debug.shoot_hero_heat_delta = heat_delta;
+    wl_debug.fw_raw_rpm_1 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
+    wl_debug.fw_raw_rpm_2 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
+    wl_debug.fw_raw_rpm_3 = 0.0f;  // 当前 CAN 协议仅传输 2 个摩擦轮转速
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
@@ -1174,7 +1199,7 @@ void ControlLoop() {
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    const float bullet_speed = 11.65;
+    const float bullet_speed = 11.9f;
 #else
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)

@@ -49,7 +49,9 @@ class Gimbal {
     float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
     float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
     float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
-    float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
+    float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};           ///< 控制周期
+    float measured_dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 硬件测得的实际控制周期
+    bool measured_dt_valid{false};  ///< measured_dt_s 是否来自有效的 DWT 周期差
 
     /// 辨识/验证模式专用
     GimbalIdent *ident{nullptr};                                                             ///< 辨识控制器对象
@@ -166,7 +168,9 @@ class Gimbal {
         ident_in.yaw_motor_vel_rad_s = static_cast<float>(input.yaw_motor->vel());
         ident_in.pitch_motor_pos_rad = input.pitch_motor->pos();
         ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
-        ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+        ident_in.dt_s =
+            (input.measured_dt_s > 1e-5f) ? input.measured_dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+        ident_in.timing_valid = input.measured_dt_valid;
 
         output_.yaw_vel_rad_s = ident_in.yaw_motor_vel_rad_s;
         output_.pitch_vel_rad_s = ident_in.pitch_motor_vel_rad_s;

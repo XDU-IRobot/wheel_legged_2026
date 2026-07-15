@@ -101,7 +101,7 @@ const DmMitSettings kYawMotorSettings{0x12, 0x02, kPi, 30.f, 10.f, {0.f, 500.f},
 namespace gimbal_ident_common {
 constexpr size_t kHarmonicCount = 5;                   ///< 五次谐波
 constexpr float kRpmToRadPerSec = kPi * 2.0f / 60.0f;  ///< rpm → rad/s
-constexpr size_t kIdentUartTxBufSize = 128;            ///< 辨识串口发送缓冲区大小 [byte]
+constexpr size_t kIdentUartTxBufSize = 256;            ///< 扩展辨识 CSV 串口发送缓冲区大小 [byte]
 
 /// @brief 辨识子模式 (编译时选择，通过遥控器左 DOWN + 右 UP 激活 kIdent 状态后生效)
 enum class IdentSubMode : uint8_t {
@@ -179,7 +179,7 @@ constexpr float kPitchMinRad = -0.2f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.7f;   ///< 俯仰角上限 [rad]
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
-constexpr PidGains kYawPositionPid{27.0f, 0.0f, 0.5f, 1000.0f, 1.0f};    ///< 偏航位置 PID
+constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};    ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{1.5f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.5f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 28.0f, 0.0f};         ///< 俯仰速度 PID
@@ -232,8 +232,14 @@ constexpr float kFrictionPitchMoveVelocityRadS = 0.30f;  ///< 非采样过渡段
 constexpr float kFrictionPauseDuration = 0.5f;           ///< 段间停顿 [s]
 
 /// @brief Pitch 惯量模式: 正弦参数
-constexpr float kPitchInertiaFreqHz = 0.2f;      ///< 正弦频率 [Hz]
-constexpr float kPitchInertiaAmplitude = 0.25f;  ///< 正弦幅值 [rad]
+constexpr float kPitchInertiaFrequenciesHz[] = {0.4f, 0.7f, 1.0f};
+constexpr size_t kPitchInertiaFrequencyCount =
+    sizeof(kPitchInertiaFrequenciesHz) / sizeof(kPitchInertiaFrequenciesHz[0]);
+constexpr float kPitchInertiaAmplitude = 0.15f;
+constexpr uint16_t kPitchInertiaWarmupCycles = 2;
+constexpr uint16_t kPitchInertiaRecordCycles = 6;
+constexpr float kPitchInertiaPrepareVelocityRadS = 0.30f;
+constexpr float kPitchInertiaPrepareDurationS = 0.5f;
 
 /// @brief 耦合惯量模式: Pitch 固定角度序列 [rad]
 constexpr float kCouplingPitchAngles[] = {0.75f, 1.00f, 1.25f, 1.50f};
@@ -645,13 +651,13 @@ constexpr uint8_t kRobotId = 1U;                                           ///< 
 constexpr float kBulletSpeedMps = 11.5f;                                   ///< 弹速 [m/s]（裁判系统回退值）
 constexpr float kBulletDefaultSpeedMps = 11.5f;                            ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 10.5f;                           ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPidRune{27.0f, 0.0f, 0.5f, 1000.0f, 1.0f};  ///< 自瞄偏航位置 PID（打符）
-constexpr PidGains kYawSpeedPidRune{0.8f, 0.05f, 0.0f, 6.4f, 0.6f};        ///< 自瞄偏航速度 PID（打符）
-constexpr PidGains kPitchPositionPidRune{48, 0.f, 1.5f, 8.0f, 4.f};        ///< 自瞄俯仰位置 PID（打符）
+constexpr PidGains kYawPositionPidRune{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};  ///< 自瞄偏航位置 PID（打符）
+constexpr PidGains kYawSpeedPidRune{0.8f, 0.f, 0.0f, 6.4f, 0.6f};          ///< 自瞄偏航速度 PID（打符）
+constexpr PidGains kPitchPositionPidRune{55, 0.f, 1.5f, 8.0f, 4.f};        ///< 自瞄俯仰位置 PID（打符）
 constexpr PidGains kPitchSpeedPidRune{0.8f, 0.0f, 0.0f, 6.4f, 0.4f};       ///< 自瞄俯仰速度 PID（打符）
-constexpr PidGains kYawPositionPid{27.0f, 0.0f, 0.5f, 1000.0f, 1.0f};      ///< 自瞄偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.8f, 0.05f, 0.0f, 6.4f, 0.6f};            ///< 自瞄偏航速度 PID
-constexpr PidGains kPitchPositionPid{48, 0.f, 1.5f, 8.0f, 4.f};            ///< 自瞄俯仰位置 PID
+constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};      ///< 自瞄偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.8f, 0.f, 0.0f, 6.4f, 0.6f};              ///< 自瞄偏航速度 PID
+constexpr PidGains kPitchPositionPid{55, 0.f, 1.5f, 8.0f, 4.f};            ///< 自瞄俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.8f, 0.0f, 0.0f, 6.4f, 0.4f};           ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
@@ -749,8 +755,14 @@ constexpr size_t kFrictionPitchVelocityCount =
 constexpr float kFrictionPitchMoveVelocityRadS = 0.20f;
 constexpr float kFrictionPauseDuration = 0.5f;
 
-constexpr float kPitchInertiaFreqHz = 0.2f;
-constexpr float kPitchInertiaAmplitude = 0.2f;
+constexpr float kPitchInertiaFrequenciesHz[] = {0.4f, 0.7f, 1.0f};
+constexpr size_t kPitchInertiaFrequencyCount =
+    sizeof(kPitchInertiaFrequenciesHz) / sizeof(kPitchInertiaFrequenciesHz[0]);
+constexpr float kPitchInertiaAmplitude = 0.15f;
+constexpr uint16_t kPitchInertiaWarmupCycles = 2;
+constexpr uint16_t kPitchInertiaRecordCycles = 6;
+constexpr float kPitchInertiaPrepareVelocityRadS = 0.30f;
+constexpr float kPitchInertiaPrepareDurationS = 0.5f;
 
 constexpr float kCouplingPitchAngles[] = {-2.50f, -2.29f, -2.00f, -1.70f};
 constexpr size_t kCouplingAngleCount = 4;
@@ -1259,8 +1271,14 @@ constexpr size_t kFrictionPitchVelocityCount =
 constexpr float kFrictionPitchMoveVelocityRadS = 0.20f;
 constexpr float kFrictionPauseDuration = 0.5f;
 
-constexpr float kPitchInertiaFreqHz = 0.2f;
-constexpr float kPitchInertiaAmplitude = 0.25f;
+constexpr float kPitchInertiaFrequenciesHz[] = {0.4f, 0.7f, 1.0f};
+constexpr size_t kPitchInertiaFrequencyCount =
+    sizeof(kPitchInertiaFrequenciesHz) / sizeof(kPitchInertiaFrequenciesHz[0]);
+constexpr float kPitchInertiaAmplitude = 0.15f;
+constexpr uint16_t kPitchInertiaWarmupCycles = 2;
+constexpr uint16_t kPitchInertiaRecordCycles = 6;
+constexpr float kPitchInertiaPrepareVelocityRadS = 0.30f;
+constexpr float kPitchInertiaPrepareDurationS = 0.5f;
 
 constexpr float kCouplingPitchAngles[] = {0.70f, 0.94f, 1.20f, 1.50f};
 constexpr size_t kCouplingAngleCount = 4;
