@@ -31,6 +31,7 @@ class Chassis {
     bool keyboard_active{false};                        ///< 图传键鼠是否在线
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
+    bool position_hold_active{false};                  ///< 位置锚定激活中，触发 LQR 误差缩放
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
   };
@@ -71,6 +72,7 @@ class Chassis {
     rm::f32 filtered_wheel_speed_mps{0.0f};  ///< 低通滤波后轮速
     rm::f32 raw_wheel_speed_mps{0.0f};       ///< 原始轮速观测
     rm::f32 raw_accel_speed_mps{0.0f};       ///< 原始加速度积分速度
+    rm::f32 imu_acc_x_integral_mps{0.0f};   ///< IMU X轴加速度直接积分速度
     rm::f32 current_speed_mps{0.0f};         ///< 速度融合当前估计
     bool off_ground_in_mid_high_leg{false};
     bool off_ground_gravity_off{false};          ///< 离地 > 0.1s 重力补偿已关闭
@@ -140,6 +142,7 @@ class Chassis {
   rm::f32 rf_real_torque_{0.0f};
   rm::f32 rb_real_torque_{0.0f};
   rm::f32 imu_acc_x_mps2_{0.0f};
+  rm::f32 imu_acc_x_integral_mps_{0.0f};
   rm::f32 imu_acc_z_mps2_{0.0f};
 
   rm::f32 left_support_force_est_n_{0.0f};

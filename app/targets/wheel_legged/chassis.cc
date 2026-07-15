@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "include/params.hpp"
+#include "include/state_ctx.hpp"
 
 /**
  * @file  targets/wheel_legged/chassis.cc
@@ -242,6 +243,7 @@ void chassis::Chassis::SafeStop() {
   output_.rb_tau = 0.0f;
   output_.lw_tau = 0.0f;
   output_.rw_tau = 0.0f;
+  imu_acc_x_integral_mps_ = 0.0f;
 }
 
 /**
@@ -277,6 +279,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   imu_roll_ = estimator_input.imu.roll_rad;
   imu_acc_x_mps2_ = estimator_input.imu.acc_x_mps2;
+  imu_acc_x_integral_mps_ += imu_acc_x_mps2_ * estimator_input.dt_s;
   imu_acc_z_mps2_ = estimator_input.imu.acc_z_mps2;
   lf_real_torque_ = estimator_input.left_leg.front.torque_nm;
   lb_real_torque_ = estimator_input.left_leg.back.torque_nm;
@@ -292,6 +295,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.speed_mps = state_output.fused_speed_mps;
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
   output_.raw_accel_speed_mps = state_output.raw_accel_speed_mps;
+  output_.imu_acc_x_integral_mps = imu_acc_x_integral_mps_;
   output_.current_speed_mps = state_output.current_speed_mps;
 
   CalSupportForce();
@@ -540,7 +544,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias);
+  const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
+  const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
+  const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
+  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias,
+                                                 pos_scale, vel_scale);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());

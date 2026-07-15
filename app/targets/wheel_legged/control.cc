@@ -426,7 +426,39 @@ void ControlLoop() {
     }
     prev_domain_state = tc_state.domain_state;
   }
-  const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+  // C/V/B 键重置正方向：偏航未对齐时暂缓腿长切换，先转到位
+  // 暂缓期间必须阻止 FSM 切换模式，只覆盖 target_leg_length_m 不够——
+  // fsm_mode 在 chassis.cc 里还会影响腿 PID、力控、轮力矩等多个路径。
+  const auto leg_profile_from_state = [](chassis::Fsm::State s) -> wheel_legged::LegProfile {
+    if (s == chassis::Fsm::State::kMidLeg) return wheel_legged::LegProfile::kMid;
+    if (s == chassis::Fsm::State::kHighLeg || s == chassis::Fsm::State::kStairTask)
+      return wheel_legged::LegProfile::kHigh;
+    return wheel_legged::LegProfile::kLow;
+  };
+
+  if (ctx.defer_leg_change) {
+    ctx.pending_leg_profile = chassis_input.request.leg_request;
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err < kSpinExitYawAlignThresholdRad) {
+      chassis_input.request.leg_request = ctx.pending_leg_profile;
+      ctx.defer_leg_change = false;
+    } else {
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
+  } else if (input.mode_request.reset_yaw_request) {
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
+      ctx.defer_leg_change = true;
+      ctx.pending_leg_profile = chassis_input.request.leg_request;
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
+  }
+
+  chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
@@ -753,6 +785,9 @@ void ControlLoop() {
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       ctx.spin_exit_recovery = true;
       ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+      ctx.yaw_follow_target =
+          SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
+      ctx.yaw_follow_target_initialized = true;
     }
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -792,7 +827,8 @@ void ControlLoop() {
 
   // ── 7e. 偏航目标更新 ──
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
-  if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if ((!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) &&
+      !now_is_spin_exit_pending) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
@@ -1010,7 +1046,8 @@ void ControlLoop() {
   // ── φ 目标：将偏航电机角度误差映射为 LQR 的底盘朝向误差 ──
   // motor_error = 电机当前角度偏离目标的角度，底盘偏离期望朝向的大小与之相同
   // 非自旋、非翻转、chassis 输出使能时才生效，否则不产生朝向力矩
-  if (!spin_control_enabled && !now_is_spin_exit_pending && !ctx.flip_180_in_progress && chassis_output_enable &&
+  // kSpinExitPending 阶段同样生效：主动转向使 yaw 电机靠拢正方向，避免被动等超时
+  if (!spin_control_enabled && !ctx.flip_180_in_progress && chassis_output_enable &&
       ctx.yaw_follow_target_initialized) {
     const float motor_error =
         rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
@@ -1107,6 +1144,7 @@ void ControlLoop() {
     wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
   }
 #endif
+  chassis_update_input.position_hold_active = ctx.integrate_position;
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 

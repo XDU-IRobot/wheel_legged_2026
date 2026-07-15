@@ -38,6 +38,7 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   yaw_follow_target_initialized = false;
   flip_180_in_progress = false;
   flip_180_ticks = 0U;
+  defer_leg_change = false;
 }
 
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {
@@ -113,6 +114,20 @@ bool IsYawAtStartupTarget(const float yaw_target_rad, const float yaw_motor_rad,
 bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad, const float yaw_motor_vel_rad_s) {
   const float yaw_err_rad = std::fabs(rm::modules::Wrap(yaw_target_rad - yaw_motor_rad, -kPi, kPi));
   return yaw_err_rad <= kYawFollowDriveReadyErrorRad && std::fabs(yaw_motor_vel_rad_s) <= kYawFollowDriveReadyVelRadS;
+}
+PositionVelocityScales ResolvePositionVelocityScales(const chassis::Fsm::State mode) {
+  switch (mode) {
+    case chassis::Fsm::State::kLowLeg:
+      return {params::active::control_loop::kPositionErrorScaleLowLeg,
+              params::active::control_loop::kVelocityErrorScaleLowLeg};
+    case chassis::Fsm::State::kHighLeg:
+    case chassis::Fsm::State::kStairTask:
+      return {params::active::control_loop::kPositionErrorScaleHighLeg,
+              params::active::control_loop::kVelocityErrorScaleHighLeg};
+    default:
+      return {params::active::control_loop::kPositionErrorScaleMidLeg,
+              params::active::control_loop::kVelocityErrorScaleMidLeg};
+  }
 }
 
 SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {

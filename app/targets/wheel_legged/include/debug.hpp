@@ -190,6 +190,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_raw_wheel_speed_mps;       // 原始轮速观测
   float chassis_filtered_wheel_speed_mps;  // 低通滤波后轮速
   float chassis_raw_accel_speed_mps;       // 原始加速度积分速度
+  float chassis_imu_acc_x_integral_mps;    // IMU X轴加速度直接积分速度
   float chassis_left_force_n;              // 左腿竖直力
   float chassis_right_force_n;             // 右腿竖直力
   float chassis_left_support_force_n;      // 左腿支撑力
