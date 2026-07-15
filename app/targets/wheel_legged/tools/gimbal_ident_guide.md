@@ -2,7 +2,7 @@
 
 ## 概述
 
-云台辨识用于标定二自由度云台的 9 个动力学参数，为前馈控制提供准确的模型。辨识采用**分步递进**策略：先辨识独立的参数（重力、摩擦），再以此为基础辨识耦合参数（惯量），最后综合验证。
+云台辨识用于标定二自由度云台的 9 个动力学参数，为前馈控制提供准确的模型。Pitch 重力与摩擦首先通过多速度正反扫角联合辨识，再辨识惯量和耦合参数，最后综合验证。
 
 ### 9 参数一览
 
@@ -11,8 +11,8 @@
 | theta[0] | I1zz_com | Yaw 轴等效惯量（含 Pitch 耦合分量） | Step 4 coupling |
 | theta[1] | I2xx_com | Pitch 轴绕 x 的耦合惯量 | Step 4 coupling |
 | theta[2] | I2yy_com | Pitch 轴等效惯量 | Step 3 pitch-inertia |
-| theta[3] | m2·l2x | 水平偏心距 × Pitch 体质量 | Step 1 gravity |
-| theta[4] | m2·l2z | 垂直偏心距 × Pitch 体质量 | Step 1 gravity |
+| theta[3] | m2·l2x | 水平偏心距 × Pitch 体质量 | Step 2 friction 联合辨识 |
+| theta[4] | m2·l2z | 垂直偏心距 × Pitch 体质量 | Step 2 friction 联合辨识 |
 | theta[5] | fv1 | Yaw 粘性摩擦系数 | Step 2 friction |
 | theta[6] | fc1 | Yaw 库仑摩擦系数 | Step 2 friction |
 | theta[7] | fv2 | Pitch 粘性摩擦系数 | Step 2 friction |
@@ -34,9 +34,9 @@ pip install numpy pandas scipy scikit-learn pyserial
 ## 整体流程
 
 ```
-Step 1 (gravity)      → theta[3], theta[4]
+Step 1 (gravity)      → 静态重力曲线检查（可选）
         ↓
-Step 2 (friction)     → theta[5], theta[6], theta[7], theta[8]
+Step 2 (friction)     → Pitch 重力/偏置/摩擦联合辨识 + Yaw 摩擦辨识
         ↓
 Step 3 (pitch-inertia) → theta[2]
         ↓
@@ -45,7 +45,8 @@ Step 4 (coupling)     → theta[0], theta[1]
 Step 5 (verify)       → 综合验证全部 9 参数
 ```
 
-每一步的输出是下一步的输入，依序进行。
+Pitch 的 theta[3]、theta[4]、常值偏置 C、theta[7]、theta[8] 由 Step 2
+同一批多速度正反扫角数据联合求解。Step 1 不再是必需的参数输入，只用于静态交叉验证。
 
 ---
 
@@ -69,13 +70,13 @@ Step 5 (verify)       → 综合验证全部 9 参数
 
 **原理**：
 
-Pitch 轴静止时（dq2 ≈ 0），电机力矩仅用于抵消重力：
+理想、无静摩擦时，Pitch 轴静止力矩满足：
 
 ```
 tau2 = -g * theta[3] * cos(q2) - g * theta[4] * sin(q2)
 ```
 
-通过采集多个 Pitch 角度的 tau2 数据，使用最小二乘法拟合出 theta[3]（水平偏心）和 theta[4]（垂直偏心）。
+实际静止状态还存在方向相关的静摩擦，因此本步骤采用往返平均，只用于检查重力曲线和联合辨识结果，不再作为 Step 2 的必需输入。
 
 ### 操作步骤
 
@@ -101,7 +102,9 @@ constexpr float kGravitySettleDuration = 0.5f;   // 到位稳定时间 (s)
 
 #### 1.2 编译烧录固件，上电运行
 
-上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。云台将依次移动到每个 Pitch 角度并停留测量。全程 Yaw 轴保持当前位置不动。
+上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。云台先按数组顺序正向扫描全部 Pitch 角度，再按相反顺序扫描回起点；转折端不重复停留。除两端外，每个角度都会分别从两个方向进入并测量，可减小静摩擦和线缆迟滞对重力项的影响。全程 Yaw 轴保持当前位置不动。
+
+若角度数组包含 `N` 个角度，一次辨识共记录 `2N-1` 个静止段。请等待云台反向返回起始角度后再停止采集。
 
 #### 1.3 采集数据
 
@@ -148,19 +151,22 @@ Step 1: 静态重力项辨识  →  theta[3], theta[4]
 
 ---
 
-## Step 2 — 低速摩擦项辨识 (theta[5..8])
+## Step 2 — Pitch 重力/摩擦联合辨识 + Yaw 摩擦辨识
 
-**目的**：在重力项已知的前提下，通过 Yaw 和 Pitch 轴的分段匀速运动，辨识粘性摩擦和库仑摩擦。
+**目的**：让 Pitch 以多个正负恒定速度扫过同一个角度范围，同时辨识重力、常值偏置、粘性摩擦和库仑摩擦；随后使用多个速度档辨识 Yaw 摩擦。
 
 **原理**：
 
-匀速运动时惯性项为零，扣除重力后剩余的力矩主要由摩擦贡献：
+Pitch 匀速运动时惯性项为零，联合模型为：
 
 ```
-tau = fv * dq + fc * tanh(dq)
+tau2 = A*cos(q2) + B*sin(q2) + C
+     + fv2*dq2 + fc2*tanh(dq2 / 0.02)
 ```
 
-其中 tanh 用于平滑近似符号函数（避免在 dq=0 处不连续）。
+其中 `A=-g*theta[3]`、`B=-g*theta[4]`。`tanh(dq/0.02)` 用于平滑近似符号函数，0.02 rad/s 必须与 C++ 动力学模型一致。
+
+> 注意：摩擦基函数已由旧版 `tanh(dq)` 改为 `tanh(dq/0.02)`，旧的 theta[6]/theta[8] 数值不能直接沿用，必须重新辨识。
 
 ### 操作步骤
 
@@ -173,19 +179,21 @@ static constexpr IdentSubMode kIdentSubMode = IdentSubMode::kFriction;
 确认摩擦参数：
 
 ```cpp
-constexpr float kFrictionVelocities[] = {0.05f, 0.10f, 0.20f, 0.40f};      // 正速度档 (rad/s)
-constexpr float kFrictionVelocitiesNeg[] = {-0.05f, -0.10f, -0.20f, -0.40f}; // 负速度档
-constexpr size_t kFrictionVelocityCount = 4;
-constexpr float kFrictionConstVelDuration = 2.0f;  // 每段匀速持续时间 (s)
-constexpr float kFrictionAccel = 0.5f;              // 加减速加速度 (rad/s²)
+constexpr float kFrictionPitchVelocitiesRadS[] = {0.05f, 0.10f, 0.20f, 0.30f};
+constexpr size_t kFrictionPitchVelocityCount = 4;
+constexpr float kFrictionYawVelocitiesRadS[] = {0.05f, 0.10f, 0.20f, 0.30f};
+constexpr size_t kFrictionYawVelocityCount = 4;
+constexpr float kFrictionYawTravelRad = 1.0f;
+constexpr float kFrictionPauseDuration = 0.5f;
 ```
 
-- 速度档位应覆盖低速范围（0.05 ~ 0.4 rad/s），保证摩擦效应显著
-- 加速度不宜过大，避免惯性项干扰
+- 每个 Pitch 速度档均执行 Top→Bottom 正扫和 Bottom→Top 反扫
+- 准备、端点停顿和转向阶段不发送 CSV
+- 多个速度幅值用于分离粘性摩擦与库仑摩擦
 
 #### 2.2 编译烧录，上电运行
 
-上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。云台先扫 Yaw 轴（正转速 4 档 → 负转速 4 档），再扫 Pitch 轴（正负交替 8 档）。
+上电后，**遥控器左拨杆 DOWN + 右拨杆 UP** 激活辨识模式。云台先移动到 Pitch Top 保护端，再按速度数组逐档完成正反向全行程扫描；完成后回中，再按多个速度档完成 Yaw 正反转。
 
 #### 2.3 采集数据
 
@@ -198,12 +206,10 @@ python serial_collect.py friction --port COM6
 #### 2.4 运行辨识
 
 ```bash
-python identify_gimbal.py friction friction_sweep.csv --theta34 0.027061,-0.025930
+python identify_gimbal.py friction friction_sweep.csv
 ```
 
-其中 `--theta34` 填入 Step 1 辨识得到的 theta[3], theta[4]。
-
-**输出将打印下一步所需的 `--theta78` 参数**。
+输出会同时打印 theta[3]、theta[4]、C、theta[5..8]，以及下一步所需的完整命令。
 
 ---
 
@@ -214,7 +220,7 @@ python identify_gimbal.py friction friction_sweep.csv --theta34 0.027061,-0.0259
 **原理**：
 
 ```
-tau2_residual = tau2 - tau2_gravity - tau2_friction = I2yy_com * ddq2
+tau2_residual = tau2 - tau2_gravity - C - tau2_friction = I2yy_com * ddq2
 ```
 
 线性回归 ddq2 → tau2_residual，斜率即为 theta[2]。
@@ -250,7 +256,8 @@ python serial_collect.py dynamic --port COM6 --output dynamic_pitch.csv
 ```bash
 python identify_gimbal.py pitch-inertia dynamic_pitch.csv \
     --theta34 0.027061,-0.025930 \
-    --theta78 0.3,0.04
+    --theta78 0.3,0.04 \
+    --pitch-bias 0.10
 ```
 
 `--theta78` 填入 Step 2 辨识得到的 theta[7], theta[8]（Pitch 摩擦）。
@@ -391,13 +398,13 @@ constexpr float kIdentTheta[9] = {
 python serial_collect.py gravity --port COM6
 python identify_gimbal.py gravity gravity_static.csv
 
-# Step 2: 低速摩擦
+# Step 2: Pitch 重力/摩擦联合辨识 + Yaw 摩擦
 python serial_collect.py friction --port COM6
-python identify_gimbal.py friction friction_sweep.csv --theta34 <θ3>,<θ4>
+python identify_gimbal.py friction friction_sweep.csv
 
 # Step 3: Pitch 惯量
 python serial_collect.py dynamic --port COM6 --output dynamic_pitch.csv
-python identify_gimbal.py pitch-inertia dynamic_pitch.csv --theta34 <θ3>,<θ4> --theta78 <θ7>,<θ8>
+python identify_gimbal.py pitch-inertia dynamic_pitch.csv --theta34 <θ3>,<θ4> --theta78 <θ7>,<θ8> --pitch-bias <C>
 
 # Step 4: 耦合惯量
 python serial_collect.py dynamic --port COM6 --output q2_m40.csv   # Pitch=-40°

@@ -2,8 +2,8 @@
 云台动力学参数分步辨识工具
 
 按照文档推荐的顺序逐步辨识 9 个动力学参数：
-  1. gravity       — 静态重力项 (theta[3], theta[4])
-  2. friction      — 低速摩擦项 (theta[5], theta[6], theta[7], theta[8])
+  1. gravity       — 静态重力项检查（可选）
+  2. friction      — Pitch 重力/摩擦联合辨识 + Yaw 摩擦辨识
   3. pitch-inertia — Pitch 等效惯量 (theta[2])
   4. coupling      — Yaw-Pitch 耦合惯量 (theta[0], theta[1])
   5. verify        — 综合验证全部 9 参数
@@ -18,8 +18,8 @@
 
 Usage:
   python identify_gimbal.py gravity gravity_static.csv
-  python identify_gimbal.py friction friction_sweep.csv --theta34 0.027,-0.026
-  python identify_gimbal.py pitch-inertia dynamic_pitch.csv --theta34 0.027,-0.026 --theta78 0.3,0.04
+  python identify_gimbal.py friction friction_sweep.csv
+  python identify_gimbal.py pitch-inertia dynamic_pitch.csv --theta34 0.027,-0.026 --theta78 0.3,0.04 --pitch-bias 0.1
   python identify_gimbal.py coupling q2_m40.csv q2_0.csv q2_p40.csv --theta56 0.2,0.03
   python identify_gimbal.py verify dynamic_harmonics.csv --theta 0.01,0.005,0.03,0.027,-0.026,0.2,0.03,0.3,0.04
 """
@@ -32,6 +32,7 @@ from scipy.signal import savgol_filter
 from sklearn.linear_model import LinearRegression
 
 G_DEFAULT = 9.81
+FRICTION_VELOCITY_SCALE_DEFAULT = 0.02
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +149,55 @@ def find_const_vel_segments(dq, dq_stability=0.03, min_duration_s=0.5, dt=None):
     return segments
 
 
+def average_bidirectional_static_points(q2_points, tau2_points):
+    """检测 0→N-1→0 三角扫描，并将同一目标角的正反向静止点配对平均。"""
+    q2_points = np.asarray(q2_points, dtype=float)
+    tau2_points = np.asarray(tau2_points, dtype=float)
+    count = len(q2_points)
+
+    # 标准往返序列包含 2N-1 个静止段，转折点位于序列中央。
+    if count < 5 or count % 2 == 0:
+        return q2_points, tau2_points, None
+
+    turn = count // 2
+    span = q2_points[turn] - q2_points[0]
+    if abs(span) < 0.1:
+        return q2_points, tau2_points, None
+
+    direction = np.sign(span)
+    forward_steps = direction * np.diff(q2_points[:turn + 1])
+    reverse_steps = direction * np.diff(q2_points[turn:])
+    if np.any(forward_steps <= 1e-3) or np.any(reverse_steps >= -1e-3):
+        return q2_points, tau2_points, None
+
+    # 返回端应回到起始角附近；容许位置环静差和静摩擦造成少量角度差。
+    endpoint_tolerance = max(0.15, 0.25 * abs(span))
+    if abs(q2_points[-1] - q2_points[0]) > endpoint_tolerance:
+        return q2_points, tau2_points, None
+
+    q2_averaged, tau2_averaged = [], []
+    pair_tau_differences = []
+    pair_q_differences = []
+    for i in range(turn):
+        j = count - 1 - i
+        q2_averaged.append(0.5 * (q2_points[i] + q2_points[j]))
+        tau2_averaged.append(0.5 * (tau2_points[i] + tau2_points[j]))
+        pair_q_differences.append(q2_points[i] - q2_points[j])
+        pair_tau_differences.append(tau2_points[i] - tau2_points[j])
+
+    # 转折端只测一次，直接作为该目标角的代表点。
+    q2_averaged.append(q2_points[turn])
+    tau2_averaged.append(tau2_points[turn])
+
+    info = {
+        'raw_count': count,
+        'averaged_count': len(q2_averaged),
+        'pair_q_differences': np.asarray(pair_q_differences),
+        'pair_tau_differences': np.asarray(pair_tau_differences),
+    }
+    return np.asarray(q2_averaged), np.asarray(tau2_averaged), info
+
+
 # ---------------------------------------------------------------------------
 # Step 1: 静态重力项辨识
 # ---------------------------------------------------------------------------
@@ -169,8 +219,9 @@ def cmd_gravity(args):
         q2_means.append(float(np.mean(df['q2'].values[start:end])))
         tau2_means.append(float(np.mean(df['tau2'].values[start:end])))
 
-    q2_enc_arr = np.array(q2_means)
-    tau2_arr = np.array(tau2_means)
+    q2_raw_arr = np.array(q2_means)
+    tau2_raw_arr = np.array(tau2_means)
+    q2_enc_arr, tau2_arr, bidirectional_info = average_bidirectional_static_points(q2_raw_arr, tau2_raw_arr)
 
     # q2 从编码器坐标转到模型坐标 (q2=0 为 pitch 水平)
     q2_model_arr = q2_enc_arr - args.pitch_offset
@@ -195,11 +246,19 @@ def cmd_gravity(args):
     print(f"Step 1: 静态重力项辨识  →  theta[3], theta[4]")
     print(f"{'=' * 60}")
     print(f"  pitch-offset = {args.pitch_offset:.4f} rad ({np.rad2deg(args.pitch_offset):.1f}°)")
-    print(f"  使用静止段数: {len(segments)}")
+    print(f"  检测到静止段数: {len(segments)}")
     for i, (s, e) in enumerate(segments):
-        q2_deg = np.rad2deg(q2_enc_arr[i])
-        q2m_deg = np.rad2deg(q2_model_arr[i])
-        print(f"    [{i}] q2={q2_deg:.1f}° (model:{q2m_deg:.1f}°)  tau2={tau2_arr[i]:.4f}  (行 {s}-{e})")
+        q2_deg = np.rad2deg(q2_raw_arr[i])
+        q2m_deg = q2_deg - np.rad2deg(args.pitch_offset)
+        print(f"    [{i}] q2={q2_deg:.1f}° (model:{q2m_deg:.1f}°)  tau2={tau2_raw_arr[i]:.4f}  (行 {s}-{e})")
+
+    if bidirectional_info is not None:
+        tau_diff = np.abs(bidirectional_info['pair_tau_differences'])
+        q_diff_deg = np.abs(np.rad2deg(bidirectional_info['pair_q_differences']))
+        print(f"\n  检测到正向/反向往返扫描，已按同一目标角配对平均:")
+        print(f"    原始静止段: {bidirectional_info['raw_count']}  →  拟合点: {bidirectional_info['averaged_count']}")
+        print(f"    正反向力矩差: mean={np.mean(tau_diff):.4f} Nm, max={np.max(tau_diff):.4f} Nm")
+        print(f"    正反向角度差: mean={np.mean(q_diff_deg):.2f}°, max={np.max(q_diff_deg):.2f}°")
 
     print(f"\n  拟合: tau2 = A*cos(q2_model) + B*sin(q2_model) + C")
     print(f"    A  = {A:.6f}")
@@ -217,8 +276,8 @@ def cmd_gravity(args):
         print(f"\n  *** 注意: 常值偏置 C={C:.4f} 偏大，建议检查 ***")
         print(f"      可能原因: 电流零偏 / 线缆拉力 / 编码器零位 / 力矩方向")
 
-    print(f"\n  下一步 (friction) 请使用:")
-    print(f"    --theta34 {theta3:.6f},{theta4:.6f} --pitch-bias {C:.6f}")
+    print(f"\n  本结果仅用于静态交叉验证。正式参数请运行联合辨识:")
+    print("    python identify_gimbal.py friction friction_sweep.csv")
 
     return theta3, theta4
 
@@ -228,7 +287,8 @@ def cmd_gravity(args):
 # ---------------------------------------------------------------------------
 
 def cmd_friction(args):
-    theta3, theta4 = parse_theta(args.theta34, 2, 'theta34')
+    if args.friction_velocity_scale <= 0.0:
+        raise ValueError("--friction-velocity-scale 必须大于 0")
 
     df = load_csv(args.csv)
     df, dt = add_ddq(df)
@@ -239,10 +299,6 @@ def cmd_friction(args):
     dq2 = df['dq2'].values
     tau1 = df['tau1'].values
     tau2 = df['tau2'].values
-
-    # Pitch 先扣重力再扣常值偏置
-    tau2_gravity = -g * (theta3 * np.cos(q2) + theta4 * np.sin(q2))
-    tau2_no_g = tau2 - tau2_gravity - args.pitch_bias
 
     # ── Yaw 摩擦 ──
     print(f"\n{'=' * 60}")
@@ -263,7 +319,7 @@ def cmd_friction(args):
         dq1_arr = np.array(dq1_pts)
         tau1_arr = np.array(tau1_pts)
 
-        X = np.column_stack([dq1_arr, np.tanh(dq1_arr)])
+        X = np.column_stack([dq1_arr, np.tanh(dq1_arr / args.friction_velocity_scale)])
         reg = LinearRegression(fit_intercept=False)
         reg.fit(X, tau1_arr)
         theta5, theta6 = reg.coef_
@@ -272,48 +328,104 @@ def cmd_friction(args):
         print(f"  使用匀速段数: {len(yaw_segs)}")
         for i, (s, e) in enumerate(yaw_segs):
             print(f"    [{i}] dq1={dq1_pts[i]:.4f} rad/s  tau1={tau1_pts[i]:.4f}  (行 {s}-{e})")
-        print(f"\n  拟合: tau1 = theta[5]*dq1 + theta[6]*tanh(dq1)")
+        print(f"\n  拟合: tau1 = theta[5]*dq1 + theta[6]*tanh(dq1/{args.friction_velocity_scale:g})")
         print(f"    theta[5] (fv1, 粘性) = {theta5:.6f}")
         print(f"    theta[6] (fc1, 库仑) = {theta6:.6f}")
         print(f"    R² = {r2_yaw:.4f}")
 
-    # ── Pitch 摩擦 ──
+    # ── Pitch 重力 + 偏置 + 摩擦联合辨识 ──
     print(f"\n{'=' * 60}")
-    print(f"Step 2b: Pitch 摩擦辨识  →  theta[7] (fv2), theta[8] (fc2)")
+    print(f"Step 1+2b: Pitch 重力与摩擦联合辨识")
+    print(f"  → theta[3], theta[4], pitch-bias, theta[7], theta[8]")
     print(f"{'=' * 60}")
 
     pitch_segs = find_const_vel_segments(dq2, args.pitch_dq_stability, args.pitch_min_duration, dt)
 
-    if len(pitch_segs) < 3:
-        print(f"  警告: 仅找到 {len(pitch_segs)} 个 Pitch 匀速段，theta[7]/theta[8] 置零")
-        theta7, theta8 = 0.0, 0.0
-    else:
-        dq2_pts, tau2_pts = [], []
-        for s, e in pitch_segs:
-            dq2_pts.append(float(np.mean(dq2[s:e])))
-            tau2_pts.append(float(np.mean(tau2_no_g[s:e])))
+    if len(pitch_segs) < 4:
+        print(f"错误: 仅找到 {len(pitch_segs)} 个 Pitch 匀速段，联合辨识至少需要 4 段。")
+        print("请确认每个速度档都完成了正向和反向全行程扫描。")
+        sys.exit(1)
 
-        dq2_arr = np.array(dq2_pts)
-        tau2_arr = np.array(tau2_pts)
+    sample_indices = []
+    sample_weights = []
+    segment_stats = []
+    for s, e in pitch_segs:
+        idx = np.arange(s, e)
+        # Yaw 应基本静止；排除力矩接近饱和的数据。
+        keep = (np.abs(dq1[idx]) < args.pitch_yaw_velocity_max) & (np.abs(tau2[idx]) < args.torque_limit)
+        idx = idx[keep]
+        if len(idx) < max(10, int(args.pitch_min_duration / dt)):
+            continue
+        sample_indices.append(idx)
+        # 每个正/反向扫角段总权重相同，避免低速段因样本更多而主导回归。
+        sample_weights.append(np.full(len(idx), 1.0 / len(idx)))
+        segment_stats.append((s, e, float(np.mean(dq2[idx])), float(np.ptp(q2[idx])), len(idx)))
 
-        X = np.column_stack([dq2_arr, np.tanh(dq2_arr)])
-        reg = LinearRegression(fit_intercept=False)
-        reg.fit(X, tau2_arr)
-        theta7, theta8 = reg.coef_
-        r2_pitch = reg.score(X, tau2_arr)
+    if len(sample_indices) < 4:
+        print(f"错误: 筛选后仅剩 {len(sample_indices)} 个有效 Pitch 匀速段。")
+        sys.exit(1)
 
-        print(f"  使用匀速段数: {len(pitch_segs)}")
-        for i, (s, e) in enumerate(pitch_segs):
-            print(f"    [{i}] dq2={dq2_pts[i]:.4f} rad/s  tau2_no_g={tau2_pts[i]:.4f}  (行 {s}-{e})")
-        print(f"\n  拟合: tau2_no_g = theta[7]*dq2 + theta[8]*tanh(dq2)")
-        print(f"    theta[7] (fv2, 粘性) = {theta7:.6f}")
-        print(f"    theta[8] (fc2, 库仑) = {theta8:.6f}")
-        print(f"    R² = {r2_pitch:.4f}")
+    idx_all = np.concatenate(sample_indices)
+    weights = np.concatenate(sample_weights)
+    X = np.column_stack([
+        np.cos(q2[idx_all]),
+        np.sin(q2[idx_all]),
+        np.ones(len(idx_all)),
+        dq2[idx_all],
+        np.tanh(dq2[idx_all] / args.friction_velocity_scale),
+    ])
+    y = tau2[idx_all]
+
+    if np.linalg.matrix_rank(X) < X.shape[1]:
+        print("错误: 联合回归矩阵秩不足；需要多个速度幅值，并且每档同时包含正、反方向。")
+        sys.exit(1)
+
+    reg = LinearRegression(fit_intercept=False)
+    reg.fit(X, y, sample_weight=weights)
+    A, B, pitch_bias, theta7, theta8 = reg.coef_
+    theta3 = -A / g
+    theta4 = -B / g
+    pred = reg.predict(X)
+    residual = y - pred
+    r2_pitch = reg.score(X, y, sample_weight=weights)
+    rmse_pitch = float(np.sqrt(np.average(residual ** 2, weights=weights)))
+    mae_pitch = float(np.average(np.abs(residual), weights=weights))
+
+    # 对每列归一化后计算条件数，诊断 A/C、fv/fc 是否仍高度耦合。
+    col_norm = np.linalg.norm(X, axis=0)
+    condition = float(np.linalg.cond(X / np.maximum(col_norm, 1e-12)))
+    gravity_condition = float(np.linalg.cond(X[:, :3] / np.maximum(col_norm[:3], 1e-12)))
+    friction_condition = float(np.linalg.cond(X[:, 3:] / np.maximum(col_norm[3:], 1e-12)))
+
+    print(f"  使用匀速段数: {len(segment_stats)}, 有效样本: {len(idx_all)} / {len(df)}")
+    for i, (s, e, mean_dq, q_span, count) in enumerate(segment_stats):
+        print(f"    [{i}] dq2={mean_dq:+.4f} rad/s  q跨度={np.rad2deg(q_span):.1f}°  "
+              f"样本={count}  (行 {s}-{e})")
+
+    print(f"\n  联合模型:")
+    print(f"    tau2 = A*cos(q2) + B*sin(q2) + C + theta[7]*dq2 "
+          f"+ theta[8]*tanh(dq2/{args.friction_velocity_scale:g})")
+    print(f"    A = {A:.6f}, B = {B:.6f}, C = {pitch_bias:.6f}")
+    print(f"    theta[3] (m2*l2x) = {theta3:.6f}")
+    print(f"    theta[4] (m2*l2z) = {theta4:.6f}")
+    print(f"    theta[7] (fv2)     = {theta7:.6f}")
+    print(f"    theta[8] (fc2)     = {theta8:.6f}")
+    print(f"    R²={r2_pitch:.4f}, RMSE={rmse_pitch:.4f} Nm, MAE={mae_pitch:.4f} Nm")
+    print(f"    归一化条件数: full={condition:.1f}, gravity={gravity_condition:.1f}, "
+          f"friction={friction_condition:.1f}")
+
+    if gravity_condition > 100.0:
+        print("\n  *** 警告: 重力 A/B/C 仍高度耦合，请扩大安全扫角范围或独立标定 C。***")
+    if friction_condition > 30.0:
+        print("\n  *** 警告: theta[7]/theta[8] 仍高度耦合，请增加速度档差异。***")
+    if abs(pitch_bias) > 0.1 * max(abs(A), abs(B), 0.01):
+        print(f"\n  注意: C={pitch_bias:.4f} Nm 较大；它是执行器/线缆等效偏置，不属于理想重力项。")
 
     print(f"\n  下一步 (pitch-inertia) 请使用:")
-    print(f"    --theta34 {theta3:.6f},{theta4:.6f} --theta78 {theta7:.6f},{theta8:.6f}")
+    print(f"    --theta34 {theta3:.6f},{theta4:.6f} --theta78 {theta7:.6f},{theta8:.6f} \\")
+    print(f"    --pitch-bias {pitch_bias:.6f}")
 
-    return theta5, theta6, theta7, theta8
+    return theta3, theta4, pitch_bias, theta5, theta6, theta7, theta8
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +433,8 @@ def cmd_friction(args):
 # ---------------------------------------------------------------------------
 
 def cmd_pitch_inertia(args):
+    if args.friction_velocity_scale <= 0.0:
+        raise ValueError("--friction-velocity-scale 必须大于 0")
     theta3, theta4 = parse_theta(args.theta34, 2, 'theta34')
     theta7, theta8 = parse_theta(args.theta78, 2, 'theta78')
 
@@ -336,8 +450,8 @@ def cmd_pitch_inertia(args):
 
     # 扣除重力和摩擦
     tau2_gravity = -g * (theta3 * np.cos(q2) + theta4 * np.sin(q2))
-    tau2_friction = theta7 * dq2 + theta8 * np.tanh(dq2)
-    tau2_residual = tau2 - tau2_gravity - tau2_friction
+    tau2_friction = theta7 * dq2 + theta8 * np.tanh(dq2 / args.friction_velocity_scale)
+    tau2_residual = tau2 - tau2_gravity - tau2_friction - args.pitch_bias
 
     # 筛选: Yaw 基本不动 且 Pitch 有明显的加速度
     mask = (np.abs(dq1) < 0.15) & (np.abs(ddq2) > 0.05)
@@ -380,6 +494,8 @@ def cmd_pitch_inertia(args):
 # ---------------------------------------------------------------------------
 
 def cmd_coupling(args):
+    if args.friction_velocity_scale <= 0.0:
+        raise ValueError("--friction-velocity-scale 必须大于 0")
     theta5, theta6 = parse_theta(args.theta56, 2, 'theta56')
 
     dfs = [load_csv(p) for p in args.csv]
@@ -397,7 +513,7 @@ def cmd_coupling(args):
     tau1 = df_all['tau1'].values
 
     # 扣除 Yaw 摩擦
-    tau1_residual = tau1 - theta5 * dq1 - theta6 * np.tanh(dq1)
+    tau1_residual = tau1 - theta5 * dq1 - theta6 * np.tanh(dq1 / args.friction_velocity_scale)
 
     sin_q2 = np.sin(q2)
     cos_q2 = np.cos(q2)
@@ -458,6 +574,8 @@ def cmd_coupling(args):
 # ---------------------------------------------------------------------------
 
 def cmd_verify(args):
+    if args.friction_velocity_scale <= 0.0:
+        raise ValueError("--friction-velocity-scale 必须大于 0")
     theta = parse_theta(args.theta, 9, 'theta')
 
     df = load_csv(args.csv)
@@ -496,7 +614,7 @@ def cmd_verify(args):
         theta[3] * gx_sin_gy_cos_q1 * cos_q2 +
         theta[4] * gx_sin_gy_cos_q1 * sin_q2 +
         theta[5] * dq1 +
-        theta[6] * np.tanh(dq1)
+        theta[6] * np.tanh(dq1 / args.friction_velocity_scale)
     )
 
     # Pitch (与 C++ gimbal_dynamics.hpp:102-108 完全一致)
@@ -507,8 +625,8 @@ def cmd_verify(args):
         theta[3] * (gx_cos_gy_sin_q1 * sin_q2 + gz * cos_q2) +
         theta[4] * (-gx_cos_gy_sin_q1 * cos_q2 + gz * sin_q2) +
         theta[7] * dq2 +
-        theta[8] * np.tanh(dq2)
-    )
+        theta[8] * np.tanh(dq2 / args.friction_velocity_scale)
+    ) + args.pitch_bias
 
     # ── 评估指标 ──
     def r2_score(y_true, y_pred):
@@ -537,6 +655,7 @@ def cmd_verify(args):
     print(f"    theta[6] (fc1)       = {theta[6]:.7f}")
     print(f"    theta[7] (fv2)       = {theta[7]:.7f}")
     print(f"    theta[8] (fc2)       = {theta[8]:.7f}")
+    print(f"    pitch bias C         = {args.pitch_bias:.7f} Nm")
 
     print(f"\n  Yaw 轴:")
     print(f"    R²   = {r2_yaw:.4f}")
@@ -579,8 +698,8 @@ def main():
   # Step 1: 静态重力项
   python identify_gimbal.py gravity gravity_static.csv
 
-  # Step 2: 低速摩擦项 (需要 θ3,θ4)
-  python identify_gimbal.py friction friction_sweep.csv --theta34 0.027,-0.026
+  # Step 2: Pitch 重力/摩擦联合辨识 + Yaw 摩擦辨识
+  python identify_gimbal.py friction friction_sweep.csv
 
   # Step 3: Pitch 惯量 (需要 θ3,θ4 和 θ7,θ8)
   python identify_gimbal.py pitch-inertia dynamic_pitch.csv --theta34 0.027,-0.026 --theta78 0.3,0.04
@@ -605,32 +724,44 @@ def main():
     p.add_argument('--min-duration', type=float, default=0.5, help='静止段最短持续时间 (s)')
 
     # --- friction ---
-    p = sub.add_parser('friction', help='Step 2: 低速摩擦项辨识 (theta[5..8])')
-    p.add_argument('csv', help='Yaw/Pitch 低速匀速扫角数据 CSV')
-    p.add_argument('--theta34', required=True, help='theta[3],theta[4] (来自 gravity 步骤)')
+    p = sub.add_parser('friction', help='Pitch 重力/摩擦联合辨识 + Yaw 摩擦辨识')
+    p.add_argument('csv', help='Pitch 多速度正反扫角 + Yaw 匀速数据 CSV')
     p.add_argument('--g', type=float, default=G_DEFAULT)
     p.add_argument('--dq-stability', type=float, default=0.03, help='Yaw 匀速判定的 dq 标准差阈值 (rad/s)')
     p.add_argument('--min-duration', type=float, default=0.5, help='Yaw 匀速段最短持续时间 (s)')
     p.add_argument('--pitch-dq-stability', type=float, default=0.06, help='Pitch 匀速判定的 dq 标准差阈值 (rad/s)')
     p.add_argument('--pitch-min-duration', type=float, default=0.3, help='Pitch 匀速段最短持续时间 (s)')
-    p.add_argument('--pitch-bias', type=float, default=0.0, help='Pitch 常值力矩偏置 (Nm)，即 gravity 步骤的 C 值')
+    p.add_argument('--pitch-yaw-velocity-max', type=float, default=0.10,
+                   help='Pitch 联合辨识时允许的最大 |dq1| (rad/s)')
+    p.add_argument('--torque-limit', type=float, default=9.5,
+                   help='排除 |tau2| 超过此值的饱和样本 (Nm)')
+    p.add_argument('--friction-velocity-scale', type=float, default=FRICTION_VELOCITY_SCALE_DEFAULT,
+                   help='tanh 摩擦过渡速度 (rad/s)，必须与 C++ 动力学模型一致')
 
     # --- pitch-inertia ---
     p = sub.add_parser('pitch-inertia', help='Step 3: Pitch 惯量辨识 (theta[2])')
     p.add_argument('csv', help='Yaw 固定、Pitch 低频加减速数据 CSV')
     p.add_argument('--theta34', required=True, help='theta[3],theta[4] (来自 gravity 步骤)')
     p.add_argument('--theta78', required=True, help='theta[7],theta[8] (来自 friction 步骤的 Pitch 摩擦)')
+    p.add_argument('--pitch-bias', type=float, default=0.0, help='联合辨识得到的 Pitch 常值力矩偏置 C (Nm)')
+    p.add_argument('--friction-velocity-scale', type=float, default=FRICTION_VELOCITY_SCALE_DEFAULT,
+                   help='tanh 摩擦过渡速度 (rad/s)')
     p.add_argument('--g', type=float, default=G_DEFAULT)
 
     # --- coupling ---
     p = sub.add_parser('coupling', help='Step 4: 耦合惯量辨识 (theta[0], theta[1])')
     p.add_argument('csv', nargs='+', help='多个 q2 姿态下的 Yaw 加减速数据 CSV (可指定多个文件)')
     p.add_argument('--theta56', required=True, help='theta[5],theta[6] (来自 friction 步骤的 Yaw 摩擦)')
+    p.add_argument('--friction-velocity-scale', type=float, default=FRICTION_VELOCITY_SCALE_DEFAULT,
+                   help='tanh 摩擦过渡速度 (rad/s)')
 
     # --- verify ---
     p = sub.add_parser('verify', help='Step 5: 综合验证全部 9 参数')
     p.add_argument('csv', help='五次谐波综合轨迹数据 CSV')
     p.add_argument('--theta', required=True, help='全部 9 参数: theta0,theta1,...,theta8')
+    p.add_argument('--pitch-bias', type=float, default=0.0, help='Pitch 常值力矩偏置 C (Nm)')
+    p.add_argument('--friction-velocity-scale', type=float, default=FRICTION_VELOCITY_SCALE_DEFAULT,
+                   help='tanh 摩擦过渡速度 (rad/s)')
     p.add_argument('--g', type=float, default=G_DEFAULT)
 
     args = parser.parse_args()
