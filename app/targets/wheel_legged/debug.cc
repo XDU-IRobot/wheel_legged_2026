@@ -160,6 +160,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   // ── 云台反馈与电机 ──
   wl_debug.yaw_cmd_target_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.yaw_motor_raw_pos_rad = input.estimator_input.yaw_motor_rad;
+  wl_debug.pitch_motor_raw_pos_rad = input.estimator_input.pitch_motor_rad;
   wl_debug.gimbal_yaw_pos_feedback_rad = gimbal_control_output.yaw_pos_rad;
   wl_debug.gimbal_yaw_vel_feedback_rad_s = gimbal_control_output.yaw_vel_rad_s;
   wl_debug.yaw_cmd_torque_nm = gimbal_control_output.yaw_cmd_torque_nm;

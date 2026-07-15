@@ -70,6 +70,7 @@ struct ChassisStateEstimatorInput {
 
   rm::f32 dt_s{0.002f};               ///< 估计周期
   rm::f32 yaw_motor_rad{0.0f};        ///< 云台偏航电机角度，供底盘跟随使用
+  rm::f32 pitch_motor_rad{0.0f};      ///< 云台俯仰电机角度，供调试使用
   rm::f32 s_ref_m{0.0f};              ///< 外部位移参考
   bool use_external_s_ref{false};     ///< 是否用外部位移参考覆盖积分位移
   bool use_wheel_speed_direct{true};  ///< 是否跳过速度融合并直接使用轮速

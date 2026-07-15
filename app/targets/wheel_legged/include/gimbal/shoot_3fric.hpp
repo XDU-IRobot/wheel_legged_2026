@@ -156,6 +156,7 @@ class ShootController {
 
   [[nodiscard]] State state() const { return state_; }
   [[nodiscard]] float booster_pos() const { return booster_pos_; }
+  [[nodiscard]] float booster_target() const { return now_angle_; }
   [[nodiscard]] uint32_t shot_count() const { return shot_count_; }
 
  private:

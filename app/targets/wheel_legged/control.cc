@@ -573,10 +573,15 @@ void ControlLoop() {
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag, true,
-                                     globals->referee->data().robot_status.shooter_barrel_heat_limit -
-                                         globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
+    const int32_t heat_delta = globals->referee->data().robot_status.shooter_barrel_heat_limit -
+                               globals->referee->data().power_heat_data.shooter_42mm_barrel_heat;
+    globals->shoot_controller.Update(shooter_enter, fire_flag, true, heat_delta);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
+    wl_debug.booster_target_rad = globals->shoot_controller.booster_target();
+    wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
+    wl_debug.shoot_hero_fire_trigger = fire_flag ? 1U : 0U;
+    wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
+    wl_debug.shoot_hero_heat_delta = heat_delta;
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
   }
 #else
