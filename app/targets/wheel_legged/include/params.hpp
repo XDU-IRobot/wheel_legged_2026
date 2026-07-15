@@ -176,7 +176,7 @@ namespace gimbal {
 using namespace common::gimbal;
 
 constexpr float kPitchMinRad = -0.2f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.7f;    ///< 俯仰角上限 [rad]
+constexpr float kPitchMaxRad = 0.7f;   ///< 俯仰角上限 [rad]
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
 constexpr PidGains kYawPositionPid{27.0f, 0.0f, 1.f, 1000.0f, 1.0f};    ///< 偏航位置 PID
@@ -210,14 +210,14 @@ constexpr float kPitchPhase[kHarmonicCount] = {};                      ///< pitc
 constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};    ///< 辨识模式 yaw 位置 PID
 constexpr PidGains kIdentPitchPosPid{60.0f, 0.0f, 0.5f, 28.0f, 0.0f};  ///< 辨识模式 pitch 位置 PID
 constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.f, 10.0f, 2.0f};     ///< Friction step yaw 速度 PID
-constexpr PidGains kIdentPitchVelPid{2.f, 10.0f, 0.f, 10.0f, 10.0f};  ///< Friction step pitch 速度 PID
+constexpr PidGains kIdentPitchVelPid{2.f, 10.0f, 0.f, 10.0f, 10.0f};   ///< Friction step pitch 速度 PID
 constexpr float kIdentPitchCenter = -1.5f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
 constexpr float kIdentPitchTopLimit = -1.7f;     ///< 辨识轨迹 pitch 下限 [rad]
 constexpr float kIdentPitchBottomLimit = -0.8f;  ///< 辨识轨迹 pitch 上限 [rad]
 
 // ── 分步辨识参数 ──
 /// @brief 重力模式: Pitch 目标角度序列 [rad]
-constexpr float kGravityPitchAngles[] = {-1.7f, -1.6f, -1.5f, -1.4f, -1.3f, -1.2f, -1.1f, -1.f , -0.9f,-0.8f};
+constexpr float kGravityPitchAngles[] = {-1.7f, -1.6f, -1.5f, -1.4f, -1.3f, -1.2f, -1.1f, -1.f, -0.9f, -0.8f};
 constexpr size_t kGravityAngleCount = 10;
 constexpr float kGravityHoldDuration = 3.0f;    ///< 每角度测量时间 [s]
 constexpr float kGravitySettleDuration = 1.5f;  ///< 到位稳定时间 [s]
