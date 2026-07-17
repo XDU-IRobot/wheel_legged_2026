@@ -129,7 +129,7 @@ class Gimbal {
       output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
       // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
-      output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
+      output_.pitch_pos_rad = input.gimbal_imu_pitch_rad;
       // output_.pitch_pos_rad = input.pitch_motor->pos();
       output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
 
@@ -285,13 +285,9 @@ class Gimbal {
       output_.ff_pitch_friction = ff.pitch_friction;
 
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm = std::clamp(
-          controller_.output().pitch + ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
-          28.f);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(ff.pitch, -28.f, 28.f);
+      output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch, -28.f, 28.f);
     }
   }
 

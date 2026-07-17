@@ -47,7 +47,6 @@ struct ChassisStateContext {
   bool integrate_position{false};  ///< 是否对期望纵向位置进行积分（速度目标归零后冻结为锚点）
   uint32_t position_hold_timeout_ticks{0U};  ///< 位置锚定超时计数器（斜坡归零后累积，超时强制冻结）
   bool position_frozen_by_timeout{false};  ///< true=超时强冻, false=速度低于阈值正常冻结
-
   // ── 偏航跟随 ──
   chassis::Fsm::State last_chassis_mode{chassis::Fsm::State::kDisabled};  ///< 上一周期底盘模式
 
@@ -70,6 +69,8 @@ struct ChassisStateContext {
   bool spin_exit_recovery{false};       ///< 小陀螺退出恢复中，使用快速偏航斜坡
   bool flip_180_in_progress{false};     ///< R 键云台 180° 旋转中，暂时抑制偏航跟随
   uint32_t flip_180_ticks{0U};          ///< flip_180 抑制计数器
+  bool defer_leg_change{false};         ///< 等待偏航对齐后再变腿长
+  wheel_legged::LegProfile pending_leg_profile{LegProfile::kLow};  ///< 待应用的腿长档位
 
   /**
    * @brief 在底盘模式切换时重置相关状态
@@ -143,6 +144,19 @@ bool IsYawAtStartupTarget(float yaw_target_rad, float yaw_motor_rad, float yaw_m
  * @return true 表示偏航跟踪到位，可以开始纵向移动
  */
 bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_motor_vel_rad_s);
+
+/**
+ * @brief LQR 纵向位移/速度误差缩放系数，用于独立调节位置刚度与速度阻尼
+ */
+struct PositionVelocityScales {
+  float position_scale{1.0f};
+  float velocity_scale{1.0f};
+};
+
+/**
+ * @brief 根据底盘状态机模式选择合适的纵向误差缩放系数
+ */
+PositionVelocityScales ResolvePositionVelocityScales(chassis::Fsm::State mode);
 
 /**
  * @brief 根据底盘状态机模式选择合适的纵向速度斜坡参数
