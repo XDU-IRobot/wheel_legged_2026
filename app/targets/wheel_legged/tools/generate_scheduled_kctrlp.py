@@ -175,19 +175,30 @@ INFANTRY3_QR_POINTS: list[QrPoint] = [
 
 INFANTRY4_QR_POINTS: list[QrPoint] = [
     QrPoint(
-        0.16,
-        np.diag([200.0, 100.0, 200.0, 1.0, 800.0, 1.0, 800.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.4, 2.4, 1.0, 1.0]),
+        # 0.17,
+        # #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
+        # np.diag([250.0, 150.0,  300.0, 10.0,  250.0,    1.0,     250.0,     1.0,   800.0,  1.0]),
+        # #        T_wl    T_wr     T_bl     T_br
+        # np.diag([1.,1., 0.25, 0.1]),
+        0.17,
+        #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
+        np.diag([250.0, 150.0,  300.0, 10.0,  250.0,    1.0,     250.0,     1.0,   800.0,  1.0]),
+        #        T_wl    T_wr     T_bl     T_br
+        np.diag([1.,1., 0.25, 0.1]),
     ),
     QrPoint(
         0.23,
-        np.diag([200.0, 120.0, 200.0, 1.0, 1200.0, 4.0, 1200.0, 4.0, 3200.0, 1.0]),
-        np.diag([3.5, 3.5, 0.5, 0.5]),
+        #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
+        np.diag([250.0, 150.0,  300.0, 10.0,  250.0,    1.0,     250.0,     1.0,   800.0,  1.0]),
+        #        T_wl    T_wr     T_bl     T_br
+        np.diag([1.,1., 0.25, 0.1]),
     ),
     QrPoint(
-        0.33,
-        np.diag([150.0, 60.0, 200.0, 1.0, 1200.0, 1.0, 1200.0, 1.0, 3200.0, 1.0]),
-        np.diag([4.0, 4.0, 0.5, 0.5]),
+        0.3,
+        #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
+        np.diag([250.0, 150.0,  300.0, 10.0,  250.0,    1.0,     250.0,     1.0,   800.0,  1.0]),
+        #        T_wl    T_wr     T_bl     T_br
+        np.diag([1.,1., 0.25, 0.1]),
     ),
 ]
 
