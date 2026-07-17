@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "include/params.hpp"
+#include "tools/displacement_bias_generated.hpp"
 
 /**
  * @file  targets/wheel_legged/chassis.cc
@@ -66,6 +67,23 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
   }
 
   return kEtaLookupLwM[kCount - 1] / max_l;
+}
+
+/**
+ * @brief 按平均腿长查表插值期望位移偏置
+ */
+rm::f32 LookupDisplacementBiasFromLegLength(const rm::f32 leg_length_m) {
+  constexpr const auto &table = wheel_legged::params::generated::kDisplacementBias;
+  constexpr int kCount = static_cast<int>(sizeof(table) / sizeof(table[0]));
+  const rm::f32 t_min = table[0][0];
+  const rm::f32 t_max = table[kCount - 1][0];
+  if (leg_length_m <= t_min) return table[0][1];
+  if (leg_length_m >= t_max) return table[kCount - 1][1];
+  const rm::f32 step = (t_max - t_min) / static_cast<rm::f32>(kCount - 1);
+  const rm::f32 idx_f = (leg_length_m - t_min) / step;
+  const int idx = static_cast<int>(idx_f);
+  const rm::f32 alpha = idx_f - static_cast<rm::f32>(idx);
+  return table[idx][1] * (1.0f - alpha) + table[idx + 1][1] * alpha;
 }
 
 /**
@@ -540,7 +558,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   filtered_theta_lr_dot_ = filtered_state.theta_lr_dot;
   output_.filtered_theta_ll_dot = filtered_theta_ll_dot_;
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
-  const rm::f32 displacement_bias = wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
+  const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
+  const rm::f32 displacement_bias = LookupDisplacementBiasFromLegLength(avg_leg_length_m);
   base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
@@ -550,8 +569,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 gravity_ff_left = effective_mass_left_kg * kGravityMps2;
   const rm::f32 gravity_ff_right = effective_mass_right_kg * kGravityMps2;
   const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
-
-  const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
 
   const bool use_stair_target = input.motion_target.use_stair_theta_controller;
 

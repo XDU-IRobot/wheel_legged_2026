@@ -543,7 +543,6 @@ constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;      ///< 低腿长期望�
 constexpr float kExpectedThetaBBiasRad = -0.108f;         ///< 期望机体俯仰偏置 [rad]
 constexpr float kExpectedThetaBSpeedK = -0.03f;           ///< 期望机体俯仰速度系数（theta_b += k * s_dot）
 constexpr float kExpectedDisplacementBiasM = 0.0f;        ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = 0.2f;  ///< 低腿长期望位移偏置 [m]
 
 // ==== 速度斜坡参数（按腿长档位分级）====
 constexpr SdotRampParams kSdotRampLowLeg{0.007f, 0.007f};     ///< 低腿长速度斜坡（加速/制动步长）
@@ -1047,7 +1046,6 @@ constexpr float kYawFollowSideOffsetRad = 0.5f * wheel_legged::params::common::k
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.0f;      ///< 低腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.0f;      ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = 0.0f;             ///< 期望机体俯仰偏置 [rad]
-constexpr float kExpectedDisplacementBiasMLowLeg = -0.3f;  ///< 低腿长期望位移偏置 [m]
 
 // ==== 速度斜坡参数 ====
 constexpr SdotRampParams kSdotRampLowLeg{0.0065f, 0.007f};   ///< 低腿长速度斜坡
@@ -1282,47 +1280,46 @@ constexpr float kStairDescendLegLengthM = 0.16f;
 constexpr float kStairDescendThetaBTriggerRad = 0.18f;
 
 constexpr StairClimbParams kStairClimb{
-    .high_leg_length_m = 0.35f,
-    .hook_leg_length_m = 0.35f,
-    .retract_leg_length_m = 0.1f,
-    .settle_leg_length_m = 0.1f,
-    .contact_theta_threshold_rad = 0.40f,
-    .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = -0.2f,
-    .retract_theta_tolerance_rad = 0.7f,
-    .hook_theta_tolerance_rad = 0.3f,
-    .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.33f,
-    .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.02f,
-    .hook_stable_ms = 100U,
-    .retract_stable_ms = 200U,
-    .settle_stable_ms = 200U,
-    .hook_timeout_ms = 1000U,
-    .retract_timeout_ms = 1000U,
-    .settle_timeout_ms = 1000U,
+  .high_leg_length_m = 0.33f,
+  .hook_leg_length_m = 0.33f,
+  .retract_leg_length_m = 0.1f,
+  .settle_leg_length_m = 0.1f,
+  .contact_theta_threshold_rad = 0.50f,
+  .hook_theta_target_rad = 1.f,
+  .retract_theta_target_rad = 1.2f,
+  .retract_theta_tolerance_rad = 0.5f,
+  .hook_theta_tolerance_rad = 0.3f,
+  .leg_length_tolerance_m = 0.05f,
+  .settle_theta_tolerance_rad = 0.5f,
+  .settle_theta_target_rad = 0.f,
+  .settle_theta_ramp_step_rad = 0.05f,
+  .hook_stable_ms = 10U,
+  .retract_stable_ms = 20U,
+  .settle_stable_ms = 50U,
+  .hook_timeout_ms = 1000U,
+  .retract_timeout_ms = 1000U,
+  .settle_timeout_ms = 1000U,
 };
-
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.31f,
-    .hook_leg_length_m = 0.31f,
-    .retract_leg_length_m = 0.1f,
-    .settle_leg_length_m = 0.1f,
-    .contact_theta_threshold_rad = 0.40f,
-    .hook_theta_target_rad = 0.8f,
-    .retract_theta_target_rad = -0.2f,
-    .retract_theta_tolerance_rad = 0.7f,
-    .hook_theta_tolerance_rad = 1.f,
-    .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.33f,
-    .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.02f,
-    .hook_stable_ms = 100U,
-    .retract_stable_ms = 200U,
-    .settle_stable_ms = 200U,
-    .hook_timeout_ms = 1000U,
-    .retract_timeout_ms = 1000U,
-    .settle_timeout_ms = 1000U,
+  .high_leg_length_m = 0.29f,
+  .hook_leg_length_m = 0.29f,
+  .retract_leg_length_m = 0.1f,
+  .settle_leg_length_m = 0.1f,
+  .contact_theta_threshold_rad = 0.50f,
+  .hook_theta_target_rad = 1.2f,
+  .retract_theta_target_rad = 1.2f,
+  .retract_theta_tolerance_rad = 0.5f,
+  .hook_theta_tolerance_rad = 0.3f,
+  .leg_length_tolerance_m = 0.05f,
+  .settle_theta_tolerance_rad = 0.5f,
+  .settle_theta_target_rad = 0.f,
+  .settle_theta_ramp_step_rad = 0.05f,
+  .hook_stable_ms = 10U,
+  .retract_stable_ms = 20U,
+  .settle_stable_ms = 50U,
+  .hook_timeout_ms = 1000U,
+  .retract_timeout_ms = 1000U,
+  .settle_timeout_ms = 1000U,
 };
 
 // ==== 倒地自启 ====
@@ -1549,7 +1546,6 @@ constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向�
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;     ///< 低腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;     ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = -0.005f;         ///< 期望机体俯仰偏置 [rad]
-constexpr float kExpectedDisplacementBiasMLowLeg = -0.25f;  ///< 低腿长期望位移偏置 [m]//-0.85 -0.45 -0.05
 
 // ==== 速度斜坡参数 ====
 constexpr SdotRampParams kSdotRampLowLeg{0.0045f, 0.0045f};   ///< 低腿长速度斜坡
