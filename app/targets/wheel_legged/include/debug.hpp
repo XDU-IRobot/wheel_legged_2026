@@ -50,10 +50,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
   uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
   uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
-  uint8_t tc_remote_valid;         // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t stair_high_leg_request;  // Stair coordinator requests high-leg standby
-  uint8_t stair_task_request;      // Stair command parsed this cycle
-  uint8_t stair_task_mode;         // Stair coordinator state
+  uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
+  uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
+  uint8_t stair_task_request;       // Stair command parsed this cycle
+  uint8_t stair_task_mode;          // Stair coordinator state
   uint8_t stair_requested_attempts;
   uint8_t stair_completed_attempts;
   uint8_t stair_phase;  // Active sequence phase

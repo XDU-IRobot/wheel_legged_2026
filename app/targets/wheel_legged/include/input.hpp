@@ -107,8 +107,8 @@ struct InputSnapshot {
   TcRemoteInput tc_remote{};                              ///< 图传键鼠数据（CAN 桥）
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
-  bool auto_jump_triggered{false};      ///< 本周期自动跳跃触发
-  bool auto_jump_enabled{false};         ///< 自动跳跃模式是否开启（同步自 TcSemanticState）
+  bool auto_jump_triggered{false};                        ///< 本周期自动跳跃触发
+  bool auto_jump_enabled{false};        ///< 自动跳跃模式是否开启（同步自 TcSemanticState）
   bool ui_refresh_key{false};           ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};       ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};     ///< 云台惯导俯仰角

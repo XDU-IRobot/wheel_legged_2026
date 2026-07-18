@@ -635,8 +635,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   if (tc_state.auto_jump_enabled) {
     const bool tof_ready = g.tof.has_value() && g.tof_i2c1.has_value();
     if (tof_ready) {
-      const bool both_close =
-          g.tof->measurement().distance_mm < 720 && g.tof_i2c1->measurement().distance_mm < 720;
+      const bool both_close = g.tof->measurement().distance_mm < 720 && g.tof_i2c1->measurement().distance_mm < 720;
       if (both_close && tc_state.auto_jump_tof_armed) {
         input.mode_request.jump_trigger = true;
         input.auto_jump_triggered = true;
