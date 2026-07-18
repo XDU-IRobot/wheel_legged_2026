@@ -80,7 +80,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_mean_leg_length_m = chassis_control_output.mean_leg_length_m;
   wl_debug.chassis_speed_mps = chassis_control_output.speed_mps;
   wl_debug.chassis_raw_wheel_speed_mps = chassis_control_output.raw_wheel_speed_mps;
+  wl_debug.chassis_filtered_wheel_speed_mps = chassis_control_output.filtered_wheel_speed_mps;
   wl_debug.chassis_raw_accel_speed_mps = chassis_control_output.raw_accel_speed_mps;
+  wl_debug.chassis_imu_acc_x_integral_mps = chassis_control_output.imu_acc_x_integral_mps;
   wl_debug.chassis_left_force_n = chassis_control_output.left_force_n;
   wl_debug.chassis_right_force_n = chassis_control_output.right_force_n;
   wl_debug.chassis_left_support_force_n = chassis_control_output.left_support_force_n;
@@ -159,6 +161,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   // ── 云台反馈与电机 ──
   wl_debug.yaw_cmd_target_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.yaw_motor_raw_pos_rad = input.estimator_input.yaw_motor_rad;
+  wl_debug.pitch_motor_raw_pos_rad = input.estimator_input.pitch_motor_rad;
   wl_debug.gimbal_yaw_pos_feedback_rad = gimbal_control_output.yaw_pos_rad;
   wl_debug.gimbal_yaw_vel_feedback_rad_s = gimbal_control_output.yaw_vel_rad_s;
   wl_debug.yaw_cmd_torque_nm = gimbal_control_output.yaw_cmd_torque_nm;
@@ -170,6 +173,13 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_pitch_dq_rad_s = gimbal_control_output.pitch_dq;
   wl_debug.gimbal_yaw_ddq_rad_s2 = gimbal_control_output.yaw_ddq;
   wl_debug.gimbal_pitch_ddq_rad_s2 = gimbal_control_output.pitch_ddq;
+  wl_debug.ff_yaw_inertia = gimbal_control_output.ff_yaw_inertia;
+  wl_debug.ff_yaw_gravity = gimbal_control_output.ff_yaw_gravity;
+  wl_debug.ff_yaw_friction = gimbal_control_output.ff_yaw_friction;
+  wl_debug.ff_pitch_coupling = gimbal_control_output.ff_pitch_coupling;
+  wl_debug.ff_pitch_inertia = gimbal_control_output.ff_pitch_inertia;
+  wl_debug.ff_pitch_gravity = gimbal_control_output.ff_pitch_gravity;
+  wl_debug.ff_pitch_friction = gimbal_control_output.ff_pitch_friction;
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;

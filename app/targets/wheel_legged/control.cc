@@ -319,6 +319,22 @@ void ControlLoop() {
 
   const uint32_t now_ms = HAL_GetTick();
 
+  // DWT CYCCNT runs at the Cortex-M7 core clock.  Measure the real interval
+  // between control-loop invocations instead of assuming that the timer ISR
+  // always executes at exactly 500 Hz.  The unsigned subtraction is safe
+  // across the 32-bit CYCCNT wrap as long as adjacent calls are less than one
+  // wrap period apart.
+  static uint32_t last_control_cycles = 0U;
+  const uint32_t now_control_cycles = DWT->CYCCNT;
+  float measured_control_dt_s = kControlLoopDtS;
+  bool measured_control_dt_valid = false;
+  if (last_control_cycles != 0U && SystemCoreClock != 0U) {
+    const uint32_t delta_cycles = now_control_cycles - last_control_cycles;
+    measured_control_dt_s = static_cast<float>(delta_cycles) / static_cast<float>(SystemCoreClock);
+    measured_control_dt_valid = measured_control_dt_s >= 0.0005f && measured_control_dt_s <= 0.020f;
+  }
+  last_control_cycles = now_control_cycles;
+
   // ── 跨周期状态（static 保持值语义，避免堆分配）──
   static InputSnapshot input{};
   static Dr16SemanticState dr16_state{};
@@ -328,6 +344,9 @@ void ControlLoop() {
   static bool was_posture_invalid = false;
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
+#endif
 
   // ── 一次性初始化 ──
   (void)0;
@@ -423,7 +442,39 @@ void ControlLoop() {
     }
     prev_domain_state = tc_state.domain_state;
   }
-  const chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+  // C/V/B 键重置正方向：偏航未对齐时暂缓腿长切换，先转到位
+  // 暂缓期间必须阻止 FSM 切换模式，只覆盖 target_leg_length_m 不够——
+  // fsm_mode 在 chassis.cc 里还会影响腿 PID、力控、轮力矩等多个路径。
+  const auto leg_profile_from_state = [](chassis::Fsm::State s) -> wheel_legged::LegProfile {
+    if (s == chassis::Fsm::State::kMidLeg) return wheel_legged::LegProfile::kMid;
+    if (s == chassis::Fsm::State::kHighLeg || s == chassis::Fsm::State::kStairTask)
+      return wheel_legged::LegProfile::kHigh;
+    return wheel_legged::LegProfile::kLow;
+  };
+
+  if (ctx.defer_leg_change) {
+    ctx.pending_leg_profile = chassis_input.request.leg_request;
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err < kSpinExitYawAlignThresholdRad) {
+      chassis_input.request.leg_request = ctx.pending_leg_profile;
+      ctx.defer_leg_change = false;
+    } else {
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
+  } else if (input.mode_request.reset_yaw_request) {
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
+      ctx.defer_leg_change = true;
+      ctx.pending_leg_profile = chassis_input.request.leg_request;
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
+  }
+
+  chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
@@ -526,6 +577,8 @@ void ControlLoop() {
   gimbal_update_input.gimbal_imu_gyro_z_rad_s = input.gimbal_imu_gyro_z_rad_s;
   gimbal_update_input.gimbal_imu_gyro_x_rad_s = -input.gimbal_imu_gyro_x_rad_s;
   gimbal_update_input.dt_s = kControlLoopDtS;
+  gimbal_update_input.measured_dt_s = measured_control_dt_s;
+  gimbal_update_input.measured_dt_valid = measured_control_dt_valid;
   gimbal_update_input.ident = &globals->gimbal_ident;
   gimbal_update_input.test_profile = gimbal_output.control.gimbal_test_profile;
   globals->gimbal.Update(gimbal_update_input);
@@ -545,8 +598,12 @@ void ControlLoop() {
 
   // 辨识模式串口数据发送
   if (gimbal_control_output.ident_data_pending && gimbal_control_output.ident_tx_data != nullptr) {
-    globals->no_dtcm->ident_uart.Write(reinterpret_cast<const rm::u8 *>(gimbal_control_output.ident_tx_data),
-                                       gimbal_control_output.ident_tx_len, 5);
+    // Do not block the 500 Hz ISR while a full CSV line is shifted out.
+    if (!globals->no_dtcm->ident_uart.IsTxBusy()) {
+      const size_t tx_len = std::min(gimbal_control_output.ident_tx_len, globals->no_dtcm->ident_tx_buffer.size());
+      std::memcpy(globals->no_dtcm->ident_tx_buffer.data(), gimbal_control_output.ident_tx_data, tx_len);
+      globals->no_dtcm->ident_uart.WriteAsync(globals->no_dtcm->ident_tx_buffer.data(), tx_len, {});
+    }
   }
 
   // 超级电容 TX：每周期从裁判系统读取功率上限和缓冲能量，下发给超级电容
@@ -573,11 +630,25 @@ void ControlLoop() {
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
-    globals->shoot_controller.Update(shooter_enter, fire_flag, true,
-                                     globals->referee->data().robot_status.shooter_barrel_heat_limit -
-                                         globals->referee->data().power_heat_data.shooter_42mm_barrel_heat);
+    const int32_t heat_delta = globals->referee->data().robot_status.shooter_barrel_heat_limit -
+                               globals->referee->data().power_heat_data.shooter_42mm_barrel_heat;
+    globals->shoot_controller.Update(shooter_enter, fire_flag, true, heat_delta);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
+    wl_debug.booster_target_rad = globals->shoot_controller.booster_target();
+    wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
+    wl_debug.shoot_hero_fire_trigger = fire_flag ? 1U : 0U;
+    wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
+    wl_debug.shoot_hero_heat_delta = heat_delta;
+    wl_debug.fw_raw_rpm_1 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
+    wl_debug.fw_raw_rpm_2 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
+    wl_debug.fw_raw_rpm_3 = 0.0f;  // 当前 CAN 协议仅传输 2 个摩擦轮转速
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
+
+    if (gimbal_rx_valid && globals->gimbal_rx->PopShotDetected()) {
+      if (hero_remaining_ammo > 0) {
+        --hero_remaining_ammo;
+      }
+    }
   }
 #else
   // Infantry3/4：双摩擦轮 + M3508 拨盘，通过 ShootOutput 解耦
@@ -744,6 +815,8 @@ void ControlLoop() {
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       ctx.spin_exit_recovery = true;
       ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+      ctx.yaw_follow_target = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
+      ctx.yaw_follow_target_initialized = true;
     }
     ctx.last_chassis_mode = chassis_output.mode;
   }
@@ -783,7 +856,8 @@ void ControlLoop() {
 
   // ── 7e. 偏航目标更新 ──
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
-  if (!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+  if ((!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) &&
+      !now_is_spin_exit_pending) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
@@ -1001,7 +1075,8 @@ void ControlLoop() {
   // ── φ 目标：将偏航电机角度误差映射为 LQR 的底盘朝向误差 ──
   // motor_error = 电机当前角度偏离目标的角度，底盘偏离期望朝向的大小与之相同
   // 非自旋、非翻转、chassis 输出使能时才生效，否则不产生朝向力矩
-  if (!spin_control_enabled && !now_is_spin_exit_pending && !ctx.flip_180_in_progress && chassis_output_enable &&
+  // kSpinExitPending 阶段同样生效：主动转向使 yaw 电机靠拢正方向，避免被动等超时
+  if (!spin_control_enabled && !ctx.flip_180_in_progress && chassis_output_enable &&
       ctx.yaw_follow_target_initialized) {
     const float motor_error =
         rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
@@ -1089,6 +1164,16 @@ void ControlLoop() {
   }
 
   // ── 7m. 底盘控制器执行 ──
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  {
+    const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
+    chassis_update_input.displacement_bias =
+        ns::control_loop::kExpectedDisplacementBiasMLowLeg + shots_fired * ns::control_loop::kDisplacementBiasPerShot;
+    wl_debug.hero_remaining_ammo = hero_remaining_ammo;
+    wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
+  }
+#endif
+  chassis_update_input.position_hold_active = ctx.integrate_position;
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 
@@ -1169,7 +1254,7 @@ void ControlLoop() {
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    const float bullet_speed = 11.65;
+    const float bullet_speed = 11.9f;
 #else
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)

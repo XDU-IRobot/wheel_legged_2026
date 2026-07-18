@@ -49,7 +49,9 @@ class Gimbal {
     float gimbal_imu_pitch_rad{0.0f};      ///< 云台惯导俯仰角
     float gimbal_imu_gyro_z_rad_s{0.0f};   ///< 云台惯导偏航角速度（替代偏航电机 vel）
     float gimbal_imu_gyro_x_rad_s{0.0f};   ///< 云台惯导俯仰角速度（替代俯仰电机 vel）
-    float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 控制周期
+    float dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};           ///< 控制周期
+    float measured_dt_s{wheel_legged::params::active::gimbal::kDefaultDtS};  ///< 硬件测得的实际控制周期
+    bool measured_dt_valid{false};  ///< measured_dt_s 是否来自有效的 DWT 周期差
 
     /// 辨识/验证模式专用
     GimbalIdent *ident{nullptr};                                                             ///< 辨识控制器对象
@@ -76,6 +78,17 @@ class Gimbal {
     float pitch_dq{0.0f};   ///< 俯仰目标角速度 (rad/s)
     float yaw_ddq{0.0f};    ///< 偏航目标角加速度 (rad/s^2)
     float pitch_ddq{0.0f};  ///< 俯仰目标角加速度 (rad/s^2)
+
+    /// 动力学前馈分项
+    float ff_yaw{0.0f};
+    float ff_pitch{0.0f};
+    float ff_yaw_inertia{0.0f};
+    float ff_yaw_gravity{0.0f};
+    float ff_yaw_friction{0.0f};
+    float ff_pitch_coupling{0.0f};
+    float ff_pitch_inertia{0.0f};
+    float ff_pitch_gravity{0.0f};
+    float ff_pitch_friction{0.0f};
 
     /// 辨识模式串口数据
     bool ident_data_pending{false};      ///< 是否有待发送的辨识数据
@@ -116,9 +129,9 @@ class Gimbal {
       output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
       // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
-      output_.pitch_pos_rad = -input.gimbal_imu_pitch_rad;
+      output_.pitch_pos_rad = input.gimbal_imu_pitch_rad;
       // output_.pitch_pos_rad = input.pitch_motor->pos();
-      output_.pitch_vel_rad_s = input.gimbal_imu_gyro_x_rad_s;
+      output_.pitch_vel_rad_s = -input.gimbal_imu_gyro_x_rad_s;
 
       const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
       output_.yaw_target_rad = desired_yaw;
@@ -155,7 +168,9 @@ class Gimbal {
         ident_in.yaw_motor_vel_rad_s = static_cast<float>(input.yaw_motor->vel());
         ident_in.pitch_motor_pos_rad = input.pitch_motor->pos();
         ident_in.pitch_motor_vel_rad_s = static_cast<float>(input.pitch_motor->vel());
-        ident_in.dt_s = (input.dt_s > 1e-5f) ? input.dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+        ident_in.dt_s =
+            (input.measured_dt_s > 1e-5f) ? input.measured_dt_s : wheel_legged::params::active::gimbal::kDefaultDtS;
+        ident_in.timing_valid = input.measured_dt_valid;
 
         output_.yaw_vel_rad_s = ident_in.yaw_motor_vel_rad_s;
         output_.pitch_vel_rad_s = ident_in.pitch_motor_vel_rad_s;
@@ -255,53 +270,35 @@ class Gimbal {
       output_.pitch_ddq = pitch_ddq;
 
       // pitch 目标转到辨识编码器坐标系
-      const float pitch_q_enc = output_.pitch_target_rad + ns_ident::kIdentPitchCenter;
+      const float pitch_q_enc = input.pitch_motor->pos() - ns_ident::kIdentPitchCenter;
       // const float pitch_q_enc = output_.pitch_target_rad ;
       const Eigen::Vector3f g_vec(0.0f, 0.0f, -9.81f);
-      // const auto ff =
-      //     dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, yaw_dq, pitch_dq, yaw_ddq, pitch_ddq, g_vec);
-      const auto ff = dynamics_.ComputeFf(output_.yaw_target_rad, pitch_q_enc, 0.f, 0.f, 0.f, 0.f, g_vec);
-      const float ff_p = 1.7f * std::cos(output_.pitch_pos_rad);
+      // 惯量项用目标加速度 (ddq)，摩擦/科氏力项用电机关节速度
+      // const auto ff = dynamics_.ComputeFfDecomposed(output_.yaw_pos_rad, pitch_q_enc, -output_.yaw_vel_rad_s,
+      //                                               -output_.pitch_vel_rad_s, yaw_ddq, pitch_ddq, g_vec);
+      const auto ff = dynamics_.ComputeFfDecomposed(output_.yaw_pos_rad, pitch_q_enc, -output_.yaw_vel_rad_s,
+                                                    -output_.pitch_vel_rad_s, 0.f, 0.f, g_vec);
+      output_.ff_yaw = ff.yaw;
+      output_.ff_pitch = ff.pitch;
+      output_.ff_yaw_inertia = ff.yaw_inertia;
+      output_.ff_yaw_gravity = ff.yaw_gravity;
+      output_.ff_yaw_friction = ff.yaw_friction;
+      output_.ff_pitch_coupling = ff.pitch_yaw_coupling;
+      output_.ff_pitch_inertia = ff.pitch_inertia;
+      output_.ff_pitch_gravity = ff.pitch_gravity;
+      output_.ff_pitch_friction = ff.pitch_friction;
 
-      // 开前馈
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(controller_.output().pitch ,
-      //                -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(2.6f ,
-      //                -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm =
-          std::clamp(-0.880538f * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad -
-                         1.720819f * input.gimbal_imu_pitch_rad * input.gimbal_imu_pitch_rad +
-                         0.827059f * input.gimbal_imu_pitch_rad + 2.490684f,
-                     -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                     wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp( wheel_legged::params::active::gimbal::kPitchGravityCompensationNm *
-      //                                                 std::cos(1.05f*(input.gimbal_imu_pitch_rad - 0.1f)),
-      //                -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      output_.pitch_cmd_torque_nm = std::clamp(
+          controller_.output().pitch + ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
+          28.f);
 
-#else
-      output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                     wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm =
-          std::clamp(controller_.output().pitch + ff.y(), -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-                     wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
+      // output_.yaw_cmd_torque_nm = std::clamp(ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+      //                                        wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       // output_.pitch_cmd_torque_nm =
-      //     std::clamp( ff_p , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      // output_.pitch_cmd_torque_nm =
-      //     std::clamp(controller_.output().pitch, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
-      //                wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-#endif
+      //     std::clamp(ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f, 28.f);
     }
   }
 
