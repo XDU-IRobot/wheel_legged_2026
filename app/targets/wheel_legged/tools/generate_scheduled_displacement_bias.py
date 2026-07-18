@@ -34,8 +34,8 @@ INFANTRY3_KEY_POINTS = [
 
 INFANTRY4_KEY_POINTS = [
     (0.17, -0.85),
-    (0.23, -0.55),
-    (0.32, -0.35),
+    (0.23, -0.9),
+    (0.32, -1.),
 ]
 
 VARIANT_KEY_POINTS = {
