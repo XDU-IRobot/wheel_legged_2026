@@ -174,7 +174,8 @@ class GimbalIdent {
 
   rm::modules::PID ident_pid_yaw_{};
   rm::modules::PID ident_pid_pitch_{};
-  rm::modules::PID ident_vel_pid_yaw_{};  ///< Friction step yaw 专用速度环 PID
+  rm::modules::PID ident_vel_pid_yaw_{};    ///< Friction step yaw 专用速度环 PID
+  rm::modules::PID ident_vel_pid_pitch_{};  ///< Friction step pitch 专用速度环 PID
   Gimbal2DofDynamics dynamics_{};
 
   IdentSubMode submode_{IdentSubMode::kHarmonic};
@@ -240,6 +241,7 @@ class GimbalIdent {
     ident_pid_yaw_.Clear();
     ident_pid_pitch_.Clear();
     ident_vel_pid_yaw_.Clear();
+    ident_vel_pid_pitch_.Clear();
   }
 
   void StartGravity() {
@@ -388,6 +390,8 @@ class GimbalIdent {
 
     if (fric_axis_ == kFricAxisPitch) {
       // ── Pitch 联合辨识: 每个速度档均执行 Top→Bottom 正扫和 Bottom→Top 反扫 ──
+      // 位置斜坡 + 位置 PID (带积分) 控制恒定速度。
+      // 相比于速度环, 位置环天然补偿 pitch 轴的位置相关重力负载。
       // 准备、端点停顿和转向阶段不发送 CSV，避免加减速数据进入重力/摩擦联合回归。
       const float top = ns_ident::kIdentPitchTopLimit;
       const float bottom = ns_ident::kIdentPitchBottomLimit;
@@ -414,11 +418,12 @@ class GimbalIdent {
           data_tick_counter_ = 0;
         }
       } else if (fric_phase_ == 1) {
-        // 正扫: Top → Bottom。
+        // 正扫: Top → Bottom, 位置斜坡 + PID 跟踪。
         fric_pitch_target_ = std::min(fric_pitch_target_ + sweep_velocity * input.dt_s, bottom);
         if (fric_pitch_target_ >= bottom) {
           fric_phase_ = 2;
           fric_phase_time_ = 0.0f;
+          ident_pid_pitch_.Clear();
           emit_data = false;
         }
       } else if (fric_phase_ == 2) {
@@ -432,11 +437,12 @@ class GimbalIdent {
           data_tick_counter_ = 0;
         }
       } else if (fric_phase_ == 3) {
-        // 反扫: Bottom → Top。
+        // 反扫: Bottom → Top, 位置斜坡 + PID 跟踪。
         fric_pitch_target_ = std::max(fric_pitch_target_ - sweep_velocity * input.dt_s, top);
         if (fric_pitch_target_ <= top) {
           fric_phase_ = 4;
           fric_phase_time_ = 0.0f;
+          ident_pid_pitch_.Clear();
           emit_data = false;
         }
       } else {
@@ -671,7 +677,7 @@ class GimbalIdent {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Step 4: 耦合惯量 — Pitch 固定 + Yaw 正弦加减速
+  // Step 4: 耦合惯量 — Pitch 固定 + Yaw 大振幅正弦 (Python 两步法: 每角度 I_eff → 跨角度 I1zz/I2xx)
   // ──────────────────────────────────────────────────────────────────────────
 
   Output CouplingUpdate(const Input &input) {
@@ -691,8 +697,10 @@ class GimbalIdent {
     const float A = ns_ident::kCouplingAmplitude;
     const float pitch_fixed = ns_ident::kCouplingPitchAngles[coup_angle_idx_];
 
-    // Yaw 正弦轨迹, Pitch 固定在指定角度
+    // Yaw 正弦轨迹 + 解析速度/加速度 (供 CSV ddq1_ref 输出, Python 两步法辨识使用)
     const float yaw_continuous = A * std::sin(w * coup_angle_time_);
+    const float yaw_vel_continuous = A * w * std::cos(w * coup_angle_time_);
+    const float yaw_acc_continuous = -A * w * w * std::sin(w * coup_angle_time_);
 
     const float yaw_target = WrapYawTarget(yaw_continuous, input.yaw_motor_pos_rad);
     const float pitch_target = std::clamp(pitch_fixed, ns_ident::kIdentPitchTopLimit, ns_ident::kIdentPitchBottomLimit);
@@ -702,6 +710,11 @@ class GimbalIdent {
 
     coup_angle_time_ += input.dt_s;
     ident_time_s_ += input.dt_s;
+
+    // 周期计数与数据有效性标记
+    const uint16_t cycle = static_cast<uint16_t>(coup_angle_time_ * ns_ident::kCouplingFreqHz);
+    const bool valid = cycle >= ns_ident::kCouplingWarmupCycles &&
+                       cycle < ns_ident::kCouplingWarmupCycles + ns_ident::kCouplingRecordCycles;
 
     // 该角度持续时间到, 切换下一个
     if (coup_angle_time_ >= ns_ident::kCouplingDurationPerAngle) {
@@ -716,6 +729,12 @@ class GimbalIdent {
     out.pitch_cmd_tau = std::clamp(ident_pid_pitch_.out(), -ns_ident::kDmTorqueLimitNm, ns_ident::kDmTorqueLimitNm);
     out.yaw_target_rad = yaw_target;
     out.pitch_target_rad = pitch_target;
+    out.yaw_target_vel_rad_s = yaw_vel_continuous;
+    out.yaw_target_acc_rad_s2 = yaw_acc_continuous;
+    out.excitation_frequency_hz = ns_ident::kCouplingFreqHz;
+    out.excitation_index = static_cast<uint16_t>(coup_angle_idx_);
+    out.cycle_index = cycle;
+    out.valid_for_fit = valid && input.timing_valid;
 
     if (++data_tick_counter_ >= kCsvDecimation) {
       data_tick_counter_ = 0;
@@ -832,6 +851,11 @@ class GimbalIdent {
         .SetKd(ns_ident::kIdentYawVelPid.kd)
         .SetMaxOut(ns_ident::kIdentYawVelPid.max_out)
         .SetMaxIout(ns_ident::kIdentYawVelPid.max_iout);
+    ident_vel_pid_pitch_.SetKp(ns_ident::kIdentPitchVelPid.kp)
+        .SetKi(ns_ident::kIdentPitchVelPid.ki)
+        .SetKd(ns_ident::kIdentPitchVelPid.kd)
+        .SetMaxOut(ns_ident::kIdentPitchVelPid.max_out)
+        .SetMaxIout(ns_ident::kIdentPitchVelPid.max_iout);
 
     Eigen::Matrix<float, 9, 1> theta;
     for (int i = 0; i < 9; ++i) theta(i) = ns::active::gimbal::kIdentTheta[i];
@@ -866,6 +890,7 @@ class GimbalIdent {
     ident_pid_yaw_.Clear();
     ident_pid_pitch_.Clear();
     ident_vel_pid_yaw_.Clear();
+    ident_vel_pid_pitch_.Clear();
   }
 };
 

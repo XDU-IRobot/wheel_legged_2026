@@ -215,6 +215,8 @@ class Chassis {
   rm::modules::PID right_leg_turn_pid_manual_{};
   rm::modules::PID left_stair_theta_pid_{};   ///< 台阶序列左腿摆角 PID
   rm::modules::PID right_stair_theta_pid_{};  ///< 台阶序列右腿摆角 PID
+  rm::modules::PID left_leg_angle_pid_jump_retract2_{};   ///< 跳跃收腿第二阶段左腿摆角 PID
+  rm::modules::PID right_leg_angle_pid_jump_retract2_{};  ///< 跳跃收腿第二阶段右腿摆角 PID
 
   UpdateOutput output_{};
 };
