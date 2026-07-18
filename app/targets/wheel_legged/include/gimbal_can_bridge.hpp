@@ -184,7 +184,7 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
   void RxCallback(const rm::hal::CanFrame *msg) override {}
 
   bool QueueSend() {
-    tx_data_[0] = 0;
+    tx_data_[0] = combat_mode_ ? 1 : 0;
     // for (rm::usize i = 1; i < kPayloadSize; ++i) {
     //   tx_data_[i] = 0;
     // }
