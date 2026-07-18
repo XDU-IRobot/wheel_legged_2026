@@ -710,7 +710,7 @@ const DmMitSettings kPitchMotorSettings{0x17, 0x07, kPi, 30.f, 10.f, {0.f, 500.f
 constexpr float kPitchMinRad = -0.5f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.6f;   ///< 俯仰角上限 [rad]
 
-inline constexpr PidGains kYawPositionPid{30.0f, 0.f, 0.7f, 10.0f, 0.0f};    ///< 偏航位置 PID
+inline constexpr PidGains kYawPositionPid{20.0f, 0.f, 1.5f, 10.0f, 0.0f};    ///< 偏航位置 PID
 inline constexpr PidGains kYawSpeedPid{0.5f, 0.0f, 0.0f, 6.0f, 0.4f};        ///< 偏航速度 PID
 inline constexpr PidGains kPitchPositionPid{20.0f, 0.f, 0.3f, 10.0f, 0.6f};  ///< 俯仰位置 PID
 inline constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.f, 8.0f, 0.0f};       ///< 俯仰速度 PID

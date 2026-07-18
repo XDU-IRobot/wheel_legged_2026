@@ -48,7 +48,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_enable_request;      // 使能请求
   uint8_t dr16_spin_request;        // 小陀螺请求
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
-  // 自动跳跃调试字段已移除
+  uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
+  uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
   uint8_t tc_remote_valid;         // 图传键鼠链路活跃（收到键盘帧）
   uint8_t stair_high_leg_request;  // Stair coordinator requests high-leg standby
   uint8_t stair_task_request;      // Stair command parsed this cycle

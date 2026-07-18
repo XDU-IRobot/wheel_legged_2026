@@ -107,7 +107,8 @@ struct InputSnapshot {
   TcRemoteInput tc_remote{};                              ///< 图传键鼠数据（CAN 桥）
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
-  // 自动跳跃字段已移除
+  bool auto_jump_triggered{false};      ///< 本周期自动跳跃触发
+  bool auto_jump_enabled{false};         ///< 自动跳跃模式是否开启（同步自 TcSemanticState）
   bool ui_refresh_key{false};           ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};       ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};     ///< 云台惯导俯仰角
@@ -147,8 +148,9 @@ struct TcSemanticState {
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
-  bool ad_enabled{false};            ///< AD 功能开关（Z 键短按切换，默认关闭）
-  bool z_ad_armed{true};             ///< Z 键 AD 切换是否已就绪（上升沿检测）
+  bool auto_jump_enabled{false};     ///< 自动跳跃模式开关（Z 键短按切换，默认关闭）
+  bool z_auto_jump_armed{true};      ///< Z 键自动跳跃切换是否已就绪（上升沿检测）
+  bool auto_jump_tof_armed{true};    ///< 自动跳跃 TOF 边沿检测
   bool dial_jump_armed{true};        ///< DR16 拨轮跳跃边沿检测
   bool mouse_z_jump_armed{true};     ///< 鼠标滚轮跳跃边沿检测
   wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用

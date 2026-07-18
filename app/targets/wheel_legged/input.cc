@@ -190,12 +190,12 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   // E 键：UI 刷新使能（电平有效）
   tc_state.e_ui_refresh = (tc_remote.keyboard_value & kRcKeyE) != 0U;
 
-  // Z 键短按（无 Ctrl）：切换 AD 功能开关
-  if (z_pressed && !ctrl_pressed && tc_state.z_ad_armed) {
-    tc_state.ad_enabled = !tc_state.ad_enabled;
-    tc_state.z_ad_armed = false;
+  // Z 键短按（无 Ctrl）：切换自动跳跃模式
+  if (z_pressed && !ctrl_pressed && tc_state.z_auto_jump_armed) {
+    tc_state.auto_jump_enabled = !tc_state.auto_jump_enabled;
+    tc_state.z_auto_jump_armed = false;
   }
-  if (!z_pressed) tc_state.z_ad_armed = true;
+  if (!z_pressed) tc_state.z_auto_jump_armed = true;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -544,6 +544,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       input.mode_request.target_source == wheel_legged::TargetSource::kHost && input.mode_request.host_target_valid;
 
   // 1. 从执行器采集关节/轮毂/IMU 反馈
+  input.auto_jump_triggered = false;
   actuators.FillEstimatorInput(g, input.estimator_input);
 
   // 2. 读取 DR16 原始值
@@ -629,6 +630,23 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 3b. 语义折叠
   ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
+
+  // 3c. 自动跳跃：Z 键开启后，两侧 TOF < 720mm 时触发跳跃（与拨轮跳跃效果相同）
+  if (tc_state.auto_jump_enabled) {
+    const bool tof_ready = g.tof.has_value() && g.tof_i2c1.has_value();
+    if (tof_ready) {
+      const bool both_close =
+          g.tof->measurement().distance_mm < 720 && g.tof_i2c1->measurement().distance_mm < 720;
+      if (both_close && tc_state.auto_jump_tof_armed) {
+        input.mode_request.jump_trigger = true;
+        input.auto_jump_triggered = true;
+        tc_state.auto_jump_tof_armed = false;
+      }
+      if (!both_close) tc_state.auto_jump_tof_armed = true;
+    }
+  }
+
+  input.auto_jump_enabled = tc_state.auto_jump_enabled;
 
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
   const bool auto_aim_active = IsAutoAimProfile(input.mode_request.combat_profile);
