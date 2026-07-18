@@ -1316,26 +1316,6 @@ void ControlLoop() {
     wl_debug.gimbal_euler_yaw_rad = 0.0f;
     wl_debug.gimbal_euler_pitch_rad = 0.0f;
   }
-  {
-    // DYP-A22 受控输出：每 50ms (25 tick @ 500Hz) 触发一次测量
-    static uint32_t dyp_trigger_tick = 0U;
-    if (++dyp_trigger_tick >= 100U) {
-      dyp_trigger_tick = 0U;
-      if (globals->dyp_left.has_value()) globals->dyp_left->TriggerOnce();
-      if (globals->dyp_right.has_value()) globals->dyp_right->TriggerOnce();
-    }
-    const auto left = globals->dyp_left.has_value() ? globals->dyp_left->distance_raw() : 0U;
-    const auto right = globals->dyp_right.has_value() ? globals->dyp_right->distance_raw() : 0U;
-    wl_debug.dyp_distance_raw_left = left;
-    wl_debug.dyp_distance_raw_right = right;
-    wl_debug.dyp_distance_filtered_left = left;
-    wl_debug.dyp_distance_filtered_right = right;
-    wl_debug.dyp_distance_filtered_avg = static_cast<uint16_t>((static_cast<uint32_t>(left) + right) / 2U);
-    wl_debug.dyp_result_left = globals->dyp_left.has_value() && globals->dyp_left->data_valid() ? 1U : 0U;
-    wl_debug.dyp_result_right = globals->dyp_right.has_value() && globals->dyp_right->data_valid() ? 1U : 0U;
-    wl_debug.dyp_frame_count = (globals->dyp_left.has_value() ? globals->dyp_left->frame_count() : 0U) +
-                               (globals->dyp_right.has_value() ? globals->dyp_right->frame_count() : 0U);
-  }
   wl_debug.yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
   wl_debug.pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;
 

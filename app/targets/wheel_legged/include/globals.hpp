@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include "fdcan.h"
+#include "i2c.h"
 #include "stm32h7xx_it.h"
 #include "usart.h"
 
@@ -13,8 +14,8 @@
 
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
+#include "common/device/vl53l4cd.hpp"
 #include "gimbal_can_bridge.hpp"
-#include "utils/dyp_a22.hpp"
 #include "utils/aimbot_can.hpp"
 #include "librm/device/supercap/gk_supercap.hpp"
 #include "librm/device/referee/referee.hpp"
@@ -62,8 +63,8 @@ struct SharedResources {
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
   std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
-  std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
-  std::optional<rm::device::DypA22> dyp_right{};     ///< DYP 右超声波 (UART9)
+  std::optional<rm::device::Vl53l4cd> tof{};         ///< Selected VL53L4CD ToF on I2C2
+  std::optional<rm::device::Vl53l4cd> tof_i2c1{};    ///< Selected VL53L4CD ToF on I2C1
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -123,8 +124,6 @@ struct SharedResources {
     prepare_uart_rx_to_idle_dma(huart10, USART10_IRQn, DMA1_Stream5_IRQn);
     prepare_uart_rx_to_idle_dma(huart1, USART1_IRQn, DMA2_Stream0_IRQn);
     prepare_uart_rx_to_idle_dma(huart7, UART7_IRQn, DMA1_Stream3_IRQn);
-    prepare_uart_rx_to_idle_dma(huart8, UART8_IRQn, DMA2_Stream3_IRQn);
-    prepare_uart_rx_to_idle_dma(huart9, UART9_IRQn, DMA2_Stream2_IRQn);
 
     const auto prepare_uart_tx_dma = [](UART_HandleTypeDef &huart, const IRQn_Type uart_irqn,
                                         const IRQn_Type dma_tx_irqn) {
@@ -180,13 +179,13 @@ struct SharedResources {
     if (!supercap.has_value()) {
       supercap.emplace(*wheel_can);
     }
-    if (!dyp_left.has_value()) {
-      dyp_left.emplace(no_dtcm->dyp_left_uart);
-      dyp_left->Start();
+    if (!tof.has_value()) {
+      tof.emplace(hi2c2);
+      (void)tof->Begin();
     }
-    if (!dyp_right.has_value()) {
-      dyp_right.emplace(no_dtcm->dyp_right_uart);
-      dyp_right->Start();
+    if (!tof_i2c1.has_value()) {
+      tof_i2c1.emplace(hi2c1);
+      (void)tof_i2c1->Begin();
     }
 
     if (!dm_lf.has_value()) {
