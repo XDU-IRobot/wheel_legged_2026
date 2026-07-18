@@ -2,9 +2,7 @@
 
 #include <array>
 
-#include "i2c.h"
-
-namespace device {
+namespace rm::device {
 namespace {
 
 constexpr std::uint16_t kVhvTimeout = 0x0008;
@@ -25,10 +23,6 @@ constexpr std::uint16_t kOscCalibrateValue = 0x00DE;
 constexpr std::uint16_t kFirmwareStatus = 0x00E5;
 constexpr std::uint16_t kModelId = 0x010F;
 
-constexpr std::uint32_t kI2cTimeoutMs = 100;
-constexpr std::uint32_t kBootTimeoutMs = 1000;
-constexpr std::uint32_t kReceiverPollPeriodMs = 5;
-
 // ST VL53L4CD ULD v1.0.0 default configuration, registers 0x002D-0x0087.
 constexpr std::array<std::uint8_t, 91> kDefaultConfiguration{
     0x12, 0x00, 0x00, 0x11, 0x02, 0x00, 0x02, 0x08, 0x00, 0x08, 0x10, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00,
@@ -40,338 +34,327 @@ constexpr std::array<std::uint8_t, 91> kDefaultConfiguration{
 constexpr std::array<std::uint8_t, 24> kRangeStatusMap{255, 255, 255, 5,   2,   4,   1,  7, 3,   0,   255, 255,
                                                        9,   13,  255, 255, 255, 255, 10, 6, 255, 255, 11,  12};
 
-Vl53l4cd g_receiver_sensor{hi2c2};
-Vl53l4cd::Result g_receiver_result{};
-std::uint32_t g_receiver_last_poll_tick{0};
-bool g_receiver_started{false};
-
-void SetReceiverDriverStatus(Vl53l4cd::Status status) {
-  g_vl53l4cd_state.driver_status = static_cast<std::uint8_t>(status);
-}
-
 }  // namespace
 
-volatile Vl53l4cdReceiverState g_vl53l4cd_state{};
+Vl53l4cd::Vl53l4cd(I2C_HandleTypeDef &i2c) : Vl53l4cd(i2c, Config{}) {}
 
-Vl53l4cd::Vl53l4cd(I2C_HandleTypeDef &i2c, std::uint8_t address) : i2c_(&i2c), address_(address) {}
+Vl53l4cd::Vl53l4cd(I2C_HandleTypeDef &i2c, const Config &config) : i2c_(&i2c), config_(config) {}
 
-Vl53l4cd::Status Vl53l4cd::Init() {
-  if (i2c_ == nullptr || (address_ & 0x01U) != 0U) {
-    return Status::kInvalidArgument;
+Vl53l4cd::Error Vl53l4cd::Begin() {
+  measurement_ = {};
+  model_id_ = 0;
+  sample_count_ = 0;
+  ranging_ = false;
+
+  Error error = Init();
+  if (error == Error::kOk) {
+    error = Start();
+  }
+  return RecordError(error);
+}
+
+Vl53l4cd::Error Vl53l4cd::Init() {
+  if (i2c_ == nullptr || config_.address > 0x7FU || config_.i2c_timeout_ms == 0 || config_.boot_timeout_ms == 0) {
+    return Error::kInvalidArgument;
   }
 
   HAL_Delay(10);
-  Status status = WaitForBoot();
-  if (status != Status::kOk) {
-    return status;
+  Error error = WaitForBoot();
+  if (error != Error::kOk) {
+    return error;
   }
 
-  status = ReadWord(kModelId, model_id_);
-  if (status != Status::kOk) {
-    return status;
+  error = ReadWord(kModelId, model_id_);
+  if (error != Error::kOk) {
+    return error;
   }
   if (model_id_ != kExpectedModelId) {
-    return Status::kWrongDevice;
+    return Error::kWrongDevice;
   }
 
-  status = Write(0x002D, kDefaultConfiguration.data(), static_cast<std::uint16_t>(kDefaultConfiguration.size()));
-  if (status != Status::kOk) {
-    return status;
+  error = Write(0x002D, kDefaultConfiguration.data(), static_cast<u16>(kDefaultConfiguration.size()));
+  if (error != Error::kOk) {
+    return error;
   }
 
-  status = WriteByte(kSystemStart, 0x40);
-  if (status != Status::kOk) {
-    return status;
+  error = WriteByte(kSystemStart, 0x40);
+  if (error != Error::kOk) {
+    return error;
   }
-  status = WaitForData(kBootTimeoutMs);
-  if (status != Status::kOk) {
-    return status;
-  }
-
-  if ((status = ClearInterrupt()) != Status::kOk || (status = Stop()) != Status::kOk ||
-      (status = WriteByte(kVhvTimeout, 0x09)) != Status::kOk || (status = WriteByte(0x000B, 0x00)) != Status::kOk ||
-      (status = WriteWord(0x0024, 0x0500)) != Status::kOk) {
-    return status;
+  error = WaitForData(config_.boot_timeout_ms);
+  if (error != Error::kOk) {
+    return error;
   }
 
-  return SetRangeTiming(50, 0);
+  if ((error = ClearInterrupt()) != Error::kOk || (error = Stop()) != Error::kOk ||
+      (error = WriteByte(kVhvTimeout, 0x09)) != Error::kOk || (error = WriteByte(0x000B, 0x00)) != Error::kOk ||
+      (error = WriteWord(0x0024, 0x0500)) != Error::kOk) {
+    return error;
+  }
+
+  return SetRangeTiming(config_.timing_budget_ms, config_.inter_measurement_ms);
 }
 
-Vl53l4cd::Status Vl53l4cd::Start() {
+Vl53l4cd::Error Vl53l4cd::Start() {
   std::uint32_t inter_measurement = 0;
-  Status status = ReadDword(kInterMeasurement, inter_measurement);
-  if (status != Status::kOk) {
-    return status;
+  Error error = ReadDword(kInterMeasurement, inter_measurement);
+  if (error != Error::kOk) {
+    return error;
   }
 
-  status = WriteByte(kSystemStart, inter_measurement == 0 ? 0x21 : 0x40);
-  if (status != Status::kOk) {
-    return status;
+  error = WriteByte(kSystemStart, inter_measurement == 0 ? 0x21 : 0x40);
+  if (error != Error::kOk) {
+    return error;
   }
-  status = WaitForData(kBootTimeoutMs);
-  return status == Status::kOk ? ClearInterrupt() : status;
+  error = WaitForData(config_.boot_timeout_ms);
+  if (error == Error::kOk) {
+    error = ClearInterrupt();
+  }
+  ranging_ = error == Error::kOk;
+  last_poll_tick_ = HAL_GetTick();
+  return error;
 }
 
-Vl53l4cd::Status Vl53l4cd::Stop() { return WriteByte(kSystemStart, 0x00); }
+Vl53l4cd::Error Vl53l4cd::Stop() {
+  const Error error = WriteByte(kSystemStart, 0x00);
+  if (error == Error::kOk) {
+    ranging_ = false;
+  }
+  return RecordError(error);
+}
 
-Vl53l4cd::Status Vl53l4cd::SetRangeTiming(std::uint32_t timing_budget_ms, std::uint32_t inter_measurement_ms) {
+Vl53l4cd::Error Vl53l4cd::SetRangeTiming(std::uint32_t timing_budget_ms, std::uint32_t inter_measurement_ms) {
   if (timing_budget_ms < 10 || timing_budget_ms > 200 ||
       (inter_measurement_ms != 0 && inter_measurement_ms <= timing_budget_ms)) {
-    return Status::kInvalidArgument;
+    return Error::kInvalidArgument;
   }
 
   std::uint16_t osc_frequency = 0;
-  Status status = ReadWord(0x0006, osc_frequency);
-  if (status != Status::kOk) {
-    return status;
+  Error error = ReadWord(0x0006, osc_frequency);
+  if (error != Error::kOk) {
+    return error;
   }
   if (osc_frequency == 0) {
-    return Status::kInvalidArgument;
+    return Error::kInvalidArgument;
   }
 
   std::uint32_t timing_budget_us = timing_budget_ms * 1000U;
   const std::uint32_t macro_period_us = (2304U * (0x40000000U / osc_frequency)) >> 6U;
 
   if (inter_measurement_ms == 0) {
-    if ((status = WriteDword(kInterMeasurement, 0)) != Status::kOk) {
-      return status;
+    if ((error = WriteDword(kInterMeasurement, 0)) != Error::kOk) {
+      return error;
     }
     timing_budget_us -= 2500U;
   } else {
     std::uint16_t clock_pll = 0;
-    if ((status = ReadWord(kOscCalibrateValue, clock_pll)) != Status::kOk) {
-      return status;
+    if ((error = ReadWord(kOscCalibrateValue, clock_pll)) != Error::kOk) {
+      return error;
     }
     clock_pll &= 0x03FFU;
     const auto period =
         static_cast<std::uint32_t>(1.055F * static_cast<float>(inter_measurement_ms) * static_cast<float>(clock_pll));
-    if ((status = WriteDword(kInterMeasurement, period)) != Status::kOk) {
-      return status;
+    if ((error = WriteDword(kInterMeasurement, period)) != Error::kOk) {
+      return error;
     }
     timing_budget_us = (timing_budget_us - 4300U) / 2U;
   }
 
-  const auto encode_timeout = [timing_budget_us](std::uint32_t macro_period) {
-    std::uint16_t ms_byte = 0;
-    const std::uint32_t shifted_budget = timing_budget_us << 12U;
-    const std::uint32_t tmp = macro_period * 16U;
-    std::uint32_t ls_byte = ((shifted_budget + ((tmp >> 6U) >> 1U)) / (tmp >> 6U)) - 1U;
-    while ((ls_byte & 0xFFFFFF00U) != 0U) {
-      ls_byte >>= 1U;
-      ++ms_byte;
-    }
-    return static_cast<std::uint16_t>((ms_byte << 8U) | (ls_byte & 0xFFU));
-  };
-
-  status = WriteWord(kRangeConfigA, encode_timeout(macro_period_us));
-  if (status != Status::kOk) {
-    return status;
+  error = WriteWord(kRangeConfigA, EncodeTimeout(timing_budget_us, macro_period_us, 16U));
+  if (error != Error::kOk) {
+    return error;
   }
-
-  const auto encode_timeout_b = [timing_budget_us](std::uint32_t macro_period) {
-    std::uint16_t ms_byte = 0;
-    const std::uint32_t shifted_budget = timing_budget_us << 12U;
-    const std::uint32_t tmp = macro_period * 12U;
-    std::uint32_t ls_byte = ((shifted_budget + ((tmp >> 6U) >> 1U)) / (tmp >> 6U)) - 1U;
-    while ((ls_byte & 0xFFFFFF00U) != 0U) {
-      ls_byte >>= 1U;
-      ++ms_byte;
-    }
-    return static_cast<std::uint16_t>((ms_byte << 8U) | (ls_byte & 0xFFU));
-  };
-  return WriteWord(kRangeConfigB, encode_timeout_b(macro_period_us));
+  error = WriteWord(kRangeConfigB, EncodeTimeout(timing_budget_us, macro_period_us, 12U));
+  if (error == Error::kOk) {
+    config_.timing_budget_ms = timing_budget_ms;
+    config_.inter_measurement_ms = inter_measurement_ms;
+  }
+  return error;
 }
 
-Vl53l4cd::Status Vl53l4cd::IsDataReady(bool &ready) {
-  std::uint8_t mux = 0;
-  std::uint8_t gpio = 0;
-  Status status = ReadByte(kGpioHvMuxCtrl, mux);
-  if (status != Status::kOk) {
-    return status;
+u16 Vl53l4cd::EncodeTimeout(u32 timing_budget_us, u32 macro_period_us, u32 multiplier) {
+  u16 exponent = 0;
+  const u32 shifted_budget = timing_budget_us << 12U;
+  const u32 period = macro_period_us * multiplier;
+  u32 mantissa = ((shifted_budget + ((period >> 6U) >> 1U)) / (period >> 6U)) - 1U;
+  while ((mantissa & 0xFFFFFF00U) != 0U) {
+    mantissa >>= 1U;
+    ++exponent;
   }
-  status = ReadByte(kGpioStatus, gpio);
-  if (status != Status::kOk) {
-    return status;
+  return static_cast<u16>((exponent << 8U) | (mantissa & 0xFFU));
+}
+
+Vl53l4cd::Error Vl53l4cd::IsDataReady(bool &ready) {
+  u8 mux = 0;
+  u8 gpio = 0;
+  Error error = ReadByte(kGpioHvMuxCtrl, mux);
+  if (error != Error::kOk) {
+    return error;
+  }
+  error = ReadByte(kGpioStatus, gpio);
+  if (error != Error::kOk) {
+    return error;
   }
 
-  const std::uint8_t interrupt_polarity = (mux & 0x10U) != 0U ? 0U : 1U;
+  const u8 interrupt_polarity = (mux & 0x10U) != 0U ? 0U : 1U;
   ready = (gpio & 0x01U) == interrupt_polarity;
-  return Status::kOk;
+  return Error::kOk;
 }
 
-Vl53l4cd::Status Vl53l4cd::Read(Result &result) {
-  std::uint8_t raw_status = 0;
-  Status status = ReadByte(kResultRangeStatus, raw_status);
-  if (status != Status::kOk) {
-    return status;
+Vl53l4cd::Error Vl53l4cd::ReadMeasurement() {
+  Measurement next{};
+  u8 raw_status = 0;
+  Error error = ReadByte(kResultRangeStatus, raw_status);
+  if (error != Error::kOk) {
+    return error;
   }
   raw_status &= 0x1FU;
-  result.range_status = raw_status < kRangeStatusMap.size() ? kRangeStatusMap[raw_status] : 255;
+  next.range_status = raw_status < kRangeStatusMap.size() ? kRangeStatusMap[raw_status] : 255;
 
-  std::uint16_t raw = 0;
-  if ((status = ReadWord(kResultSpadCount, raw)) != Status::kOk) {
-    return status;
+  u16 raw = 0;
+  if ((error = ReadWord(kResultSpadCount, raw)) != Error::kOk) {
+    return error;
   }
-  result.number_of_spads = raw / 256U;
+  next.number_of_spads = raw / 256U;
 
-  if ((status = ReadWord(kResultSignalRate, raw)) != Status::kOk) {
-    return status;
+  if ((error = ReadWord(kResultSignalRate, raw)) != Error::kOk) {
+    return error;
   }
-  result.signal_rate_kcps = raw * 8U;
+  next.signal_rate_kcps = raw * 8U;
 
-  if ((status = ReadWord(kResultAmbientRate, raw)) != Status::kOk) {
-    return status;
+  if ((error = ReadWord(kResultAmbientRate, raw)) != Error::kOk) {
+    return error;
   }
-  result.ambient_rate_kcps = raw * 8U;
+  next.ambient_rate_kcps = raw * 8U;
 
-  if ((status = ReadWord(kResultSigma, raw)) != Status::kOk) {
-    return status;
+  if ((error = ReadWord(kResultSigma, raw)) != Error::kOk) {
+    return error;
   }
-  result.sigma_mm = raw / 4U;
+  next.sigma_mm = raw / 4U;
 
-  if ((status = ReadWord(kResultDistance, result.distance_mm)) != Status::kOk) {
-    return status;
+  if ((error = ReadWord(kResultDistance, next.distance_mm)) != Error::kOk) {
+    return error;
   }
-  return ClearInterrupt();
+  if ((error = ClearInterrupt()) != Error::kOk) {
+    return error;
+  }
+
+  measurement_ = next;
+  ++sample_count_;
+  return Error::kOk;
 }
 
-Vl53l4cd::Status Vl53l4cd::Poll(Result &result) {
+Vl53l4cd::Error Vl53l4cd::Poll() {
+  if (!ranging_) {
+    return RecordError(Error::kNotStarted);
+  }
+
+  const u32 now = HAL_GetTick();
+  if ((now - last_poll_tick_) < config_.poll_period_ms) {
+    return Error::kNotReady;
+  }
+  last_poll_tick_ = now;
+
   bool ready = false;
-  const Status status = IsDataReady(ready);
-  if (status != Status::kOk) {
-    return status;
+  Error error = IsDataReady(ready);
+  if (error == Error::kOk && ready) {
+    error = ReadMeasurement();
+  } else if (error == Error::kOk) {
+    return Error::kNotReady;
   }
-  return ready ? Read(result) : Status::kNotReady;
+  return RecordError(error);
 }
 
-Vl53l4cd::Status Vl53l4cd::WaitForBoot() {
-  const std::uint32_t start = HAL_GetTick();
-  while ((HAL_GetTick() - start) < kBootTimeoutMs) {
-    std::uint8_t firmware_status = 0;
-    const Status status = ReadByte(kFirmwareStatus, firmware_status);
-    if (status != Status::kOk) {
-      return status;
+Vl53l4cd::Error Vl53l4cd::WaitForBoot() {
+  const u32 start = HAL_GetTick();
+  while ((HAL_GetTick() - start) < config_.boot_timeout_ms) {
+    u8 firmware_status = 0;
+    const Error error = ReadByte(kFirmwareStatus, firmware_status);
+    if (error != Error::kOk) {
+      return error;
     }
     if (firmware_status == 0x03) {
-      return Status::kOk;
+      return Error::kOk;
     }
     HAL_Delay(1);
   }
-  return Status::kTimeout;
+  return Error::kTimeout;
 }
 
-Vl53l4cd::Status Vl53l4cd::WaitForData(std::uint32_t timeout_ms) {
-  const std::uint32_t start = HAL_GetTick();
+Vl53l4cd::Error Vl53l4cd::WaitForData(u32 timeout_ms) {
+  const u32 start = HAL_GetTick();
   while ((HAL_GetTick() - start) < timeout_ms) {
     bool ready = false;
-    const Status status = IsDataReady(ready);
-    if (status != Status::kOk) {
-      return status;
+    const Error error = IsDataReady(ready);
+    if (error != Error::kOk) {
+      return error;
     }
     if (ready) {
-      return Status::kOk;
+      return Error::kOk;
     }
     HAL_Delay(1);
   }
-  return Status::kTimeout;
+  return Error::kTimeout;
 }
 
-Vl53l4cd::Status Vl53l4cd::ClearInterrupt() { return WriteByte(kInterruptClear, 0x01); }
+Vl53l4cd::Error Vl53l4cd::ClearInterrupt() { return WriteByte(kInterruptClear, 0x01); }
 
-Vl53l4cd::Status Vl53l4cd::Read(std::uint16_t reg, std::uint8_t *data, std::uint16_t size) {
-  return HAL_I2C_Mem_Read(i2c_, address_, reg, I2C_MEMADD_SIZE_16BIT, data, size, kI2cTimeoutMs) == HAL_OK
-             ? Status::kOk
-             : Status::kI2cError;
-}
-
-Vl53l4cd::Status Vl53l4cd::Write(std::uint16_t reg, const std::uint8_t *data, std::uint16_t size) {
-  return HAL_I2C_Mem_Write(i2c_, address_, reg, I2C_MEMADD_SIZE_16BIT, const_cast<std::uint8_t *>(data), size,
-                           kI2cTimeoutMs) == HAL_OK
-             ? Status::kOk
-             : Status::kI2cError;
-}
-
-Vl53l4cd::Status Vl53l4cd::ReadByte(std::uint16_t reg, std::uint8_t &value) { return Read(reg, &value, 1); }
-
-Vl53l4cd::Status Vl53l4cd::ReadWord(std::uint16_t reg, std::uint16_t &value) {
-  std::uint8_t data[2]{};
-  const Status status = Read(reg, data, sizeof(data));
-  if (status == Status::kOk) {
-    value = static_cast<std::uint16_t>((static_cast<std::uint16_t>(data[0]) << 8U) | data[1]);
+Vl53l4cd::Error Vl53l4cd::RecordError(Error error) {
+  if (error == Error::kNotReady) {
+    return error;
   }
-  return status;
+  last_error_ = error;
+  ReportStatus(error == Error::kOk ? Device::kOk : Device::kFault);
+  return error;
 }
 
-Vl53l4cd::Status Vl53l4cd::ReadDword(std::uint16_t reg, std::uint32_t &value) {
-  std::uint8_t data[4]{};
-  const Status status = Read(reg, data, sizeof(data));
-  if (status == Status::kOk) {
-    value = (static_cast<std::uint32_t>(data[0]) << 24U) | (static_cast<std::uint32_t>(data[1]) << 16U) |
-            (static_cast<std::uint32_t>(data[2]) << 8U) | data[3];
+Vl53l4cd::Error Vl53l4cd::Read(u16 reg, u8 *data, u16 size) {
+  const u16 hal_address = static_cast<u16>(config_.address) << 1U;
+  return HAL_I2C_Mem_Read(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, data, size, config_.i2c_timeout_ms) == HAL_OK
+             ? Error::kOk
+             : Error::kI2cError;
+}
+
+Vl53l4cd::Error Vl53l4cd::Write(u16 reg, const u8 *data, u16 size) {
+  const u16 hal_address = static_cast<u16>(config_.address) << 1U;
+  return HAL_I2C_Mem_Write(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, const_cast<u8 *>(data), size,
+                           config_.i2c_timeout_ms) == HAL_OK
+             ? Error::kOk
+             : Error::kI2cError;
+}
+
+Vl53l4cd::Error Vl53l4cd::ReadByte(u16 reg, u8 &value) { return Read(reg, &value, 1); }
+
+Vl53l4cd::Error Vl53l4cd::ReadWord(u16 reg, u16 &value) {
+  u8 data[2]{};
+  const Error error = Read(reg, data, sizeof(data));
+  if (error == Error::kOk) {
+    value = static_cast<u16>((static_cast<u16>(data[0]) << 8U) | data[1]);
   }
-  return status;
+  return error;
 }
 
-Vl53l4cd::Status Vl53l4cd::WriteByte(std::uint16_t reg, std::uint8_t value) { return Write(reg, &value, 1); }
+Vl53l4cd::Error Vl53l4cd::ReadDword(u16 reg, u32 &value) {
+  u8 data[4]{};
+  const Error error = Read(reg, data, sizeof(data));
+  if (error == Error::kOk) {
+    value = (static_cast<u32>(data[0]) << 24U) | (static_cast<u32>(data[1]) << 16U) |
+            (static_cast<u32>(data[2]) << 8U) | data[3];
+  }
+  return error;
+}
 
-Vl53l4cd::Status Vl53l4cd::WriteWord(std::uint16_t reg, std::uint16_t value) {
-  const std::uint8_t data[]{
-      static_cast<std::uint8_t>(value >> 8U),
-      static_cast<std::uint8_t>(value & 0xFFU),
-  };
+Vl53l4cd::Error Vl53l4cd::WriteByte(u16 reg, u8 value) { return Write(reg, &value, 1); }
+
+Vl53l4cd::Error Vl53l4cd::WriteWord(u16 reg, u16 value) {
+  const u8 data[]{static_cast<u8>(value >> 8U), static_cast<u8>(value)};
   return Write(reg, data, sizeof(data));
 }
 
-Vl53l4cd::Status Vl53l4cd::WriteDword(std::uint16_t reg, std::uint32_t value) {
-  const std::uint8_t data[]{
-      static_cast<std::uint8_t>(value >> 24U),
-      static_cast<std::uint8_t>(value >> 16U),
-      static_cast<std::uint8_t>(value >> 8U),
-      static_cast<std::uint8_t>(value),
-  };
+Vl53l4cd::Error Vl53l4cd::WriteDword(u16 reg, u32 value) {
+  const u8 data[]{static_cast<u8>(value >> 24U), static_cast<u8>(value >> 16U), static_cast<u8>(value >> 8U),
+                  static_cast<u8>(value)};
   return Write(reg, data, sizeof(data));
 }
 
-void Vl53l4cdReceiverInit() {
-  Vl53l4cd::Status status = g_receiver_sensor.Init();
-  g_vl53l4cd_state.model_id = g_receiver_sensor.model_id();
-  SetReceiverDriverStatus(status);
-  if (status != Vl53l4cd::Status::kOk) {
-    return;
-  }
-
-  status = g_receiver_sensor.Start();
-  SetReceiverDriverStatus(status);
-  g_receiver_started = status == Vl53l4cd::Status::kOk;
-  g_receiver_last_poll_tick = HAL_GetTick();
-}
-
-void Vl53l4cdReceiverPoll() {
-  if (!g_receiver_started) {
-    return;
-  }
-
-  const std::uint32_t now = HAL_GetTick();
-  if ((now - g_receiver_last_poll_tick) < kReceiverPollPeriodMs) {
-    return;
-  }
-  g_receiver_last_poll_tick = now;
-
-  const Vl53l4cd::Status status = g_receiver_sensor.Poll(g_receiver_result);
-  if (status == Vl53l4cd::Status::kNotReady) {
-    return;
-  }
-  SetReceiverDriverStatus(status);
-  if (status != Vl53l4cd::Status::kOk) {
-    return;
-  }
-
-  g_vl53l4cd_state.range_status = g_receiver_result.range_status;
-  g_vl53l4cd_state.distance_mm = g_receiver_result.distance_mm;
-  g_vl53l4cd_state.signal_rate_kcps = g_receiver_result.signal_rate_kcps;
-  g_vl53l4cd_state.ambient_rate_kcps = g_receiver_result.ambient_rate_kcps;
-  g_vl53l4cd_state.sigma_mm = g_receiver_result.sigma_mm;
-  g_vl53l4cd_state.sample_count = g_vl53l4cd_state.sample_count + 1U;
-}
-
-}  // namespace device
+}  // namespace rm::device

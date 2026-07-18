@@ -1,5 +1,4 @@
 #include "common/bsp/timer_task_scheduler.hpp"
-#include "common/device/vl53l4cd.hpp"
 
 #include <etl/delegate.h>
 #include "include/ai/policy_runner.hpp"
@@ -26,7 +25,6 @@ extern "C" {
 void AppMain() {
   globals = &g_globals;
   globals->Init();
-  ::device::Vl53l4cdReceiverInit();
   wheel_legged::ai::PolicyTestInit();
 
   TimerTaskScheduler mainloop{&htim13};
@@ -44,7 +42,9 @@ void AppMain() {
     if (globals->gimbal_can.has_value()) {
       (void)globals->gimbal_can->Process();
     }
-    ::device::Vl53l4cdReceiverPoll();
+    if (globals->tof.has_value()) {
+      (void)globals->tof->Poll();
+    }
     wheel_legged::ai::PolicyTestPoll();
   }
 }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include "fdcan.h"
+#include "i2c.h"
 #include "stm32h7xx_it.h"
 #include "usart.h"
 
@@ -13,6 +14,7 @@
 
 #include "chassis/chassis.hpp"
 #include "chassis/fsm.hpp"
+#include "common/device/vl53l4cd.hpp"
 #include "gimbal_can_bridge.hpp"
 #include "utils/dyp_a22.hpp"
 #include "utils/aimbot_can.hpp"
@@ -64,6 +66,7 @@ struct SharedResources {
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
   std::optional<rm::device::DypA22> dyp_left{};      ///< DYP 左超声波 (UART8)
   std::optional<rm::device::DypA22> dyp_right{};     ///< DYP 右超声波 (UART9)
+  std::optional<rm::device::Vl53l4cd> tof{};         ///< VL53L4CD ToF (I2C2)
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -187,6 +190,10 @@ struct SharedResources {
     if (!dyp_right.has_value()) {
       dyp_right.emplace(no_dtcm->dyp_right_uart);
       dyp_right->Start();
+    }
+    if (!tof.has_value()) {
+      tof.emplace(hi2c2);
+      (void)tof->Begin();
     }
 
     if (!dm_lf.has_value()) {
