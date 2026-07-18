@@ -117,9 +117,8 @@ int main(void) {
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
-  MX_UART8_Init();
-  MX_UART9_Init();
   MX_I2C2_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   AppMain();
   /* USER CODE END 2 */
@@ -200,8 +199,8 @@ void PeriphCommonClock_Config(void) {
   /** Initializes the peripherals clock
    */
   PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADC | RCC_PERIPHCLK_SPI2 | RCC_PERIPHCLK_SPI1 |
-                                             RCC_PERIPHCLK_UART5 | RCC_PERIPHCLK_UART8 | RCC_PERIPHCLK_FDCAN |
-                                             RCC_PERIPHCLK_UART7 | RCC_PERIPHCLK_USART2;
+                                             RCC_PERIPHCLK_UART5 | RCC_PERIPHCLK_FDCAN | RCC_PERIPHCLK_UART7 |
+                                             RCC_PERIPHCLK_USART2;
   PeriphClkInitStruct.PLL2.PLL2M = 2;
   PeriphClkInitStruct.PLL2.PLL2N = 16;
   PeriphClkInitStruct.PLL2.PLL2P = 2;

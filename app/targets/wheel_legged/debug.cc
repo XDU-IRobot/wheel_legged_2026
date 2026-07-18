@@ -33,6 +33,19 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
     wl_debug.vl53l4cd_sample_count = tof.sample_count();
   }
 
+  if (globals->tof_i2c1.has_value()) {
+    const auto &tof = *globals->tof_i2c1;
+    const auto &measurement = tof.measurement();
+    wl_debug.vl53l4cd_i2c1_driver_status = static_cast<uint8_t>(tof.last_error());
+    wl_debug.vl53l4cd_i2c1_range_status = measurement.range_status;
+    wl_debug.vl53l4cd_i2c1_model_id = tof.model_id();
+    wl_debug.vl53l4cd_i2c1_distance_mm = measurement.distance_mm;
+    wl_debug.vl53l4cd_i2c1_signal_kcps = measurement.signal_rate_kcps;
+    wl_debug.vl53l4cd_i2c1_ambient_kcps = measurement.ambient_rate_kcps;
+    wl_debug.vl53l4cd_i2c1_sigma_mm = measurement.sigma_mm;
+    wl_debug.vl53l4cd_i2c1_sample_count = tof.sample_count();
+  }
+
   // ── DR16 原始输入 ──
   wl_debug.dr16_online = static_cast<uint8_t>(input.dr16.online);
   wl_debug.dr16_switch_l_raw = static_cast<int32_t>(input.dr16.switch_l);
