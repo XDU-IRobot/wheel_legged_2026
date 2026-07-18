@@ -484,8 +484,7 @@ void ControlLoop() {
 
   // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
   if (ctx.defer_leg_change) {
-    chassis_input.request.stair_task_active =
-        (globals->chassis_fsm.mode() == chassis::Fsm::State::kStairTask);
+    chassis_input.request.stair_task_active = (globals->chassis_fsm.mode() == chassis::Fsm::State::kStairTask);
   } else if (tc_state.pending_action != TcSemanticState::PendingAction::kNone) {
     // yaw 对齐完成（或本就不需要转），执行之前暂缓的动作
     switch (tc_state.pending_action) {
