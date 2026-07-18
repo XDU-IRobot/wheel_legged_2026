@@ -111,15 +111,11 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
                             bool &r_yaw_reset_edge, bool &r_flip_180_edge) {
   const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
 
-  // C 键（无 Ctrl）：按 C → 中腿长；已在中腿长则回低腿长
+  // C 键（无 Ctrl）：对齐正方向后切换中/低腿长、取消台阶
   const bool c_pressed = (tc_remote.keyboard_value & kRcKeyC) != 0U;
   if (c_pressed && !ctrl_pressed && tc_state.mid_leg_c_armed) {
     r_yaw_reset_edge = true;
-    const bool already_mid = tc_state.mid_leg_hold;
-    tc_state.mid_leg_hold = !already_mid;
-    tc_state.mid_leg_f = false;
-    tc_state.stair_descend_hold = false;
-    stair_task_request = wheel_legged::StairTaskRequest::kCancel;
+    tc_state.pending_action = TcSemanticState::PendingAction::kC;
     tc_state.mid_leg_c_armed = false;
   }
   if (!c_pressed) tc_state.mid_leg_c_armed = true;
@@ -151,26 +147,20 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   }
   if (!ctrl_pressed || !q_pressed) tc_state.ctrl_q_standby_armed = true;
 
-  // V 键：启动/取消单台阶任务
+  // V 键：对齐正方向后启动单台阶任务
   const bool v_pressed = (tc_remote.keyboard_value & kRcKeyV) != 0U;
   if (v_pressed && tc_state.v_high_leg_armed) {
     r_yaw_reset_edge = true;
-    tc_state.mid_leg_hold = false;
-    tc_state.mid_leg_f = false;
-    stair_task_request = wheel_legged::StairTaskRequest::kArmSingle;
-    tc_state.stair_descend_hold = false;
+    tc_state.pending_action = TcSemanticState::PendingAction::kV;
     tc_state.v_high_leg_armed = false;
   }
   if (!v_pressed) tc_state.v_high_leg_armed = true;
 
-  // B 键：启动/取消双台阶任务
+  // B 键：对齐正方向后启动双台阶任务
   const bool b_pressed = (tc_remote.keyboard_value & kRcKeyB) != 0U;
   if (b_pressed && tc_state.b_high_leg_armed) {
     r_yaw_reset_edge = true;
-    tc_state.mid_leg_hold = false;
-    tc_state.mid_leg_f = false;
-    stair_task_request = wheel_legged::StairTaskRequest::kArmDouble;
-    tc_state.stair_descend_hold = false;
+    tc_state.pending_action = TcSemanticState::PendingAction::kB;
     tc_state.b_high_leg_armed = false;
   }
   if (!b_pressed) tc_state.b_high_leg_armed = true;

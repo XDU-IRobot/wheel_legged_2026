@@ -378,8 +378,16 @@ void ControlLoop() {
   const bool stair_high_leg_ready = std::fabs(chassis_control_output.mean_leg_length_m -
                                               stair_params.high_leg_length_m) <= stair_params.leg_length_tolerance_m;
   const auto &previous_sequence_output = g_stair_sequence.output();
-  const auto effective_stair_request =
-      input.mode_request.spin_hold ? wheel_legged::StairTaskRequest::kCancel : input.mode_request.stair_task_request;
+  // 延迟的台阶请求（来自 C/V/B 键 yaw 对齐完成后注入）
+  const auto deferred_req = tc_state.deferred_stair_request;
+  if (deferred_req != wheel_legged::StairTaskRequest::kNone) {
+    tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kNone;
+  }
+  const auto effective_stair_request = [&]() {
+    if (deferred_req != wheel_legged::StairTaskRequest::kNone) return deferred_req;
+    if (input.mode_request.spin_hold) return wheel_legged::StairTaskRequest::kCancel;
+    return input.mode_request.stair_task_request;
+  }();
   const auto &stair_task_output = g_stair_task_coordinator.Update({
       .request = effective_stair_request,
       .contact_detected = stair_contact_detected,
@@ -472,6 +480,37 @@ void ControlLoop() {
       ctx.pending_leg_profile = chassis_input.request.leg_request;
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
+  }
+
+  // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
+  if (ctx.defer_leg_change) {
+    chassis_input.request.stair_task_active =
+        (globals->chassis_fsm.mode() == chassis::Fsm::State::kStairTask);
+  } else if (tc_state.pending_action != TcSemanticState::PendingAction::kNone) {
+    // yaw 对齐完成（或本就不需要转），执行之前暂缓的动作
+    switch (tc_state.pending_action) {
+      case TcSemanticState::PendingAction::kC:
+        tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kCancel;
+        break;
+      case TcSemanticState::PendingAction::kV:
+        tc_state.mid_leg_hold = false;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmSingle;
+        break;
+      case TcSemanticState::PendingAction::kB:
+        tc_state.mid_leg_hold = false;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
+        break;
+      default:
+        break;
+    }
+    tc_state.pending_action = TcSemanticState::PendingAction::kNone;
   }
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);

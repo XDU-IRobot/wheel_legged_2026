@@ -152,6 +152,10 @@ struct TcSemanticState {
   bool dial_jump_armed{true};        ///< DR16 拨轮跳跃边沿检测
   bool mouse_z_jump_armed{true};     ///< 鼠标滚轮跳跃边沿检测
   wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用
+  enum class PendingAction : uint8_t { kNone, kC, kV, kB };
+  PendingAction pending_action{PendingAction::kNone};                                ///< yaw 对齐完成后待执行的动作
+  wheel_legged::StairTaskRequest deferred_stair_request{                             ///< 延迟到下一周期的台阶请求
+      wheel_legged::StairTaskRequest::kNone};
 };
 
 /**
