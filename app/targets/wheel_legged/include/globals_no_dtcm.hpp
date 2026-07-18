@@ -20,8 +20,6 @@ struct SharedResourcesNoDtcm {
   rm::hal::Serial<wheel_legged::params::common::gimbal_ident_common::kIdentUartTxBufSize> ident_uart{huart7, true,
                                                                                                      false};
   std::array<rm::u8, wheel_legged::params::common::gimbal_ident_common::kIdentUartTxBufSize> ident_tx_buffer{};
-  rm::hal::Serial<wheel_legged::params::active::globals::kDypUartRxBufferSize> dyp_left_uart{huart8, false, false};
-  rm::hal::Serial<wheel_legged::params::active::globals::kDypUartRxBufferSize> dyp_right_uart{huart9, false, false};
 };
 
 extern __attribute__((section(".sram4"))) SharedResourcesNoDtcm globals_no_dtcm;
