@@ -122,6 +122,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
 
   // ── 云台反馈与电机 ──
   float yaw_motor_raw_pos_rad;            // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
+  float pitch_motor_raw_pos_rad;          // 俯仰 DM 电机编码器
   float gimbal_yaw_pos_feedback_rad;      // 偏航角度反馈值（来源：云台 IMU yaw 或电机编码器）
   float gimbal_yaw_vel_feedback_rad_s;    // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
   float yaw_cmd_target_rad;               // 偏航目标角
@@ -190,6 +191,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_raw_wheel_speed_mps;       // 原始轮速观测
   float chassis_filtered_wheel_speed_mps;  // 低通滤波后轮速
   float chassis_raw_accel_speed_mps;       // 原始加速度积分速度
+  float chassis_imu_acc_x_integral_mps;    // IMU X轴加速度直接积分速度
   float chassis_left_force_n;              // 左腿竖直力
   float chassis_right_force_n;             // 右腿竖直力
   float chassis_left_support_force_n;      // 左腿支撑力
@@ -263,7 +265,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float shoot_loader_spd_feedback;  // 拨盘速度环反馈 [rpm]
   float shoot_loader_spd_pid_out;   // 拨盘速度环 PID 输出（最终给电机）
   // ── 发射机构（三摩擦变体 hero）──
-  float booster_raw_pos_rad;        // DM 拨盘位置 (hero)
+  float booster_raw_pos_rad;        // DM 拨盘当前位置 (hero)
+  float booster_target_rad;         // DM 拨盘目标角度 (hero)
   float fw_raw_rpm_1;               // 摩擦轮1 RPM (hero)
   float fw_raw_rpm_2;               // 摩擦轮2 RPM (hero)
   float fw_raw_rpm_3;               // 摩擦轮3 RPM (hero)
@@ -271,6 +274,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
   uint8_t shoot_hero_enter;         // Hero 进入射击模式
   int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）
+  int32_t hero_remaining_ammo;      // Hero 剩余弹量（本地跟踪）
+  float hero_displacement_bias;     // Hero 动态位移偏置 [m]
 
   // ── 本地热量闭环 ──
   float shoot_local_heat;         // 本地估算枪口热量

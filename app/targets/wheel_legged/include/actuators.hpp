@@ -45,6 +45,7 @@ class Actuators {
     input.imu.acc_y_mps2 = g.chassis_imu->acc_y();
     input.imu.acc_z_mps2 = g.chassis_imu->acc_z();
     input.yaw_motor_rad = g.yaw_motor.has_value() ? g.yaw_motor->pos() : 0.0f;
+    input.pitch_motor_rad = g.pitch_motor.has_value() ? g.pitch_motor->pos() : 0.0f;
   }
 
   /**

@@ -6,6 +6,7 @@
 
 #include "include/params.hpp"
 #include "tools/displacement_bias_generated.hpp"
+#include "include/state_ctx.hpp"
 
 /**
  * @file  targets/wheel_legged/chassis.cc
@@ -231,6 +232,15 @@ void chassis::Chassis::Init() {
   left_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
   right_stair_theta_pid_.SetCircularCycle(2.f * M_PI);
 
+  const auto &left_leg_angle_pid_jump_retract2 = wheel_legged::params::active::chassis::kLeftLegAnglePidJumpRetract2;
+  init_pid(left_leg_angle_pid_jump_retract2_, left_leg_angle_pid_jump_retract2.kp, left_leg_angle_pid_jump_retract2.ki,
+           left_leg_angle_pid_jump_retract2.kd, left_leg_angle_pid_jump_retract2.max_out,
+           left_leg_angle_pid_jump_retract2.max_iout);
+  const auto &right_leg_angle_pid_jump_retract2 = wheel_legged::params::active::chassis::kRightLegAnglePidJumpRetract2;
+  init_pid(right_leg_angle_pid_jump_retract2_, right_leg_angle_pid_jump_retract2.kp,
+           right_leg_angle_pid_jump_retract2.ki, right_leg_angle_pid_jump_retract2.kd,
+           right_leg_angle_pid_jump_retract2.max_out, right_leg_angle_pid_jump_retract2.max_iout);
+
   lqr_controller_.SetLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
 
   left_l0_ddot_filter_.set_cutoff_frequency(wheel_legged::params::active::chassis::kL0DdotFilterSampleHz,
@@ -260,6 +270,7 @@ void chassis::Chassis::SafeStop() {
   output_.rb_tau = 0.0f;
   output_.lw_tau = 0.0f;
   output_.rw_tau = 0.0f;
+  imu_acc_x_integral_mps_ = 0.0f;
 }
 
 /**
@@ -295,6 +306,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   imu_roll_ = estimator_input.imu.roll_rad;
   imu_acc_x_mps2_ = estimator_input.imu.acc_x_mps2;
+  imu_acc_x_integral_mps_ += imu_acc_x_mps2_ * estimator_input.dt_s;
   imu_acc_z_mps2_ = estimator_input.imu.acc_z_mps2;
   lf_real_torque_ = estimator_input.left_leg.front.torque_nm;
   lb_real_torque_ = estimator_input.left_leg.back.torque_nm;
@@ -310,6 +322,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   output_.speed_mps = state_output.fused_speed_mps;
   output_.raw_wheel_speed_mps = state_output.raw_wheel_speed_mps;
   output_.raw_accel_speed_mps = state_output.raw_accel_speed_mps;
+  output_.imu_acc_x_integral_mps = imu_acc_x_integral_mps_;
   output_.current_speed_mps = state_output.current_speed_mps;
 
   CalSupportForce();
@@ -561,6 +574,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   const rm::f32 displacement_bias = LookupDisplacementBiasFromLegLength(avg_leg_length_m);
   base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
+  const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
+  const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
+  const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
@@ -665,6 +681,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                          -state_output.current.theta_lr_dot, 2);
   }
 
+  // 跳跃收腿第二阶段摆角 PID
+  if (use_jump_retract2) {
+    left_leg_angle_pid_jump_retract2_.UpdateExtDiff(0.0f, state_output.current.theta_ll,
+                                                    -state_output.current.theta_ll_dot, 2);
+    right_leg_angle_pid_jump_retract2_.UpdateExtDiff(0.0f, state_output.current.theta_lr,
+                                                     -state_output.current.theta_lr_dot, 2);
+  }
+
   // 离地 > 0.1s 后去掉重力补偿
   constexpr uint16_t kGravityOffDelayTicks = 50;  // 0.1s @ 500Hz
   const bool off_ground_for_force = off_ground_duration_ticks_ >= kGravityOffDelayTicks;
@@ -763,6 +787,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     } else if (use_stair_target) {
       t_bl_cmd = -left_stair_theta_pid_.out();
       t_br_cmd = -right_stair_theta_pid_.out();
+    } else if (use_jump_retract2) {
+      t_bl_cmd = -left_leg_angle_pid_jump_retract2_.out();
+      t_br_cmd = -right_leg_angle_pid_jump_retract2_.out();
     } else {
       t_bl_cmd = -base_torque_.t_bl;
       t_br_cmd = -base_torque_.t_br;

@@ -60,7 +60,7 @@ class Shoot {
   bool prev_fire_flag_{false};
   uint32_t shot_count_{0};
   EncoderCounter dial_encoder_counter_;
-  Shoot2Fric controller_{9, 42.75f};
+  Shoot2Fric controller_{9, 42.f};
 
   float current_heat_{0.0f};
   uint16_t heat_limit_{240};
