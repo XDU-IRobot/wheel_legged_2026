@@ -216,10 +216,12 @@ void chassis::Chassis::Init() {
 
   const auto &left_leg_angle_pid_jump_retract2 = wheel_legged::params::active::chassis::kLeftLegAnglePidJumpRetract2;
   init_pid(left_leg_angle_pid_jump_retract2_, left_leg_angle_pid_jump_retract2.kp, left_leg_angle_pid_jump_retract2.ki,
-           left_leg_angle_pid_jump_retract2.kd, left_leg_angle_pid_jump_retract2.max_out, left_leg_angle_pid_jump_retract2.max_iout);
+           left_leg_angle_pid_jump_retract2.kd, left_leg_angle_pid_jump_retract2.max_out,
+           left_leg_angle_pid_jump_retract2.max_iout);
   const auto &right_leg_angle_pid_jump_retract2 = wheel_legged::params::active::chassis::kRightLegAnglePidJumpRetract2;
-  init_pid(right_leg_angle_pid_jump_retract2_, right_leg_angle_pid_jump_retract2.kp, right_leg_angle_pid_jump_retract2.ki,
-           right_leg_angle_pid_jump_retract2.kd, right_leg_angle_pid_jump_retract2.max_out, right_leg_angle_pid_jump_retract2.max_iout);
+  init_pid(right_leg_angle_pid_jump_retract2_, right_leg_angle_pid_jump_retract2.kp,
+           right_leg_angle_pid_jump_retract2.ki, right_leg_angle_pid_jump_retract2.kd,
+           right_leg_angle_pid_jump_retract2.max_out, right_leg_angle_pid_jump_retract2.max_iout);
 
   lqr_controller_.SetLqrCoefficients(ToCoeffMatrix(kCtrlPLow));
 
