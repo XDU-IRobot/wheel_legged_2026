@@ -1055,18 +1055,9 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  float effective_s_dot = spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot;
-  if (target_s_dot == 0.0f && effective_s_dot == 0.0f) {
-    effective_s_dot = -ns::control_loop::kLqrStopDampingK * current_state.s_dot;
-  }
-  chassis_update_input.expected.s_dot =
-      chassis_control_output.off_ground_in_mid_high_leg ? current_state.s_dot : effective_s_dot;
-#else
   chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
                                             ? current_state.s_dot
                                             : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
-#endif
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
@@ -1106,12 +1097,7 @@ void ControlLoop() {
   }
   if (!spin_control_enabled &&
       !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    chassis_update_input.expected.theta_b =
-        kExpectedThetaBBiasRad + wheel_legged::params::hero::control_loop::kExpectedThetaBSpeedK * ctx.filtered_s_dot;
-#else
     chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
-#endif
   }
 
   // ── 7l. 偏航角速度控制 ──
@@ -1253,15 +1239,11 @@ void ControlLoop() {
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
 
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    const float bullet_speed = 11.9f;
-#else
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)
             ? referee_bullet_speed
             : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps
                                                                : ns::aimbot::kBulletSpeedMps);
-#endif
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 
