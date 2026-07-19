@@ -32,8 +32,8 @@ class Chassis {
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
     bool position_hold_active{false};                   ///< 位置锚定激活中，触发 LQR 误差缩放
-    rm::f32 displacement_bias{
-        wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
+    // rm::f32 displacement_bias{
+    //     wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
   };
 
   /**
