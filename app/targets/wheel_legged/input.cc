@@ -170,7 +170,6 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   if (f_pressed && tc_state.f_slow_armed) {
     tc_state.mid_leg_f = !tc_state.mid_leg_f;
     tc_state.mid_leg_hold = tc_state.mid_leg_f;
-    tc_state.stair_descend_hold = false;
     tc_state.f_slow_armed = false;
   }
   if (!f_pressed) tc_state.f_slow_armed = true;
@@ -186,13 +185,34 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   if (!r_pressed) tc_state.r_flip_armed = true;
 
   const bool z_pressed = (tc_remote.keyboard_value & kRcKeyZ) != 0U;
+  const bool x_pressed = (tc_remote.keyboard_value & kRcKeyX) != 0U;
 
   // E 键：UI 刷新使能（电平有效）
   tc_state.e_ui_refresh = (tc_remote.keyboard_value & kRcKeyE) != 0U;
 
-  // Z 键短按（无 Ctrl）：切换自动跳跃模式
+  // X 键上升沿：只切换工作的 ToF 硬件对。进入下台阶模式时取消尚未触发的自动跳跃。
+  if (x_pressed && tc_state.x_tof_mode_armed) {
+    tc_state.x_tof_mode_armed = false;
+    const bool can_exit_stair_descend =
+        tc_state.requested_tof_mode != wheel_legged::TofMode::kStairDescend || !tc_state.stair_descend_in_progress;
+    if (!ctrl_pressed && !tc_state.auto_jump_in_progress && can_exit_stair_descend) {
+      tc_state.requested_tof_mode = tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump
+                                        ? wheel_legged::TofMode::kStairDescend
+                                        : wheel_legged::TofMode::kAutoJump;
+      if (tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend) {
+        tc_state.auto_jump_enabled = false;
+        tc_state.auto_jump_tof_armed = true;
+      }
+    }
+  }
+  if (!x_pressed) tc_state.x_tof_mode_armed = true;
+
+  // Z 键上升沿：在前向 ToF 模式下启动一次自动跳跃；下台阶模式中屏蔽。
   if (z_pressed && !ctrl_pressed && tc_state.z_auto_jump_armed) {
-    tc_state.auto_jump_enabled = !tc_state.auto_jump_enabled;
+    if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump && !tc_state.auto_jump_enabled) {
+      tc_state.auto_jump_enabled = true;
+      tc_state.auto_jump_tof_armed = true;
+    }
     tc_state.z_auto_jump_armed = false;
   }
   if (!z_pressed) tc_state.z_auto_jump_armed = true;
@@ -288,29 +308,13 @@ TcModeResult ResolveTcMode(const TcRemoteInput &tc_remote, TcSemanticState &tc_s
   // 小陀螺：Shift 键
   r.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
 
-  // Mouse wheel up toggles stair-descend mode
-  {
-    const bool mouse_z_trigger = tc_remote.mouse_z > 70;
-    const bool mouse_z_edge = mouse_z_trigger && tc_state.stair_descend_armed;
-    if (mouse_z_edge) {
-      const bool entering = !tc_state.stair_descend_hold;
-      tc_state.stair_descend_hold = entering;
-      if (entering) {
-        tc_state.mid_leg_hold = false;
-        tc_state.mid_leg_f = false;
-      }
-    }
-    if (mouse_z_trigger) tc_state.stair_descend_armed = false;
-    if (tc_remote.mouse_z <= 0) tc_state.stair_descend_armed = true;
-  }
-
   // 跳跃：鼠标滚轮下滚 < -70（低腿）
   {
     const bool mouse_z_trigger = (r.leg == wheel_legged::LegProfile::kLow && tc_remote.mouse_z < -70);
     const bool mouse_z_edge = mouse_z_trigger && tc_state.mouse_z_jump_armed;
     if (mouse_z_trigger) tc_state.mouse_z_jump_armed = false;
     if (tc_remote.mouse_z >= 0) tc_state.mouse_z_jump_armed = true;
-    r.jump_trigger = mouse_z_edge && !tc_state.stair_descend_hold;
+    r.jump_trigger = mouse_z_edge;
   }
 
   // 将 standby 状态暂存到 domain 字段的注释里，由调用方处理
@@ -438,7 +442,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   bool r_yaw_reset_edge = false;
   bool r_flip_180_edge = false;
   wheel_legged::StairTaskRequest stair_task_request = wheel_legged::StairTaskRequest::kNone;
-  if (tc_remote_active) {
+  if (tc_remote.valid) {
     ResolveTcKeyboardEdges(tc_remote, tc_state, semantic_state, stair_task_request, r_yaw_reset_edge, r_flip_180_edge);
   }
   tc_state.auto_aim_hold = tc_remote.right_button;
@@ -495,7 +499,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   }
 
   // ── 3. 组装剩余字段 ──
-  request.stair_descend_active = tc_state.stair_descend_hold;
   request.leg_request = leg_request;
   if (leg_request == wheel_legged::LegProfile::kHigh &&
       request.stair_task_request == wheel_legged::StairTaskRequest::kNone) {
@@ -631,18 +634,34 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   // 3b. 语义折叠
   ResolveInputSemantics(dr16, tc_remote, semantic_state, tc_state, input);
 
-  // 3c. 自动跳跃：Z 键开启后，两侧 TOF < 720mm 时触发跳跃（与拨轮跳跃效果相同）
-  if (tc_state.auto_jump_enabled) {
-    const bool tof_ready = g.tof.has_value() && g.tof_i2c1.has_value();
+  // 预留给未来下台阶控制：动作完成后置位即可自动退回默认前向 ToF。
+  if (tc_state.stair_descend_completed) {
+    tc_state.requested_tof_mode = wheel_legged::TofMode::kAutoJump;
+    tc_state.stair_descend_in_progress = false;
+    tc_state.stair_descend_completed = false;
+  }
+  g.requested_tof_mode = tc_state.requested_tof_mode;
+
+  // 3c. 一次性自动跳跃：仅使用已就绪且数据有效、新鲜的两个前向 ToF。
+  if (tc_state.auto_jump_enabled && tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump &&
+      g.active_tof_mode == wheel_legged::TofMode::kAutoJump && g.tof_mode_ready) {
+    const bool tof_ready = g.left_front_tof.has_value() && g.right_front_tof.has_value();
     if (tof_ready) {
-      const bool both_close =
-          g.tof->measurement().distance_mm < 720 && g.tof_i2c1->measurement().distance_mm < 720;
+      const auto &left = *g.left_front_tof;
+      const auto &right = *g.right_front_tof;
+      const bool measurements_valid = left.ranging() && right.ranging() && left.data_valid() && right.data_valid();
+      const bool both_close = measurements_valid &&
+                              left.measurement().distance_mm < params::active::tof::kAutoJumpTriggerDistanceMm &&
+                              right.measurement().distance_mm < params::active::tof::kAutoJumpTriggerDistanceMm;
       if (both_close && tc_state.auto_jump_tof_armed) {
         input.mode_request.jump_trigger = true;
         input.auto_jump_triggered = true;
         tc_state.auto_jump_tof_armed = false;
       }
-      if (!both_close) tc_state.auto_jump_tof_armed = true;
+      const bool both_clear = measurements_valid &&
+                              left.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm &&
+                              right.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm;
+      if (both_clear) tc_state.auto_jump_tof_armed = true;
     }
   }
 
@@ -696,8 +715,6 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
   chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;
   fsm_input.request = {
-      .stair_descend_active = m.stair_descend_active,
-      .theta_b_rad = chassis_output.current_state.theta_b,
       .input_valid = m.input_valid,
       .domain_request = m.domain_request,
       .leg_request = m.leg_request,
