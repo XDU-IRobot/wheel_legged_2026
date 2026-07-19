@@ -491,7 +491,6 @@ void ControlLoop() {
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
   } else if (input.mode_request.reset_yaw_request) {
-    // C/V/B 键始终先对齐 yaw 再变腿长，不等已对齐阈值
     ctx.defer_leg_change = true;
     ctx.pending_leg_profile = chassis_input.request.leg_request;
     chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
@@ -949,7 +948,7 @@ void ControlLoop() {
     ctx.yaw_target_ramp_final = nearest.target_rad;
     ctx.defer_yaw_target_rad = nearest.target_rad;
     ctx.yaw_target_ramp_active = true;
-    ctx.yaw_follow_target = nearest;
+    ctx.yaw_follow_target = {input.estimator_input.yaw_motor_rad, nearest.drive_sign};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
@@ -957,16 +956,17 @@ void ControlLoop() {
     ctx.filtered_yaw_dot = 0.0f;
   }
 
-  // yaw 目标斜坡：将 LQR 误差钳位在 step 以内，目标跟随电机位置移动，误差不累加
+  // yaw 目标斜坡：target 从当前位置以固定步长向最终目标移动
   if (ctx.yaw_target_ramp_active) {
-    const float raw_error =
-        rm::modules::Wrap(ctx.yaw_target_ramp_final - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-    if (std::fabs(raw_error) < kYawTargetRampStepRad) {
+    const float error_to_final =
+        rm::modules::Wrap(ctx.yaw_target_ramp_final - ctx.yaw_follow_target.target_rad, -kPi, kPi);
+    if (std::fabs(error_to_final) < kYawTargetRampStepRad) {
       ctx.yaw_target_ramp_active = false;
       ctx.yaw_follow_target.target_rad = ctx.yaw_target_ramp_final;
     } else {
       ctx.yaw_follow_target.target_rad =
-          input.estimator_input.yaw_motor_rad + std::copysign(kYawTargetRampStepRad, raw_error);
+          rm::modules::Wrap(
+              ctx.yaw_follow_target.target_rad + std::copysign(kYawTargetRampStepRad, error_to_final), -kPi, kPi);
     }
   }
 

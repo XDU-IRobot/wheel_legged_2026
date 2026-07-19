@@ -857,16 +857,16 @@ constexpr StairClimbParams kStairClimbStep2{
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
     .hook_theta_target_rad = 1.2f,
-    .retract_theta_target_rad = 0.f,
+    .retract_theta_target_rad = 1.2f,
     .retract_theta_tolerance_rad = 0.4f,
-    .hook_theta_tolerance_rad = 0.8f,
+    .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.4f,
+    .settle_theta_tolerance_rad = 0.7f,
     .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.02f,
-    .hook_stable_ms = 100U,
-    .retract_stable_ms = 100U,
-    .settle_stable_ms = 100U,
+    .settle_theta_ramp_step_rad = 0.15f,
+    .hook_stable_ms = 10U,
+    .retract_stable_ms = 20U,
+    .settle_stable_ms = 20U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
@@ -889,7 +889,7 @@ constexpr std::uint32_t kJumpPushReachedHoldMs = 3U;    ///< 蹬伸腿长到位�
 
 // ==== 基本运动（腿长档位）====
 constexpr float kLowLegLengthM = 0.17f;              ///< 低腿长档位目标腿长 [m]
-constexpr float kMidLegLengthM = 0.21f;              ///< 中腿长档位目标腿长 [m]
+constexpr float kMidLegLengthM = 0.23f;              ///< 中腿长档位目标腿长 [m]
 constexpr float kHighLegLengthM = 0.3f;              ///< 高腿长档位目标腿长 [m]
 constexpr float kLegLengthRampTimeS = 0.3f;          ///< 腿长切换斜坡时间 [s]
 constexpr std::uint32_t kSpinExitTimeoutMs = 3000U;  ///< 小陀螺预测退出超时兜底 [ms]

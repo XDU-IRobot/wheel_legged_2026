@@ -80,12 +80,7 @@ const StairClimbSequence::Output &StairClimbSequence::Update(const Input &input)
               std::fabs(input.theta_ll_rad - p.hook_theta_target_rad) <= p.hook_theta_tolerance_rad &&
               std::fabs(input.theta_lr_rad - p.hook_theta_target_rad) <= p.hook_theta_tolerance_rad;
           if (StableFor(at_target, p.hook_stable_ms, input.tick_ms)) {
-            if (use_step2_params_) {
-              output_.trigger_standup = true;
-              EnterPhase(wheel_legged::StairPhase::kSucceeded, input.tick_ms);
-            } else {
-              EnterPhase(wheel_legged::StairPhase::kRetract, input.tick_ms);
-            }
+            EnterPhase(wheel_legged::StairPhase::kRetract, input.tick_ms);
           } else if (elapsed_ms >= p.hook_timeout_ms) {
             Abort(wheel_legged::StairAbortReason::kHookTimeout, input.tick_ms);
           }
