@@ -4,8 +4,67 @@
  */
 
 #include "include/debug.hpp"
+
+#include <array>
+
 #include "include/ai/policy_runner.hpp"
 #include "include/globals.hpp"
+
+namespace {
+
+constexpr std::size_t kTofMeanWindow = wheel_legged::params::active::tof::kDebugMovingAverageWindow;
+
+struct TofDebugFilterState {
+  std::array<float, kTofMeanWindow> window{};
+  uint32_t last_sample_count{0U};
+  std::size_t next_index{0U};
+  std::size_t valid_count{0U};
+  float low_pass_mm{0.0F};
+  float window_sum_mm{0.0F};
+  bool initialized{false};
+};
+
+struct TofDebugFilterOutput {
+  float low_pass_mm;
+  float moving_average_mm;
+};
+
+TofDebugFilterOutput UpdateTofDebugFilter(const rm::device::Vl53l4cd &tof, TofDebugFilterState &state) {
+  const uint32_t sample_count = tof.sample_count();
+  if (sample_count < state.last_sample_count) state = {};
+  if (sample_count == state.last_sample_count) {
+    return {state.low_pass_mm,
+            state.valid_count > 0U ? state.window_sum_mm / static_cast<float>(state.valid_count) : 0.0F};
+  }
+  state.last_sample_count = sample_count;
+
+  if (sample_count == 0U || !tof.data_valid()) {
+    return {state.low_pass_mm,
+            state.valid_count > 0U ? state.window_sum_mm / static_cast<float>(state.valid_count) : 0.0F};
+  }
+
+  const float raw_mm = static_cast<float>(tof.measurement().distance_mm);
+  if (!state.initialized) {
+    state.low_pass_mm = raw_mm;
+    state.initialized = true;
+  } else {
+    constexpr float alpha = wheel_legged::params::active::tof::kDebugLowPassAlpha;
+    state.low_pass_mm += alpha * (raw_mm - state.low_pass_mm);
+  }
+
+  if (state.valid_count == kTofMeanWindow) {
+    state.window_sum_mm -= state.window[state.next_index];
+  } else {
+    ++state.valid_count;
+  }
+  state.window[state.next_index] = state.low_pass_mm;
+  state.window_sum_mm += state.low_pass_mm;
+  state.next_index = (state.next_index + 1U) % kTofMeanWindow;
+
+  return {state.low_pass_mm, state.window_sum_mm / static_cast<float>(state.valid_count)};
+}
+
+}  // namespace
 
 void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loop::InputSnapshot &input,
                          const chassis::Fsm::Output &chassis_output, const gimbal::Fsm::Output &gimbal_output,
@@ -20,30 +79,89 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_fsm_state_changed = static_cast<uint8_t>(chassis_output.state_changed);
   wl_debug.gimbal_fsm_state_changed = static_cast<uint8_t>(gimbal_output.state_changed);
 
-  if (globals->tof.has_value()) {
-    const auto &tof = *globals->tof;
-    const auto &measurement = tof.measurement();
-    wl_debug.vl53l4cd_driver_status = static_cast<uint8_t>(tof.last_error());
-    wl_debug.vl53l4cd_range_status = measurement.range_status;
-    wl_debug.vl53l4cd_model_id = tof.model_id();
-    wl_debug.vl53l4cd_distance_mm = measurement.distance_mm;
-    wl_debug.vl53l4cd_signal_kcps = measurement.signal_rate_kcps;
-    wl_debug.vl53l4cd_ambient_kcps = measurement.ambient_rate_kcps;
-    wl_debug.vl53l4cd_sigma_mm = measurement.sigma_mm;
-    wl_debug.vl53l4cd_sample_count = tof.sample_count();
+  wl_debug.tof_runtime_enabled = static_cast<uint8_t>(wheel_legged::params::active::tof::kEnabled);
+  wl_debug.tof_requested_mode = static_cast<uint8_t>(globals->requested_tof_mode);
+  wl_debug.tof_active_mode = static_cast<uint8_t>(globals->active_tof_mode);
+  wl_debug.tof_mode_ready = static_cast<uint8_t>(globals->tof_mode_ready);
+  wl_debug.tof_init_error_mask = globals->tof_init_error_mask;
+  wl_debug.tof_switch_count = globals->tof_switch_count;
+  wl_debug.tof_poll_request_count = globals->tof_poll_request_count;
+  wl_debug.tof_poll_process_count = globals->tof_poll_process_count;
+  wl_debug.tof_poll_coalesced_count = globals->tof_poll_coalesced_count;
+  wl_debug.tof_poll_last_us = globals->tof_poll_last_us;
+  wl_debug.tof_poll_max_us = globals->tof_poll_max_us;
+
+#define COPY_TOF_DEBUG(name)                                                \
+  if (globals->name.has_value()) {                                          \
+    const auto &tof = *globals->name;                                       \
+    wl_debug.name##_driver_status = static_cast<uint8_t>(tof.last_error()); \
+    wl_debug.name##_range_status = tof.measurement().range_status;          \
+    wl_debug.name##_data_valid = static_cast<uint8_t>(tof.data_valid());    \
+    wl_debug.name##_ranging = static_cast<uint8_t>(tof.ranging());          \
+    wl_debug.name##_model_id = tof.model_id();                              \
+    wl_debug.name##_distance_mm = tof.measurement().distance_mm;            \
+    wl_debug.name##_sample_count = tof.sample_count();                      \
+    wl_debug.name##_last_sample_tick_ms = tof.last_sample_tick_ms();        \
+    wl_debug.name##_poll_count = tof.poll_count();                          \
+    wl_debug.name##_i2c_error_count = tof.i2c_error_count();                \
+  }
+  COPY_TOF_DEBUG(left_front_tof)
+  COPY_TOF_DEBUG(right_front_tof)
+#undef COPY_TOF_DEBUG
+
+  // 下方 TOF 精简字段（不使用 COPY_TOF_DEBUG 宏，因为下方字段集更小）
+  if (globals->left_down_tof.has_value()) {
+    const auto &tof = *globals->left_down_tof;
+    wl_debug.left_down_tof_driver_status = static_cast<uint8_t>(tof.last_error());
+    wl_debug.left_down_tof_range_status = tof.measurement().range_status;
+    wl_debug.left_down_tof_data_valid = static_cast<uint8_t>(tof.data_valid());
+    wl_debug.left_down_tof_ranging = static_cast<uint8_t>(tof.ranging());
+    wl_debug.left_down_tof_distance_mm = tof.measurement().distance_mm;
+    wl_debug.left_down_tof_sample_count = tof.sample_count();
+    wl_debug.left_down_tof_i2c_error_count = tof.i2c_error_count();
+  }
+  if (globals->right_down_tof.has_value()) {
+    const auto &tof = *globals->right_down_tof;
+    wl_debug.right_down_tof_driver_status = static_cast<uint8_t>(tof.last_error());
+    wl_debug.right_down_tof_range_status = tof.measurement().range_status;
+    wl_debug.right_down_tof_data_valid = static_cast<uint8_t>(tof.data_valid());
+    wl_debug.right_down_tof_ranging = static_cast<uint8_t>(tof.ranging());
+    wl_debug.right_down_tof_distance_mm = tof.measurement().distance_mm;
+    wl_debug.right_down_tof_sample_count = tof.sample_count();
+    wl_debug.right_down_tof_i2c_error_count = tof.i2c_error_count();
   }
 
-  if (globals->tof_i2c1.has_value()) {
-    const auto &tof = *globals->tof_i2c1;
-    const auto &measurement = tof.measurement();
-    wl_debug.vl53l4cd_i2c1_driver_status = static_cast<uint8_t>(tof.last_error());
-    wl_debug.vl53l4cd_i2c1_range_status = measurement.range_status;
-    wl_debug.vl53l4cd_i2c1_model_id = tof.model_id();
-    wl_debug.vl53l4cd_i2c1_distance_mm = measurement.distance_mm;
-    wl_debug.vl53l4cd_i2c1_signal_kcps = measurement.signal_rate_kcps;
-    wl_debug.vl53l4cd_i2c1_ambient_kcps = measurement.ambient_rate_kcps;
-    wl_debug.vl53l4cd_i2c1_sigma_mm = measurement.sigma_mm;
-    wl_debug.vl53l4cd_i2c1_sample_count = tof.sample_count();
+  static TofDebugFilterState left_front_filter{};
+  static TofDebugFilterState right_front_filter{};
+  if (globals->left_front_tof.has_value()) {
+    const auto output = UpdateTofDebugFilter(*globals->left_front_tof, left_front_filter);
+    wl_debug.left_front_tof_low_pass_mm = output.low_pass_mm;
+    wl_debug.left_front_tof_moving_average_mm = output.moving_average_mm;
+  }
+  if (globals->right_front_tof.has_value()) {
+    const auto output = UpdateTofDebugFilter(*globals->right_front_tof, right_front_filter);
+    wl_debug.right_front_tof_low_pass_mm = output.low_pass_mm;
+    wl_debug.right_front_tof_moving_average_mm = output.moving_average_mm;
+  }
+
+  // 活跃 TOF 对的原始均值（auto_jump 用前向，stair_descend 用下向）
+  wl_debug.active_tof_pair_raw_mean_mm = 0.0F;
+  if (globals->tof_mode_ready) {
+    if (globals->active_tof_mode == wheel_legged::TofMode::kAutoJump && globals->left_front_tof.has_value() &&
+        globals->right_front_tof.has_value() && globals->left_front_tof->ranging() &&
+        globals->right_front_tof->ranging() && globals->left_front_tof->data_valid() &&
+        globals->right_front_tof->data_valid()) {
+      wl_debug.active_tof_pair_raw_mean_mm =
+          0.5F * (static_cast<float>(globals->left_front_tof->measurement().distance_mm) +
+                  static_cast<float>(globals->right_front_tof->measurement().distance_mm));
+    } else if (globals->active_tof_mode == wheel_legged::TofMode::kStairDescend && globals->left_down_tof.has_value() &&
+               globals->right_down_tof.has_value() && globals->left_down_tof->ranging() &&
+               globals->right_down_tof->ranging() && globals->left_down_tof->data_valid() &&
+               globals->right_down_tof->data_valid()) {
+      wl_debug.active_tof_pair_raw_mean_mm =
+          0.5F * (static_cast<float>(globals->left_down_tof->measurement().distance_mm) +
+                  static_cast<float>(globals->right_down_tof->measurement().distance_mm));
+    }
   }
 
   // ── DR16 原始输入 ──
@@ -62,6 +180,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
       input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled);
   wl_debug.dr16_spin_request = static_cast<uint8_t>(input.mode_request.spin_hold);
   wl_debug.dr16_jump_trigger_edge = static_cast<uint8_t>(input.mode_request.jump_trigger);
+  wl_debug.auto_jump_triggered = static_cast<uint8_t>(input.auto_jump_triggered);
+  wl_debug.auto_jump_enabled = static_cast<uint8_t>(input.auto_jump_enabled);
   wl_debug.tc_remote_valid = static_cast<uint8_t>(input.tc_remote.valid);
   wl_debug.tc_keyboard_value = input.tc_remote.keyboard_value;
   wl_debug.tc_mouse_x = input.tc_remote.mouse_x;
