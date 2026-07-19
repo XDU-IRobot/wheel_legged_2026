@@ -33,7 +33,7 @@ INFANTRY3_KEY_POINTS = [
 ]
 
 INFANTRY4_KEY_POINTS = [
-    (0.17, -0.9),
+    (0.17, -1.0),
     (0.23, -1.5),
     (0.32, -2.8),
 ]

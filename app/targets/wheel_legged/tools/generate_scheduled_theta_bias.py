@@ -69,13 +69,13 @@ INFANTRY3_KEY_POINTS_LR = [
 
 INFANTRY4_KEY_POINTS_LL = [
     (0.17, -0.0),
-    (0.23, -0.05),
-    (0.33, -0.1),
+    (0.23, -0.1),
+    (0.33, -0.15),
 ]
 INFANTRY4_KEY_POINTS_LR = [
     (0.17, -0.0),
-    (0.23, -0.05),
-    (0.33, -0.1),
+    (0.23, -0.1),
+    (0.33, -0.15),
 ]
 
 VARIANT_KEY_POINTS_LL = {
