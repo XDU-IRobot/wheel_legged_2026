@@ -90,8 +90,6 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.tof_poll_coalesced_count = globals->tof_poll_coalesced_count;
   wl_debug.tof_poll_last_us = globals->tof_poll_last_us;
   wl_debug.tof_poll_max_us = globals->tof_poll_max_us;
-  wl_debug.tof_left_poll_last_us = globals->tof_left_poll_last_us;
-  wl_debug.tof_right_poll_last_us = globals->tof_right_poll_last_us;
 
 #define COPY_TOF_DEBUG(name)                                                \
   if (globals->name.has_value()) {                                          \
@@ -111,6 +109,28 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   COPY_TOF_DEBUG(right_front_tof)
 #undef COPY_TOF_DEBUG
 
+  // 下方 TOF 精简字段（不使用 COPY_TOF_DEBUG 宏，因为下方字段集更小）
+  if (globals->left_down_tof.has_value()) {
+    const auto &tof = *globals->left_down_tof;
+    wl_debug.left_down_tof_driver_status = static_cast<uint8_t>(tof.last_error());
+    wl_debug.left_down_tof_range_status = tof.measurement().range_status;
+    wl_debug.left_down_tof_data_valid = static_cast<uint8_t>(tof.data_valid());
+    wl_debug.left_down_tof_ranging = static_cast<uint8_t>(tof.ranging());
+    wl_debug.left_down_tof_distance_mm = tof.measurement().distance_mm;
+    wl_debug.left_down_tof_sample_count = tof.sample_count();
+    wl_debug.left_down_tof_i2c_error_count = tof.i2c_error_count();
+  }
+  if (globals->right_down_tof.has_value()) {
+    const auto &tof = *globals->right_down_tof;
+    wl_debug.right_down_tof_driver_status = static_cast<uint8_t>(tof.last_error());
+    wl_debug.right_down_tof_range_status = tof.measurement().range_status;
+    wl_debug.right_down_tof_data_valid = static_cast<uint8_t>(tof.data_valid());
+    wl_debug.right_down_tof_ranging = static_cast<uint8_t>(tof.ranging());
+    wl_debug.right_down_tof_distance_mm = tof.measurement().distance_mm;
+    wl_debug.right_down_tof_sample_count = tof.sample_count();
+    wl_debug.right_down_tof_i2c_error_count = tof.i2c_error_count();
+  }
+
   static TofDebugFilterState left_front_filter{};
   static TofDebugFilterState right_front_filter{};
   if (globals->left_front_tof.has_value()) {
@@ -124,15 +144,25 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
     wl_debug.right_front_tof_moving_average_mm = output.moving_average_mm;
   }
 
-  const bool front_pair_valid = globals->active_tof_mode == wheel_legged::TofMode::kAutoJump &&
-                                globals->tof_mode_ready && globals->left_front_tof.has_value() &&
-                                globals->right_front_tof.has_value() && globals->left_front_tof->ranging() &&
-                                globals->right_front_tof->ranging() && globals->left_front_tof->data_valid() &&
-                                globals->right_front_tof->data_valid();
-  wl_debug.auto_jump_tof_pair_raw_mean_mm =
-      front_pair_valid ? 0.5F * (static_cast<float>(globals->left_front_tof->measurement().distance_mm) +
-                                 static_cast<float>(globals->right_front_tof->measurement().distance_mm))
-                       : 0.0F;
+  // 活跃 TOF 对的原始均值（auto_jump 用前向，stair_descend 用下向）
+  wl_debug.active_tof_pair_raw_mean_mm = 0.0F;
+  if (globals->tof_mode_ready) {
+    if (globals->active_tof_mode == wheel_legged::TofMode::kAutoJump && globals->left_front_tof.has_value() &&
+        globals->right_front_tof.has_value() && globals->left_front_tof->ranging() &&
+        globals->right_front_tof->ranging() && globals->left_front_tof->data_valid() &&
+        globals->right_front_tof->data_valid()) {
+      wl_debug.active_tof_pair_raw_mean_mm =
+          0.5F * (static_cast<float>(globals->left_front_tof->measurement().distance_mm) +
+                  static_cast<float>(globals->right_front_tof->measurement().distance_mm));
+    } else if (globals->active_tof_mode == wheel_legged::TofMode::kStairDescend && globals->left_down_tof.has_value() &&
+               globals->right_down_tof.has_value() && globals->left_down_tof->ranging() &&
+               globals->right_down_tof->ranging() && globals->left_down_tof->data_valid() &&
+               globals->right_down_tof->data_valid()) {
+      wl_debug.active_tof_pair_raw_mean_mm =
+          0.5F * (static_cast<float>(globals->left_down_tof->measurement().distance_mm) +
+                  static_cast<float>(globals->right_down_tof->measurement().distance_mm));
+    }
+  }
 
   // ── DR16 原始输入 ──
   wl_debug.dr16_online = static_cast<uint8_t>(input.dr16.online);
