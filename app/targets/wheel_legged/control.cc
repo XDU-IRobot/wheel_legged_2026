@@ -209,6 +209,7 @@ constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRa
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
+constexpr float kYawTargetRampStepRad = ns::control_loop::kYawTargetRampStepRad;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -450,7 +451,7 @@ void ControlLoop() {
     }
     prev_domain_state = tc_state.domain_state;
   }
-  // C/V/B 键重置正方向：偏航未对齐时暂缓腿长切换，先转到位
+  // C/V/B 键重置正方向：始终先对齐 yaw 再切换腿长
   // 暂缓期间必须阻止 FSM 切换模式，只覆盖 target_leg_length_m 不够——
   // fsm_mode 在 chassis.cc 里还会影响腿 PID、力控、轮力矩等多个路径。
   const auto leg_profile_from_state = [](chassis::Fsm::State s) -> wheel_legged::LegProfile {
@@ -462,9 +463,8 @@ void ControlLoop() {
 
   if (ctx.defer_leg_change) {
     ctx.pending_leg_profile = chassis_input.request.leg_request;
-    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     const float yaw_err =
-        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+        std::fabs(rm::modules::Wrap(ctx.defer_yaw_target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi));
     if (yaw_err < kSpinExitYawAlignThresholdRad) {
       chassis_input.request.leg_request = ctx.pending_leg_profile;
       ctx.defer_leg_change = false;
@@ -472,14 +472,10 @@ void ControlLoop() {
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
   } else if (input.mode_request.reset_yaw_request) {
-    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
-    const float yaw_err =
-        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
-    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
-      ctx.defer_leg_change = true;
-      ctx.pending_leg_profile = chassis_input.request.leg_request;
-      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
-    }
+    // C/V/B 键始终先对齐 yaw 再变腿长，不等已对齐阈值
+    ctx.defer_leg_change = true;
+    ctx.pending_leg_profile = chassis_input.request.leg_request;
+    chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
   }
 
   // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
@@ -761,7 +757,11 @@ void ControlLoop() {
     static uint32_t chassis_tx_counter = 0;
     if (chassis_tx_counter % 5 == 0) {
       const bool combat_mode = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
+      const float bullet_speed = globals->referee.has_value()
+                                     ? globals->referee->data().shoot_data.initial_speed
+                                     : 0.0f;
       globals->chassis_tx->SetCombatMode(combat_mode);
+      globals->chassis_tx->SetBulletSpeed(bullet_speed);
       globals->chassis_tx->QueueSend();
     }
     chassis_tx_counter++;
@@ -895,7 +895,7 @@ void ControlLoop() {
   // ── 7e. 偏航目标更新 ──
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
   if ((!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) &&
-      !now_is_spin_exit_pending) {
+      !now_is_spin_exit_pending && !ctx.yaw_target_ramp_active) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
@@ -915,12 +915,29 @@ void ControlLoop() {
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
-    ctx.yaw_follow_target = {kYawFollowFixedTargetRad, 1.0f};
+    const auto nearest = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
+    ctx.yaw_target_ramp_final = nearest.target_rad;
+    ctx.defer_yaw_target_rad = nearest.target_rad;
+    ctx.yaw_target_ramp_active = true;
+    ctx.yaw_follow_target = nearest;
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
     ctx.filtered_yaw_dot = 0.0f;
+  }
+
+  // yaw 目标斜坡：将 LQR 误差钳位在 step 以内，目标跟随电机位置移动，误差不累加
+  if (ctx.yaw_target_ramp_active) {
+    const float raw_error =
+        rm::modules::Wrap(ctx.yaw_target_ramp_final - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    if (std::fabs(raw_error) < kYawTargetRampStepRad) {
+      ctx.yaw_target_ramp_active = false;
+      ctx.yaw_follow_target.target_rad = ctx.yaw_target_ramp_final;
+    } else {
+      ctx.yaw_follow_target.target_rad =
+          input.estimator_input.yaw_motor_rad + std::copysign(kYawTargetRampStepRad, raw_error);
+    }
   }
 
   // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成

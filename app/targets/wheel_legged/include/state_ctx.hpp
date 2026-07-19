@@ -71,6 +71,11 @@ struct ChassisStateContext {
   uint32_t flip_180_ticks{0U};          ///< flip_180 抑制计数器
   bool defer_leg_change{false};         ///< 等待偏航对齐后再变腿长
   wheel_legged::LegProfile pending_leg_profile{LegProfile::kLow};  ///< 待应用的腿长档位
+  float defer_yaw_target_rad{0.0f};     ///< defer 退出判据用的 yaw 目标 [rad]
+
+  // ── yaw 目标值斜坡（C/V/B 回正时钳位 LQR 误差以避免发散）──
+  bool yaw_target_ramp_active{false};  ///< yaw 目标斜坡激活中
+  float yaw_target_ramp_final{0.0f};   ///< yaw 目标斜坡最终目标 [rad]
 
   /**
    * @brief 在底盘模式切换时重置相关状态

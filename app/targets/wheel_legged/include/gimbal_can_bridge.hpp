@@ -169,8 +169,8 @@ class GimbalToChassisRxBridge final : public rm::device::CanDevice {
 
 /**
  * @brief 底盘→云台 CAN 发送桥
- * @note  发送 combat_mode 标志位给云台控制摩擦轮
- *        - 0x120: [0] combat_mode (1=kCombat, 0=其他)
+ * @note  发送 combat_mode 和弹丸初速度给云台
+ *        - 0x120: [0] combat_mode, [1..4] bullet_speed_mps (float), [5..7] reserved
  */
 class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
  public:
@@ -180,14 +180,13 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
   explicit ChassisToGimbalTxBridge(rm::hal::CanInterface &can) : CanDevice(can, kTxStdId) {}
 
   void SetCombatMode(bool combat) { combat_mode_ = combat; }
+  void SetBulletSpeed(float speed) { bullet_speed_mps_ = speed; }
 
   void RxCallback(const rm::hal::CanFrame *msg) override {}
 
   bool QueueSend() {
     tx_data_[0] = combat_mode_ ? 1 : 0;
-    // for (rm::usize i = 1; i < kPayloadSize; ++i) {
-    //   tx_data_[i] = 0;
-    // }
+    std::memcpy(&tx_data_[1], &bullet_speed_mps_, sizeof(float));
     can_->Write(kTxStdId, tx_data_.data(), tx_data_.size());
     ReportStatus(kOk);
     return true;
@@ -195,5 +194,6 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
 
  private:
   bool combat_mode_{false};
+  float bullet_speed_mps_{0.0f};
   std::array<rm::u8, kPayloadSize> tx_data_{};
 };
