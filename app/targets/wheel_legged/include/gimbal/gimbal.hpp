@@ -289,10 +289,9 @@ class Gimbal {
       output_.ff_pitch_friction = ff.pitch_friction;
 
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw , -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm =
-          std::clamp(controller_.output().pitch, -28.f, 28.f);
+      output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch, -28.f, 28.f);
     }
   }
 
