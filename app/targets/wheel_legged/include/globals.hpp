@@ -23,6 +23,7 @@
 #include "gimbal/fsm.hpp"
 #include "gimbal/gimbal.hpp"
 #include "gimbal/gimbal_ident.hpp"
+#include "tof_mode.hpp"
 #include "librm/device/remote/dr16.hpp"
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
 #include "gimbal/shoot_3fric.hpp"
@@ -63,8 +64,22 @@ struct SharedResources {
   std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
   std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
-  std::optional<rm::device::Vl53l4cd> tof{};         ///< Selected VL53L4CD ToF on I2C2
-  std::optional<rm::device::Vl53l4cd> tof_i2c1{};    ///< Selected VL53L4CD ToF on I2C1
+  std::optional<rm::device::Vl53l4cd> left_front_tof{};
+  std::optional<rm::device::Vl53l4cd> right_front_tof{};
+  std::optional<rm::device::Vl53l4cd> left_down_tof{};
+  std::optional<rm::device::Vl53l4cd> right_down_tof{};
+  volatile wheel_legged::TofMode requested_tof_mode{wheel_legged::TofMode::kAutoJump};
+  volatile wheel_legged::TofMode active_tof_mode{wheel_legged::TofMode::kAutoJump};
+  volatile bool tof_mode_ready{false};
+  volatile std::uint8_t tof_init_error_mask{0U};  ///< bit0=left, bit1=right for the active pair.
+  volatile std::uint32_t tof_switch_count{0U};
+  volatile std::uint32_t tof_poll_request_count{0U};
+  volatile std::uint32_t tof_poll_process_count{0U};
+  volatile std::uint32_t tof_poll_coalesced_count{0U};
+  volatile std::uint32_t tof_poll_last_us{0U};
+  volatile std::uint32_t tof_poll_max_us{0U};
+  volatile std::uint32_t tof_left_poll_last_us{0U};
+  volatile std::uint32_t tof_right_poll_last_us{0U};
 
   std::optional<DmMitMotor> yaw_motor{};    ///< 云台偏航 DM 电机
   std::optional<DmMitMotor> pitch_motor{};  ///< 云台俯仰 DM 电机
@@ -179,14 +194,11 @@ struct SharedResources {
     if (!supercap.has_value()) {
       supercap.emplace(*wheel_can);
     }
-    if (!tof.has_value()) {
-      tof.emplace(hi2c2);
-      (void)tof->Begin();
-    }
-    if (!tof_i2c1.has_value()) {
-      tof_i2c1.emplace(hi2c1);
-      (void)tof_i2c1->Begin();
-    }
+    // Constructors do not access hardware. main.cc powers and begins only the selected pair.
+    if (!left_front_tof.has_value()) left_front_tof.emplace(hi2c1);
+    if (!right_front_tof.has_value()) right_front_tof.emplace(hi2c2);
+    if (!left_down_tof.has_value()) left_down_tof.emplace(hi2c1);
+    if (!right_down_tof.has_value()) right_down_tof.emplace(hi2c2);
 
     if (!dm_lf.has_value()) {
       dm_lf.emplace(*joint_can, wheel_legged::params::active::globals::kDmLfSettings);

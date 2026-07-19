@@ -326,12 +326,32 @@ void ControlLoop() {
   // wrap period apart.
   static uint32_t last_control_cycles = 0U;
   const uint32_t now_control_cycles = DWT->CYCCNT;
+  const uint32_t control_exec_start_cycles = now_control_cycles;
   float measured_control_dt_s = kControlLoopDtS;
   bool measured_control_dt_valid = false;
   if (last_control_cycles != 0U && SystemCoreClock != 0U) {
     const uint32_t delta_cycles = now_control_cycles - last_control_cycles;
     measured_control_dt_s = static_cast<float>(delta_cycles) / static_cast<float>(SystemCoreClock);
     measured_control_dt_valid = measured_control_dt_s >= 0.0005f && measured_control_dt_s <= 0.020f;
+    if (measured_control_dt_valid) {
+      constexpr uint32_t kExpectedControlDtUs = 2000U;
+      static uint32_t control_dt_min_us = 0xFFFFFFFFU;
+      static uint32_t control_dt_max_us = 0U;
+      static uint32_t control_jitter_max_us = 0U;
+
+      const uint32_t control_dt_us =
+          static_cast<uint32_t>((static_cast<uint64_t>(delta_cycles) * 1000000ULL) / SystemCoreClock);
+      const uint32_t jitter_us = control_dt_us >= kExpectedControlDtUs ? control_dt_us - kExpectedControlDtUs
+                                                                       : kExpectedControlDtUs - control_dt_us;
+      if (control_dt_us < control_dt_min_us) control_dt_min_us = control_dt_us;
+      if (control_dt_us > control_dt_max_us) control_dt_max_us = control_dt_us;
+      if (jitter_us > control_jitter_max_us) control_jitter_max_us = jitter_us;
+      wl_debug.control_dt_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_us, 0xFFFFU));
+      wl_debug.control_dt_min_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_min_us, 0xFFFFU));
+      wl_debug.control_dt_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_max_us, 0xFFFFU));
+      wl_debug.control_jitter_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_jitter_max_us, 0xFFFFU));
+      if (jitter_us > 100U) ++wl_debug.control_jitter_over_100us_count;
+    }
   }
   last_control_cycles = now_control_cycles;
 
@@ -354,7 +374,6 @@ void ControlLoop() {
   // 云台 C 板通信断开时强制退出中腿长保持
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
     tc_state.mid_leg_hold = false;
-    tc_state.stair_descend_hold = false;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -491,19 +510,16 @@ void ControlLoop() {
       case TcSemanticState::PendingAction::kC:
         tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
         tc_state.mid_leg_f = false;
-        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kCancel;
         break;
       case TcSemanticState::PendingAction::kV:
         tc_state.mid_leg_hold = false;
         tc_state.mid_leg_f = false;
-        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmSingle;
         break;
       case TcSemanticState::PendingAction::kB:
         tc_state.mid_leg_hold = false;
         tc_state.mid_leg_f = false;
-        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
         break;
       default:
@@ -514,6 +530,21 @@ void ControlLoop() {
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
+  // Z arms one automatic jump only. It is cleared after that jump leaves all jump phases.
+  const auto is_jump_state = [](const chassis::Fsm::State state) {
+    return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
+           state == chassis::Fsm::State::kJumpRecover;
+  };
+  if (input.auto_jump_triggered && is_jump_state(chassis_output.mode)) {
+    tc_state.auto_jump_in_progress = true;
+  }
+  if (tc_state.auto_jump_in_progress && !is_jump_state(chassis_output.mode)) {
+    tc_state.auto_jump_enabled = false;
+    tc_state.auto_jump_in_progress = false;
+    tc_state.auto_jump_tof_armed = true;
+    input.auto_jump_enabled = false;
+  }
+
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
@@ -523,7 +554,6 @@ void ControlLoop() {
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
-      tc_state.stair_descend_hold = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
   }
@@ -1538,10 +1568,25 @@ void ControlLoop() {
       }
     }
   }
-  if (times % 17 == 0) {
-    schedule.schedule();
-    if (globals->ui_refresh_key) {
-      static_UI_add();
-    }
+  // TEMP: Disable UI task execution while measuring the 500 Hz control-loop
+  // baseline. UI tasks use blocking HAL_UART_Transmit() and previously ran
+  // inside this TIM13 ISR. Keep task registration/snapshots intact so this can
+  // be restored after the timing test.
+  // if (times % 17 == 0) {
+  //   schedule.schedule();
+  //   if (globals->ui_refresh_key) {
+  //     static_UI_add();
+  //   }
+  // }
+
+  if (SystemCoreClock != 0U) {
+    static uint32_t control_exec_max_us = 0U;
+    const uint32_t elapsed_cycles = DWT->CYCCNT - control_exec_start_cycles;
+    const uint32_t control_exec_us =
+        static_cast<uint32_t>((static_cast<uint64_t>(elapsed_cycles) * 1000000ULL) / SystemCoreClock);
+    if (control_exec_us > control_exec_max_us) control_exec_max_us = control_exec_us;
+    wl_debug.control_exec_last_us = static_cast<uint16_t>(std::min<uint32_t>(control_exec_us, 0xFFFFU));
+    wl_debug.control_exec_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_exec_max_us, 0xFFFFU));
+    if (control_exec_us > 2000U) ++wl_debug.control_overrun_count;
   }
 }
