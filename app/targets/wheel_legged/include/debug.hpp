@@ -245,11 +245,9 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t tof_poll_coalesced_count;  // 主循环来不及处理而被合并的请求数
   uint32_t tof_poll_last_us;          // 最近一次左右两颗 Poll 总耗时
   uint32_t tof_poll_max_us;           // 启动以来最大总耗时
-  uint32_t tof_left_poll_last_us;
-  uint32_t tof_right_poll_last_us;
 
-  float auto_jump_tof_pair_raw_mean_mm;  // (left raw + right raw) / 2
-  float left_front_tof_low_pass_mm;      // first-order LPF of new valid samples
+  float active_tof_pair_raw_mean_mm;  // active pair: (left raw + right raw) / 2 (auto_jump or stair_descend)
+  float left_front_tof_low_pass_mm;   // first-order LPF of new valid samples
   float right_front_tof_low_pass_mm;
   float left_front_tof_moving_average_mm;  // 5-point mean of LPF output
   float right_front_tof_moving_average_mm;
@@ -275,6 +273,23 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t right_front_tof_last_sample_tick_ms;
   uint32_t right_front_tof_poll_count;
   uint32_t right_front_tof_i2c_error_count;
+
+  // 下方 TOF 精简调试字段（仅保留关键数据，完整字段集同上方的 front TOF）
+  uint8_t left_down_tof_driver_status;
+  uint8_t left_down_tof_range_status;
+  uint8_t left_down_tof_data_valid;
+  uint8_t left_down_tof_ranging;
+  uint16_t left_down_tof_distance_mm;
+  uint32_t left_down_tof_sample_count;
+  uint32_t left_down_tof_i2c_error_count;
+
+  uint8_t right_down_tof_driver_status;
+  uint8_t right_down_tof_range_status;
+  uint8_t right_down_tof_data_valid;
+  uint8_t right_down_tof_ranging;
+  uint16_t right_down_tof_distance_mm;
+  uint32_t right_down_tof_sample_count;
+  uint32_t right_down_tof_i2c_error_count;
 
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;            // 发射使能（云台处于 Combat）
