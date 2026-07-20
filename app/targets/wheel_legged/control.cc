@@ -209,7 +209,6 @@ constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRa
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
-constexpr float kYawTargetRampStepRad = ns::control_loop::kYawTargetRampStepRad;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -923,7 +922,7 @@ void ControlLoop() {
   // ── 7e. 偏航目标更新 ──
   const bool yaw_follow_mode_changed = requested_yaw_follow_align_mode != ctx.yaw_follow_align_mode;
   if ((!has_drive_input || chassis_input.request.domain_request == wheel_legged::DomainRequest::kDisabled) &&
-      !now_is_spin_exit_pending && !ctx.yaw_target_ramp_active) {
+      !now_is_spin_exit_pending) {
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = false;
     ctx.yaw_follow_drive_ready = false;
@@ -944,28 +943,13 @@ void ControlLoop() {
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
     const auto nearest = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
-    ctx.yaw_target_ramp_final = nearest.target_rad;
     ctx.defer_yaw_target_rad = nearest.target_rad;
-    ctx.yaw_target_ramp_active = true;
-    ctx.yaw_follow_target = {input.estimator_input.yaw_motor_rad, nearest.drive_sign};
+    ctx.yaw_follow_target = nearest;
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
     ctx.filtered_yaw_dot = 0.0f;
-  }
-
-  // yaw 目标斜坡：target 从当前位置以固定步长向最终目标移动
-  if (ctx.yaw_target_ramp_active) {
-    const float error_to_final =
-        rm::modules::Wrap(ctx.yaw_target_ramp_final - ctx.yaw_follow_target.target_rad, -kPi, kPi);
-    if (std::fabs(error_to_final) < kYawTargetRampStepRad) {
-      ctx.yaw_target_ramp_active = false;
-      ctx.yaw_follow_target.target_rad = ctx.yaw_target_ramp_final;
-    } else {
-      ctx.yaw_follow_target.target_rad = rm::modules::Wrap(
-          ctx.yaw_follow_target.target_rad + std::copysign(kYawTargetRampStepRad, error_to_final), -kPi, kPi);
-    }
   }
 
   // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成

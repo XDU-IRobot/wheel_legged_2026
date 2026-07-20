@@ -39,7 +39,6 @@ void ChassisStateContext::ResetOnModeChange(const float current_s, const float c
   flip_180_in_progress = false;
   flip_180_ticks = 0U;
   defer_leg_change = false;
-  yaw_target_ramp_active = false;
 }
 
 void RampValueToTarget(const float target, float &value, const SdotRampParams &ramp_params) {
