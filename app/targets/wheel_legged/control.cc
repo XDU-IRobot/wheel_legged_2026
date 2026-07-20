@@ -786,9 +786,8 @@ void ControlLoop() {
     static uint32_t chassis_tx_counter = 0;
     if (chassis_tx_counter % 5 == 0) {
       const bool combat_mode = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
-      const float bullet_speed = globals->referee.has_value()
-                                     ? globals->referee->data().shoot_data.initial_speed
-                                     : 0.0f;
+      const float bullet_speed =
+          globals->referee.has_value() ? globals->referee->data().shoot_data.initial_speed : 0.0f;
       globals->chassis_tx->SetCombatMode(combat_mode);
       globals->chassis_tx->SetBulletSpeed(bullet_speed);
       globals->chassis_tx->QueueSend();
@@ -964,9 +963,8 @@ void ControlLoop() {
       ctx.yaw_target_ramp_active = false;
       ctx.yaw_follow_target.target_rad = ctx.yaw_target_ramp_final;
     } else {
-      ctx.yaw_follow_target.target_rad =
-          rm::modules::Wrap(
-              ctx.yaw_follow_target.target_rad + std::copysign(kYawTargetRampStepRad, error_to_final), -kPi, kPi);
+      ctx.yaw_follow_target.target_rad = rm::modules::Wrap(
+          ctx.yaw_follow_target.target_rad + std::copysign(kYawTargetRampStepRad, error_to_final), -kPi, kPi);
     }
   }
 
