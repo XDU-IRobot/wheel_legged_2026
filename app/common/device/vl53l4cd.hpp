@@ -31,11 +31,8 @@ class Vl53l4cd : public Device {
 
   struct Config {
     u8 address{kDefaultAddress};
-    u32 timing_budget_ms{10};
+    u32 timing_budget_ms{50};
     u32 inter_measurement_ms{0};
-    // The application schedules Poll() at 100 Hz. Keep this guard shorter than
-    // 10 ms so millisecond tick quantization cannot accidentally skip a whole
-    // scheduled sample.
     u32 poll_period_ms{5};
     u32 i2c_timeout_ms{100};
     u32 boot_timeout_ms{1000};
@@ -75,9 +72,6 @@ class Vl53l4cd : public Device {
   [[nodiscard]] Error last_error() const { return last_error_; }
   [[nodiscard]] u16 model_id() const { return model_id_; }
   [[nodiscard]] u32 sample_count() const { return sample_count_; }
-  [[nodiscard]] u32 last_sample_tick_ms() const { return last_sample_tick_ms_; }
-  [[nodiscard]] u32 poll_count() const { return poll_count_; }
-  [[nodiscard]] u32 i2c_error_count() const { return i2c_error_count_; }
   [[nodiscard]] bool ranging() const { return ranging_; }
   [[nodiscard]] u8 address() const { return config_.address; }
 
@@ -108,12 +102,7 @@ class Vl53l4cd : public Device {
   Error last_error_{Error::kNotStarted};
   u16 model_id_{0};
   u32 sample_count_{0};
-  u32 last_sample_tick_ms_{0};
   u32 last_poll_tick_{0};
-  u32 poll_count_{0};
-  u32 i2c_error_count_{0};
-  u8 interrupt_polarity_{0};
-  bool interrupt_polarity_valid_{false};
   bool ranging_{false};
 };
 

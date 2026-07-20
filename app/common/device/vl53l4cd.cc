@@ -34,20 +34,6 @@ constexpr std::array<std::uint8_t, 91> kDefaultConfiguration{
 constexpr std::array<std::uint8_t, 24> kRangeStatusMap{255, 255, 255, 5,   2,   4,   1,  7, 3,   0,   255, 255,
                                                        9,   13,  255, 255, 255, 255, 10, 6, 255, 255, 11,  12};
 
-// Result registers are contiguous from RESULT_RANGE_STATUS (0x0089) through
-// RESULT_DISTANCE (0x0097). Read them in one transaction instead of six.
-constexpr std::size_t kResultBlockSize = kResultDistance + 2U - kResultRangeStatus;
-constexpr std::size_t kRangeStatusOffset = 0U;
-constexpr std::size_t kSpadCountOffset = kResultSpadCount - kResultRangeStatus;
-constexpr std::size_t kSignalRateOffset = kResultSignalRate - kResultRangeStatus;
-constexpr std::size_t kAmbientRateOffset = kResultAmbientRate - kResultRangeStatus;
-constexpr std::size_t kSigmaOffset = kResultSigma - kResultRangeStatus;
-constexpr std::size_t kDistanceOffset = kResultDistance - kResultRangeStatus;
-
-u16 ReadBigEndianWord(const std::array<u8, kResultBlockSize> &data, const std::size_t offset) {
-  return static_cast<u16>((static_cast<u16>(data[offset]) << 8U) | data[offset + 1U]);
-}
-
 }  // namespace
 
 Vl53l4cd::Vl53l4cd(I2C_HandleTypeDef &i2c) : Vl53l4cd(i2c, Config{}) {}
@@ -58,10 +44,6 @@ Vl53l4cd::Error Vl53l4cd::Begin() {
   measurement_ = {};
   model_id_ = 0;
   sample_count_ = 0;
-  last_sample_tick_ms_ = 0;
-  poll_count_ = 0;
-  i2c_error_count_ = 0;
-  interrupt_polarity_valid_ = false;
   ranging_ = false;
 
   Error error = Init();
@@ -94,17 +76,6 @@ Vl53l4cd::Error Vl53l4cd::Init() {
   if (error != Error::kOk) {
     return error;
   }
-
-  // GPIO interrupt polarity is configured by the default register block and
-  // remains unchanged while ranging. Cache it so normal polling only needs to
-  // read GPIO_STATUS.
-  u8 mux = 0;
-  error = ReadByte(kGpioHvMuxCtrl, mux);
-  if (error != Error::kOk) {
-    return error;
-  }
-  interrupt_polarity_ = (mux & 0x10U) != 0U ? 0U : 1U;
-  interrupt_polarity_valid_ = true;
 
   error = WriteByte(kSystemStart, 0x40);
   if (error != Error::kOk) {
@@ -214,52 +185,61 @@ u16 Vl53l4cd::EncodeTimeout(u32 timing_budget_us, u32 macro_period_us, u32 multi
 }
 
 Vl53l4cd::Error Vl53l4cd::IsDataReady(bool &ready) {
-  if (!interrupt_polarity_valid_) {
-    u8 mux = 0;
-    const Error error = ReadByte(kGpioHvMuxCtrl, mux);
-    if (error != Error::kOk) {
-      return error;
-    }
-    interrupt_polarity_ = (mux & 0x10U) != 0U ? 0U : 1U;
-    interrupt_polarity_valid_ = true;
-  }
-
+  u8 mux = 0;
   u8 gpio = 0;
-  const Error error = ReadByte(kGpioStatus, gpio);
+  Error error = ReadByte(kGpioHvMuxCtrl, mux);
+  if (error != Error::kOk) {
+    return error;
+  }
+  error = ReadByte(kGpioStatus, gpio);
   if (error != Error::kOk) {
     return error;
   }
 
-  ready = (gpio & 0x01U) == interrupt_polarity_;
+  const u8 interrupt_polarity = (mux & 0x10U) != 0U ? 0U : 1U;
+  ready = (gpio & 0x01U) == interrupt_polarity;
   return Error::kOk;
 }
 
 Vl53l4cd::Error Vl53l4cd::ReadMeasurement() {
   Measurement next{};
-  std::array<u8, kResultBlockSize> result{};
-  Error error = Read(kResultRangeStatus, result.data(), static_cast<u16>(result.size()));
+  u8 raw_status = 0;
+  Error error = ReadByte(kResultRangeStatus, raw_status);
   if (error != Error::kOk) {
     return error;
   }
-
-  u8 raw_status = result[kRangeStatusOffset];
   raw_status &= 0x1FU;
   next.range_status = raw_status < kRangeStatusMap.size() ? kRangeStatusMap[raw_status] : 255;
-  u16 raw = ReadBigEndianWord(result, kSpadCountOffset);
+
+  u16 raw = 0;
+  if ((error = ReadWord(kResultSpadCount, raw)) != Error::kOk) {
+    return error;
+  }
   next.number_of_spads = raw / 256U;
-  raw = ReadBigEndianWord(result, kSignalRateOffset);
+
+  if ((error = ReadWord(kResultSignalRate, raw)) != Error::kOk) {
+    return error;
+  }
   next.signal_rate_kcps = raw * 8U;
-  raw = ReadBigEndianWord(result, kAmbientRateOffset);
+
+  if ((error = ReadWord(kResultAmbientRate, raw)) != Error::kOk) {
+    return error;
+  }
   next.ambient_rate_kcps = raw * 8U;
-  raw = ReadBigEndianWord(result, kSigmaOffset);
+
+  if ((error = ReadWord(kResultSigma, raw)) != Error::kOk) {
+    return error;
+  }
   next.sigma_mm = raw / 4U;
-  next.distance_mm = ReadBigEndianWord(result, kDistanceOffset);
+
+  if ((error = ReadWord(kResultDistance, next.distance_mm)) != Error::kOk) {
+    return error;
+  }
   if ((error = ClearInterrupt()) != Error::kOk) {
     return error;
   }
 
   measurement_ = next;
-  last_sample_tick_ms_ = HAL_GetTick();
   ++sample_count_;
   return Error::kOk;
 }
@@ -274,7 +254,6 @@ Vl53l4cd::Error Vl53l4cd::Poll() {
     return Error::kNotReady;
   }
   last_poll_tick_ = now;
-  ++poll_count_;
 
   bool ready = false;
   Error error = IsDataReady(ready);
@@ -331,21 +310,17 @@ Vl53l4cd::Error Vl53l4cd::RecordError(Error error) {
 
 Vl53l4cd::Error Vl53l4cd::Read(u16 reg, u8 *data, u16 size) {
   const u16 hal_address = static_cast<u16>(config_.address) << 1U;
-  if (HAL_I2C_Mem_Read(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, data, size, config_.i2c_timeout_ms) == HAL_OK) {
-    return Error::kOk;
-  }
-  ++i2c_error_count_;
-  return Error::kI2cError;
+  return HAL_I2C_Mem_Read(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, data, size, config_.i2c_timeout_ms) == HAL_OK
+             ? Error::kOk
+             : Error::kI2cError;
 }
 
 Vl53l4cd::Error Vl53l4cd::Write(u16 reg, const u8 *data, u16 size) {
   const u16 hal_address = static_cast<u16>(config_.address) << 1U;
-  if (HAL_I2C_Mem_Write(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, const_cast<u8 *>(data), size,
-                        config_.i2c_timeout_ms) == HAL_OK) {
-    return Error::kOk;
-  }
-  ++i2c_error_count_;
-  return Error::kI2cError;
+  return HAL_I2C_Mem_Write(i2c_, hal_address, reg, I2C_MEMADD_SIZE_16BIT, const_cast<u8 *>(data), size,
+                           config_.i2c_timeout_ms) == HAL_OK
+             ? Error::kOk
+             : Error::kI2cError;
 }
 
 Vl53l4cd::Error Vl53l4cd::ReadByte(u16 reg, u8 &value) { return Read(reg, &value, 1); }

@@ -326,32 +326,12 @@ void ControlLoop() {
   // wrap period apart.
   static uint32_t last_control_cycles = 0U;
   const uint32_t now_control_cycles = DWT->CYCCNT;
-  const uint32_t control_exec_start_cycles = now_control_cycles;
   float measured_control_dt_s = kControlLoopDtS;
   bool measured_control_dt_valid = false;
   if (last_control_cycles != 0U && SystemCoreClock != 0U) {
     const uint32_t delta_cycles = now_control_cycles - last_control_cycles;
     measured_control_dt_s = static_cast<float>(delta_cycles) / static_cast<float>(SystemCoreClock);
     measured_control_dt_valid = measured_control_dt_s >= 0.0005f && measured_control_dt_s <= 0.020f;
-    if (measured_control_dt_valid) {
-      constexpr uint32_t kExpectedControlDtUs = 2000U;
-      static uint32_t control_dt_min_us = 0xFFFFFFFFU;
-      static uint32_t control_dt_max_us = 0U;
-      static uint32_t control_jitter_max_us = 0U;
-
-      const uint32_t control_dt_us =
-          static_cast<uint32_t>((static_cast<uint64_t>(delta_cycles) * 1000000ULL) / SystemCoreClock);
-      const uint32_t jitter_us = control_dt_us >= kExpectedControlDtUs ? control_dt_us - kExpectedControlDtUs
-                                                                       : kExpectedControlDtUs - control_dt_us;
-      if (control_dt_us < control_dt_min_us) control_dt_min_us = control_dt_us;
-      if (control_dt_us > control_dt_max_us) control_dt_max_us = control_dt_us;
-      if (jitter_us > control_jitter_max_us) control_jitter_max_us = jitter_us;
-      wl_debug.control_dt_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_us, 0xFFFFU));
-      wl_debug.control_dt_min_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_min_us, 0xFFFFU));
-      wl_debug.control_dt_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_dt_max_us, 0xFFFFU));
-      wl_debug.control_jitter_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_jitter_max_us, 0xFFFFU));
-      if (jitter_us > 100U) ++wl_debug.control_jitter_over_100us_count;
-    }
   }
   last_control_cycles = now_control_cycles;
 
@@ -374,12 +354,13 @@ void ControlLoop() {
   // 云台 C 板通信断开时强制退出中腿长保持
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
     tc_state.mid_leg_hold = false;
+    tc_state.stair_descend_hold = false;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 1：硬件反馈采集 + DR16 语义折叠
   // ═══════════════════════════════════════════════════════════════════════
-  UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state, now_ms);
+  UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
   globals->ui_refresh_key = tc_state.e_ui_refresh;
   input.ui_refresh_key = tc_state.e_ui_refresh;
 
@@ -469,7 +450,7 @@ void ControlLoop() {
     }
     prev_domain_state = tc_state.domain_state;
   }
-  // C/V/B 键重置正方向：始终先对齐 yaw 再切换腿长
+  // C/V/B 键重置正方向：偏航未对齐时暂缓腿长切换，先转到位
   // 暂缓期间必须阻止 FSM 切换模式，只覆盖 target_leg_length_m 不够——
   // fsm_mode 在 chassis.cc 里还会影响腿 PID、力控、轮力矩等多个路径。
   const auto leg_profile_from_state = [](chassis::Fsm::State s) -> wheel_legged::LegProfile {
@@ -481,8 +462,9 @@ void ControlLoop() {
 
   if (ctx.defer_leg_change) {
     ctx.pending_leg_profile = chassis_input.request.leg_request;
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     const float yaw_err =
-        std::fabs(rm::modules::Wrap(ctx.defer_yaw_target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
     if (yaw_err < kSpinExitYawAlignThresholdRad) {
       chassis_input.request.leg_request = ctx.pending_leg_profile;
       ctx.defer_leg_change = false;
@@ -490,9 +472,14 @@ void ControlLoop() {
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
   } else if (input.mode_request.reset_yaw_request) {
-    ctx.defer_leg_change = true;
-    ctx.pending_leg_profile = chassis_input.request.leg_request;
-    chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
+      ctx.defer_leg_change = true;
+      ctx.pending_leg_profile = chassis_input.request.leg_request;
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
   }
 
   // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
@@ -504,16 +491,19 @@ void ControlLoop() {
       case TcSemanticState::PendingAction::kC:
         tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
         tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kCancel;
         break;
       case TcSemanticState::PendingAction::kV:
         tc_state.mid_leg_hold = false;
         tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmSingle;
         break;
       case TcSemanticState::PendingAction::kB:
         tc_state.mid_leg_hold = false;
         tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
         break;
       default:
@@ -524,21 +514,6 @@ void ControlLoop() {
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
-  // Z arms one automatic jump only. It is cleared after that jump leaves all jump phases.
-  const auto is_jump_state = [](const chassis::Fsm::State state) {
-    return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
-           state == chassis::Fsm::State::kJumpRecover;
-  };
-  if (input.auto_jump_triggered && is_jump_state(chassis_output.mode)) {
-    tc_state.auto_jump_in_progress = true;
-  }
-  if (tc_state.auto_jump_in_progress && !is_jump_state(chassis_output.mode)) {
-    tc_state.auto_jump_enabled = false;
-    tc_state.auto_jump_in_progress = false;
-    tc_state.auto_jump_tof_armed = true;
-    input.auto_jump_enabled = false;
-  }
-
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
@@ -548,6 +523,7 @@ void ControlLoop() {
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
+      tc_state.stair_descend_hold = false;
     }
     prev_chassis_mode_for_recovery = chassis_output.mode;
   }
@@ -785,10 +761,7 @@ void ControlLoop() {
     static uint32_t chassis_tx_counter = 0;
     if (chassis_tx_counter % 5 == 0) {
       const bool combat_mode = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
-      const float bullet_speed =
-          globals->referee.has_value() ? globals->referee->data().shoot_data.initial_speed : 0.0f;
       globals->chassis_tx->SetCombatMode(combat_mode);
-      globals->chassis_tx->SetBulletSpeed(bullet_speed);
       globals->chassis_tx->QueueSend();
     }
     chassis_tx_counter++;
@@ -891,8 +864,8 @@ void ControlLoop() {
   const bool tc_remote_active = input.tc_remote.valid;
   const bool has_drive_input = dr16_online || tc_remote_active;
 
-  // AD 屏蔽：暂时永久关闭横向移动（小陀螺模式除外）
-  if (chassis_output.mode != chassis::Fsm::State::kSpin &&
+  // AD 屏蔽：AD 关闭时清除键盘 A/D 键位（小陀螺模式或 Z 键开启时不屏蔽）
+  if (!tc_state.ad_enabled && chassis_output.mode != chassis::Fsm::State::kSpin &&
       chassis_output.mode != chassis::Fsm::State::kSpinExitPending) {
     input.dr16.keyboard &= ~0x000Cu;
     input.tc_remote.keyboard_value &= ~0x000Cu;
@@ -942,9 +915,7 @@ void ControlLoop() {
   // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
-    const auto nearest = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
-    ctx.defer_yaw_target_rad = nearest.target_rad;
-    ctx.yaw_follow_target = nearest;
+    ctx.yaw_follow_target = {kYawFollowFixedTargetRad, 1.0f};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
@@ -1431,7 +1402,7 @@ void ControlLoop() {
     ui_snapshot.spin_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                               chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
-    ui_snapshot.ad_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
+    ui_snapshot.ad_active = tc_state.ad_enabled || chassis_output.mode == chassis::Fsm::State::kSpin ||
                             chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
     ui_snapshot.yaw_display_offset_rad = -ns::control_loop::kYawFollowFixedTargetRad;
 
@@ -1567,25 +1538,10 @@ void ControlLoop() {
       }
     }
   }
-  // TEMP: Disable UI task execution while measuring the 500 Hz control-loop
-  // baseline. UI tasks use blocking HAL_UART_Transmit() and previously ran
-  // inside this TIM13 ISR. Keep task registration/snapshots intact so this can
-  // be restored after the timing test.
-  // if (times % 17 == 0) {
-  //   schedule.schedule();
-  //   if (globals->ui_refresh_key) {
-  //     static_UI_add();
-  //   }
-  // }
-
-  if (SystemCoreClock != 0U) {
-    static uint32_t control_exec_max_us = 0U;
-    const uint32_t elapsed_cycles = DWT->CYCCNT - control_exec_start_cycles;
-    const uint32_t control_exec_us =
-        static_cast<uint32_t>((static_cast<uint64_t>(elapsed_cycles) * 1000000ULL) / SystemCoreClock);
-    if (control_exec_us > control_exec_max_us) control_exec_max_us = control_exec_us;
-    wl_debug.control_exec_last_us = static_cast<uint16_t>(std::min<uint32_t>(control_exec_us, 0xFFFFU));
-    wl_debug.control_exec_max_us = static_cast<uint16_t>(std::min<uint32_t>(control_exec_max_us, 0xFFFFU));
-    if (control_exec_us > 2000U) ++wl_debug.control_overrun_count;
+  if (times % 17 == 0) {
+    schedule.schedule();
+    if (globals->ui_refresh_key) {
+      static_UI_add();
+    }
   }
 }

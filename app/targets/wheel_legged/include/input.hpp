@@ -9,7 +9,6 @@
 #include "chassis/fsm.hpp"
 #include "fsm_common.hpp"
 #include "gimbal/fsm.hpp"
-#include "tof_mode.hpp"
 
 struct SharedResources;
 
@@ -108,17 +107,12 @@ struct InputSnapshot {
   TcRemoteInput tc_remote{};                              ///< 图传键鼠数据（CAN 桥）
   chassis::ChassisStateEstimatorInput estimator_input{};  ///< 底盘传感器反馈（估计器输入）
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
-  bool auto_jump_triggered{false};                        ///< 本周期自动跳跃触发
-  bool auto_jump_enabled{false};                          ///< 已按 Z，正在等待或执行一次自动跳跃
-  bool auto_jump_both_close{false};                       ///< 调试：both_close 条件
-  bool auto_jump_tof_armed_debug{false};                  ///< 调试：auto_jump_tof_armed 条件
-  bool auto_jump_both_active{false};                      ///< 调试：both_active 条件（含200ms消抖）
-  bool auto_jump_trigger_ready{false};                    ///< 调试：both_close && tof_armed && both_active
-  bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
-  float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
-  float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
-  float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）
-  float gimbal_imu_gyro_x_rad_s{0.0f};                    ///< 云台惯导 X 轴角速度（俯仰轴）
+  // 自动跳跃字段已移除
+  bool ui_refresh_key{false};           ///< E 键按下（UI 刷新使能）
+  float gimbal_imu_yaw_rad{0.0f};       ///< 云台惯导偏航角
+  float gimbal_imu_pitch_rad{0.0f};     ///< 云台惯导俯仰角
+  float gimbal_imu_gyro_z_rad_s{0.0f};  ///< 云台惯导 Z 轴角速度（偏航轴）
+  float gimbal_imu_gyro_x_rad_s{0.0f};  ///< 云台惯导 X 轴角速度（俯仰轴）
 };
 
 /**
@@ -135,8 +129,10 @@ struct Dr16SemanticState {
  * @brief 图传语义状态（跨周期保持）
  */
 struct TcSemanticState {
-  bool mid_leg_c_armed{true};  ///< C 键是否已就绪（上升沿检测）
-  bool g_aim_armed{true};      ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
+  bool stair_descend_hold{false};  ///< Mouse-wheel-up toggled stair-descend mode.
+  bool stair_descend_armed{true};  ///< Mouse-wheel-up edge detector armed state.
+  bool mid_leg_c_armed{true};      ///< C 键是否已就绪（上升沿检测）
+  bool g_aim_armed{true};          ///< G 键是否已就绪（上升沿检测，aim_mode 切换）
   // 自动小跳字段已移除
   bool mid_leg_hold{false};         ///< 是否保持中腿长
   bool mid_leg_f{false};            ///< F 键触发的 mid_leg_f 中腿长模式（慢速斜坡参数）
@@ -151,17 +147,10 @@ struct TcSemanticState {
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
-  wheel_legged::TofMode requested_tof_mode{wheel_legged::TofMode::kAutoJump};
-  bool x_tof_mode_armed{true};            ///< X 键 ToF 模式切换上升沿
-  bool stair_descend_in_progress{false};  ///< 预留：下台阶动作执行中时禁止 X 手动退出
-  bool stair_descend_completed{false};    ///< 预留：下台阶逻辑完成后置 true，自动切回前向 ToF
-  bool auto_jump_enabled{false};          ///< Z 键启动的一次性自动跳跃正在等待/执行
-  bool auto_jump_in_progress{false};      ///< 已由自动测距触发并进入底盘跳跃状态
-  bool z_auto_jump_armed{true};           ///< Z 键上升沿检测
-  bool auto_jump_tof_armed{true};         ///< 自动跳跃 TOF 边沿检测
-  uint32_t both_active_start_ms{0};       ///< both_active 条件首次满足的时刻
-  bool dial_jump_armed{true};             ///< DR16 拨轮跳跃边沿检测
-  bool mouse_z_jump_armed{true};          ///< 鼠标滚轮跳跃边沿检测
+  bool ad_enabled{false};            ///< AD 功能开关（Z 键短按切换，默认关闭）
+  bool z_ad_armed{true};             ///< Z 键 AD 切换是否已就绪（上升沿检测）
+  bool dial_jump_armed{true};        ///< DR16 拨轮跳跃边沿检测
+  bool mouse_z_jump_armed{true};     ///< 鼠标滚轮跳跃边沿检测
   wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用
   enum class PendingAction : uint8_t { kNone, kC, kV, kB };
   PendingAction pending_action{PendingAction::kNone};   ///< yaw 对齐完成后待执行的动作
@@ -224,7 +213,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
  * @note  每个控制周期调用一次，在 FSM 与控制器之前执行。
  */
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
-                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state, uint32_t now_ms);
+                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state);
 
 /**
  * @brief 从 InputSnapshot 构建底盘 FSM 输入

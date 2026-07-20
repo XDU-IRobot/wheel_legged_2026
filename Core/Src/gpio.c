@@ -54,10 +54,10 @@ void MX_GPIO_Init(void) {
   HAL_GPIO_WritePin(GPIOC, POWER_24V_2_Pin | POWER_24V_1_Pin | POWER_5V_Pin | ACC_CS_Pin | GYRO_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LEFT_DOWN_TOF_XSHUT_Pin | MCP_CS_Pin | LEFT_FRONT_TOF_XSHUT_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, TOF_I2C1_PE14_XSHUT_Pin | MCP_CS_Pin | TOF_I2C1_PE0_XSHUT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, RIGHT_FRONT_TOF_XSHUT_Pin | RIGHT_DOWN_TOF_XSHUT_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, TOF_I2C2_PD14_XSHUT_Pin | TOF_I2C2_PD15_XSHUT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : POWER_24V_2_Pin POWER_24V_1_Pin POWER_5V_Pin */
   GPIO_InitStruct.Pin = POWER_24V_2_Pin | POWER_24V_1_Pin | POWER_5V_Pin;
@@ -79,8 +79,8 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIO1_PE13_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LEFT_DOWN_TOF_XSHUT_Pin MCP_CS_Pin LEFT_FRONT_TOF_XSHUT_Pin */
-  GPIO_InitStruct.Pin = LEFT_DOWN_TOF_XSHUT_Pin | MCP_CS_Pin | LEFT_FRONT_TOF_XSHUT_Pin;
+  /*Configure GPIO pins : TOF_I2C1_PE14_XSHUT_Pin MCP_CS_Pin TOF_I2C1_PE0_XSHUT_Pin */
+  GPIO_InitStruct.Pin = TOF_I2C1_PE14_XSHUT_Pin | MCP_CS_Pin | TOF_I2C1_PE0_XSHUT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -92,8 +92,8 @@ void MX_GPIO_Init(void) {
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(MCP_INT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : RIGHT_FRONT_TOF_XSHUT_Pin RIGHT_DOWN_TOF_XSHUT_Pin */
-  GPIO_InitStruct.Pin = RIGHT_FRONT_TOF_XSHUT_Pin | RIGHT_DOWN_TOF_XSHUT_Pin;
+  /*Configure GPIO pins : TOF_I2C2_PD14_XSHUT_Pin TOF_I2C2_PD15_XSHUT_Pin */
+  GPIO_InitStruct.Pin = TOF_I2C2_PD14_XSHUT_Pin | TOF_I2C2_PD15_XSHUT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
