@@ -110,6 +110,7 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_triggered{false};                        ///< 本周期自动跳跃触发
   bool auto_jump_enabled{false};                          ///< 已按 Z，正在等待或执行一次自动跳跃
+  bool stair_descend_triggered{false};                    ///< 本周期下台阶单帧测距触发
   bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角

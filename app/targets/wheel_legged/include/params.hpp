@@ -45,6 +45,18 @@ struct StairClimbParams {
   std::uint32_t settle_timeout_ms;
 };
 
+struct StairDescendParams {
+  float approach_leg_length_m;
+  float push_leg_length_m;
+  float retract_leg_length_m;
+  float speed_limit_mps;
+  float push_force_n;
+  float leg_length_tolerance_m;
+  std::uint32_t push_reached_hold_ms;
+  std::uint32_t push_timeout_ms;
+  std::uint32_t retract_duration_ms;
+};
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 三变体完全相同的公共参数（仅保留真正不随变体变化的常量与配置）
 // ══════════════════════════════════════════════════════════════════════════════
@@ -61,8 +73,10 @@ namespace tof {
 // Temporary A/B-test switch. false keeps all four XSHUT pins low and removes
 // ToF initialization, scheduling, mode switching, and polling at compile time.
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1200U;
-constexpr std::uint16_t kAutoJumpRearmDistanceMm = 1300U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 850U;
+constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
+constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
 constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
@@ -281,6 +295,18 @@ inline const DmMitSettings kBoosterDmSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f,
 
 // ── 底盘状态机 ──
 namespace chassis_fsm {
+
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.28f,
+    .retract_leg_length_m = 0.13f,
+    .speed_limit_mps = 1.0f,
+    .push_force_n = 80.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 500U,
+    .retract_duration_ms = 60U,
+};
 
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.37f,
@@ -829,6 +855,18 @@ constexpr float kNormalShootFrequencyHz = 10.0f;  ///< 正常发射频率 [Hz]
 // ── 底盘状态机 ──
 namespace chassis_fsm {
 
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.31f,
+    .retract_leg_length_m = 0.17f,
+    .speed_limit_mps = 0.5f,
+    .push_force_n = 170.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 2000U,
+    .retract_duration_ms = 1500U,
+};
+
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.33f,
     .hook_leg_length_m = 0.33f,
@@ -1353,6 +1391,18 @@ constexpr float kNormalShootFrequencyHz = 12.0f;  ///< 正常发射频率 [Hz]
 
 // ── 底盘状态机 ──
 namespace chassis_fsm {
+
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.28f,
+    .retract_leg_length_m = 0.13f,
+    .speed_limit_mps = 1.0f,
+    .push_force_n = 80.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 500U,
+    .retract_duration_ms = 60U,
+};
 
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.35f,

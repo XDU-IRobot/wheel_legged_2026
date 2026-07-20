@@ -429,7 +429,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);
-  if (is_jump_state) {
+  const bool is_stair_descend_direct_target =
+      input.fsm_mode == Fsm::State::kStairDescendPush || input.fsm_mode == Fsm::State::kStairDescendRetract;
+  if (is_jump_state || is_stair_descend_direct_target) {
     // 跳跃阶段直接使用 FSM 设定的各阶段目标腿长，不走斜坡
     params_.leg_target_length_m = input.motion_target.leg_length_m;
     smoothed_leg_target_length_m_ = params_.leg_target_length_m;
@@ -612,8 +614,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   }
 
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
-  const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush);
-  const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover);
+  const bool use_stair_descend_push = input.fsm_mode == Fsm::State::kStairDescendPush;
+  const bool use_stair_descend_retract = input.fsm_mode == Fsm::State::kStairDescendRetract;
+  const bool use_jump_extend = (input.fsm_mode == Fsm::State::kJumpPush) || use_stair_descend_push;
+  const bool use_jump_retract2 = (input.fsm_mode == Fsm::State::kJumpRecover) || use_stair_descend_retract;
   const bool is_jump_state = use_jump_retract1 || use_jump_extend || use_jump_retract2;
 
   // 台阶序列摆角 PID
@@ -653,8 +657,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       // left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
       // right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
 
-      left_force_ = kJumpPushForceN + roll_pid_.out();
-      right_force_ = kJumpPushForceN + roll_pid_.out();
+      const float push_force_n = use_stair_descend_push
+                                     ? wheel_legged::params::active::chassis_fsm::kStairDescend.push_force_n
+                                     : kJumpPushForceN;
+      left_force_ = push_force_n + roll_pid_.out();
+      right_force_ = push_force_n + roll_pid_.out();
 
       // left_force_ = 200.f;
       // right_force_ = 200.f;
