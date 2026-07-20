@@ -4,6 +4,7 @@
 
 #include <librm.hpp>
 #include "../params.hpp"
+#include "../state_ctx.hpp"
 
 /**
  * @file  targets/wheel_legged/include/chassis/lqr.hpp
@@ -71,24 +72,24 @@ class WbrController {
    * @brief 单步控制解算
    */
   [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected,
-                                           rm::f32 displacement_bias_m = 0.0f, float position_error_scale = 1.0f,
-                                           float velocity_error_scale = 1.0f) const {
+                                           rm::f32 displacement_bias_m = 0.0f,
+                                           const wheel_legged::control_loop::PositionVelocityScales &scales = {}) const {
     static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
 
     rm::f32 k_matrix[4][10]{};
     ComputeKMatrix(current.l_l, current.l_r, k_matrix);
 
     rm::f32 x_err[10]{};
-    x_err[0] = (current.s - expected.s) * position_error_scale + displacement_bias_m;
-    x_err[1] = (current.s_dot - expected.s_dot) * velocity_error_scale;
-    x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi)*1.3;
-    x_err[3] = current.phi_dot - expected.phi_dot;
-    x_err[4] = current.theta_ll - expected.theta_ll;
-    x_err[5] = current.theta_ll_dot - expected.theta_ll_dot;
-    x_err[6] = current.theta_lr - expected.theta_lr;
-    x_err[7] = current.theta_lr_dot - expected.theta_lr_dot;
-    x_err[8] = current.theta_b - expected.theta_b;
-    x_err[9] = current.theta_b_dot - expected.theta_b_dot;
+    x_err[0] = (current.s - expected.s) * scales.position_scale + displacement_bias_m;
+    x_err[1] = (current.s_dot - expected.s_dot) * scales.velocity_scale;
+    x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi) * scales.phi_scale;
+    x_err[3] = (current.phi_dot - expected.phi_dot) * scales.phi_dot_scale;
+    x_err[4] = (current.theta_ll - expected.theta_ll) * scales.theta_ll_scale;
+    x_err[5] = (current.theta_ll_dot - expected.theta_ll_dot) * scales.theta_ll_dot_scale;
+    x_err[6] = (current.theta_lr - expected.theta_lr) * scales.theta_lr_scale;
+    x_err[7] = (current.theta_lr_dot - expected.theta_lr_dot) * scales.theta_lr_dot_scale;
+    x_err[8] = (current.theta_b - expected.theta_b) * scales.theta_b_scale;
+    x_err[9] = (current.theta_b_dot - expected.theta_b_dot) * scales.theta_b_dot_scale;
 
     rm::f32 u_vec[4]{};
     for (int i = 0; i < 4; ++i) {

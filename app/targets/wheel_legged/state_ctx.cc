@@ -119,14 +119,59 @@ PositionVelocityScales ResolvePositionVelocityScales(const chassis::Fsm::State m
   switch (mode) {
     case chassis::Fsm::State::kLowLeg:
       return {params::active::control_loop::kPositionErrorScaleLowLeg,
-              params::active::control_loop::kVelocityErrorScaleLowLeg};
+              params::active::control_loop::kVelocityErrorScaleLowLeg,
+              params::active::control_loop::kPhiErrorScaleLowLeg,
+              params::active::control_loop::kPhiDotErrorScaleLowLeg,
+              params::active::control_loop::kThetaLlErrorScaleLowLeg,
+              params::active::control_loop::kThetaLlDotErrorScaleLowLeg,
+              params::active::control_loop::kThetaLrErrorScaleLowLeg,
+              params::active::control_loop::kThetaLrDotErrorScaleLowLeg,
+              params::active::control_loop::kThetaBErrorScaleLowLeg,
+              params::active::control_loop::kThetaBDotErrorScaleLowLeg};
+    case chassis::Fsm::State::kMidLeg:
+      return {params::active::control_loop::kPositionErrorScaleMidLeg,
+              params::active::control_loop::kVelocityErrorScaleMidLeg,
+              params::active::control_loop::kPhiErrorScaleMidLeg,
+              params::active::control_loop::kPhiDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaLlErrorScaleMidLeg,
+              params::active::control_loop::kThetaLlDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaLrErrorScaleMidLeg,
+              params::active::control_loop::kThetaLrDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaBErrorScaleMidLeg,
+              params::active::control_loop::kThetaBDotErrorScaleMidLeg};
     case chassis::Fsm::State::kHighLeg:
+      return {params::active::control_loop::kPositionErrorScaleHighLeg,
+              params::active::control_loop::kVelocityErrorScaleHighLeg,
+              params::active::control_loop::kPhiErrorScaleHighLeg,
+              params::active::control_loop::kPhiDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaLlErrorScaleHighLeg,
+              params::active::control_loop::kThetaLlDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaLrErrorScaleHighLeg,
+              params::active::control_loop::kThetaLrDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaBErrorScaleHighLeg,
+              params::active::control_loop::kThetaBDotErrorScaleHighLeg};
     case chassis::Fsm::State::kStairTask:
       return {params::active::control_loop::kPositionErrorScaleHighLeg,
-              params::active::control_loop::kVelocityErrorScaleHighLeg};
+              params::active::control_loop::kVelocityErrorScaleHighLeg,
+              params::active::control_loop::kPhiErrorScaleHighLeg,
+              params::active::control_loop::kPhiDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaLlErrorScaleHighLeg,
+              params::active::control_loop::kThetaLlDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaLrErrorScaleHighLeg,
+              params::active::control_loop::kThetaLrDotErrorScaleHighLeg,
+              params::active::control_loop::kThetaBErrorScaleHighLeg,
+              params::active::control_loop::kThetaBDotErrorScaleHighLeg};
     default:
       return {params::active::control_loop::kPositionErrorScaleMidLeg,
-              params::active::control_loop::kVelocityErrorScaleMidLeg};
+              params::active::control_loop::kVelocityErrorScaleMidLeg,
+              params::active::control_loop::kPhiErrorScaleMidLeg,
+              params::active::control_loop::kPhiDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaLlErrorScaleMidLeg,
+              params::active::control_loop::kThetaLlDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaLrErrorScaleMidLeg,
+              params::active::control_loop::kThetaLrDotErrorScaleMidLeg,
+              params::active::control_loop::kThetaBErrorScaleMidLeg,
+              params::active::control_loop::kThetaBDotErrorScaleMidLeg};
   }
 }
 

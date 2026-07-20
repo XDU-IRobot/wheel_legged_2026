@@ -151,6 +151,14 @@ bool IsYawFollowDriveReady(float yaw_target_rad, float yaw_motor_rad, float yaw_
 struct PositionVelocityScales {
   float position_scale{1.0f};
   float velocity_scale{1.0f};
+  float phi_scale{1.0f};
+  float phi_dot_scale{1.0f};
+  float theta_ll_scale{1.0f};
+  float theta_ll_dot_scale{1.0f};
+  float theta_lr_scale{1.0f};
+  float theta_lr_dot_scale{1.0f};
+  float theta_b_scale{1.0f};
+  float theta_b_dot_scale{1.0f};
 };
 
 /**

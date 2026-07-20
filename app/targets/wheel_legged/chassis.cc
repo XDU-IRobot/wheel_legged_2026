@@ -565,10 +565,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   output_.filtered_theta_lr_dot = filtered_theta_lr_dot_;
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
   const rm::f32 displacement_bias = LookupDisplacementBiasFromLegLength(avg_leg_length_m);
-  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias);
-  const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
-  const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
-  const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
+  auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
+  if (!input.position_hold_active) {
+    pv_scales.position_scale = 1.0f;
+    pv_scales.velocity_scale = 1.0f;
+  }
+  base_torque_ = lqr_controller_.ComputeControl(filtered_state, input.expected, displacement_bias, pv_scales);
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
