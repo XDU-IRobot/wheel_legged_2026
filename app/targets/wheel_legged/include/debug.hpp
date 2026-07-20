@@ -24,6 +24,16 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_fsm_state_changed;  // 底盘状态机本周期是否切换
   uint8_t gimbal_fsm_state_changed;   // 云台状态机本周期是否切换
 
+  // Compact 500 Hz control-loop timing (kept small to preserve the 1024-byte snapshot limit)
+  uint16_t control_dt_us;
+  uint16_t control_dt_min_us;
+  uint16_t control_dt_max_us;
+  uint16_t control_jitter_max_us;
+  uint16_t control_exec_last_us;
+  uint16_t control_exec_max_us;
+  uint32_t control_jitter_over_100us_count;
+  uint32_t control_overrun_count;
+
   // ── 遥控器原始输入 ──
   uint8_t dr16_online;        // DR16 在线
   int32_t dr16_switch_l_raw;  // 左拨杆原始位置
@@ -48,11 +58,16 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_enable_request;      // 使能请求
   uint8_t dr16_spin_request;        // 小陀螺请求
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
-  // 自动跳跃调试字段已移除
-  uint8_t tc_remote_valid;         // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t stair_high_leg_request;  // Stair coordinator requests high-leg standby
-  uint8_t stair_task_request;      // Stair command parsed this cycle
-  uint8_t stair_task_mode;         // Stair coordinator state
+  uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
+  uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
+  uint8_t auto_jump_both_close;     // 调试：both_close 条件
+  uint8_t auto_jump_tof_armed;      // 调试：auto_jump_tof_armed 条件
+  uint8_t auto_jump_both_active;    // 调试：both_active 条件（含200ms消抖）
+  uint8_t auto_jump_trigger_ready;  // 调试：both_close && tof_armed && both_active
+  uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
+  uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
+  uint8_t stair_task_request;       // Stair command parsed this cycle
+  uint8_t stair_task_mode;          // Stair coordinator state
   uint8_t stair_requested_attempts;
   uint8_t stair_completed_attempts;
   uint8_t stair_phase;  // Active sequence phase
@@ -222,25 +237,63 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float filtered_theta_ll_dot_rad_s;       // 滤波后左腿摆角速度
   float filtered_theta_lr_dot_rad_s;       // 滤波后右腿摆角速度
 
-  // Selected VL53L4CD ToF on I2C2
-  uint8_t vl53l4cd_driver_status;  // 0=OK, 2=I2C error, 3=timeout, 4=wrong device, 5=bad config, 6=not started
-  uint8_t vl53l4cd_range_status;   // 0 means the current distance is valid
-  uint16_t vl53l4cd_model_id;      // Expected value: 0xEBAA
-  uint16_t vl53l4cd_distance_mm;   // Measured distance [mm]
-  uint16_t vl53l4cd_signal_kcps;   // Target signal rate [kcps]
-  uint16_t vl53l4cd_ambient_kcps;  // Ambient light rate [kcps]
-  uint16_t vl53l4cd_sigma_mm;      // Estimated measurement deviation [mm]
-  uint32_t vl53l4cd_sample_count;  // Number of received samples
+  // ── 四路 ToF 与硬件模式 ──
+  uint8_t tof_runtime_enabled;  // 0 for the current no-ToF baseline build
+  uint8_t tof_requested_mode;   // 0=auto-jump(front), 1=stair-descend(down)
+  uint8_t tof_active_mode;      // 实际已切换的硬件模式
+  uint8_t tof_mode_ready;       // 两个当前传感器都 Begin 成功
+  uint8_t tof_init_error_mask;  // bit0=left, bit1=right
+  uint32_t tof_switch_count;
+  uint32_t tof_poll_request_count;    // TIM13 产生的 100 Hz 请求数
+  uint32_t tof_poll_process_count;    // 主循环实际处理次数
+  uint32_t tof_poll_coalesced_count;  // 主循环来不及处理而被合并的请求数
+  uint32_t tof_poll_last_us;          // 最近一次左右两颗 Poll 总耗时
+  uint32_t tof_poll_max_us;           // 启动以来最大总耗时
 
-  // Selected VL53L4CD ToF on I2C1
-  uint8_t vl53l4cd_i2c1_driver_status;
-  uint8_t vl53l4cd_i2c1_range_status;
-  uint16_t vl53l4cd_i2c1_model_id;
-  uint16_t vl53l4cd_i2c1_distance_mm;
-  uint16_t vl53l4cd_i2c1_signal_kcps;
-  uint16_t vl53l4cd_i2c1_ambient_kcps;
-  uint16_t vl53l4cd_i2c1_sigma_mm;
-  uint32_t vl53l4cd_i2c1_sample_count;
+  float active_tof_pair_raw_mean_mm;  // active pair: (left raw + right raw) / 2 (auto_jump or stair_descend)
+  float left_front_tof_low_pass_mm;   // first-order LPF of new valid samples
+  float right_front_tof_low_pass_mm;
+  float left_front_tof_moving_average_mm;  // 5-point mean of LPF output
+  float right_front_tof_moving_average_mm;
+
+  uint8_t left_front_tof_driver_status;
+  uint8_t left_front_tof_range_status;
+  uint8_t left_front_tof_data_valid;
+  uint8_t left_front_tof_ranging;
+  uint16_t left_front_tof_model_id;
+  uint16_t left_front_tof_distance_mm;
+  uint32_t left_front_tof_sample_count;
+  uint32_t left_front_tof_last_sample_tick_ms;
+  uint32_t left_front_tof_poll_count;
+  uint32_t left_front_tof_i2c_error_count;
+
+  uint8_t right_front_tof_driver_status;
+  uint8_t right_front_tof_range_status;
+  uint8_t right_front_tof_data_valid;
+  uint8_t right_front_tof_ranging;
+  uint16_t right_front_tof_model_id;
+  uint16_t right_front_tof_distance_mm;
+  uint32_t right_front_tof_sample_count;
+  uint32_t right_front_tof_last_sample_tick_ms;
+  uint32_t right_front_tof_poll_count;
+  uint32_t right_front_tof_i2c_error_count;
+
+  // 下方 TOF 精简调试字段（仅保留关键数据，完整字段集同上方的 front TOF）
+  uint8_t left_down_tof_driver_status;
+  uint8_t left_down_tof_range_status;
+  uint8_t left_down_tof_data_valid;
+  uint8_t left_down_tof_ranging;
+  uint16_t left_down_tof_distance_mm;
+  uint32_t left_down_tof_sample_count;
+  uint32_t left_down_tof_i2c_error_count;
+
+  uint8_t right_down_tof_driver_status;
+  uint8_t right_down_tof_range_status;
+  uint8_t right_down_tof_data_valid;
+  uint8_t right_down_tof_ranging;
+  uint16_t right_down_tof_distance_mm;
+  uint32_t right_down_tof_sample_count;
+  uint32_t right_down_tof_i2c_error_count;
 
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;            // 发射使能（云台处于 Combat）
