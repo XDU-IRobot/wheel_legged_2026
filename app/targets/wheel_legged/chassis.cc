@@ -192,14 +192,6 @@ void chassis::Chassis::Init() {
   const auto &right_l0_dip = wheel_legged::params::active::chassis::kRightL0PidDip;
   init_pid(right_l0_pid_dip_, right_l0_dip.kp, right_l0_dip.ki, right_l0_dip.kd, right_l0_dip.max_out,
            right_l0_dip.max_iout);
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  const auto &left_l0_standup = wheel_legged::params::active::chassis::kLeftL0PidStandup;
-  init_pid(left_l0_pid_standup_, left_l0_standup.kp, left_l0_standup.ki, left_l0_standup.kd, left_l0_standup.max_out,
-           left_l0_standup.max_iout);
-  const auto &right_l0_standup = wheel_legged::params::active::chassis::kRightL0PidStandup;
-  init_pid(right_l0_pid_standup_, right_l0_standup.kp, right_l0_standup.ki, right_l0_standup.kd,
-           right_l0_standup.max_out, right_l0_standup.max_iout);
-#endif
   const auto &roll_pid = wheel_legged::params::active::chassis::kRollPid;
   init_pid(roll_pid_, roll_pid.kp, roll_pid.ki, roll_pid.kd, roll_pid.max_out, roll_pid.max_iout);
   const auto &left_leg_turn_pid = wheel_legged::params::active::chassis::kLeftLegTurnPid;
@@ -588,25 +580,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   const bool use_stair_target = input.motion_target.use_stair_theta_controller;
 
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  // 着地后腿长 PID D 项输入放大
-  if (input.fsm_mode == Fsm::State::kSpin) {
-    constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
-                               2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
-                                -right_leg_.l0_dot(), 2);
-  } else if (!standup_complete_) {
-    left_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
-    right_l0_pid_standup_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
-  } else if (use_stair_target) {
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
-  } else {
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
-  }
-#else
   // 着地后腿长 PID D 项输入放大
   if (input.fsm_mode == Fsm::State::kSpin) {
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
@@ -621,26 +594,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
-#endif
   // 下压目标腿长时使用独立 PID（持续 1s）
   if (mid_leg_dip_active_) {
     left_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
-  output_.left_l0_pid_out = mid_leg_dip_active_
-                                ? left_l0_pid_dip_.out()
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-                                : (!standup_complete_ ? left_l0_pid_standup_.out() : left_l0_pid_.out());
-#else
-                                : left_l0_pid_.out();
-#endif
-  output_.right_l0_pid_out = mid_leg_dip_active_
-                                 ? right_l0_pid_dip_.out()
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-                                 : (!standup_complete_ ? right_l0_pid_standup_.out() : right_l0_pid_.out());
-#else
-                                 : right_l0_pid_.out();
-#endif
+  output_.left_l0_pid_out = mid_leg_dip_active_ ? left_l0_pid_dip_.out() : left_l0_pid_.out();
+  output_.right_l0_pid_out = mid_leg_dip_active_ ? right_l0_pid_dip_.out() : right_l0_pid_.out();
   const rm::f32 length_force_base = 0.5f * (output_.left_l0_pid_out + output_.right_l0_pid_out);
 
   l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
@@ -732,11 +692,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const float right_leg_length_force = right_l0_pid_jump_one_.out();
       left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    } else if (input.motion_target.disable_leg_force) {
-      left_force_ = 0.0f;
-      right_force_ = 0.0f;
-#endif
     } else if (!standup_complete_ || use_stair_target) {
       // 起立 / 台阶序列：腿长PID + 弹簧补偿，不用重力/roll/惯性
       left_force_ = output_.left_l0_pid_out + l_spring_torque_;

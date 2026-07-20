@@ -394,10 +394,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     }
 
     case State::kJumpRecover: {
-      // 最低维持时间结束后，落地（非离地）时退出回收阶段，超时作为保底
-      if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMinMs && !request.off_ground) {
-        next_mode = requested_stable_state;
-      } else if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMs) {
+      if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kJumpLowRecoverMs) {
         next_mode = requested_stable_state;
       }
       break;

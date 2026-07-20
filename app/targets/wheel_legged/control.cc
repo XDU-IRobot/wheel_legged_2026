@@ -378,8 +378,16 @@ void ControlLoop() {
   const bool stair_high_leg_ready = std::fabs(chassis_control_output.mean_leg_length_m -
                                               stair_params.high_leg_length_m) <= stair_params.leg_length_tolerance_m;
   const auto &previous_sequence_output = g_stair_sequence.output();
-  const auto effective_stair_request =
-      input.mode_request.spin_hold ? wheel_legged::StairTaskRequest::kCancel : input.mode_request.stair_task_request;
+  // 延迟的台阶请求（来自 C/V/B 键 yaw 对齐完成后注入）
+  const auto deferred_req = tc_state.deferred_stair_request;
+  if (deferred_req != wheel_legged::StairTaskRequest::kNone) {
+    tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kNone;
+  }
+  const auto effective_stair_request = [&]() {
+    if (deferred_req != wheel_legged::StairTaskRequest::kNone) return deferred_req;
+    if (input.mode_request.spin_hold) return wheel_legged::StairTaskRequest::kCancel;
+    return input.mode_request.stair_task_request;
+  }();
   const auto &stair_task_output = g_stair_task_coordinator.Update({
       .request = effective_stair_request,
       .contact_detected = stair_contact_detected,
@@ -472,6 +480,36 @@ void ControlLoop() {
       ctx.pending_leg_profile = chassis_input.request.leg_request;
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
+  }
+
+  // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
+  if (ctx.defer_leg_change) {
+    chassis_input.request.stair_task_active = (globals->chassis_fsm.mode() == chassis::Fsm::State::kStairTask);
+  } else if (tc_state.pending_action != TcSemanticState::PendingAction::kNone) {
+    // yaw 对齐完成（或本就不需要转），执行之前暂缓的动作
+    switch (tc_state.pending_action) {
+      case TcSemanticState::PendingAction::kC:
+        tc_state.mid_leg_hold = !tc_state.mid_leg_hold;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kCancel;
+        break;
+      case TcSemanticState::PendingAction::kV:
+        tc_state.mid_leg_hold = false;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmSingle;
+        break;
+      case TcSemanticState::PendingAction::kB:
+        tc_state.mid_leg_hold = false;
+        tc_state.mid_leg_f = false;
+        tc_state.stair_descend_hold = false;
+        tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
+        break;
+      default:
+        break;
+    }
+    tc_state.pending_action = TcSemanticState::PendingAction::kNone;
   }
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
@@ -1055,18 +1093,9 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  float effective_s_dot = spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot;
-  if (target_s_dot == 0.0f && effective_s_dot == 0.0f) {
-    effective_s_dot = -ns::control_loop::kLqrStopDampingK * current_state.s_dot;
-  }
-  chassis_update_input.expected.s_dot =
-      chassis_control_output.off_ground_in_mid_high_leg ? current_state.s_dot : effective_s_dot;
-#else
   chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
                                             ? current_state.s_dot
                                             : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
-#endif
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;
@@ -1106,12 +1135,7 @@ void ControlLoop() {
   }
   if (!spin_control_enabled &&
       !(stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask)) {
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    chassis_update_input.expected.theta_b =
-        kExpectedThetaBBiasRad + wheel_legged::params::hero::control_loop::kExpectedThetaBSpeedK * ctx.filtered_s_dot;
-#else
     chassis_update_input.expected.theta_b = kExpectedThetaBBiasRad;
-#endif
   }
 
   // ── 7l. 偏航角速度控制 ──
@@ -1253,15 +1277,11 @@ void ControlLoop() {
     const uint8_t robot_id = referee_online ? globals->referee->data().robot_status.robot_id : ns::aimbot::kRobotId;
     const float referee_bullet_speed = globals->referee->data().shoot_data.initial_speed;
 
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-    const float bullet_speed = 11.9f;
-#else
     const float bullet_speed =
         (referee_online && referee_bullet_speed >= ns::aimbot::kBulletBoundarySpeedMps)
             ? referee_bullet_speed
             : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps
                                                                : ns::aimbot::kBulletSpeedMps);
-#endif
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
     globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 
@@ -1295,26 +1315,6 @@ void ControlLoop() {
   } else {
     wl_debug.gimbal_euler_yaw_rad = 0.0f;
     wl_debug.gimbal_euler_pitch_rad = 0.0f;
-  }
-  {
-    // DYP-A22 受控输出：每 50ms (25 tick @ 500Hz) 触发一次测量
-    static uint32_t dyp_trigger_tick = 0U;
-    if (++dyp_trigger_tick >= 100U) {
-      dyp_trigger_tick = 0U;
-      if (globals->dyp_left.has_value()) globals->dyp_left->TriggerOnce();
-      if (globals->dyp_right.has_value()) globals->dyp_right->TriggerOnce();
-    }
-    const auto left = globals->dyp_left.has_value() ? globals->dyp_left->distance_raw() : 0U;
-    const auto right = globals->dyp_right.has_value() ? globals->dyp_right->distance_raw() : 0U;
-    wl_debug.dyp_distance_raw_left = left;
-    wl_debug.dyp_distance_raw_right = right;
-    wl_debug.dyp_distance_filtered_left = left;
-    wl_debug.dyp_distance_filtered_right = right;
-    wl_debug.dyp_distance_filtered_avg = static_cast<uint16_t>((static_cast<uint32_t>(left) + right) / 2U);
-    wl_debug.dyp_result_left = globals->dyp_left.has_value() && globals->dyp_left->data_valid() ? 1U : 0U;
-    wl_debug.dyp_result_right = globals->dyp_right.has_value() && globals->dyp_right->data_valid() ? 1U : 0U;
-    wl_debug.dyp_frame_count = (globals->dyp_left.has_value() ? globals->dyp_left->frame_count() : 0U) +
-                               (globals->dyp_right.has_value() ? globals->dyp_right->frame_count() : 0U);
   }
   wl_debug.yaw_motor_status = globals->yaw_motor.has_value() ? globals->yaw_motor->status() : 0;
   wl_debug.pitch_motor_status = globals->pitch_motor.has_value() ? globals->pitch_motor->status() : 0;

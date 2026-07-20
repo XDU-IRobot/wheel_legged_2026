@@ -222,18 +222,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float filtered_theta_ll_dot_rad_s;       // 滤波后左腿摆角速度
   float filtered_theta_lr_dot_rad_s;       // 滤波后右腿摆角速度
 
-  // ── DYP 超声波 ──
-  uint16_t dyp_distance_raw_left;        // 左超声波原始读数
-  uint16_t dyp_distance_raw_right;       // 右超声波原始读数
-  uint16_t dyp_distance_filtered_left;   // 左超声波滤波值（仅保留 status==1 时的值）
-  uint16_t dyp_distance_filtered_right;  // 右超声波滤波值（仅保留 status==1 时的值）
-  uint16_t dyp_distance_filtered_avg;    // 左右超声波滤波值均值
-  uint8_t dyp_result_left;               // 左测量状态
-  uint8_t dyp_result_right;              // 右测量状态
-  uint32_t dyp_frame_count;              // 接收帧计数
-
-  // VL53L4CD ToF distance sensor
-  uint8_t vl53l4cd_driver_status;  // 0=OK, 2=I2C error, 3=timeout, 4=wrong device
+  // Selected VL53L4CD ToF on I2C2
+  uint8_t vl53l4cd_driver_status;  // 0=OK, 2=I2C error, 3=timeout, 4=wrong device, 5=bad config, 6=not started
   uint8_t vl53l4cd_range_status;   // 0 means the current distance is valid
   uint16_t vl53l4cd_model_id;      // Expected value: 0xEBAA
   uint16_t vl53l4cd_distance_mm;   // Measured distance [mm]
@@ -241,6 +231,16 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint16_t vl53l4cd_ambient_kcps;  // Ambient light rate [kcps]
   uint16_t vl53l4cd_sigma_mm;      // Estimated measurement deviation [mm]
   uint32_t vl53l4cd_sample_count;  // Number of received samples
+
+  // Selected VL53L4CD ToF on I2C1
+  uint8_t vl53l4cd_i2c1_driver_status;
+  uint8_t vl53l4cd_i2c1_range_status;
+  uint16_t vl53l4cd_i2c1_model_id;
+  uint16_t vl53l4cd_i2c1_distance_mm;
+  uint16_t vl53l4cd_i2c1_signal_kcps;
+  uint16_t vl53l4cd_i2c1_ambient_kcps;
+  uint16_t vl53l4cd_i2c1_sigma_mm;
+  uint32_t vl53l4cd_i2c1_sample_count;
 
   // ── 发射机构（双摩擦变体）──
   uint8_t shoot_enabled;            // 发射使能（云台处于 Combat）

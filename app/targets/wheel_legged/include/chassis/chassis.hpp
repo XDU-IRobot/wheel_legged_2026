@@ -202,10 +202,6 @@ class Chassis {
   rm::modules::PID right_l0_pid_jump_three_{};
   rm::modules::PID left_l0_pid_dip_{};
   rm::modules::PID right_l0_pid_dip_{};
-#if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  rm::modules::PID left_l0_pid_standup_{};
-  rm::modules::PID right_l0_pid_standup_{};
-#endif
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
