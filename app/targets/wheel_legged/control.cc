@@ -586,9 +586,14 @@ void ControlLoop() {
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
   gimbal_update_input.use_yaw_motor_feedback = gimbal_startup_align_active;
   gimbal_update_input.aimbot_mode = gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  gimbal_update_input.aimbot_is_rune =
+      (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance);
+#else
   gimbal_update_input.aimbot_is_rune =
       (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig);
+#endif
   const bool chassis_spin_mode = chassis_output.mode == chassis::Fsm::State::kSpin;
   const bool chassis_spin_exit_pending = chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
   gimbal_update_input.spin_hold = chassis_spin_mode || chassis_spin_exit_pending;
@@ -789,6 +794,8 @@ void ControlLoop() {
           globals->referee.has_value() ? globals->referee->data().shoot_data.initial_speed : 0.0f;
       globals->chassis_tx->SetCombatMode(combat_mode);
       globals->chassis_tx->SetBulletSpeed(bullet_speed);
+      globals->chassis_tx->SetLongDistanceMode(input.mode_request.combat_profile ==
+                                               wheel_legged::CombatProfile::kAutoAimFuLongDistance);
       globals->chassis_tx->QueueSend();
     }
     chassis_tx_counter++;
@@ -1260,7 +1267,14 @@ void ControlLoop() {
   if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
     g_actuators.ResetDmMotorsLatch();
   }
-  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_output_enable);
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  // 吊射自瞄模式：底盘输出 0（保持 enable，仅发一次 CAN 帧，避免 wheel_can 拥堵影响拨盘）
+  const bool chassis_apply_enable = chassis_output_enable && chassis_input.request.combat_profile !=
+                                                                 wheel_legged::CombatProfile::kAutoAimFuLongDistance;
+#else
+  const bool chassis_apply_enable = chassis_output_enable;
+#endif
+  g_actuators.ApplyChassisOutput(*globals, chassis_control_output, chassis_apply_enable);
   wl_debug.dm_enabled_latched = g_actuators.dm_enabled_latched() ? 1U : 0U;
 
   // 底盘电机在线状态
@@ -1295,6 +1309,9 @@ void ControlLoop() {
       case wheel_legged::CombatProfile::kAutoAimFuBig:
         aimbot_mode = 3;
         break;
+      case wheel_legged::CombatProfile::kAutoAimFuLongDistance:
+        aimbot_mode = 5;
+        break;
       case wheel_legged::CombatProfile::kNormal:
       default:
         aimbot_mode = 1;
@@ -1312,7 +1329,7 @@ void ControlLoop() {
             : ((referee_online && referee_bullet_speed > 0.0f) ? ns::aimbot::kBulletDefaultSpeedMps
                                                                : ns::aimbot::kBulletSpeedMps);
     const uint16_t imu_count = static_cast<uint16_t>(globals->gimbal_rx->frame_count() & 0xFU);
-    globals->aimbot->UpdateControl(yaw_deg, pitch_deg, roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
+    globals->aimbot->UpdateControl(yaw_deg, -pitch_deg, -roll_deg, robot_id, aimbot_mode, imu_count, bullet_speed);
 
     // 自瞄 TX 调试
     wl_debug.aimbot_tx_mode = aimbot_mode;
@@ -1323,10 +1340,75 @@ void ControlLoop() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  // 阶段 8b：吊射自瞄 0x180 WASD 控制帧（仅 hero，每周期发，上升沿触发）
+  // ═══════════════════════════════════════════════════════════════════════
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  {
+    static bool was_in_long_distance = false;
+    static uint8_t wasd_last_pressed = 0;
+
+    const bool is_long_distance =
+        chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance;
+
+    uint8_t wasd_value = 0;  // 默认每周期发 0
+
+    if (is_long_distance) {
+      // 刚进入吊射模式时复位
+      if (!was_in_long_distance) {
+        wasd_last_pressed = 0;
+      }
+
+      // 从硬件源直接读取键盘值，绕过 AD 屏蔽
+      uint16_t keys = 0;
+      bool ctrl_held = false;
+      {
+        const bool vt03_online = globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0 &&
+                                 globals->gimbal_rx->vt03_online();
+        if (vt03_online) {
+          keys = globals->gimbal_rx->keyboard_value();
+          ctrl_held = (keys & 0x0020U) != 0U;
+        } else if (input.dr16.online) {
+          // DR16 回退：从 globals->dr16 逐键重建，避免被 AD 屏蔽清零
+          if (globals->dr16.key(rm::device::DR16::Key::kW)) keys |= 0x0001U;
+          if (globals->dr16.key(rm::device::DR16::Key::kS)) keys |= 0x0002U;
+          if (globals->dr16.key(rm::device::DR16::Key::kA)) keys |= 0x0004U;
+          if (globals->dr16.key(rm::device::DR16::Key::kD)) keys |= 0x0008U;
+          ctrl_held = globals->dr16.key(rm::device::DR16::Key::kCtrl);
+        }
+      }
+
+      // Ctrl+WASD 上升沿检测（按住 Ctrl 时检测 WASD 边沿）
+      uint8_t current_pressed = 0;
+      if (ctrl_held) {
+        // 按键映射优先级：W→1, S→2, A→3, D→4
+        if ((keys & 0x0001U) != 0U) {  // W
+          current_pressed = 1;
+        } else if ((keys & 0x0002U) != 0U) {  // S
+          current_pressed = 2;
+        } else if ((keys & 0x0004U) != 0U) {  // A
+          current_pressed = 3;
+        } else if ((keys & 0x0008U) != 0U) {  // D
+          current_pressed = 4;
+        }
+      }
+
+      // 上升沿检测：仅当次周期发送按键值，其余周期发 0
+      if (current_pressed != 0 && current_pressed != wasd_last_pressed) {
+        wasd_value = current_pressed;
+      }
+      wasd_last_pressed = current_pressed;
+
+      globals->aimbot->SendWasdCommand(wasd_value);
+    }
+    was_in_long_distance = is_long_distance;
+  }
+#endif
+
+  // ═══════════════════════════════════════════════════════════════════════
   // 阶段 9：调试快照导出
   // ═══════════════════════════════════════════════════════════════════════
   if (globals->gimbal_rx.has_value()) {
-    wl_debug.gimbal_imu_pitch_rad = globals->gimbal_rx->pitch_rad();
+    wl_debug.gimbal_imu_pitch_rad = globals->gimbal_rx->pitch_rad() * (180.0f / kPi);
     wl_debug.gimbal_imu_yaw_rad = globals->gimbal_rx->yaw_rad();
     wl_debug.gimbal_imu_gyro_x_rad_s = globals->gimbal_rx->gyro_x_rad_s();
     wl_debug.gimbal_imu_gyro_z_rad_s = globals->gimbal_rx->gyro_z_rad_s();

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cstdint>
 
@@ -148,7 +148,11 @@ struct TcSemanticState {
   bool f_slow_armed{true};          ///< F 键是否已就绪（上升沿检测，mid_leg_f 模式切换）
   bool e_ui_refresh{false};         ///< E 键是否按下（UI 刷新控制）
   bool auto_aim_hold{false};        ///< 鼠标右键按住时自瞄模式（电平有效）
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  enum class AimMode : uint8_t { kAmmo, kFuLongDistance };
+#else
   enum class AimMode : uint8_t { kAmmo, kFuSmall, kFuBig };
+#endif
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
   wheel_legged::TofMode requested_tof_mode{wheel_legged::TofMode::kAutoJump};

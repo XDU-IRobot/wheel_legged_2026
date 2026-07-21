@@ -130,14 +130,14 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float imu_raw_acc_z_mps2;    // 加速度 Z
 
   // ── 云台 IMU ──
-  float gimbal_imu_pitch_rad;     // 云台 IMU 俯仰
-  float gimbal_imu_yaw_rad;       // 云台 IMU 偏航
+  float gimbal_imu_pitch_rad;     // 云台 IMU 俯仰 [deg]
+  float gimbal_imu_yaw_rad;       // 云台 IMU 偏航 [rad]
   float gimbal_imu_gyro_x_rad_s;  // 云台 IMU 陀螺 X（俯仰轴角速度）
   float gimbal_imu_gyro_z_rad_s;  // 云台 IMU 陀螺 Z（偏航轴角速度）
 
   // ── 云台反馈与电机 ──
-  float yaw_motor_raw_pos_rad;            // 偏航 DM 电机编码器（仅归中模式用作位置反馈）
-  float pitch_motor_raw_pos_rad;          // 俯仰 DM 电机编码器
+  float yaw_motor_raw_pos_rad;            // 偏航 DM 电机编码器 [deg]（仅归中模式用作位置反馈）
+  float pitch_motor_raw_pos_rad;          // 俯仰 DM 电机编码器 [rad]
   float gimbal_yaw_pos_feedback_rad;      // 偏航角度反馈值（来源：云台 IMU yaw 或电机编码器）
   float gimbal_yaw_vel_feedback_rad_s;    // 偏航角速度反馈值（来源：云台 IMU 陀螺 Z）
   float yaw_cmd_target_rad;               // 偏航目标角

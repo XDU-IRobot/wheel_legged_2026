@@ -511,17 +511,24 @@ constexpr float kControlLoopDtS = 0.002f;  ///< 控制环周期 [s]
 constexpr std::int16_t kDr16AxisMaxAbs = 660;       ///< DR16 摇杆轴最大绝对值（用于归一化到 [-1,1]）
 constexpr float kRcStickMax = 660.0f;               ///< RC 摇杆最大值（用于积分目标速率计算）
 constexpr float kTcMouseMax = 200.0f;               ///< 图传鼠标增量最大值（用于积分目标速率计算）
-constexpr float kRcYawRateMaxRadS = -0.2f;          ///< RC 摇杆满偏时偏航积分速率 [rad/s]
-constexpr float kRcPitchRateMaxRadS = 0.2f;         ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
+constexpr float kRcYawRateMaxRadS = -3.f;           ///< RC 摇杆满偏时偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS = 3.f;          ///< RC 摇杆满偏时俯仰积分速率 [rad/s]
 constexpr float kTcMouseYawRateMaxRadS = -6.0f;     ///< 图传鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kTcMousePitchRateMaxRadS = 3.0f;    ///< 图传鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kDr16MouseMax = 1600.0f;            ///< DR16 鼠标增量最大值（用于积分目标速率计算）
 constexpr float kDr16MouseYawRateMaxRadS = -6.0f;   ///< DR16 鼠标满偏时偏航积分速率 [rad/s]
 constexpr float kDr16MousePitchRateMaxRadS = 3.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
-constexpr float kPitchTargetMinRad = -0.2f;         ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.7f;          ///< RC 积分俯仰目标上限 [rad]
-constexpr float kKeyboardAccelRampStep = 0.008f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
-constexpr float kKeyboardBrakeRampStep = 0.008f;    ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+// 吊射自瞄 WASD 云台速率（hero only）
+constexpr float kRcYawRateMaxRadS_LongDistance = -0.01f;        ///< 吊射偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS_LongDistance = 0.01f;       ///< 吊射俯仰积分速率 [rad/s]
+constexpr float kRcYawRateMaxRadS_LongDistance_Shift = -0.1f;   ///< 吊射 Shift 偏航积分速率 [rad/s]
+constexpr float kRcPitchRateMaxRadS_LongDistance_Shift = 0.1f;  ///< 吊射 Shift 俯仰积分速率 [rad/s]
+#endif
+constexpr float kPitchTargetMinRad = -0.2f;       ///< RC 积分俯仰目标下限 [rad]
+constexpr float kPitchTargetMaxRad = 0.7f;        ///< RC 积分俯仰目标上限 [rad]
+constexpr float kKeyboardAccelRampStep = 0.008f;  ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
+constexpr float kKeyboardBrakeRampStep = 0.008f;  ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
 // -- 云台启动归中判稳 --
 constexpr float kGimbalStartupYawAlignErrorRad = 0.04f;           ///< 归中完成位置误差阈值 [rad]

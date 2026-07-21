@@ -22,6 +22,12 @@ f32 AimbotCanCommunicator::yaw_acc() const { return yaw_acc_; }
 
 f32 AimbotCanCommunicator::pitch_acc() const { return pitch_acc_; }
 
+void AimbotCanCommunicator::SendWasdCommand(u8 wasd_value) {
+  u8 buf[8]{};
+  buf[0] = wasd_value;
+  this->can_->Write(0x180, buf, 8);
+}
+
 void AimbotCanCommunicator::RxCallback(const hal::CanFrame *msg) {
   if (msg->rx_std_id == 0x170) {
     ReportStatus(kOk);

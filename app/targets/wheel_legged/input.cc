@@ -29,6 +29,14 @@ constexpr float kTcMousePitchRateMaxRadS = params::active::control_loop::kTcMous
 constexpr float kDr16MouseMax = params::active::control_loop::kDr16MouseMax;
 constexpr float kDr16MouseYawRateMaxRadS = params::active::control_loop::kDr16MouseYawRateMaxRadS;
 constexpr float kDr16MousePitchRateMaxRadS = params::active::control_loop::kDr16MousePitchRateMaxRadS;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+constexpr float kRcYawRateMaxRadS_LongDistance = params::active::control_loop::kRcYawRateMaxRadS_LongDistance;
+constexpr float kRcPitchRateMaxRadS_LongDistance = params::active::control_loop::kRcPitchRateMaxRadS_LongDistance;
+constexpr float kRcYawRateMaxRadS_LongDistance_Shift =
+    params::active::control_loop::kRcYawRateMaxRadS_LongDistance_Shift;
+constexpr float kRcPitchRateMaxRadS_LongDistance_Shift =
+    params::active::control_loop::kRcPitchRateMaxRadS_LongDistance_Shift;
+#endif
 constexpr float kPitchTargetMinRad = params::active::control_loop::kPitchTargetMinRad;
 constexpr float kPitchTargetMaxRad = params::active::control_loop::kPitchTargetMaxRad;
 
@@ -86,11 +94,21 @@ float ResolveKeyboardAxis(uint16_t keys, uint16_t key_pos, uint16_t key_neg, flo
 
 /// 判断 combat_profile 是否为自瞄模式
 bool IsAutoAimProfile(const CombatProfile p) {
-  return p == CombatProfile::kAutoAimAmmo || p == CombatProfile::kAutoAimFuSmall || p == CombatProfile::kAutoAimFuBig;
+  return p == CombatProfile::kAutoAimAmmo || p == CombatProfile::kAutoAimFuSmall || p == CombatProfile::kAutoAimFuBig ||
+         p == CombatProfile::kAutoAimFuLongDistance;
 }
 
 /// 将 aim_mode 映射为 CombatProfile
 wheel_legged::CombatProfile ResolveAutoAimProfile(const TcSemanticState::AimMode aim_mode) {
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  switch (aim_mode) {
+    case TcSemanticState::AimMode::kFuLongDistance:
+      return wheel_legged::CombatProfile::kAutoAimFuLongDistance;
+    case TcSemanticState::AimMode::kAmmo:
+    default:
+      return wheel_legged::CombatProfile::kAutoAimAmmo;
+  }
+#else
   switch (aim_mode) {
     case TcSemanticState::AimMode::kFuSmall:
       return wheel_legged::CombatProfile::kAutoAimFuSmall;
@@ -100,6 +118,7 @@ wheel_legged::CombatProfile ResolveAutoAimProfile(const TcSemanticState::AimMode
     default:
       return wheel_legged::CombatProfile::kAutoAimAmmo;
   }
+#endif
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -120,10 +139,14 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   }
   if (!c_pressed) tc_state.mid_leg_c_armed = true;
 
-  // G 键（上升沿）：循环切换 aim_mode
+  // G 键（上升沿）：循环切换 aim_mode（hero 2 态，infantry 3 态）
   const bool g_pressed = (tc_remote.keyboard_value & kRcKeyG) != 0U;
   if (g_pressed && tc_state.g_aim_armed) {
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    tc_state.aim_mode = static_cast<TcSemanticState::AimMode>((static_cast<uint8_t>(tc_state.aim_mode) + 1) % 2);
+#else
     tc_state.aim_mode = static_cast<TcSemanticState::AimMode>((static_cast<uint8_t>(tc_state.aim_mode) + 1) % 3);
+#endif
     tc_state.g_aim_armed = false;
   }
   if (!g_pressed) tc_state.g_aim_armed = true;
@@ -252,7 +275,11 @@ Dr16ModeResult ResolveDr16Mode(const Dr16RawInput &dr16, TcSemanticState &tc_sta
         r.leg = wheel_legged::LegProfile::kLow;
         break;
       case rm::device::DR16::SwitchPosition::kUp:
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+        r.combat = wheel_legged::CombatProfile::kAutoAimFuLongDistance;
+#else
         r.combat = wheel_legged::CombatProfile::kAutoAimFuSmall;
+#endif
         r.leg = wheel_legged::LegProfile::kLow;
         break;
       default:
@@ -336,13 +363,67 @@ TcModeResult ResolveTcMode(const TcRemoteInput &tc_remote, TcSemanticState &tc_s
 
 void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput &dr16, const TcRemoteInput &tc_remote,
                            bool tc_remote_active, float gimbal_imu_yaw_rad, float gimbal_imu_pitch_rad,
-                           bool host_controls_gimbal) {
+                           bool host_controls_gimbal, bool is_long_distance) {
   if (!semantic_state.gimbal_target_initialized) {
     semantic_state.rc_target.yaw_rad = gimbal_imu_yaw_rad;
     semantic_state.rc_target.pitch_rad = -gimbal_imu_pitch_rad;
     semantic_state.gimbal_target_initialized = true;
   }
-  if (host_controls_gimbal) return;
+  // 吊射模式：跳过 host_controls_gimbal 检查（由 WASD 接管）
+  if (!is_long_distance && host_controls_gimbal) return;
+
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  if (is_long_distance) {
+    // 吊射模式：关闭鼠标，WASD 控制云台（W/S→pitch, A/D→yaw）
+    uint16_t keys = 0;
+    if (dr16.online) {
+      keys = dr16.keyboard;
+    } else if (tc_remote_active) {
+      keys = tc_remote.keyboard_value;
+    }
+
+    const bool ctrl_held = (keys & 0x0020U) != 0U;
+    // Ctrl 按下时屏蔽 WASD 云台控制（用于 0x180 通信）
+    if (ctrl_held) return;
+    const bool shift_held = (keys & 0x0010U) != 0U;
+    const float pitch_rate =
+        (shift_held ? std::abs(kRcPitchRateMaxRadS_LongDistance_Shift) : std::abs(kRcPitchRateMaxRadS_LongDistance)) *
+        kControlLoopDtS;
+    const float yaw_rate =
+        (shift_held ? kRcYawRateMaxRadS_LongDistance_Shift : kRcYawRateMaxRadS_LongDistance) * kControlLoopDtS;
+
+    float yaw_delta = 0.0f;
+    float pitch_delta = 0.0f;
+    if ((keys & 0x0001U) != 0U) pitch_delta += pitch_rate;  // W: pitch up
+    if ((keys & 0x0002U) != 0U) pitch_delta -= pitch_rate;  // S: pitch down
+    if ((keys & 0x0004U) != 0U) yaw_delta -= yaw_rate;      // A: yaw
+    if ((keys & 0x0008U) != 0U) yaw_delta += yaw_rate;      // D: yaw
+
+    semantic_state.rc_target.yaw_rad =
+        rm::modules::Wrap(semantic_state.rc_target.yaw_rad + yaw_delta, -params::active::kPi, params::active::kPi);
+    semantic_state.rc_target.pitch_rad =
+        std::clamp(semantic_state.rc_target.pitch_rad + pitch_delta, kPitchTargetMinRad, kPitchTargetMaxRad);
+    return;
+  }
+#endif
+
+  // 吊射模式使用专用速率参数
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  const float rc_yaw_rate = kRcYawRateMaxRadS;
+  const float rc_pitch_rate = kRcPitchRateMaxRadS;
+  const float tc_mouse_yaw_rate = kTcMouseYawRateMaxRadS;
+  const float tc_mouse_pitch_rate = kTcMousePitchRateMaxRadS;
+  const float dr16_mouse_yaw_rate = kDr16MouseYawRateMaxRadS;
+  const float dr16_mouse_pitch_rate = kDr16MousePitchRateMaxRadS;
+#else
+  (void)is_long_distance;
+  const float rc_yaw_rate = kRcYawRateMaxRadS;
+  const float rc_pitch_rate = kRcPitchRateMaxRadS;
+  const float tc_mouse_yaw_rate = kTcMouseYawRateMaxRadS;
+  const float tc_mouse_pitch_rate = kTcMousePitchRateMaxRadS;
+  const float dr16_mouse_yaw_rate = kDr16MouseYawRateMaxRadS;
+  const float dr16_mouse_pitch_rate = kDr16MousePitchRateMaxRadS;
+#endif
 
   {
     float yaw_delta = 0.0f;
@@ -350,17 +431,16 @@ void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput
     if (dr16.online) {
       const bool dr16_mouse_active = (dr16.mouse_x != 0 || dr16.mouse_y != 0);
       if (dr16_mouse_active) {
-        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * kDr16MouseYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * kDr16MousePitchRateMaxRadS * kControlLoopDtS;
+        yaw_delta += static_cast<float>(dr16.mouse_x) / kDr16MouseMax * dr16_mouse_yaw_rate * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.mouse_y) / kDr16MouseMax * dr16_mouse_pitch_rate * kControlLoopDtS;
       } else {
-        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * kRcYawRateMaxRadS * kControlLoopDtS;
-        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * kRcPitchRateMaxRadS * kControlLoopDtS;
+        yaw_delta += static_cast<float>(dr16.left_x) / kRcStickMax * rc_yaw_rate * kControlLoopDtS;
+        pitch_delta += static_cast<float>(dr16.left_y) / kRcStickMax * rc_pitch_rate * kControlLoopDtS;
       }
     } else if (tc_remote_active) {
-      const float mouse_yaw =
-          static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * kTcMouseYawRateMaxRadS * kControlLoopDtS;
+      const float mouse_yaw = static_cast<float>(tc_remote.mouse_x) / kTcMouseMax * tc_mouse_yaw_rate * kControlLoopDtS;
       const float mouse_pitch =
-          static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * kTcMousePitchRateMaxRadS * kControlLoopDtS;
+          static_cast<float>(tc_remote.mouse_y) / kTcMouseMax * tc_mouse_pitch_rate * kControlLoopDtS;
       const bool mouse_active = (tc_remote.mouse_x != 0 || tc_remote.mouse_y != 0);
       if (mouse_active) {
         yaw_delta += mouse_yaw;
@@ -489,8 +569,12 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
       request.standby = true;
     }
 
-    // 战斗子模式：自瞄覆盖
+    // 战斗子模式：自瞄覆盖（hero 吊射模式默认进入，无需右键）
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+    if (tc_state.auto_aim_hold || tc_state.aim_mode == TcSemanticState::AimMode::kFuLongDistance) {
+#else
     if (tc_state.auto_aim_hold) {
+#endif
       combat_profile = ResolveAutoAimProfile(tc_state.aim_mode);
     }
   } else {
@@ -507,7 +591,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.mid_leg_f = tc_state.mid_leg_f;
 
   const bool is_auto_aim = IsAutoAimProfile(combat_profile);
-  if (is_auto_aim) request.standby = true;
+  if (is_auto_aim && combat_profile != wheel_legged::CombatProfile::kAutoAimFuLongDistance) request.standby = true;
   if (request.domain_request == wheel_legged::DomainRequest::kDisabled) request.standby = false;
 
   request.combat_profile = combat_profile;
@@ -531,8 +615,9 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     semantic_state.rc_target.pitch_rad = 0.0f;
     semantic_state.gimbal_target_initialized = false;
   } else {
+    const bool is_long_distance = combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance;
     IntegrateGimbalTarget(semantic_state, dr16, tc_remote, tc_remote_active, input.gimbal_imu_yaw_rad,
-                          input.gimbal_imu_pitch_rad, host_controls_gimbal);
+                          input.gimbal_imu_pitch_rad, host_controls_gimbal, is_long_distance);
   }
   request.rc_target = semantic_state.rc_target;
 

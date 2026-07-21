@@ -313,6 +313,7 @@ class Gimbal {
     kNormal,
     kAimbot,
     kAimbotRune,
+    kAimbotLongDistance,
     kAimbotSpin,
   };
 
@@ -324,7 +325,11 @@ class Gimbal {
       return PidProfile::kAimbotSpin;
     }
     if (input.aimbot_is_rune) {
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      return PidProfile::kAimbotLongDistance;
+#else
       return PidProfile::kAimbotRune;
+#endif
     }
     return PidProfile::kAimbot;
   }
@@ -360,6 +365,9 @@ class Gimbal {
         break;
       case PidProfile::kAimbotRune:
         ConfigureAimbotRunePid();
+        break;
+      case PidProfile::kAimbotLongDistance:
+        ConfigureAimbotLongDistancePid();
         break;
       case PidProfile::kAimbotSpin:
         ConfigureAimbotSpinPid();
@@ -433,6 +441,38 @@ class Gimbal {
 
   /** @brief 配置自瞄打符双环 PID 参数 */
   void ConfigureAimbotRunePid() {
+    const auto &yaw_pos = wheel_legged::params::active::aimbot::kYawPositionPidRune;
+    const auto &yaw_spd = wheel_legged::params::active::aimbot::kYawSpeedPidRune;
+    const auto &pitch_pos = wheel_legged::params::active::aimbot::kPitchPositionPidRune;
+    const auto &pitch_spd = wheel_legged::params::active::aimbot::kPitchSpeedPidRune;
+    controller_.pid()
+        .yaw_position.SetKp(yaw_pos.kp)
+        .SetKi(yaw_pos.ki)
+        .SetKd(yaw_pos.kd)
+        .SetMaxOut(yaw_pos.max_out)
+        .SetMaxIout(yaw_pos.max_iout);
+    controller_.pid()
+        .yaw_speed.SetKp(yaw_spd.kp)
+        .SetKi(yaw_spd.ki)
+        .SetKd(yaw_spd.kd)
+        .SetMaxOut(yaw_spd.max_out)
+        .SetMaxIout(yaw_spd.max_iout);
+    controller_.pid()
+        .pitch_position.SetKp(pitch_pos.kp)
+        .SetKi(pitch_pos.ki)
+        .SetKd(pitch_pos.kd)
+        .SetMaxOut(pitch_pos.max_out)
+        .SetMaxIout(pitch_pos.max_iout);
+    controller_.pid()
+        .pitch_speed.SetKp(pitch_spd.kp)
+        .SetKi(pitch_spd.ki)
+        .SetKd(pitch_spd.kd)
+        .SetMaxOut(pitch_spd.max_out)
+        .SetMaxIout(pitch_spd.max_iout);
+  }
+
+  /** @brief 配置吊射自瞄双环 PID 参数（hero 专用，参数与打符相同） */
+  void ConfigureAimbotLongDistancePid() {
     const auto &yaw_pos = wheel_legged::params::active::aimbot::kYawPositionPidRune;
     const auto &yaw_spd = wheel_legged::params::active::aimbot::kYawSpeedPidRune;
     const auto &pitch_pos = wheel_legged::params::active::aimbot::kPitchPositionPidRune;
