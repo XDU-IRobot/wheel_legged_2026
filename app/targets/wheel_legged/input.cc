@@ -542,7 +542,8 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
 }
 
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
-                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state) {
+                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state,
+                                       const uint32_t now_ms) {
   const bool previous_host_target_active =
       input.mode_request.target_source == wheel_legged::TargetSource::kHost && input.mode_request.host_target_valid;
 
@@ -643,7 +644,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   g.requested_tof_mode = tc_state.requested_tof_mode;
 
   // 3c. 一次性自动跳跃：仅使用已就绪且数据有效、新鲜的两个前向 ToF。
-  if (tc_state.auto_jump_enabled && tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump &&
+  if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump &&
       g.active_tof_mode == wheel_legged::TofMode::kAutoJump && g.tof_mode_ready) {
     const bool tof_ready = g.left_front_tof.has_value() && g.right_front_tof.has_value();
     if (tof_ready) {
@@ -651,17 +652,33 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       const auto &right = *g.right_front_tof;
       const bool measurements_valid = left.ranging() && right.ranging() && left.data_valid() && right.data_valid();
       const bool both_close = measurements_valid &&
-                              left.measurement().distance_mm < params::active::tof::kAutoJumpTriggerDistanceMm &&
-                              right.measurement().distance_mm < params::active::tof::kAutoJumpTriggerDistanceMm;
-      if (both_close && tc_state.auto_jump_tof_armed) {
-        input.mode_request.jump_trigger = true;
-        input.auto_jump_triggered = true;
-        tc_state.auto_jump_tof_armed = false;
+                              (left.measurement().distance_mm+right.measurement().distance_mm)/2 < params::active::tof::kAutoJumpTriggerDistanceMm &&
+                                (left.measurement().distance_mm+right.measurement().distance_mm)/2 > params::active::tof::kAutoJumpMinDistanceMm;
+      const bool both_range_ok = left.measurement().range_status == 0 && right.measurement().range_status == 0;
+      if (both_range_ok) {
+        if (tc_state.both_active_start_ms == 0) tc_state.both_active_start_ms = now_ms;
+      } else {
+        tc_state.both_active_start_ms = 0;
       }
-      const bool both_clear = measurements_valid &&
-                              left.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm &&
-                              right.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm;
-      if (both_clear) tc_state.auto_jump_tof_armed = true;
+      const bool both_active =
+          both_range_ok &&
+          (now_ms - tc_state.both_active_start_ms >= params::active::tof::kAutoJumpBothActiveDurationMs);
+      input.auto_jump_both_close = both_close;
+      input.auto_jump_tof_armed_debug = tc_state.auto_jump_tof_armed;
+      input.auto_jump_both_active = both_active;
+      input.auto_jump_trigger_ready = both_close && tc_state.auto_jump_tof_armed && both_active;
+      if (tc_state.auto_jump_enabled) {
+        if (both_close && tc_state.auto_jump_tof_armed && both_active) {
+          input.mode_request.jump_trigger = true;
+          input.auto_jump_triggered = true;
+          tc_state.auto_jump_tof_armed = false;
+          tc_state.both_active_start_ms = 0;
+        }
+        const bool both_clear = measurements_valid &&
+                                left.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm &&
+                                right.measurement().distance_mm > params::active::tof::kAutoJumpRearmDistanceMm;
+        if (both_clear) tc_state.auto_jump_tof_armed = true;
+      }
     }
   }
 
