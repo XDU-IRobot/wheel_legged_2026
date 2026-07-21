@@ -60,6 +60,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
   uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
   uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
+  uint8_t auto_jump_both_close;     // 调试：both_close 条件
+  uint8_t auto_jump_tof_armed;      // 调试：auto_jump_tof_armed 条件
+  uint8_t auto_jump_both_active;    // 调试：both_active 条件（含200ms消抖）
+  uint8_t auto_jump_trigger_ready;  // 调试：both_close && tof_armed && both_active
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
   uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
   uint8_t stair_task_request;       // Stair command parsed this cycle

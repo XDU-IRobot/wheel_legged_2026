@@ -110,6 +110,10 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_triggered{false};                        ///< 本周期自动跳跃触发
   bool auto_jump_enabled{false};                          ///< 已按 Z，正在等待或执行一次自动跳跃
+  bool auto_jump_both_close{false};                       ///< 调试：both_close 条件
+  bool auto_jump_tof_armed_debug{false};                  ///< 调试：auto_jump_tof_armed 条件
+  bool auto_jump_both_active{false};                      ///< 调试：both_active 条件（含200ms消抖）
+  bool auto_jump_trigger_ready{false};                    ///< 调试：both_close && tof_armed && both_active
   bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
@@ -155,6 +159,7 @@ struct TcSemanticState {
   bool auto_jump_in_progress{false};      ///< 已由自动测距触发并进入底盘跳跃状态
   bool z_auto_jump_armed{true};           ///< Z 键上升沿检测
   bool auto_jump_tof_armed{true};         ///< 自动跳跃 TOF 边沿检测
+  uint32_t both_active_start_ms{0};       ///< both_active 条件首次满足的时刻
   bool dial_jump_armed{true};             ///< DR16 拨轮跳跃边沿检测
   bool mouse_z_jump_armed{true};          ///< 鼠标滚轮跳跃边沿检测
   wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用
@@ -219,7 +224,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
  * @note  每个控制周期调用一次，在 FSM 与控制器之前执行。
  */
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
-                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state);
+                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state, uint32_t now_ms);
 
 /**
  * @brief 从 InputSnapshot 构建底盘 FSM 输入

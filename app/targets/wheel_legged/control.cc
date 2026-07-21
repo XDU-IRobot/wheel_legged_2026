@@ -379,7 +379,7 @@ void ControlLoop() {
   // ═══════════════════════════════════════════════════════════════════════
   // 阶段 1：硬件反馈采集 + DR16 语义折叠
   // ═══════════════════════════════════════════════════════════════════════
-  UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state);
+  UpdateRawFeedbackAndInputSnapshot(*globals, g_actuators, input, dr16_state, tc_state, now_ms);
   globals->ui_refresh_key = tc_state.e_ui_refresh;
   input.ui_refresh_key = tc_state.e_ui_refresh;
 
