@@ -71,9 +71,9 @@ class WbrController {
   /**
    * @brief 单步控制解算
    */
-  [[nodiscard]] MotorTorque ComputeControl(const CurrentState &current, const ExpectedState &expected,
-                                           rm::f32 displacement_bias_m = 0.0f,
-                                           const wheel_legged::control_loop::PositionVelocityScales &scales = {}) const {
+  [[nodiscard]] MotorTorque ComputeControl(
+      const CurrentState &current, const ExpectedState &expected, rm::f32 displacement_bias_m = 0.0f,
+      const wheel_legged::control_loop::PositionVelocityScales &scales = {}) const {
     static constexpr rm::f32 kPi = wheel_legged::params::active::kPi;
 
     rm::f32 k_matrix[4][10]{};
