@@ -132,7 +132,7 @@ constexpr size_t kCouplingAngleMaxCount = 12;
 
 // ── 执行器公共 ──
 namespace actuators {
-constexpr float kWheelCurrentClampAbs = 16000.0f;  ///< 轮电机电流限幅绝对值
+constexpr float kWheelCurrentClampAbs = 16000.0f;  ///< 轮电机电流限幅绝对值b
 }  // namespace actuators
 
 // ── 图传 CAN 桥通信 ──
@@ -563,7 +563,6 @@ constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误�
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
 constexpr float kYawFollowFixedTargetRad = 1.669f;     ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]（±π/2）
-constexpr float kYawTargetRampStepRad = 0.04f;         ///< C/V/B 回正时 yaw 目标值斜坡步长 [rad/周期]
 
 // ==== 期望状态偏置（腿摆角/机体俯仰）====
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;  ///< 低腿长期望左腿摆角偏置 [rad]
@@ -837,14 +836,14 @@ constexpr StairClimbParams kStairClimb{
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = 1.2f,
+    .hook_theta_target_rad = 1.4f,
+    .retract_theta_target_rad = 1.4f,
     .retract_theta_tolerance_rad = 0.5f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
     .settle_theta_tolerance_rad = 0.5f,
     .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.05f,
+    .settle_theta_ramp_step_rad = 0.06f,
     .hook_stable_ms = 10U,
     .retract_stable_ms = 20U,
     .settle_stable_ms = 50U,
@@ -853,22 +852,22 @@ constexpr StairClimbParams kStairClimb{
     .settle_timeout_ms = 1000U,
 };
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.29f,
-    .hook_leg_length_m = 0.29f,
+    .high_leg_length_m = 0.3f,
+    .hook_leg_length_m = 0.3f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.2f,
-    .retract_theta_target_rad = 0.f,
+    .hook_theta_target_rad = 1.5f,
+    .retract_theta_target_rad = 1.5f,
     .retract_theta_tolerance_rad = 0.4f,
-    .hook_theta_tolerance_rad = 0.8f,
+    .hook_theta_tolerance_rad = 0.4f,
     .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.4f,
+    .settle_theta_tolerance_rad = 1.f,
     .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.02f,
-    .hook_stable_ms = 100U,
-    .retract_stable_ms = 100U,
-    .settle_stable_ms = 100U,
+    .settle_theta_ramp_step_rad = 0.05f,
+    .hook_stable_ms = 10U,
+    .retract_stable_ms = 20U,
+    .settle_stable_ms = 20U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
@@ -1018,10 +1017,10 @@ constexpr PidGains kLeftL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};           ///< 左腿摆角速度 PID
-constexpr PidGains kRightLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};          ///< 右腿摆角速度 PID
-constexpr PidGains kLeftLegAnglePidStandup{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};   ///< 左腿摆角 PID（起立用）
-constexpr PidGains kRightLegAnglePidStandup{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 右腿摆角 PID（起立用）
+constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};          ///< 左腿摆角速度 PID
+constexpr PidGains kRightLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};         ///< 右腿摆角速度 PID
+constexpr PidGains kLeftLegAnglePidStandup{15.0f, 0.0f, 0.f, 15.0f, 0.0f};   ///< 左腿摆角 PID（起立用）
+constexpr PidGains kRightLegAnglePidStandup{15.0f, 0.0f, 0.f, 15.0f, 0.0f};  ///< 右腿摆角 PID（起立用）
 constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
 constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
 
@@ -1103,7 +1102,6 @@ constexpr float kPositionErrorScaleHighLeg = 1.0f;   ///< 高腿长位置误差�
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;   ///< 高腿长速度误差缩放
 constexpr float kYawFollowFixedTargetRad = -3.087f;  ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * wheel_legged::params::common::kPi;  ///< 偏航跟随侧向目标偏置角 [rad]
-constexpr float kYawTargetRampStepRad = 0.04f;  ///< C/V/B 回正时 yaw 目标值斜坡步长 [rad/周期]
 // kYawFollowPid 已移除：转向由 LQR φ 通道 + 偏航电机反作用力驱动
 
 // ==== 期望状态偏置 ====
@@ -1116,7 +1114,7 @@ constexpr float kExpectedDisplacementBiasMLowLeg = -0.55f;  ///< 低腿长期望
 constexpr SdotRampParams kSdotRampLowLeg{0.007f, 0.007f};    ///< 低腿长速度斜坡
 constexpr SdotRampParams kSdotRampMidLeg{0.0035f, 0.007f};   ///< 中腿长速度斜坡(C 键触发)
 constexpr SdotRampParams kSdotRampMidLegF{0.0045f, 0.006f};  ///< 中腿长速度斜坡（F 键触发）
-constexpr SdotRampParams kSdotRampHighLeg{0.006f, 0.005f};   ///< 高腿长速度斜坡
+constexpr SdotRampParams kSdotRampHighLeg{0.0045f, 0.005f};  ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.04f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
@@ -1627,7 +1625,6 @@ constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误�
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
 constexpr float kYawFollowFixedTargetRad = -2.662f;    ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]
-constexpr float kYawTargetRampStepRad = 0.04f;         ///< C/V/B 回正时 yaw 目标值斜坡步长 [rad/周期]
 
 // ==== 期望状态偏置 ====
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.0f;     ///< 低腿长期望左腿摆角偏置 [rad]
