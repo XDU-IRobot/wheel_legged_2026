@@ -224,8 +224,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
  * @note  每个控制周期调用一次，在 FSM 与控制器之前执行。
  */
 void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actuators &actuators, InputSnapshot &input,
-                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state,
-                                       uint32_t now_ms);
+                                       Dr16SemanticState &semantic_state, TcSemanticState &tc_state, uint32_t now_ms);
 
 /**
  * @brief 从 InputSnapshot 构建底盘 FSM 输入

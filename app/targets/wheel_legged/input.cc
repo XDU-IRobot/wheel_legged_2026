@@ -652,17 +652,18 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
       const auto &right = *g.right_front_tof;
       const bool measurements_valid = left.ranging() && right.ranging() && left.data_valid() && right.data_valid();
       const bool both_close = measurements_valid &&
-                              (left.measurement().distance_mm+right.measurement().distance_mm)/2 < params::active::tof::kAutoJumpTriggerDistanceMm &&
-                                (left.measurement().distance_mm+right.measurement().distance_mm)/2 > params::active::tof::kAutoJumpMinDistanceMm;
+                              (left.measurement().distance_mm + right.measurement().distance_mm) / 2 <
+                                  params::active::tof::kAutoJumpTriggerDistanceMm &&
+                              (left.measurement().distance_mm + right.measurement().distance_mm) / 2 >
+                                  params::active::tof::kAutoJumpMinDistanceMm;
       const bool both_range_ok = left.measurement().range_status == 0 && right.measurement().range_status == 0;
       if (both_range_ok) {
         if (tc_state.both_active_start_ms == 0) tc_state.both_active_start_ms = now_ms;
       } else {
         tc_state.both_active_start_ms = 0;
       }
-      const bool both_active =
-          both_range_ok &&
-          (now_ms - tc_state.both_active_start_ms >= params::active::tof::kAutoJumpBothActiveDurationMs);
+      const bool both_active = both_range_ok && (now_ms - tc_state.both_active_start_ms >=
+                                                 params::active::tof::kAutoJumpBothActiveDurationMs);
       input.auto_jump_both_close = both_close;
       input.auto_jump_tof_armed_debug = tc_state.auto_jump_tof_armed;
       input.auto_jump_both_active = both_active;
