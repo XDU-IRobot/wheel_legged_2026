@@ -182,6 +182,10 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.dr16_jump_trigger_edge = static_cast<uint8_t>(input.mode_request.jump_trigger);
   wl_debug.auto_jump_triggered = static_cast<uint8_t>(input.auto_jump_triggered);
   wl_debug.auto_jump_enabled = static_cast<uint8_t>(input.auto_jump_enabled);
+  wl_debug.auto_jump_both_close = static_cast<uint8_t>(input.auto_jump_both_close);
+  wl_debug.auto_jump_tof_armed = static_cast<uint8_t>(input.auto_jump_tof_armed_debug);
+  wl_debug.auto_jump_both_active = static_cast<uint8_t>(input.auto_jump_both_active);
+  wl_debug.auto_jump_trigger_ready = static_cast<uint8_t>(input.auto_jump_trigger_ready);
   wl_debug.tc_remote_valid = static_cast<uint8_t>(input.tc_remote.valid);
   wl_debug.tc_keyboard_value = input.tc_remote.keyboard_value;
   wl_debug.tc_mouse_x = input.tc_remote.mouse_x;
