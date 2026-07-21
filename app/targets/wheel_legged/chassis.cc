@@ -330,7 +330,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   if (input.motion_target.trigger_standup && !trigger_standup_latched_ && standup_complete_) {
     standup_complete_ = false;
     standup_phase_ = 0;
-    force_low_leg_ = true;
     trigger_standup_latched_ = true;
   }
   if (standup_complete_) {
@@ -374,42 +373,67 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else {
       standup_complete_ = false;
       standup_phase_ = 0;
-      force_low_leg_ = true;
     }
     theta_recovery_active_ = false;
   }
   prev_fsm_was_recovery_ = is_recovery_state;
 
-  // 起立三段式
-  // Phase 0: 收腿 + 摆角 PID 到目标值，腿长PID + 弹簧补偿
-  // Phase 1: 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
-  // Phase 2: 起立完成，锁存
+  // 起立三段式：先摆腿再收腿再摆腿
+  // Phase 0: 摆腿 — 正常腿长 + 摆角 PID 到目标值
+  // Phase 1: 收腿 — 低腿长 + 保持摆角目标
+  // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
+  // Phase 3: 起立完成，锁存
   if (!standup_complete_) {
     constexpr float kThetaInit = wheel_legged::params::active::chassis::kStandupPhase0ThetaTargetRad;
+    constexpr float kPhase0Len = wheel_legged::params::active::chassis::kStandupPhase0TargetLengthM;
+    constexpr float kPhase0ThetaTol = wheel_legged::params::active::chassis::kStandupPhase0ThetaTolRad;
+    constexpr float kPhase2Len = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
     constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
     constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
     constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
+    constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+    constexpr float kPi = static_cast<float>(M_PI);
+
+    auto theta_near_target = [](float theta, float target) {
+      float a = std::fmod(theta, kTwoPi);
+      if (a < 0) a += kTwoPi;
+      float diff = a - target;
+      if (diff > kPi)
+        a -= kTwoPi;
+      else if (diff < -kPi)
+        a += kTwoPi;
+      return std::fabs(a - target);
+    };
 
     if (standup_phase_ == 0) {
-      force_low_leg_ = true;
+      // Phase 0: 摆腿 — 正常腿长，摆角到目标
       standup_theta_target_ = kThetaInit;
-      if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
+      params_.leg_target_length_m = kPhase0Len;
+      if (theta_near_target(state_output.current.theta_ll, kThetaInit) < kPhase0ThetaTol &&
+          theta_near_target(state_output.current.theta_lr, kThetaInit) < kPhase0ThetaTol) {
         standup_phase_ = 1;
       }
     }
 
     if (standup_phase_ == 1) {
+      // Phase 1: 收腿 — 低腿长，保持摆角目标
+      force_low_leg_ = true;
+      if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
+        standup_phase_ = 2;
+        force_low_leg_ = false;
+      }
+    }
+
+    if (standup_phase_ == 2) {
       force_low_leg_ = false;
-      // Phase 1 腿长目标覆盖
-      params_.leg_target_length_m = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
-      // 摆角目标斜坡回 0
+      // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0
+      params_.leg_target_length_m = kPhase2Len;
       if (standup_theta_target_ > 0.0f) {
         standup_theta_target_ -= kRampStep;
         if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
       }
       const float theta_tol =
           trigger_standup_latched_ ? wheel_legged::params::active::chassis::kStandupPhase1ThetaTolStairRad : kThetaTol;
-      constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
       const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
       const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
       const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;
@@ -417,7 +441,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       if (std::min(theta_ll_pos, kTwoPi - theta_ll_pos) < theta_tol &&
           std::min(theta_lr_pos, kTwoPi - theta_lr_pos) < theta_tol) {
         standup_complete_ = true;
-        standup_phase_ = 2;
+        standup_phase_ = 3;
         force_low_leg_ = false;
         standup_theta_target_ = 0.0f;
       }
@@ -426,6 +450,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
+  output_.standup_theta_target = standup_theta_target_;
 
   const bool is_jump_state = (input.fsm_mode == Fsm::State::kJumpPrep || input.fsm_mode == Fsm::State::kJumpPush ||
                               input.fsm_mode == Fsm::State::kJumpRecover);
@@ -683,11 +708,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
       right_force_ = right_leg_length_force - roll_pid_.out() + r_spring_torque_;
     } else if (!standup_complete_ || use_stair_target) {
-      // 起立 / 台阶序列：腿长PID + 弹簧补偿，不用重力/roll/惯性
-      left_force_ = output_.left_l0_pid_out + l_spring_torque_;
-      right_force_ = output_.right_l0_pid_out + r_spring_torque_;
-      // left_force_ =  l_spring_torque_;
-      // right_force_ =  r_spring_torque_;
+      if (standup_phase_ == 0) {
+        // Phase 0: 只摆腿，不用腿长力/弹簧力
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
+      } else {
+        // Phase 1/2: 腿长PID + 弹簧补偿，不用重力/roll/惯性
+        left_force_ = output_.left_l0_pid_out + l_spring_torque_;
+        right_force_ = output_.right_l0_pid_out + r_spring_torque_;
+      }
     } else {
       // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
       const rm::f32 inertial_ff_left = effective_mass_left_kg *
@@ -827,7 +856,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           right_leg_turn_pid_.Clear();
         }
 
-        // 双腿回到安全范围 → 直接进起立Phase 1，跳过LQR
+        // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
         if (ll_in_range && lr_in_range) {
           standup_complete_ = false;
           standup_phase_ = 1;

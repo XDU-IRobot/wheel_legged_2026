@@ -79,7 +79,8 @@ class Chassis {
     bool posture_valid{true};                    ///< 底盘姿态是否在安全范围内
     bool pitch_roll_valid_theta_invalid{false};  ///< pitch/roll 正常但腿摆角异常
     bool standup_complete{false};                ///< 起立完成：双腿 theta 均小于阈值后置 true
-    uint8_t standup_phase{0};                    ///< 起立阶段：0=收腿+摆角, 1=摆角收敛, 2=完成
+    uint8_t standup_phase{0};                    ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
+    float standup_theta_target{0.0f};            ///< 起立摆角 PID 目标当前值 [rad]
     bool mid_leg_dip_active{false};              ///< 中腿长下压激活中
     rm::f32 stair_t_bl_cmd{0.0f};                ///< 上台阶左腿摆角控制输出（PID 或 LQR）
     rm::f32 stair_t_br_cmd{0.0f};                ///< 上台阶右腿摆角控制输出（PID 或 LQR）
@@ -171,7 +172,7 @@ class Chassis {
   bool prev_enable_output_{false};
   bool l0_dot_filter_initialized_{false};
   bool standup_complete_{false};             ///< 起立完成
-  uint8_t standup_phase_{0};                 ///< 起立阶段：0=收腿, 1=摆角收敛, 2=完成
+  uint8_t standup_phase_{0};                 ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
   float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
   uint8_t theta_recovery_phase_{0};          ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）

@@ -166,20 +166,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
 
   // ── DR16 原始输入 ──
   wl_debug.dr16_online = static_cast<uint8_t>(input.dr16.online);
-  wl_debug.dr16_switch_l_raw = static_cast<int32_t>(input.dr16.switch_l);
-  wl_debug.dr16_switch_r_raw = static_cast<int32_t>(input.dr16.switch_r);
-  wl_debug.dr16_dial_raw = input.dr16.dial;
-  wl_debug.dr16_mouse_x = input.dr16.mouse_x;
-  wl_debug.dr16_mouse_y = input.dr16.mouse_y;
-  wl_debug.dr16_mouse_left = static_cast<uint8_t>(input.dr16.mouse_left);
-  wl_debug.dr16_mouse_right = static_cast<uint8_t>(input.dr16.mouse_right);
-  wl_debug.dr16_keyboard = input.dr16.keyboard;
 
-  // ── DR16 语义请求 ──
-  wl_debug.dr16_enable_request = static_cast<uint8_t>(
-      input.mode_request.input_valid && input.mode_request.domain_request != wheel_legged::DomainRequest::kDisabled);
-  wl_debug.dr16_spin_request = static_cast<uint8_t>(input.mode_request.spin_hold);
-  wl_debug.dr16_jump_trigger_edge = static_cast<uint8_t>(input.mode_request.jump_trigger);
   wl_debug.auto_jump_triggered = static_cast<uint8_t>(input.auto_jump_triggered);
   wl_debug.auto_jump_enabled = static_cast<uint8_t>(input.auto_jump_enabled);
   wl_debug.auto_jump_both_close = static_cast<uint8_t>(input.auto_jump_both_close);
@@ -214,10 +201,6 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.stair_t_bl_cmd = chassis_control_output.stair_t_bl_cmd;
   wl_debug.stair_t_br_cmd = chassis_control_output.stair_t_br_cmd;
 
-  wl_debug.dr16_left_x_raw = input.dr16.left_x;
-  wl_debug.dr16_left_y_raw = input.dr16.left_y;
-  wl_debug.dr16_right_x_raw = input.dr16.right_x;
-  wl_debug.dr16_right_y_raw = input.dr16.right_y;
 
   // ── 底盘状态 ──
   wl_debug.chassis_leg_target_length_m = chassis_control_output.leg_target_length_m;
@@ -327,6 +310,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
+  wl_debug.chassis_standup_theta_target_rad = chassis_control_output.standup_theta_target;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
   wl_debug.input_domain_request = static_cast<uint8_t>(input.mode_request.domain_request);
