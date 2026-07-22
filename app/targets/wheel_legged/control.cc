@@ -185,6 +185,10 @@ constexpr float kLargeTurnThresholdRad = ns::control_loop::kLargeTurnThresholdRa
 constexpr float kSafeTurnSpeedMps = ns::control_loop::kSafeTurnSpeedMps;
 constexpr float kLargeTurnThetaThresholdRad = ns::control_loop::kLargeTurnThetaThresholdRad;
 constexpr float kLargeTurnRecoveryAccelScale = ns::control_loop::kLargeTurnRecoveryAccelScale;
+constexpr float kLargeTurnThresholdRadMidLeg = ns::control_loop::kLargeTurnThresholdRadMidLeg;
+constexpr float kSafeTurnSpeedMpsMidLeg = ns::control_loop::kSafeTurnSpeedMpsMidLeg;
+constexpr float kLargeTurnThetaThresholdRadMidLeg = ns::control_loop::kLargeTurnThetaThresholdRadMidLeg;
+constexpr float kLargeTurnRecoveryAccelScaleMidLeg = ns::control_loop::kLargeTurnRecoveryAccelScaleMidLeg;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
@@ -209,6 +213,8 @@ constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRa
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
+constexpr float kYawResetRampStepRad = ns::control_loop::kYawResetRampStepRad;
+constexpr float kYawResetMaxSpeedMps = ns::control_loop::kYawResetMaxSpeedMps;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -490,9 +496,14 @@ void ControlLoop() {
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
   } else if (input.mode_request.reset_yaw_request) {
-    ctx.defer_leg_change = true;
-    ctx.pending_leg_profile = chassis_input.request.leg_request;
-    chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    // 检测底盘是否已对准正方向；若已对准则直接执行 C/V/B 动作，无需旋转等待
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(kYawFollowFixedTargetRad - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
+      ctx.defer_leg_change = true;
+      ctx.pending_leg_profile = chassis_input.request.leg_request;
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
   }
 
   // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
@@ -523,6 +534,19 @@ void ControlLoop() {
   }
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
+
+  const auto is_stair_descend_state = [](const chassis::Fsm::State state) {
+    return state == chassis::Fsm::State::kStairDescendApproach || state == chassis::Fsm::State::kStairDescendPush ||
+           state == chassis::Fsm::State::kStairDescendRetract;
+  };
+  static bool was_stair_descend_state = false;
+  const bool stair_descend_active = is_stair_descend_state(chassis_output.mode);
+  tc_state.stair_descend_in_progress = stair_descend_active;
+  if (was_stair_descend_state && !stair_descend_active &&
+      tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend) {
+    tc_state.stair_descend_completed = true;
+  }
+  was_stair_descend_state = stair_descend_active;
 
   // Z arms one automatic jump only. It is cleared after that jump leaves all jump phases.
   const auto is_jump_state = [](const chassis::Fsm::State state) {
@@ -619,7 +643,7 @@ void ControlLoop() {
   if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
     // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变
     dr16_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
-    dr16_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
+    dr16_state.rc_target.pitch_rad = input.gimbal_imu_pitch_rad;
     // 直接覆盖当周期目标，用上一周期 gimbal 实际输出位置，避免本周期目标跳变
     gimbal_update_input.target.yaw_rad = gimbal_control_output.yaw_pos_rad;
     gimbal_update_input.target.pitch_rad = gimbal_control_output.pitch_pos_rad;
@@ -847,6 +871,8 @@ void ControlLoop() {
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
+  const bool stair_descend_wheels_disabled = chassis_output.mode == chassis::Fsm::State::kStairDescendRetract;
+  chassis_update_input.motion_target.disable_wheel_torque = stair_descend_wheels_disabled;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.motion_target = stair_sequence_output.target;
   }
@@ -946,17 +972,45 @@ void ControlLoop() {
     }
   }
 
-  // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
+  // C/V/B 键重置底盘正方向：始终瞄准真正的正方向，使用斜坡平滑旋转
+  // 速度高于阈值时暂不激活斜坡，等降速后再转（类似小陀螺入口的速度检查）
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
-    const auto nearest = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
-    ctx.defer_yaw_target_rad = nearest.target_rad;
-    ctx.yaw_follow_target = nearest;
+    const float forward_target_rad = rm::modules::Wrap(kYawFollowFixedTargetRad, -kPi, kPi);
+    ctx.defer_yaw_target_rad = forward_target_rad;
+    ctx.yaw_reset_target_final_rad = forward_target_rad;
+    if (std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
+      ctx.yaw_reset_ramp_active = true;
+      ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
+      ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+      ctx.yaw_follow_target_initialized = true;
+      ctx.yaw_follow_drive_ready = false;
+      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+      ctx.filtered_yaw_dot = 0.0f;
+    }
+  }
+
+  // 偏航复位延迟激活：defer 已设置但因车速高未激活，降速后补激活
+  if (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active && std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
+    ctx.yaw_reset_ramp_active = true;
+    ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
     ctx.filtered_yaw_dot = 0.0f;
+  }
+
+  // 偏航复位斜坡：逐步移动 yaw_follow_target 至最终目标
+  if (ctx.yaw_reset_ramp_active) {
+    const float err = rm::modules::Wrap(ctx.yaw_reset_target_final_rad - ctx.yaw_follow_target.target_rad, -kPi, kPi);
+    if (std::fabs(err) <= kYawResetRampStepRad) {
+      ctx.yaw_follow_target.target_rad = ctx.yaw_reset_target_final_rad;
+      ctx.yaw_reset_ramp_active = false;
+    } else {
+      ctx.yaw_follow_target.target_rad =
+          rm::modules::Wrap(ctx.yaw_follow_target.target_rad + std::copysign(kYawResetRampStepRad, err), -kPi, kPi);
+    }
   }
 
   // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成
@@ -978,7 +1032,9 @@ void ControlLoop() {
                                     chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
-       chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
+       chassis_output.mode == chassis::Fsm::State::kJumpRecover ||
+       chassis_output.mode == chassis::Fsm::State::kStairDescendPush ||
+       chassis_output.mode == chassis::Fsm::State::kStairDescendRetract) &&
       chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
@@ -1008,7 +1064,8 @@ void ControlLoop() {
   const bool has_supercap = (sc_err & kScFatalMask) == 0;
   const float default_speed_max = has_supercap ? kTargetForwardSpeedMaxMps : kTargetForwardSpeedMaxNoScMps;
   const float forward_speed_base =
-      (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
+      stair_descend_active ? ns::chassis_fsm::kStairDescend.speed_limit_mps
+      : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
@@ -1023,13 +1080,17 @@ void ControlLoop() {
           : 0.0f;
   float forward_max_speed = forward_speed_base;
   // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
+  const bool is_mid_leg = (chassis_output.mode == chassis::Fsm::State::kMidLeg);
+  const float large_turn_threshold = is_mid_leg ? kLargeTurnThresholdRadMidLeg : kLargeTurnThresholdRad;
+  const float safe_turn_speed = is_mid_leg ? kSafeTurnSpeedMpsMidLeg : kSafeTurnSpeedMps;
+  const float large_turn_theta_threshold = is_mid_leg ? kLargeTurnThetaThresholdRadMidLeg : kLargeTurnThetaThresholdRad;
   const float motor_error =
       rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-  if (std::fabs(motor_error) > kLargeTurnThresholdRad &&
-      (std::fabs(current_state.s_dot) > kSafeTurnSpeedMps ||
-       std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
-       std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
-    forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
+  if (std::fabs(motor_error) > large_turn_threshold &&
+      (std::fabs(current_state.s_dot) > safe_turn_speed ||
+       std::fabs(current_state.theta_ll) > large_turn_theta_threshold ||
+       std::fabs(current_state.theta_lr) > large_turn_theta_threshold)) {
+    forward_max_speed = std::min(forward_max_speed, safe_turn_speed);
   }
   // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
   static bool s_large_turn_recovery = false;
@@ -1060,7 +1121,8 @@ void ControlLoop() {
   target_s_dot += forward_speed_bias;
   const bool stair_seq_active = stair_task_output.mode == wheel_legged::StairTaskMode::kExecuting ||
                                 stair_task_output.mode == wheel_legged::StairTaskMode::kBetweenSteps;
-  if (!chassis_output_enable || now_is_standby || stair_seq_active) {
+  if (!chassis_output_enable || now_is_standby || stair_seq_active ||
+      (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active)) {
     target_s_dot = 0.0f;
   }
 
@@ -1112,14 +1174,15 @@ void ControlLoop() {
   }
 
   // ── 7j. 纵向速度斜坡 ──
-  if (spin_control_enabled) {
+  if (spin_control_enabled || stair_descend_wheels_disabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
     const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
     // 大转向限速解除后，用缓加速斜坡逐步恢复速度
     float accel_scale = 1.0f;
     if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
-      accel_scale = kLargeTurnRecoveryAccelScale;
+      accel_scale = (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kLargeTurnRecoveryAccelScaleMidLeg
+                                                                          : kLargeTurnRecoveryAccelScale;
       if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
         s_large_turn_recovery = false;
       }
@@ -1129,9 +1192,11 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
-  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
+  chassis_update_input.expected.s_dot = stair_descend_wheels_disabled
                                             ? current_state.s_dot
-                                            : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
+                                            : (chassis_control_output.off_ground_in_mid_high_leg
+                                                   ? current_state.s_dot
+                                                   : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot));
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;

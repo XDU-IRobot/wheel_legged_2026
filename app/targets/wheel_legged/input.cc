@@ -216,9 +216,7 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   // X 键上升沿：只切换工作的 ToF 硬件对。进入下台阶模式时取消尚未触发的自动跳跃。
   if (x_pressed && tc_state.x_tof_mode_armed) {
     tc_state.x_tof_mode_armed = false;
-    const bool can_exit_stair_descend =
-        tc_state.requested_tof_mode != wheel_legged::TofMode::kStairDescend || !tc_state.stair_descend_in_progress;
-    if (!ctrl_pressed && !tc_state.auto_jump_in_progress && can_exit_stair_descend) {
+    if (!ctrl_pressed && !tc_state.auto_jump_in_progress) {
       tc_state.requested_tof_mode = tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump
                                         ? wheel_legged::TofMode::kStairDescend
                                         : wheel_legged::TofMode::kAutoJump;
@@ -366,7 +364,7 @@ void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput
                            bool host_controls_gimbal, bool is_long_distance) {
   if (!semantic_state.gimbal_target_initialized) {
     semantic_state.rc_target.yaw_rad = gimbal_imu_yaw_rad;
-    semantic_state.rc_target.pitch_rad = -gimbal_imu_pitch_rad;
+    semantic_state.rc_target.pitch_rad = gimbal_imu_pitch_rad;
     semantic_state.gimbal_target_initialized = true;
   }
   // 吊射模式：跳过 host_controls_gimbal 检查（由 WASD 接管）
@@ -591,7 +589,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.mid_leg_f = tc_state.mid_leg_f;
 
   const bool is_auto_aim = IsAutoAimProfile(combat_profile);
-  if (is_auto_aim && combat_profile != wheel_legged::CombatProfile::kAutoAimFuLongDistance) request.standby = true;
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
+    request.standby = true;
+  }
   if (request.domain_request == wheel_legged::DomainRequest::kDisabled) request.standby = false;
 
   request.combat_profile = combat_profile;
@@ -634,6 +635,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 1. 从执行器采集关节/轮毂/IMU 反馈
   input.auto_jump_triggered = false;
+  input.stair_descend_triggered = false;
   actuators.FillEstimatorInput(g, input.estimator_input);
 
   // 2. 读取 DR16 原始值
@@ -728,6 +730,28 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   }
   g.requested_tof_mode = tc_state.requested_tof_mode;
 
+  // 下台阶：向下 ToF 切换完成后才允许进入 0.25 m 接近阶段；单帧双侧小于阈值即触发。
+  input.mode_request.stair_descend_request = tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend;
+  input.mode_request.stair_descend_ready = false;
+  input.mode_request.stair_descend_trigger = false;
+  if (input.mode_request.stair_descend_request && g.active_tof_mode == wheel_legged::TofMode::kStairDescend &&
+      g.tof_mode_ready && g.left_down_tof.has_value() && g.right_down_tof.has_value()) {
+    const auto &left = *g.left_down_tof;
+    const auto &right = *g.right_down_tof;
+    const uint32_t now_ms = HAL_GetTick();
+    const bool measurements_fresh =
+        left.sample_count() > 0U && right.sample_count() > 0U &&
+        now_ms - left.last_sample_tick_ms() <= params::active::tof::kStairDescendFreshTimeoutMs &&
+        now_ms - right.last_sample_tick_ms() <= params::active::tof::kStairDescendFreshTimeoutMs;
+    const bool measurements_valid = left.ranging() && right.ranging() && left.data_valid() && right.data_valid();
+    input.mode_request.stair_descend_ready = measurements_valid && measurements_fresh;
+    input.mode_request.stair_descend_trigger =
+        input.mode_request.stair_descend_ready &&
+        left.measurement().distance_mm < params::active::tof::kStairDescendTriggerDistanceMm &&
+        right.measurement().distance_mm < params::active::tof::kStairDescendTriggerDistanceMm;
+    input.stair_descend_triggered = input.mode_request.stair_descend_trigger;
+  }
+
   // 3c. 一次性自动跳跃：仅使用已就绪且数据有效、新鲜的两个前向 ToF。
   if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump &&
       g.active_tof_mode == wheel_legged::TofMode::kAutoJump && g.tof_mode_ready) {
@@ -774,10 +798,10 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   const bool auto_aim_active = IsAutoAimProfile(input.mode_request.combat_profile);
   const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
                                      g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
-                                     g.aimbot->aimbot_state() != 0;
+                                     (g.aimbot->aimbot_state() & 0x01U) != 0U;
   if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
     semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
-    semantic_state.rc_target.pitch_rad = -g.gimbal_rx->pitch_rad();
+    semantic_state.rc_target.pitch_rad = g.gimbal_rx->pitch_rad();
     semantic_state.gimbal_target_initialized = true;
     input.mode_request.rc_target = semantic_state.rc_target;
   }
@@ -826,6 +850,9 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .spin_hold = m.spin_hold,
       .spin_dir = m.spin_dir,
       .jump_trigger = m.jump_trigger,
+      .stair_descend_request = m.stair_descend_request,
+      .stair_descend_ready = m.stair_descend_ready,
+      .stair_descend_trigger = m.stair_descend_trigger,
       .current_leg_length_m = chassis_output.mean_leg_length_m,
       .theta_ll_rad = chassis_output.current_state.theta_ll,
       .theta_lr_rad = chassis_output.current_state.theta_lr,

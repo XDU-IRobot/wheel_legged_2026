@@ -187,6 +187,7 @@ class ChassisToGimbalTxBridge final : public rm::device::CanDevice {
 
   bool QueueSend() {
     tx_data_[0] = combat_mode_ ? 1 : 0;
+    // tx_data_[0] = 0;
     std::memcpy(&tx_data_[1], &bullet_speed_mps_, sizeof(float));
     tx_data_[5] = long_distance_mode_ ? 1 : 0;
     can_->Write(kTxStdId, tx_data_.data(), tx_data_.size());

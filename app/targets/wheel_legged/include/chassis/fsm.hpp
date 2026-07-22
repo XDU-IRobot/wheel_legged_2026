@@ -30,6 +30,9 @@ class Fsm {
     kRecoveryFallCheck,
     kRecoverySelfRight,
     kStairTask,
+    kStairDescendApproach,
+    kStairDescendPush,
+    kStairDescendRetract,
     kStandby,
   };
 
@@ -88,6 +91,8 @@ class Fsm {
   wheel_legged::LegProfile jump_leg_profile_{wheel_legged::LegProfile::kLow};  ///< 触发跳跃时的腿长档位
   bool jump_push_reached_armed_{true};                                         ///< 蹬伸腿长到位上升沿检测
   uint32_t jump_push_reached_tick_ms_{0};                                      ///< 蹬伸腿长到位时刻
+  bool stair_descend_condition_active_{false};
+  uint32_t stair_descend_condition_tick_ms_{0};
   bool spin_lock_low_{false};  ///< 小陀螺后锁定低腿长，仅手动切档解锁
   bool stair_step2_{false};    ///< 双台阶第二步
   wheel_legged::LegProfile prev_leg_request_{wheel_legged::LegProfile::kLow};  ///< 上周期腿长请求（检测手动切档）
