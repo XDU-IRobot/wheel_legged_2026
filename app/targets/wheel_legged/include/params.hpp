@@ -45,6 +45,18 @@ struct StairClimbParams {
   std::uint32_t settle_timeout_ms;
 };
 
+struct StairDescendParams {
+  float approach_leg_length_m;
+  float push_leg_length_m;
+  float retract_leg_length_m;
+  float speed_limit_mps;
+  float push_force_n;
+  float leg_length_tolerance_m;
+  std::uint32_t push_reached_hold_ms;
+  std::uint32_t push_timeout_ms;
+  std::uint32_t retract_duration_ms;
+};
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 三变体完全相同的公共参数（仅保留真正不随变体变化的常量与配置）
 // ══════════════════════════════════════════════════════════════════════════════
@@ -65,6 +77,9 @@ constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 950U;  // 最大距离
 constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;       // 最小距离
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 50U;
+constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
+constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
 constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
@@ -284,6 +299,18 @@ inline const DmMitSettings kBoosterDmSettings{0x10, 0x09, kPi, 30.f, 10.f, {0.f,
 // ── 底盘状态机 ──
 namespace chassis_fsm {
 
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.28f,
+    .retract_leg_length_m = 0.13f,
+    .speed_limit_mps = 1.0f,
+    .push_force_n = 80.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 500U,
+    .retract_duration_ms = 60U,
+};
+
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.37f,
     .hook_leg_length_m = 0.37f,
@@ -391,12 +418,13 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupThetaThresholdRad = 1.1f;  ///< 起立完成判定：双腿摆角绝对值低于此值后允许轮端输出 [rad]
-constexpr float kStandupPhase0ThetaTargetRad = 1.2f;  ///< 起立 Phase 0/1 腿摆角目标 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.1f;   ///< 起立 Phase 1 目标腿长 [m]
-constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 1 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 1 容许 [rad]
-constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]
+constexpr float kStandupPhase0ThetaTargetRad = 1.2f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.21f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.6f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.1f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 2 容许 [rad]
+constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
 constexpr float kPostureRollMinRad = -0.3f;             ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.3f;              ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.58f;          ///< 机体俯仰角安全下限 [rad]
@@ -837,6 +865,18 @@ constexpr float kNormalShootFrequencyHz = 10.0f;  ///< 正常发射频率 [Hz]
 // ── 底盘状态机 ──
 namespace chassis_fsm {
 
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.31f,
+    .retract_leg_length_m = 0.17f,
+    .speed_limit_mps = 0.5f,
+    .push_force_n = 170.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 2000U,
+    .retract_duration_ms = 1500U,
+};
+
 constexpr StairClimbParams kStairClimb{
     .high_leg_length_m = 0.33f,
     .hook_leg_length_m = 0.33f,
@@ -942,18 +982,19 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupThetaThresholdRad = 1.1f;  ///< 起立完成判定：双腿摆角绝对值低于此值后允许轮端输出 [rad]
-constexpr float kStandupPhase0ThetaTargetRad = 1.55f;  ///< 起立 Phase 0/1 腿摆角目标 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.1f;    ///< 起立 Phase 1 目标腿长 [m]
-constexpr float kStandupPhase1ThetaTolRad = 0.8f;  ///< 起立 Phase 1 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 1 容许 [rad]
-constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]
+constexpr float kStandupPhase0ThetaTargetRad = 1.8f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.33f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.4f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.1f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 2 容许 [rad]
+constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
 constexpr float kPostureRollMinRad = -1.f;              ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 1.f;               ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.7f;           ///< 机体俯仰角安全下限 [rad]
 constexpr float kPostureThetaBMaxRad = 0.7f;            ///< 机体俯仰角安全上限 [rad]
 constexpr float kPostureThetaLegMinRad = -1.5f;         ///< 腿摆角安全下限 [rad]
-constexpr float kPostureThetaLegMaxRad = 2.f;           ///< 腿摆角安全上限 [rad]
+constexpr float kPostureThetaLegMaxRad = 2.2f;           ///< 腿摆角安全上限 [rad]
 constexpr float kLegRecoverThetaDotTarget = -2.0f;      ///< 倒地恢复时腿摆角速度目标 [rad/s]
 constexpr float kLegRecoverThetaDotRampStep = 0.008f;   ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
 constexpr float kManualRecoveryLegSpeedRadS = 0.5f;     ///< 手动倒地恢复腿摆角速度 [rad/s]
@@ -1123,7 +1164,7 @@ constexpr float kExpectedThetaBBiasRad = 0.0f;              ///< 期望机体俯
 constexpr float kExpectedDisplacementBiasMLowLeg = -0.55f;  ///< 低腿长期望位移偏置 [m]
 
 // ==== 速度斜坡参数 ====
-constexpr SdotRampParams kSdotRampLowLeg{0.007f, 0.007f};    ///< 低腿长速度斜坡
+constexpr SdotRampParams kSdotRampLowLeg{0.006f, 0.007f};    ///< 低腿长速度斜坡
 constexpr SdotRampParams kSdotRampMidLeg{0.0045f, 0.007f};   ///< 中腿长速度斜坡(C 键触发)
 constexpr SdotRampParams kSdotRampMidLegF{0.0045f, 0.006f};  ///< 中腿长速度斜坡（F 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.0045f, 0.005f};  ///< 高腿长速度斜坡
@@ -1368,44 +1409,57 @@ constexpr float kNormalShootFrequencyHz = 12.0f;  ///< 正常发射频率 [Hz]
 // ── 底盘状态机 ──
 namespace chassis_fsm {
 
+constexpr StairDescendParams kStairDescend{
+    .approach_leg_length_m = 0.25f,
+    .push_leg_length_m = 0.28f,
+    .retract_leg_length_m = 0.13f,
+    .speed_limit_mps = 1.0f,
+    .push_force_n = 80.0f,
+    .leg_length_tolerance_m = 0.01f,
+    .push_reached_hold_ms = 3U,
+    .push_timeout_ms = 500U,
+    .retract_duration_ms = 60U,
+};
+
 constexpr StairClimbParams kStairClimb{
-    .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .high_leg_length_m = 0.35f,
+    .hook_leg_length_m = 0.35f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
-    .contact_theta_threshold_rad = 0.50f,
+    .contact_theta_threshold_rad = 0.40f,
     .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = 1.2f,
-    .retract_theta_tolerance_rad = 0.5f,
+    .retract_theta_target_rad = -0.2f,
+    .retract_theta_tolerance_rad = 0.7f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.5f,
+    .settle_theta_tolerance_rad = 0.33f,
     .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.05f,
-    .hook_stable_ms = 10U,
-    .retract_stable_ms = 20U,
-    .settle_stable_ms = 50U,
+    .settle_theta_ramp_step_rad = 0.02f,
+    .hook_stable_ms = 100U,
+    .retract_stable_ms = 200U,
+    .settle_stable_ms = 200U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
 };
+
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.32f,
-    .hook_leg_length_m = 0.32f,
+    .high_leg_length_m = 0.31f,
+    .hook_leg_length_m = 0.31f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
-    .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.4f,
-    .retract_theta_target_rad = 1.4f,
-    .retract_theta_tolerance_rad = 0.5f,
-    .hook_theta_tolerance_rad = 0.3f,
+    .contact_theta_threshold_rad = 0.40f,
+    .hook_theta_target_rad = 0.8f,
+    .retract_theta_target_rad = -0.2f,
+    .retract_theta_tolerance_rad = 0.7f,
+    .hook_theta_tolerance_rad = 1.f,
     .leg_length_tolerance_m = 0.05f,
-    .settle_theta_tolerance_rad = 0.5f,
+    .settle_theta_tolerance_rad = 0.33f,
     .settle_theta_target_rad = 0.f,
-    .settle_theta_ramp_step_rad = 0.05f,
-    .hook_stable_ms = 10U,
-    .retract_stable_ms = 20U,
-    .settle_stable_ms = 50U,
+    .settle_theta_ramp_step_rad = 0.02f,
+    .hook_stable_ms = 100U,
+    .retract_stable_ms = 200U,
+    .settle_stable_ms = 200U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
@@ -1473,12 +1527,13 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupThetaThresholdRad = 0.8f;     ///< 起立完成判定 [rad]
-constexpr float kStandupPhase0ThetaTargetRad = 1.5f;  ///< 起立 Phase 0/1 腿摆角目标 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.1f;   ///< 起立 Phase 1 目标腿长 [m]
-constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 1 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 1 容许 [rad]
-constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]
+constexpr float kStandupPhase0ThetaTargetRad = 1.7f;   ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.245f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.6f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.1f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1ThetaTolStairRad = 1.1f;  ///< 台阶 step2 触发起立 Phase 2 容许 [rad]
+constexpr float kStandupThetaRampStepRad = 0.02f;       ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
 constexpr float kPostureRollMinRad = -0.5f;             ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.5f;              ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.7f;           ///< 机体俯仰角安全下限 [rad]

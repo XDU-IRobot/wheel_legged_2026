@@ -16,6 +16,11 @@ bool IsJumpState(const chassis::Fsm::State state) {
          state == chassis::Fsm::State::kJumpRecover;
 }
 
+bool IsStairDescendState(const chassis::Fsm::State state) {
+  return state == chassis::Fsm::State::kStairDescendApproach || state == chassis::Fsm::State::kStairDescendPush ||
+         state == chassis::Fsm::State::kStairDescendRetract;
+}
+
 /**
  * @brief 将语义腿长档位转换为物理目标腿长
  */
@@ -197,6 +202,33 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
                                         : wheel_legged::params::active::chassis_fsm::kStairClimb.high_leg_length_m;
       control.jump_phase = 0U;
       break;
+
+    case chassis::Fsm::State::kStairDescendApproach:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kMid;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairDescend.approach_leg_length_m;
+      control.jump_phase = 4U;
+      break;
+
+    case chassis::Fsm::State::kStairDescendPush:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kMid;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairDescend.push_leg_length_m;
+      control.jump_phase = 5U;
+      break;
+
+    case chassis::Fsm::State::kStairDescendRetract:
+      control.enable_dm = true;
+      control.run_chassis_update = true;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kStairDescend.retract_leg_length_m;
+      control.jump_phase = 6U;
+      break;
   }
 
   return control;
@@ -211,6 +243,8 @@ void chassis::Fsm::Init() {
   requested_leg_profile_ = wheel_legged::LegProfile::kLow;
   jump_push_reached_armed_ = true;
   jump_push_reached_tick_ms_ = 0U;
+  stair_descend_condition_active_ = false;
+  stair_descend_condition_tick_ms_ = 0U;
   state_enter_tick_ms_ = 0U;
   output_ = {};
   output_.mode = mode_;
@@ -258,6 +292,20 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   const State requested_normal_state =
       request.standby ? State::kStandby : ResolveRequestedNormalState(requested_leg_profile_);
   const State requested_stable_state = requested_normal_state;
+  const auto &descend = wheel_legged::params::active::chassis_fsm::kStairDescend;
+
+  const auto stable_for = [&](const bool condition, const uint32_t duration_ms) {
+    if (!condition) {
+      stair_descend_condition_active_ = false;
+      stair_descend_condition_tick_ms_ = request.tick_ms;
+      return false;
+    }
+    if (!stair_descend_condition_active_) {
+      stair_descend_condition_active_ = true;
+      stair_descend_condition_tick_ms_ = request.tick_ms;
+    }
+    return request.tick_ms - stair_descend_condition_tick_ms_ >= duration_ms;
+  };
 
   State next_mode = mode_;
 
@@ -282,6 +330,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStandby;
       } else if (request.stair_task_active) {
         next_mode = State::kStairTask;
+      } else if (request.stair_descend_request && request.stair_descend_ready) {
+        next_mode = State::kStairDescendApproach;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kLow;
         next_mode = State::kJumpPrep;
@@ -300,6 +350,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStandby;
       } else if (request.stair_task_active) {
         next_mode = State::kStairTask;
+      } else if (request.stair_descend_request && request.stair_descend_ready) {
+        next_mode = State::kStairDescendApproach;
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
@@ -318,6 +370,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStandby;
       } else if (request.stair_task_active) {
         next_mode = State::kStairTask;
+      } else if (request.stair_descend_request && request.stair_descend_ready) {
+        next_mode = State::kStairDescendApproach;
       } else if (request.spin_hold && std::fabs(request.current_s_dot) <
                                           wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
@@ -409,16 +463,53 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = requested_stable_state;
       }
       break;
+
+    case State::kStairDescendApproach: {
+      const bool approach_ready =
+          std::fabs(request.current_leg_length_m - descend.approach_leg_length_m) <= descend.leg_length_tolerance_m;
+      if (request.fall_detected) {
+        next_mode = State::kRecoveryFallCheck;
+      } else if (!request.stair_descend_request || request.standby) {
+        requested_leg_profile_ = wheel_legged::LegProfile::kLow;
+        spin_lock_low_ = true;
+        next_mode = State::kLowLeg;
+      } else if (approach_ready && request.stair_descend_trigger) {
+        next_mode = State::kStairDescendPush;
+      }
+      break;
+    }
+
+    case State::kStairDescendPush: {
+      const bool push_reached =
+          request.current_leg_length_m >= descend.push_leg_length_m - descend.leg_length_tolerance_m;
+      if (!request.stair_descend_request || request.standby || stable_for(push_reached, descend.push_reached_hold_ms) ||
+          elapsed_ms >= descend.push_timeout_ms || request.fall_detected) {
+        next_mode = State::kStairDescendRetract;
+      }
+      break;
+    }
+
+    case State::kStairDescendRetract: {
+      if (elapsed_ms >= descend.retract_duration_ms) {
+        requested_leg_profile_ = wheel_legged::LegProfile::kLow;
+        spin_lock_low_ = true;
+        next_mode = State::kLowLeg;
+      }
+      break;
+    }
   }
 
   if (next_mode != mode_) {
     state_enter_tick_ms_ = request.tick_ms;
+    stair_descend_condition_active_ = false;
+    stair_descend_condition_tick_ms_ = request.tick_ms;
   }
 
   Transit(next_mode);
 
-  if (!IsJumpState(mode_) && (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg ||
-                              mode_ == State::kSpin || mode_ == State::kStandby || mode_ == State::kStairTask)) {
+  if (!IsJumpState(mode_) && !IsStairDescendState(mode_) &&
+      (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin ||
+       mode_ == State::kStandby || mode_ == State::kStairTask)) {
     output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_);
   }
 

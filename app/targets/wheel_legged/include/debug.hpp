@@ -35,19 +35,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t control_overrun_count;
 
   // ── 遥控器原始输入 ──
-  uint8_t dr16_online;        // DR16 在线
-  int32_t dr16_switch_l_raw;  // 左拨杆原始位置
-  int32_t dr16_switch_r_raw;  // 右拨杆原始位置
-  int16_t dr16_dial_raw;      // 拨轮原始值
-  int16_t dr16_left_x_raw;    // 左摇杆 X
-  int16_t dr16_left_y_raw;    // 左摇杆 Y
-  int16_t dr16_right_x_raw;   // 右摇杆 X
-  int16_t dr16_right_y_raw;   // 右摇杆 Y
-  int16_t dr16_mouse_x;       // DR16 鼠标 X
-  int16_t dr16_mouse_y;       // DR16 鼠标 Y
-  uint8_t dr16_mouse_left;    // DR16 鼠标左键
-  uint8_t dr16_mouse_right;   // DR16 鼠标右键
-  uint16_t dr16_keyboard;     // DR16 键盘按键位掩码
+  uint8_t dr16_online;  // DR16 在线
 
   // ── 遥控器/图传语义请求 ──
   uint8_t input_domain_request;     // 解析后的工作域
@@ -55,15 +43,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t input_combat_profile;     // 战斗域子模式
   uint8_t input_target_source;      // 目标来源
   uint8_t input_host_target_valid;  // 上位机目标有效
-  uint8_t dr16_enable_request;      // 使能请求
-  uint8_t dr16_spin_request;        // 小陀螺请求
-  uint8_t dr16_jump_trigger_edge;   // 跳跃触发边沿
   uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
   uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
   uint8_t auto_jump_both_close;     // 调试：both_close 条件
   uint8_t auto_jump_tof_armed;      // 调试：auto_jump_tof_armed 条件
   uint8_t auto_jump_both_active;    // 调试：both_active 条件（含200ms消抖）
   uint8_t auto_jump_trigger_ready;  // 调试：both_close && tof_armed && both_active
+  uint8_t stair_descend_request;    // 下台阶模式请求
+  uint8_t stair_descend_ready;      // 向下 ToF 数据已准备完成
+  uint8_t stair_descend_triggered;  // 双侧向下 ToF 单帧触发
   uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
   uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
   uint8_t stair_task_request;       // Stair command parsed this cycle
@@ -220,7 +208,8 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_posture_valid;           // 姿态有效
   uint8_t chassis_off_ground;              // 离地
   uint8_t chassis_standup_complete;        // 起立完成
-  uint8_t chassis_standup_phase;           // 起立阶段 (0=收腿, 1=摆角收敛, 2=完成)
+  uint8_t chassis_standup_phase;           // 起立阶段 (0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成)
+  float chassis_standup_theta_target_rad;  // 起立摆角 PID 目标 [rad]
   uint8_t dm_enabled_latched;              // DM 电机使能锁存
   uint8_t gimbal_motors_enabled_latched;   // 云台电机使能锁存
   uint8_t position_frozen_by_timeout;      // 位置锚定原因: 0=速度低于阈值, 1=超时强冻

@@ -110,6 +110,7 @@ struct InputSnapshot {
   wheel_legged::ModeRequest mode_request{};               ///< 整车语义请求
   bool auto_jump_triggered{false};                        ///< 本周期自动跳跃触发
   bool auto_jump_enabled{false};                          ///< 已按 Z，正在等待或执行一次自动跳跃
+  bool stair_descend_triggered{false};                    ///< 本周期下台阶单帧测距触发
   bool auto_jump_both_close{false};                       ///< 调试：both_close 条件
   bool auto_jump_tof_armed_debug{false};                  ///< 调试：auto_jump_tof_armed 条件
   bool auto_jump_both_active{false};                      ///< 调试：both_active 条件（含200ms消抖）
