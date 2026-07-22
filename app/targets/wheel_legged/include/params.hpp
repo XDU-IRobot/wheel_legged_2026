@@ -708,10 +708,10 @@ constexpr PidGains kYawPositionPidRune{70.0f, 0.0f, 0.3f, 1000.0f, 1.0f};  ///< 
 constexpr PidGains kYawSpeedPidRune{0.2f, 0.f, 0.0f, 6.4f, 0.6f};          ///< 自瞄偏航速度 PID（打符）
 constexpr PidGains kPitchPositionPidRune{60, 0.f, 1.5f, 8.0f, 4.f};        ///< 自瞄俯仰位置 PID（打符）
 constexpr PidGains kPitchSpeedPidRune{0.2f, 0.0f, 0.0f, 6.4f, 0.4f};       ///< 自瞄俯仰速度 PID（打符）
-constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};      ///< 自瞄偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.8f, 0.f, 0.0f, 6.4f, 0.6f};              ///< 自瞄偏航速度 PID
-constexpr PidGains kPitchPositionPid{55, 0.f, 1.5f, 8.0f, 4.f};            ///< 自瞄俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.8f, 0.0f, 0.0f, 6.4f, 0.4f};           ///< 自瞄俯仰速度 PID
+constexpr PidGains kYawPositionPid{45.0f, 0.0f, 0.8f, 1000.0f, 1.0f};      ///< 自瞄偏航位置 PID
+constexpr PidGains kYawSpeedPid{1.2f, 0.f, 0.0f, 10.f, 0.6f};              ///< 自瞄偏航速度 PID
+constexpr PidGains kPitchPositionPid{85, 0.f, 3.5f, 8.0f, 4.f};            ///< 自瞄俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{1.2f, 0.0f, 0.0f, 18.f, 0.4f};           ///< 自瞄俯仰速度 PID
 }  // namespace aimbot
 
 // ── 自瞄 + 小陀螺模式 PID ──
