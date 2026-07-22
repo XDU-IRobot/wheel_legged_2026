@@ -984,8 +984,7 @@ void ControlLoop() {
   }
 
   // 偏航复位延迟激活：defer 已设置但因车速高未激活，降速后补激活
-  if (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active &&
-      std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
+  if (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active && std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
     ctx.yaw_reset_ramp_active = true;
     ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
@@ -1077,8 +1076,7 @@ void ControlLoop() {
   const bool is_mid_leg = (chassis_output.mode == chassis::Fsm::State::kMidLeg);
   const float large_turn_threshold = is_mid_leg ? kLargeTurnThresholdRadMidLeg : kLargeTurnThresholdRad;
   const float safe_turn_speed = is_mid_leg ? kSafeTurnSpeedMpsMidLeg : kSafeTurnSpeedMps;
-  const float large_turn_theta_threshold =
-      is_mid_leg ? kLargeTurnThetaThresholdRadMidLeg : kLargeTurnThetaThresholdRad;
+  const float large_turn_theta_threshold = is_mid_leg ? kLargeTurnThetaThresholdRadMidLeg : kLargeTurnThetaThresholdRad;
   const float motor_error =
       rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
   if (std::fabs(motor_error) > large_turn_threshold &&
@@ -1177,7 +1175,7 @@ void ControlLoop() {
     float accel_scale = 1.0f;
     if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
       accel_scale = (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kLargeTurnRecoveryAccelScaleMidLeg
-                                                                   : kLargeTurnRecoveryAccelScale;
+                                                                          : kLargeTurnRecoveryAccelScale;
       if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
         s_large_turn_recovery = false;
       }

@@ -72,8 +72,8 @@ struct ChassisStateContext {
   bool defer_leg_change{false};         ///< 等待偏航对齐后再变腿长
   wheel_legged::LegProfile pending_leg_profile{LegProfile::kLow};  ///< 待应用的腿长档位
   float defer_yaw_target_rad{0.0f};                                ///< defer 退出判据用的 yaw 目标 [rad]
-  bool yaw_reset_ramp_active{false};      ///< C/V/B 偏航复位斜坡激活中
-  float yaw_reset_target_final_rad{0.0f}; ///< 偏航复位最终目标角 [rad]
+  bool yaw_reset_ramp_active{false};                               ///< C/V/B 偏航复位斜坡激活中
+  float yaw_reset_target_final_rad{0.0f};                          ///< 偏航复位最终目标角 [rad]
 
   /**
    * @brief 在底盘模式切换时重置相关状态
