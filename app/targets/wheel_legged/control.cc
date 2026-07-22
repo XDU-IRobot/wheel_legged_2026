@@ -524,6 +524,19 @@ void ControlLoop() {
 
   chassis::Fsm::Output chassis_output = globals->chassis_fsm.Update(chassis_input);
 
+  const auto is_stair_descend_state = [](const chassis::Fsm::State state) {
+    return state == chassis::Fsm::State::kStairDescendApproach || state == chassis::Fsm::State::kStairDescendPush ||
+           state == chassis::Fsm::State::kStairDescendRetract;
+  };
+  static bool was_stair_descend_state = false;
+  const bool stair_descend_active = is_stair_descend_state(chassis_output.mode);
+  tc_state.stair_descend_in_progress = stair_descend_active;
+  if (was_stair_descend_state && !stair_descend_active &&
+      tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend) {
+    tc_state.stair_descend_completed = true;
+  }
+  was_stair_descend_state = stair_descend_active;
+
   // Z arms one automatic jump only. It is cleared after that jump leaves all jump phases.
   const auto is_jump_state = [](const chassis::Fsm::State state) {
     return state == chassis::Fsm::State::kJumpPrep || state == chassis::Fsm::State::kJumpPush ||
@@ -840,6 +853,8 @@ void ControlLoop() {
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
+  const bool stair_descend_wheels_disabled = chassis_output.mode == chassis::Fsm::State::kStairDescendRetract;
+  chassis_update_input.motion_target.disable_wheel_torque = stair_descend_wheels_disabled;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
     chassis_update_input.motion_target = stair_sequence_output.target;
   }
@@ -971,7 +986,9 @@ void ControlLoop() {
                                     chassis_output.control.run_chassis_update;
   const bool jump_control_enabled =
       (chassis_output.mode == chassis::Fsm::State::kJumpPrep || chassis_output.mode == chassis::Fsm::State::kJumpPush ||
-       chassis_output.mode == chassis::Fsm::State::kJumpRecover) &&
+       chassis_output.mode == chassis::Fsm::State::kJumpRecover ||
+       chassis_output.mode == chassis::Fsm::State::kStairDescendPush ||
+       chassis_output.mode == chassis::Fsm::State::kStairDescendRetract) &&
       chassis_output_enable && chassis_output.control.run_chassis_update;
 
   // ── 7g. 偏航就绪判稳 ──
@@ -1001,7 +1018,8 @@ void ControlLoop() {
   const bool has_supercap = (sc_err & kScFatalMask) == 0;
   const float default_speed_max = has_supercap ? kTargetForwardSpeedMaxMps : kTargetForwardSpeedMaxNoScMps;
   const float forward_speed_base =
-      (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
+      stair_descend_active ? ns::chassis_fsm::kStairDescend.speed_limit_mps
+      : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetForwardSpeedMaxHighLegMps
       : (chassis_output.mode == chassis::Fsm::State::kMidLeg && input.mode_request.mid_leg_f)
           ? kTargetForwardSpeedMaxMidLegMps
@@ -1105,7 +1123,7 @@ void ControlLoop() {
   }
 
   // ── 7j. 纵向速度斜坡 ──
-  if (spin_control_enabled) {
+  if (spin_control_enabled || stair_descend_wheels_disabled) {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
     const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
@@ -1122,9 +1140,11 @@ void ControlLoop() {
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
-  chassis_update_input.expected.s_dot = chassis_control_output.off_ground_in_mid_high_leg
+  chassis_update_input.expected.s_dot = stair_descend_wheels_disabled
                                             ? current_state.s_dot
-                                            : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot);
+                                            : (chassis_control_output.off_ground_in_mid_high_leg
+                                                   ? current_state.s_dot
+                                                   : (spin_control_enabled ? spin_target_s_dot : ctx.filtered_s_dot));
   chassis_update_input.expected.s = ctx.expected_s;
   wl_debug.expected_s_dot_mps = chassis_update_input.expected.s_dot;
   wl_debug.expected_s_m = chassis_update_input.expected.s;

@@ -140,14 +140,17 @@ struct ModeRequest {
   bool standby{false};                         ///< Standby: low-leg posture with wheel torque disabled
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
-  bool spin_hold{false};             ///< 小陀螺保持请求
-  float spin_dir{1.0f};              ///< 小陀螺方向（+1 正转，-1 反转）
-  bool jump_trigger{false};          ///< 跳跃边沿触发请求
-  bool reset_yaw_request{false};     ///< R 键重置底盘正方向
-  bool flip_180_request{false};      ///< R 键云台转 180° + 底盘正方向切换
-  float current_leg_length_m{0.0f};  ///< 当前平均腿长反馈 (回灌自上周期底盘输出)
-  float theta_ll_rad{0.0f};          ///< 当前左腿摆角 (回灌自上周期底盘输出)
-  float theta_lr_rad{0.0f};          ///< 当前右腿摆角 (回灌自上周期底盘输出)
+  bool spin_hold{false};              ///< 小陀螺保持请求
+  float spin_dir{1.0f};               ///< 小陀螺方向（+1 正转，-1 反转）
+  bool jump_trigger{false};           ///< 跳跃边沿触发请求
+  bool stair_descend_request{false};  ///< 下台阶模式请求
+  bool stair_descend_ready{false};    ///< 向下 ToF 已准备完成
+  bool stair_descend_trigger{false};  ///< 两个向下 ToF 单帧同时触发
+  bool reset_yaw_request{false};      ///< R 键重置底盘正方向
+  bool flip_180_request{false};       ///< R 键云台转 180° + 底盘正方向切换
+  float current_leg_length_m{0.0f};   ///< 当前平均腿长反馈 (回灌自上周期底盘输出)
+  float theta_ll_rad{0.0f};           ///< 当前左腿摆角 (回灌自上周期底盘输出)
+  float theta_lr_rad{0.0f};           ///< 当前右腿摆角 (回灌自上周期底盘输出)
 
   CombatProfile combat_profile{CombatProfile::kNormal};  ///< 战斗域子模式
   TargetSource target_source{TargetSource::kRc};         ///< 当前目标来源偏好
@@ -202,6 +205,9 @@ struct ChassisFsmInput {
   float spin_dir{1.0f};                                    ///< 小陀螺方向（+1 正转，-1 反转）
   bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
+  bool stair_descend_request{false};                       ///< 下台阶模式请求
+  bool stair_descend_ready{false};                         ///< 向下 ToF 已准备完成
+  bool stair_descend_trigger{false};                       ///< 下台阶单帧测距触发
   float current_leg_length_m{0.0f};                        ///< 当前平均腿长反馈
   float current_s_dot{0.0f};                               ///< 当前纵向速度 [m/s]
   float theta_ll_rad{0.0f};                                ///< 当前左腿摆角
