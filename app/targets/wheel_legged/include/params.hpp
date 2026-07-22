@@ -77,7 +77,6 @@ constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 950U;  // 最大距离
 constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;       // 最小距离
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
-constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 50U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
 constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
