@@ -701,8 +701,8 @@ using namespace common::main;
 // ── 自瞄通信 ──
 namespace aimbot {
 constexpr uint8_t kRobotId = 1U;                                           ///< 机器人 ID（裁判系统回退值）
-constexpr float kBulletSpeedMps = 11.5f;                                   ///< 弹速 [m/s]（裁判系统回退值）
-constexpr float kBulletDefaultSpeedMps = 11.5f;                            ///< 默认弹速
+constexpr float kBulletSpeedMps = 11.8f;                                   ///< 弹速 [m/s]（裁判系统回退值）
+constexpr float kBulletDefaultSpeedMps = 11.8f;                            ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 10.5f;                           ///< 区分裁判系统返回值是否正确
 constexpr PidGains kYawPositionPidRune{70.0f, 0.0f, 0.3f, 1000.0f, 1.0f};  ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.2f, 0.f, 0.0f, 6.4f, 0.6f};          ///< 自瞄偏航速度 PID（打符）
