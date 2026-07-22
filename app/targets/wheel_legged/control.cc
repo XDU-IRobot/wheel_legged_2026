@@ -213,6 +213,8 @@ constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRa
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
+constexpr float kYawResetRampStepRad = ns::control_loop::kYawResetRampStepRad;
+constexpr float kYawResetMaxSpeedMps = ns::control_loop::kYawResetMaxSpeedMps;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -494,9 +496,14 @@ void ControlLoop() {
       chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
     }
   } else if (input.mode_request.reset_yaw_request) {
-    ctx.defer_leg_change = true;
-    ctx.pending_leg_profile = chassis_input.request.leg_request;
-    chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    // 检测底盘是否已对准正方向；若已对准则直接执行 C/V/B 动作，无需旋转等待
+    const float yaw_err =
+        std::fabs(rm::modules::Wrap(kYawFollowFixedTargetRad - input.estimator_input.yaw_motor_rad, -kPi, kPi));
+    if (yaw_err >= kSpinExitYawAlignThresholdRad) {
+      ctx.defer_leg_change = true;
+      ctx.pending_leg_profile = chassis_input.request.leg_request;
+      chassis_input.request.leg_request = leg_profile_from_state(globals->chassis_fsm.mode());
+    }
   }
 
   // yaw 对齐未完成时保持 FSM 当前状态，完成后再执行 C/V/B 的 pending 动作
@@ -943,17 +950,46 @@ void ControlLoop() {
     }
   }
 
-  // R 键重置底盘正方向（静止时也生效，目标为固定偏置角）
+  // C/V/B 键重置底盘正方向：始终瞄准真正的正方向，使用斜坡平滑旋转
+  // 速度高于阈值时暂不激活斜坡，等降速后再转（类似小陀螺入口的速度检查）
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
-    const auto nearest = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
-    ctx.defer_yaw_target_rad = nearest.target_rad;
-    ctx.yaw_follow_target = nearest;
+    const float forward_target_rad = rm::modules::Wrap(kYawFollowFixedTargetRad, -kPi, kPi);
+    ctx.defer_yaw_target_rad = forward_target_rad;
+    ctx.yaw_reset_target_final_rad = forward_target_rad;
+    if (std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
+      ctx.yaw_reset_ramp_active = true;
+      ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
+      ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+      ctx.yaw_follow_target_initialized = true;
+      ctx.yaw_follow_drive_ready = false;
+      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
+      ctx.filtered_yaw_dot = 0.0f;
+    }
+  }
+
+  // 偏航复位延迟激活：defer 已设置但因车速高未激活，降速后补激活
+  if (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active &&
+      std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
+    ctx.yaw_reset_ramp_active = true;
+    ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
     ctx.yaw_follow_target_initialized = true;
     ctx.yaw_follow_drive_ready = false;
     ctx.yaw_follow_drive_ready_stable_ticks = 0U;
     ctx.filtered_yaw_dot = 0.0f;
+  }
+
+  // 偏航复位斜坡：逐步移动 yaw_follow_target 至最终目标
+  if (ctx.yaw_reset_ramp_active) {
+    const float err = rm::modules::Wrap(ctx.yaw_reset_target_final_rad - ctx.yaw_follow_target.target_rad, -kPi, kPi);
+    if (std::fabs(err) <= kYawResetRampStepRad) {
+      ctx.yaw_follow_target.target_rad = ctx.yaw_reset_target_final_rad;
+      ctx.yaw_reset_ramp_active = false;
+    } else {
+      ctx.yaw_follow_target.target_rad =
+          rm::modules::Wrap(ctx.yaw_follow_target.target_rad + std::copysign(kYawResetRampStepRad, err), -kPi, kPi);
+    }
   }
 
   // R 键云台转 180°：翻转底盘驱动方向，抑制偏航跟随直到云台旋转完成
@@ -1062,7 +1098,8 @@ void ControlLoop() {
   target_s_dot += forward_speed_bias;
   const bool stair_seq_active = stair_task_output.mode == wheel_legged::StairTaskMode::kExecuting ||
                                 stair_task_output.mode == wheel_legged::StairTaskMode::kBetweenSteps;
-  if (!chassis_output_enable || now_is_standby || stair_seq_active) {
+  if (!chassis_output_enable || now_is_standby || stair_seq_active ||
+      (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active)) {
     target_s_dot = 0.0f;
   }
 
