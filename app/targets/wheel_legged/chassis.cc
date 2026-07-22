@@ -323,18 +323,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     standup_complete_ = false;
     standup_phase_ = 0;
     standup_theta_target_ = 0.0f;
-    trigger_standup_latched_ = false;
     standup_from_recovery_latch_ = false;
-  }
-
-  // 台阶 step2 hook 完成后触发起立
-  if (input.motion_target.trigger_standup && !trigger_standup_latched_ && standup_complete_) {
-    standup_complete_ = false;
-    standup_phase_ = 0;
-    trigger_standup_latched_ = true;
-  }
-  if (standup_complete_) {
-    trigger_standup_latched_ = false;
   }
 
   if (!output_.posture_valid) {
@@ -433,8 +422,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         standup_theta_target_ -= kRampStep;
         if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
       }
-      const float theta_tol =
-          trigger_standup_latched_ ? wheel_legged::params::active::chassis::kStandupPhase1ThetaTolStairRad : kThetaTol;
+      const float theta_tol = kThetaTol;
       const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
       const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
       const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;

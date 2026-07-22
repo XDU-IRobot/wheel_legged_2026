@@ -81,7 +81,6 @@ struct ChassisMotionTarget {
   bool disable_wheel_torque{false};
   bool use_stair_theta_controller{false};
 
-  bool trigger_standup{false};
 };
 
 /**
