@@ -142,33 +142,38 @@ HERO_QR_POINTS: list[QrPoint] = [
 INFANTRY3_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.14,
-        np.diag([200.0, 140.0, 200.0, 1.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
-        np.diag([2., 2., 0.2, 0.2]),
+        np.diag([200.0, 140.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+        np.diag([2.6, 2.6, 0.35, 0.35]),
     ),
     QrPoint(
-        0.155,
-        np.diag([200.0, 120.0, 200.0, 1.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
-        np.diag([2., 2., 0.2, 0.2]),
+        0.17,
+        np.diag([200.0, 140.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+        np.diag([2.8, 2.8, 0.4, 0.4]),
     ),
+    # QrPoint(
+    #     0.155,
+    #     np.diag([200.0, 120.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+    #     np.diag([2.8, 2.8, 0.4, 0.4]),
+    # ),
     # QrPoint(
     #     0.185,
     #     np.diag([200.0, 100.0, 200.0, 1.0, 1300.0, 1.0, 1300.0, 1.0, 3400.0, 1.0]),
     #     np.diag([3.6, 3.6, 0.5, 0.5]),
     # ),
-    QrPoint(
-        0.195,
-        np.diag([200.0, 120.0, 200.0, 1.0, 2000.0, 1.0, 2000.0, 1.0, 4200.0, 1.0]),
-        np.diag([2., 2., 0.2, 0.2]),
-   ),
+   #  QrPoint(
+   #      0.195,
+   #      np.diag([200.0, 120.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4200.0, 1.0]),
+   #      np.diag([3.6, 3.6, 0.45, 0.45]),
+   # ),
     QrPoint(
         0.245,
-        np.diag([160.0, 100.0, 200.0, 1.0, 2050.0, 1.0, 2050.0, 1.0, 4200.0, 1.0]),
-        np.diag([2., 2., 0.25, 0.25]),
+        np.diag([160.0, 100.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4200.0, 1.0]),
+        np.diag([3.8, 3.8, 0.45, 0.45]),
     ),
     QrPoint(
         0.33,
-        np.diag([150.0, 50.0, 200.0, 1.0, 2000.0, 1.0, 2000.0, 1.0, 4500.0, 1.0]),
-        np.diag([2.2, 2.2, 0.3, 0.3]),
+        np.diag([150.0, 50.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4500.0, 1.0]),
+        np.diag([3.8, 3.8, 0.45, 0.45]),
     ),
 
 ]
@@ -191,16 +196,49 @@ INFANTRY4_QR_POINTS: list[QrPoint] = [
     ),
 ]
 
+# Spin mode: single QrPoint per variant — same Q/R regardless of leg length.
+# The K gains still vary with leg length through the dynamics (A, B),
+# but the LQR cost weights stay constant across the spin leg-length range.
+HERO_SPIN_QR_POINTS: list[QrPoint] = [
+    QrPoint(
+        0.14,
+        np.diag([80.0, 50.0, 400.0, 10.0, 1450.0, 1.0, 1450.0, 1.0, 3200.0, 1.0]),
+        np.diag([2.0, 2.0, 0.35, 0.35]),
+    ),
+]
+
+INFANTRY3_SPIN_QR_POINTS: list[QrPoint] = [
+    QrPoint(
+        0.17,
+        np.diag([80.0, 100.0, 200.0, 1.0, 3000.0, 1.0, 3000.0, 1.0, 8000.0, 1.0]),
+        np.diag([3., 3., 0.4, 0.4]),
+    ),
+]
+
+INFANTRY4_SPIN_QR_POINTS: list[QrPoint] = [
+    QrPoint(
+        0.18,
+        np.diag([80.0, 50.0, 400.0, 10.0, 800.0, 1.0, 800.0, 1.0, 3200.0, 1.0]),
+        np.diag([2.0, 2.0, 1.0, 1.0]),
+    ),
+]
+
 VARIANT_QR_POINTS: dict[str, list[QrPoint]] = {
     "hero": HERO_QR_POINTS,
     "infantry3": INFANTRY3_QR_POINTS,
     "infantry4": INFANTRY4_QR_POINTS,
+    "hero_spin": HERO_SPIN_QR_POINTS,
+    "infantry3_spin": INFANTRY3_SPIN_QR_POINTS,
+    "infantry4_spin": INFANTRY4_SPIN_QR_POINTS,
 }
 
 VARIANT_CPP_NAMES: dict[str, str] = {
     "hero": "kCtrlPHero",
     "infantry3": "kCtrlPInfantry3",
     "infantry4": "kCtrlPInfantry4",
+    "hero_spin": "kCtrlPSpinHero",
+    "infantry3_spin": "kCtrlPSpinInfantry3",
+    "infantry4_spin": "kCtrlPSpinInfantry4",
 }
 
 
@@ -306,7 +344,7 @@ def leg_params(leg_length_m: float) -> tuple[float, float, float]:
 
 def validate_qr_points(points: Iterable[QrPoint]) -> list[QrPoint]:
     sorted_points = sorted(points, key=lambda p: p.leg_length_m)
-    if len(sorted_points) < 2:
+    if len(sorted_points) < 1:
         raise ValueError("QR_POINTS must contain at least two leg-length points.")
 
     seen: set[float] = set()
@@ -506,15 +544,20 @@ def format_cpp_header(variant_coeffs: dict[str, np.ndarray]) -> str:
     for variant in ("hero", "infantry3", "infantry4"):
         blocks.append(format_cpp_array(variant_coeffs[variant], VARIANT_CPP_NAMES[variant]))
         blocks.append("")
+        blocks.append(format_cpp_array(variant_coeffs[variant + "_spin"], VARIANT_CPP_NAMES[variant + "_spin"]))
+        blocks.append("")
 
     blocks.extend(
         [
             "#if WHEEL_LEGGED_ROBOT_VARIANT == 1",
             "static constexpr const auto &kCtrlP = kCtrlPHero;",
+            "static constexpr const auto &kCtrlPSpin = kCtrlPSpinHero;",
             "#elif WHEEL_LEGGED_ROBOT_VARIANT == 2",
             "static constexpr const auto &kCtrlP = kCtrlPInfantry3;",
+            "static constexpr const auto &kCtrlPSpin = kCtrlPSpinInfantry3;",
             "#elif WHEEL_LEGGED_ROBOT_VARIANT == 3",
             "static constexpr const auto &kCtrlP = kCtrlPInfantry4;",
+            "static constexpr const auto &kCtrlPSpin = kCtrlPSpinInfantry4;",
             "#else",
             '#error "WHEEL_LEGGED_ROBOT_VARIANT must be 1, 2, or 3"',
             "#endif",
@@ -796,7 +839,7 @@ def main() -> None:
     parser.add_argument("--html-report", type=Path, help="optional HTML/SVG report path or directory")
     parser.add_argument(
         "--report-variant",
-        choices=["hero", "infantry3", "infantry4", "all"],
+        choices=["hero", "infantry3", "infantry4", "hero_spin", "infantry3_spin", "infantry4_spin", "all"],
         default="infantry3",
         help="which variant(s) to write when --html-report is set",
     )
@@ -813,7 +856,8 @@ def main() -> None:
 
     cpp = format_cpp_header(variant_coeffs)
 
-    print("\n\n".join(variant_reports[variant] for variant in ("hero", "infantry3", "infantry4")))
+    all_variants = ("hero", "infantry3", "infantry4", "hero_spin", "infantry3_spin", "infantry4_spin")
+    print("\n\n".join(variant_reports[variant] for variant in all_variants))
     print()
     print(cpp)
 
@@ -823,7 +867,7 @@ def main() -> None:
         print(f"wrote: {args.output}")
 
     if args.html_report:
-        selected_variants = ("hero", "infantry3", "infantry4") if args.report_variant == "all" else (args.report_variant,)
+        selected_variants = all_variants if args.report_variant == "all" else (args.report_variant,)
         report_path = args.html_report
         for variant in selected_variants:
             if len(selected_variants) == 1 and report_path.suffix:

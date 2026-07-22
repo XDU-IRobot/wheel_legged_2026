@@ -96,7 +96,7 @@ class Actuators {
    */
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
     if (g.dial.has_value()) {
-      g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
+      // g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
     }
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }

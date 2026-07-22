@@ -337,7 +337,7 @@ void IntegrateGimbalTarget(Dr16SemanticState &semantic_state, const Dr16RawInput
                            bool host_controls_gimbal) {
   if (!semantic_state.gimbal_target_initialized) {
     semantic_state.rc_target.yaw_rad = gimbal_imu_yaw_rad;
-    semantic_state.rc_target.pitch_rad = -gimbal_imu_pitch_rad;
+    semantic_state.rc_target.pitch_rad = gimbal_imu_pitch_rad;
     semantic_state.gimbal_target_initialized = true;
   }
   if (host_controls_gimbal) return;
@@ -505,7 +505,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.mid_leg_f = tc_state.mid_leg_f;
 
   const bool is_auto_aim = IsAutoAimProfile(combat_profile);
-  if (is_auto_aim) request.standby = true;
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
+    request.standby = true;
+  }
   if (request.domain_request == wheel_legged::DomainRequest::kDisabled) request.standby = false;
 
   request.combat_profile = combat_profile;
@@ -710,10 +713,10 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
   const bool auto_aim_active = IsAutoAimProfile(input.mode_request.combat_profile);
   const bool host_target_available = g.aimbot.has_value() && g.aimbot->online_status() == rm::device::Device::kOk &&
                                      g.aimbot->nuc_start_flag() != 0 && auto_aim_active &&
-                                     g.aimbot->aimbot_state() != 0;
+                                     (g.aimbot->aimbot_state() & 0x01U) != 0U;
   if (previous_host_target_active && auto_aim_active && !host_target_available && gimbal_rx_valid) {
     semantic_state.rc_target.yaw_rad = g.gimbal_rx->yaw_rad();
-    semantic_state.rc_target.pitch_rad = -g.gimbal_rx->pitch_rad();
+    semantic_state.rc_target.pitch_rad = g.gimbal_rx->pitch_rad();
     semantic_state.gimbal_target_initialized = true;
     input.mode_request.rc_target = semantic_state.rc_target;
   }
