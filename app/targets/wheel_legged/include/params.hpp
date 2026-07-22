@@ -193,7 +193,7 @@ constexpr float kPitchGravityCompensationNm = 2.35f;
 
 constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};    ///< 偏航位置 PID
 constexpr PidGains kYawSpeedPid{1.5f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
-constexpr PidGains kPitchPositionPid{25.0f, 0.0f, 0.5f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
+constexpr PidGains kPitchPositionPid{35.0f, 0.0f, 0.5f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 28.0f, 0.0f};         ///< 俯仰速度 PID
 
 /// @brief 辨识得到的 9 个动力学参数（theta_0 ~ theta_8），用于前馈验证
