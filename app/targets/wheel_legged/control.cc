@@ -1252,8 +1252,8 @@ void ControlLoop() {
   if (globals->aimbot.has_value() && globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0) {
     constexpr float kRadToDeg = 180.f / kPi;
     const float yaw_deg = globals->gimbal_rx->euler_yaw_rad() * kRadToDeg;
-    const float pitch_deg = globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
-    const float roll_deg = -globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
+    const float pitch_deg = -globals->gimbal_rx->euler_pitch_rad() * kRadToDeg;
+    const float roll_deg = globals->gimbal_rx->euler_roll_rad() * kRadToDeg;
 
     uint8_t aimbot_mode = 1;
     switch (chassis_input.request.combat_profile) {
@@ -1360,7 +1360,7 @@ void ControlLoop() {
     wl_debug.aimbot_rx_target = globals->aimbot->aimbot_id();
     wl_debug.aimbot_rx_nuc_start_flag = globals->aimbot->nuc_start_flag();
     wl_debug.aimbot_rx_yaw_rad = globals->aimbot->yaw() * kDegToRad;
-    wl_debug.aimbot_rx_pitch_rad = globals->aimbot->pitch() * kDegToRad;
+    wl_debug.aimbot_rx_pitch_rad = -globals->aimbot->pitch() * kDegToRad;
   } else {
     wl_debug.aimbot_rx_state = 0U;
     wl_debug.aimbot_rx_target = 0U;

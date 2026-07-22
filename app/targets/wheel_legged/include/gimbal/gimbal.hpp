@@ -240,14 +240,14 @@ class Gimbal {
       float yaw_dq = 0.0f, pitch_dq = 0.0f;
       float yaw_ddq = 0.0f, pitch_ddq = 0.0f;
       if (input.aimbot_mode) {
-        // yaw_dq = -input.aimbot_yaw_vel;
-        // pitch_dq = input.aimbot_pitch_vel;
-        // yaw_ddq = -input.aimbot_yaw_acc;
-        // pitch_ddq = input.aimbot_pitch_acc;
-        yaw_dq = 0.f;
-        pitch_dq = 0.f;
-        yaw_ddq = 0.f;
-        pitch_ddq = 0.f;
+        yaw_dq = -input.aimbot_yaw_vel;
+        pitch_dq = input.aimbot_pitch_vel;
+        yaw_ddq = -input.aimbot_yaw_acc;
+        pitch_ddq = input.aimbot_pitch_acc;
+        // yaw_dq = 0.f;
+        // pitch_dq = 0.f;
+        // yaw_ddq = 0.f;
+        // pitch_ddq = 0.f;
         ff_ready_ = false;
       } else {
         if (ff_ready_) {
@@ -289,9 +289,9 @@ class Gimbal {
       output_.ff_pitch_friction = ff.pitch_friction;
 
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
-      output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch, -28.f, 28.f);
+      output_.pitch_cmd_torque_nm = std::clamp(controller_.output().pitch + ff.pitch, -28.f, 28.f);
     }
   }
 
