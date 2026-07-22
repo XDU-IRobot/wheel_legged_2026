@@ -35,7 +35,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t control_overrun_count;
 
   // ── 遥控器原始输入 ──
-  uint8_t dr16_online;        // DR16 在线
+  uint8_t dr16_online;  // DR16 在线
 
   // ── 遥控器/图传语义请求 ──
   uint8_t input_domain_request;     // 解析后的工作域
