@@ -124,6 +124,7 @@ class Chassis {
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
+  bool prev_spin_active_{false};  ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,

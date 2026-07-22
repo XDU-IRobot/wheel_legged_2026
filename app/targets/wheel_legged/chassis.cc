@@ -38,6 +38,7 @@ constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chass
 constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEtaLookupLwM;
 
 constexpr const auto &kCtrlPLow = wheel_legged::params::active::chassis::kCtrlPLow;
+constexpr const auto &kCtrlPSpin = wheel_legged::params::active::chassis::kCtrlPSpin;
 
 std::array<std::array<rm::f32, 6>, 40> ToCoeffMatrix(const std::array<float, 240> &flat) {
   std::array<std::array<rm::f32, 6>, 40> result{};
@@ -548,6 +549,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
   const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
   const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
+
+  // 进入/退出小陀螺时切换 LQR 增益矩阵
+  const bool now_spin = (input.fsm_mode == Fsm::State::kSpin);
+  if (now_spin != prev_spin_active_) {
+    lqr_controller_.SetLqrCoefficients(now_spin ? ToCoeffMatrix(kCtrlPSpin) : ToCoeffMatrix(kCtrlPLow));
+    prev_spin_active_ = now_spin;
+  }
+
   base_torque_ =
       lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias, pos_scale, vel_scale);
 
