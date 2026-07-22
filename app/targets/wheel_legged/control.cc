@@ -618,7 +618,7 @@ void ControlLoop() {
   if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
     // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变
     dr16_state.rc_target.yaw_rad = input.gimbal_imu_yaw_rad;
-    dr16_state.rc_target.pitch_rad = -input.gimbal_imu_pitch_rad;
+    dr16_state.rc_target.pitch_rad = input.gimbal_imu_pitch_rad;
     // 直接覆盖当周期目标，用上一周期 gimbal 实际输出位置，避免本周期目标跳变
     gimbal_update_input.target.yaw_rad = gimbal_control_output.yaw_pos_rad;
     gimbal_update_input.target.pitch_rad = gimbal_control_output.pitch_pos_rad;
