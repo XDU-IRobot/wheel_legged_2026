@@ -507,7 +507,10 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.mid_leg_f = tc_state.mid_leg_f;
 
   const bool is_auto_aim = IsAutoAimProfile(combat_profile);
-  if (is_auto_aim) request.standby = true;
+  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
+      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
+    request.standby = true;
+  }
   if (request.domain_request == wheel_legged::DomainRequest::kDisabled) request.standby = false;
 
   request.combat_profile = combat_profile;

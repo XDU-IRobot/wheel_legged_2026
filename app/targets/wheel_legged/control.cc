@@ -185,6 +185,10 @@ constexpr float kLargeTurnThresholdRad = ns::control_loop::kLargeTurnThresholdRa
 constexpr float kSafeTurnSpeedMps = ns::control_loop::kSafeTurnSpeedMps;
 constexpr float kLargeTurnThetaThresholdRad = ns::control_loop::kLargeTurnThetaThresholdRad;
 constexpr float kLargeTurnRecoveryAccelScale = ns::control_loop::kLargeTurnRecoveryAccelScale;
+constexpr float kLargeTurnThresholdRadMidLeg = ns::control_loop::kLargeTurnThresholdRadMidLeg;
+constexpr float kSafeTurnSpeedMpsMidLeg = ns::control_loop::kSafeTurnSpeedMpsMidLeg;
+constexpr float kLargeTurnThetaThresholdRadMidLeg = ns::control_loop::kLargeTurnThetaThresholdRadMidLeg;
+constexpr float kLargeTurnRecoveryAccelScaleMidLeg = ns::control_loop::kLargeTurnRecoveryAccelScaleMidLeg;
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
@@ -1016,13 +1020,18 @@ void ControlLoop() {
           : 0.0f;
   float forward_max_speed = forward_speed_base;
   // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
+  const bool is_mid_leg = (chassis_output.mode == chassis::Fsm::State::kMidLeg);
+  const float large_turn_threshold = is_mid_leg ? kLargeTurnThresholdRadMidLeg : kLargeTurnThresholdRad;
+  const float safe_turn_speed = is_mid_leg ? kSafeTurnSpeedMpsMidLeg : kSafeTurnSpeedMps;
+  const float large_turn_theta_threshold =
+      is_mid_leg ? kLargeTurnThetaThresholdRadMidLeg : kLargeTurnThetaThresholdRad;
   const float motor_error =
       rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-  if (std::fabs(motor_error) > kLargeTurnThresholdRad &&
-      (std::fabs(current_state.s_dot) > kSafeTurnSpeedMps ||
-       std::fabs(current_state.theta_ll) > kLargeTurnThetaThresholdRad ||
-       std::fabs(current_state.theta_lr) > kLargeTurnThetaThresholdRad)) {
-    forward_max_speed = std::min(forward_max_speed, kSafeTurnSpeedMps);
+  if (std::fabs(motor_error) > large_turn_threshold &&
+      (std::fabs(current_state.s_dot) > safe_turn_speed ||
+       std::fabs(current_state.theta_ll) > large_turn_theta_threshold ||
+       std::fabs(current_state.theta_lr) > large_turn_theta_threshold)) {
+    forward_max_speed = std::min(forward_max_speed, safe_turn_speed);
   }
   // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
   static bool s_large_turn_recovery = false;
@@ -1112,7 +1121,8 @@ void ControlLoop() {
     // 大转向限速解除后，用缓加速斜坡逐步恢复速度
     float accel_scale = 1.0f;
     if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
-      accel_scale = kLargeTurnRecoveryAccelScale;
+      accel_scale = (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kLargeTurnRecoveryAccelScaleMidLeg
+                                                                   : kLargeTurnRecoveryAccelScale;
       if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
         s_large_turn_recovery = false;
       }
