@@ -177,21 +177,21 @@ INFANTRY4_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.17,
         #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
-        np.diag([350.0, 220.0,  200.0, 1.0,  2500.0,    1.0,     2500.0,     1.0,   3000.0,  1.0]),
+        np.diag([350.0, 220.0,  200.0, 1.0,  2200.0,    1.0,     2200.0,     1.0,   3000.0,  1.0]),
         #        T_wl    T_wr     T_bl     T_br
         np.diag([1,1, 0.1, 0.1]),
     ),
     QrPoint(
         0.23,
         #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
-        np.diag([350.0, 220.0,  200.0, 1.0,  2500.0,    1.0,     2500.0,     1.0,   3000.0,  1.0]),
+        np.diag([350.0, 220.0,  200.0, 1.0,  2200.0,    1.0,     2200.0,     1.0,   3000.0,  1.0]),
         #        T_wl    T_wr     T_bl     T_br
         np.diag([1,1, 0.1, 0.1]),
     ),
     QrPoint(
         0.3,
         #              s     ds     phi   dphi theta_ll dtheta_ll theta_lr dtheta_lr theta_b dtheta_b
-        np.diag([350.0, 220.0,  200.0, 1.0,  2500.0,    1.0,     2500.0,     1.0,   3000.0,  1.0]),
+        np.diag([350.0, 220.0,  200.0, 1.0,  2200.0,    1.0,     2200.0,     1.0,   3000.0,  1.0]),
         #        T_wl    T_wr     T_bl     T_br
         np.diag([1,1, 0.1, 0.1]),
     ),
