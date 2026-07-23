@@ -10,12 +10,12 @@ namespace wheel_legged {
 /// @brief 倒地方向（在倒地确认瞬间锁定，动作过程中不再重新分类）
 enum class FallDirection : uint8_t {
   kUnknown = 0,
-  kFront = 1,    ///< 前趴
-  kBack = 2,     ///< 后躺
-  kLeft = 3,     ///< 左侧躺
-  kRight = 4,    ///< 右侧躺
-  kInverted = 5, ///< 倒扣
-  kDiagonal = 6, ///< 斜向倒地
+  kFront = 1,     ///< 前趴
+  kBack = 2,      ///< 后躺
+  kLeft = 3,      ///< 左侧躺
+  kRight = 4,     ///< 右侧躺
+  kInverted = 5,  ///< 倒扣
+  kDiagonal = 6,  ///< 斜向倒地
 };
 
 /// @brief 倒地原因
@@ -45,7 +45,7 @@ struct FallDetection {
   bool fall_confirmed{false};
 
   // 腿
-  bool leg_fall_candidate{false};    ///< 腿摆角超限（pitch/roll 正常但 theta 越界）
+  bool leg_fall_candidate{false};  ///< 腿摆角超限（pitch/roll 正常但 theta 越界）
   bool leg_configuration_safe{true};
 
   // 传感器

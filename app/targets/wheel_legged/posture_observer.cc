@@ -97,8 +97,7 @@ PostureObservation PostureObserver::Update(const float qw, const float qx, const
                                   obs.accel_body_z * obs.accel_body_z);
 
   // 低动态 = 加速度模长接近重力 (9.81 m/s²)
-  obs.accel_low_dynamic =
-      std::abs(obs.accel_norm_mps2 - 9.81f) < config_.params.accel_low_dynamic_threshold_mps2;
+  obs.accel_low_dynamic = std::abs(obs.accel_norm_mps2 - 9.81f) < config_.params.accel_low_dynamic_threshold_mps2;
 
   // ── 11. 传感器有效标志 ──
   obs.sensor_valid = (obs.fault_flags == 0);

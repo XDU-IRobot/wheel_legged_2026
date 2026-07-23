@@ -317,10 +317,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float shoot_loader_spd_feedback;  // 拨盘速度环反馈 [rpm]
   float shoot_loader_spd_pid_out;   // 拨盘速度环 PID 输出（最终给电机）
   // ── 发射机构（三摩擦变体 hero）──
-  float booster_raw_pos_rad;        // DM 拨盘当前位置 (hero)
-  float booster_target_rad;         // DM 拨盘目标角度 (hero)
-  int32_t hero_remaining_ammo;      // Hero 剩余弹量（本地跟踪）
-  float hero_displacement_bias;     // Hero 动态位移偏置 [m]
+  float booster_raw_pos_rad;     // DM 拨盘当前位置 (hero)
+  float booster_target_rad;      // DM 拨盘目标角度 (hero)
+  int32_t hero_remaining_ammo;   // Hero 剩余弹量（本地跟踪）
+  float hero_displacement_bias;  // Hero 动态位移偏置 [m]
 
   // ── 本地热量闭环 ──
   float shoot_local_heat;         // 本地估算枪口热量
@@ -419,13 +419,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t policy_ok;           // 最近一次推理成功标志
 
   // ── 四元数倒地检测影子输出 ──
-  float fall_up_body_x;               // up_body.x in body frame
-  float fall_up_body_y;               // up_body.y in body frame
-  float fall_tilt_cos;                // up_body.z = cos(tilt angle)
-  uint8_t fall_flags;                 // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
-  uint8_t fall_aux_flags;             // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
-  uint8_t posture_fault_flags;        // PostureObservation::fault_flags (PostureFault bitmask)
-  uint8_t _fall_pad2;                 // padding
+  float fall_up_body_x;         // up_body.x in body frame
+  float fall_up_body_y;         // up_body.y in body frame
+  float fall_tilt_cos;          // up_body.z = cos(tilt angle)
+  uint8_t fall_flags;           // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
+  uint8_t fall_aux_flags;       // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
+  uint8_t posture_fault_flags;  // PostureObservation::fault_flags (PostureFault bitmask)
+  uint8_t _fall_pad2;           // padding
 };
 static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 

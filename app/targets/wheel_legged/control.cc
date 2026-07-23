@@ -1317,8 +1317,8 @@ void ControlLoop() {
     const float raw_ay = globals->chassis_imu->acc_y();
     const float raw_az = globals->chassis_imu->acc_z();
 
-    posture_obs = posture_observer.Update(raw_qw, raw_qx, raw_qy, raw_qz, raw_gx, raw_gy, raw_gz, raw_ax, raw_ay, raw_az,
-                                          now_ms);
+    posture_obs =
+        posture_observer.Update(raw_qw, raw_qx, raw_qy, raw_qz, raw_gx, raw_gy, raw_gz, raw_ax, raw_ay, raw_az, now_ms);
 
     wheel_legged::LegSafetyContext leg_ctx{};
     leg_ctx.theta_ll_rad = chassis_control_output.current_state.theta_ll;

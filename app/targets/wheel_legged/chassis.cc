@@ -373,10 +373,10 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     // 仅一条腿为负且超过阈值 → 不走负角度路径，走原三段式或 theta 恢复
     const bool single_far_neg =
         (left_neg != right_neg) &&
-        ((left_neg && state_output.current.theta_ll <
-                          -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad) ||
-         (right_neg && state_output.current.theta_lr <
-                           -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad));
+        ((left_neg &&
+          state_output.current.theta_ll < -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad) ||
+         (right_neg &&
+          state_output.current.theta_lr < -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad));
 
     if ((left_neg || right_neg) && !single_far_neg) {
       // ── 负角度路径：所有未完成腿统一收腿+摆腿向 0，各自到位后一起进 LQR ──
@@ -393,10 +393,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         return std::min(a, kTwoPi - a) < kLqrThetaTol;
       };
 
-      if (!standup_complete_left_ && theta_near_zero(state_output.current.theta_ll))
-        standup_complete_left_ = true;
-      if (!standup_complete_right_ && theta_near_zero(state_output.current.theta_lr))
-        standup_complete_right_ = true;
+      if (!standup_complete_left_ && theta_near_zero(state_output.current.theta_ll)) standup_complete_left_ = true;
+      if (!standup_complete_right_ && theta_near_zero(state_output.current.theta_lr)) standup_complete_right_ = true;
 
       // 仍有腿未完成 → 收腿+摆腿同时
       if (!standup_complete_left_ || !standup_complete_right_) {
@@ -411,70 +409,70 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       }
       standup_phase_ = 1;  // 非 Phase 0，确保腿长力生效
     } else {
-    // ── 原三段式：双腿正角度时保持不变 ──
-    // Phase 0: 摆腿 — 正常腿长 + 摆角 PID 到目标值
-    // Phase 1: 收腿 — 低腿长 + 保持摆角目标
-    // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
-    // Phase 3: 起立完成，锁存
-    constexpr float kThetaInit = wheel_legged::params::active::chassis::kStandupPhase0ThetaTargetRad;
-    constexpr float kPhase0Len = wheel_legged::params::active::chassis::kStandupPhase0TargetLengthM;
-    constexpr float kPhase0ThetaTol = wheel_legged::params::active::chassis::kStandupPhase0ThetaTolRad;
-    constexpr float kPhase2Len = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
-    constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
-    constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
-    constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
+      // ── 原三段式：双腿正角度时保持不变 ──
+      // Phase 0: 摆腿 — 正常腿长 + 摆角 PID 到目标值
+      // Phase 1: 收腿 — 低腿长 + 保持摆角目标
+      // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
+      // Phase 3: 起立完成，锁存
+      constexpr float kThetaInit = wheel_legged::params::active::chassis::kStandupPhase0ThetaTargetRad;
+      constexpr float kPhase0Len = wheel_legged::params::active::chassis::kStandupPhase0TargetLengthM;
+      constexpr float kPhase0ThetaTol = wheel_legged::params::active::chassis::kStandupPhase0ThetaTolRad;
+      constexpr float kPhase2Len = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
+      constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
+      constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
+      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
 
-    auto theta_near_target = [](float theta, float target) {
-      float a = std::fmod(theta, kTwoPi);
-      if (a < 0) a += kTwoPi;
-      float diff = a - target;
-      if (diff > kPi)
-        a -= kTwoPi;
-      else if (diff < -kPi)
-        a += kTwoPi;
-      return std::fabs(a - target);
-    };
+      auto theta_near_target = [](float theta, float target) {
+        float a = std::fmod(theta, kTwoPi);
+        if (a < 0) a += kTwoPi;
+        float diff = a - target;
+        if (diff > kPi)
+          a -= kTwoPi;
+        else if (diff < -kPi)
+          a += kTwoPi;
+        return std::fabs(a - target);
+      };
 
-    if (standup_phase_ == 0) {
-      // Phase 0: 摆腿 — 正常腿长，摆角到目标
-      standup_theta_target_ = kThetaInit;
-      params_.leg_target_length_m = kPhase0Len;
-      if (theta_near_target(state_output.current.theta_ll, kThetaInit) < kPhase0ThetaTol &&
-          theta_near_target(state_output.current.theta_lr, kThetaInit) < kPhase0ThetaTol) {
-        standup_phase_ = 1;
+      if (standup_phase_ == 0) {
+        // Phase 0: 摆腿 — 正常腿长，摆角到目标
+        standup_theta_target_ = kThetaInit;
+        params_.leg_target_length_m = kPhase0Len;
+        if (theta_near_target(state_output.current.theta_ll, kThetaInit) < kPhase0ThetaTol &&
+            theta_near_target(state_output.current.theta_lr, kThetaInit) < kPhase0ThetaTol) {
+          standup_phase_ = 1;
+        }
       }
-    }
 
-    if (standup_phase_ == 1) {
-      // Phase 1: 收腿 — 低腿长，保持摆角目标
-      force_low_leg_ = true;
-      if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
-        standup_phase_ = 2;
+      if (standup_phase_ == 1) {
+        // Phase 1: 收腿 — 低腿长，保持摆角目标
+        force_low_leg_ = true;
+        if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
+          standup_phase_ = 2;
+          force_low_leg_ = false;
+        }
+      }
+
+      if (standup_phase_ == 2) {
         force_low_leg_ = false;
+        // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0
+        params_.leg_target_length_m = kPhase2Len;
+        if (standup_theta_target_ > 0.0f) {
+          standup_theta_target_ -= kRampStep;
+          if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
+        }
+        const float theta_tol = kThetaTol;
+        const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
+        const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
+        const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;
+        const float theta_lr_pos = theta_lr_0_2pi < 0 ? theta_lr_0_2pi + kTwoPi : theta_lr_0_2pi;
+        if (std::min(theta_ll_pos, kTwoPi - theta_ll_pos) < theta_tol &&
+            std::min(theta_lr_pos, kTwoPi - theta_lr_pos) < theta_tol) {
+          standup_complete_ = true;
+          standup_phase_ = 3;
+          force_low_leg_ = false;
+          standup_theta_target_ = 0.0f;
+        }
       }
-    }
-
-    if (standup_phase_ == 2) {
-      force_low_leg_ = false;
-      // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0
-      params_.leg_target_length_m = kPhase2Len;
-      if (standup_theta_target_ > 0.0f) {
-        standup_theta_target_ -= kRampStep;
-        if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
-      }
-      const float theta_tol = kThetaTol;
-      const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
-      const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
-      const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;
-      const float theta_lr_pos = theta_lr_0_2pi < 0 ? theta_lr_0_2pi + kTwoPi : theta_lr_0_2pi;
-      if (std::min(theta_ll_pos, kTwoPi - theta_ll_pos) < theta_tol &&
-          std::min(theta_lr_pos, kTwoPi - theta_lr_pos) < theta_tol) {
-        standup_complete_ = true;
-        standup_phase_ = 3;
-        force_low_leg_ = false;
-        standup_theta_target_ = 0.0f;
-      }
-    }
     }  // else（原三段式）
   }  // !standup_complete_
   prev_enable_output_ = input.enable_output;
@@ -842,9 +840,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     const bool pitch_in_range =
         state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
-    if (pitch_in_range &&
-               imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
-               imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
+    if (pitch_in_range && imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
+        imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
       // pitch/roll正常但theta异常 → 先等云台归中，再摆腿恢复
       // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
       if (!theta_recovery_active_) {
@@ -920,7 +917,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       }
     }  // else if（pitch_in_range && roll in range）
     else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad ||
-               state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
+             state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
       theta_recovery_phase_ = 0;
       theta_recovery_active_ = false;
       constexpr rm::f32 kVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;

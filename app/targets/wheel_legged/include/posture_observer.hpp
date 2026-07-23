@@ -9,13 +9,13 @@ namespace wheel_legged {
 /// @brief 姿态观测器故障码（位掩码，可组合）
 enum class PostureFault : uint8_t {
   kNone = 0x00,
-  kQuatNaN = 0x01,           ///< 四元数包含 NaN
-  kQuatInf = 0x02,           ///< 四元数包含 Inf
-  kQuatNormBad = 0x04,       ///< 四元数范数偏离 1 超过容差
-  kQuatDiscontinuity = 0x08, ///< 四元数相邻帧跳变过大
-  kImuStale = 0x10,          ///< IMU 数据超时未更新
-  kAccelNaN = 0x20,          ///< 加速度计包含 NaN
-  kGyroNaN = 0x40,           ///< 陀螺仪包含 NaN
+  kQuatNaN = 0x01,            ///< 四元数包含 NaN
+  kQuatInf = 0x02,            ///< 四元数包含 Inf
+  kQuatNormBad = 0x04,        ///< 四元数范数偏离 1 超过容差
+  kQuatDiscontinuity = 0x08,  ///< 四元数相邻帧跳变过大
+  kImuStale = 0x10,           ///< IMU 数据超时未更新
+  kAccelNaN = 0x20,           ///< 加速度计包含 NaN
+  kGyroNaN = 0x40,            ///< 陀螺仪包含 NaN
 };
 
 /// @brief 姿态观测器输出：质量检查后的机体系 IMU 数据
@@ -41,8 +41,8 @@ struct PostureObservation {
   bool accel_low_dynamic{false};  ///< 加速度模长接近 1g → 低动态
 
   // 质量标志
-  uint8_t fault_flags{0};     ///< PostureFault 位掩码
-  bool sensor_valid{false};   ///< 传感器数据有效（fault_flags == 0 且数据新鲜）
+  uint8_t fault_flags{0};    ///< PostureFault 位掩码
+  bool sensor_valid{false};  ///< 传感器数据有效（fault_flags == 0 且数据新鲜）
 
   uint32_t last_update_ms{0};
 
