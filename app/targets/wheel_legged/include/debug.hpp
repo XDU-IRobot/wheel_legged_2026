@@ -116,6 +116,9 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float imu_raw_acc_x_mps2;    // 加速度 X
   float imu_raw_acc_y_mps2;    // 加速度 Y
   float imu_raw_acc_z_mps2;    // 加速度 Z
+  float imu_quat_roll_rad;     // 四元数解算 roll（对比内置欧拉角排查万向节死锁）
+  float imu_quat_pitch_rad;    // 四元数解算 pitch
+  float imu_quat_yaw_rad;      // 四元数解算 yaw
 
   // ── 云台 IMU ──
   float gimbal_imu_pitch_rad;     // 云台 IMU 俯仰
@@ -209,6 +212,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t chassis_off_ground;              // 离地
   uint8_t chassis_standup_complete;        // 起立完成
   uint8_t chassis_standup_phase;           // 起立阶段 (0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成)
+  uint8_t chassis_pitch_fall_retract;      // 俯仰倒地恢复后主动收腿中
   float chassis_standup_theta_target_rad;  // 起立摆角 PID 目标 [rad]
   uint8_t dm_enabled_latched;              // DM 电机使能锁存
   uint8_t gimbal_motors_enabled_latched;   // 云台电机使能锁存

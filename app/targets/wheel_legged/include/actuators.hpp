@@ -35,9 +35,19 @@ class Actuators {
     input.wheel.left_rad_s = -static_cast<float>(g.left_wheel->rpm()) * wheel_legged::params::active::kPi / 30.0f;
     input.wheel.right_rad_s = static_cast<float>(g.right_wheel->rpm()) * wheel_legged::params::active::kPi / 30.0f;
 
-    input.imu.roll_rad = g.chassis_imu->roll();
-    input.imu.pitch_rad = -g.chassis_imu->pitch();
-    input.imu.yaw_rad = g.chassis_imu->yaw();
+    // 四元数解算欧拉角，避免万向节死锁
+    {
+      float q[4] = {g.chassis_imu->quat_w(), g.chassis_imu->quat_x(), g.chassis_imu->quat_y(), g.chassis_imu->quat_z()};
+      float euler[3];
+      rm::modules::QuatToEuler(q, euler);
+      input.imu.roll_rad = euler[1];
+      input.imu.pitch_rad = -euler[0];
+      input.imu.yaw_rad = euler[2];
+      input.imu.quat_w = q[0];
+      input.imu.quat_x = q[1];
+      input.imu.quat_y = q[2];
+      input.imu.quat_z = q[3];
+    }
     input.imu.gyro_x_rad_s = g.chassis_imu->gyro_y();
     input.imu.gyro_y_rad_s = -g.chassis_imu->gyro_x();
     input.imu.gyro_z_rad_s = g.chassis_imu->gyro_z();
@@ -96,7 +106,7 @@ class Actuators {
    */
   void ApplyShootOutput(SharedResources &g, const ShootOutput &output) {
     if (g.dial.has_value()) {
-      // g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
+      g.dial->SetCurrent(static_cast<int16_t>(output.dial_current));
     }
     rm::device::DjiMotorBase::SendCommand(*g.wheel_can);
   }

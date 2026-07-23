@@ -259,6 +259,16 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.imu_raw_acc_y_mps2 = motor.imu.acc_y_mps2;
   wl_debug.imu_raw_acc_z_mps2 = motor.imu.acc_z_mps2;
 
+  // ── 四元数解算欧拉角（对比 IMU 内置欧拉角，排查万向节死锁）──
+  {
+    float q[4] = {motor.imu.quat_w, motor.imu.quat_x, motor.imu.quat_y, motor.imu.quat_z};
+    float euler[3];
+    rm::modules::QuatToEuler(q, euler);
+    wl_debug.imu_quat_roll_rad = euler[1];
+    wl_debug.imu_quat_pitch_rad = -euler[0];
+    wl_debug.imu_quat_yaw_rad = euler[2];
+  }
+
   // ── 底盘状态向量 ──
   const auto &x = chassis_control_output.current_state;
   wl_debug.state_s_m = x.s;
@@ -309,6 +319,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
+  wl_debug.chassis_pitch_fall_retract = static_cast<uint8_t>(chassis_control_output.pitch_fall_retract_active);
   wl_debug.chassis_standup_theta_target_rad = chassis_control_output.standup_theta_target;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──

@@ -99,24 +99,8 @@ bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fs
 
 bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kStandby; }
 
-constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecoveryDecelZoneRad;
-constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
 constexpr float kJumpPushForceN = wheel_legged::params::active::chassis::kJumpPushForceN;
-
-/// 计算恢复减速比例：1.0=全速，接近目标边界时线性衰减到 0
-inline float RecoveryProximityScale(const float current_angle, const float target_boundary, const float decel_zone) {
-  const float dist = std::fabs(current_angle - target_boundary);
-  if (dist >= decel_zone) return 1.0f;
-  if (dist < 0.03f) return 0.0f;
-  return dist / decel_zone;
-}
-
-/// 将原始目标速度按 proximity 缩放，边界处不低于 kMinSpeedRadS
-inline float ApplyRecoveryDecel(const float raw_target, const float proximity, const float min_speed) {
-  const float abs_target = min_speed + (std::fabs(raw_target) - min_speed) * proximity;
-  return std::copysign(abs_target, raw_target);
-}
 
 /// 检查 theta 是否在环形区间 [min, max] 内（跨 2π 等价角也正确处理）
 inline bool ThetaInRange(const float theta, const float min, const float max) {
@@ -323,18 +307,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     standup_complete_ = false;
     standup_phase_ = 0;
     standup_theta_target_ = 0.0f;
-    trigger_standup_latched_ = false;
+    standup_complete_left_ = true;
+    standup_complete_right_ = true;
     standup_from_recovery_latch_ = false;
-  }
-
-  // 台阶 step2 hook 完成后触发起立
-  if (input.motion_target.trigger_standup && !trigger_standup_latched_ && standup_complete_) {
-    standup_complete_ = false;
-    standup_phase_ = 0;
-    trigger_standup_latched_ = true;
-  }
-  if (standup_complete_) {
-    trigger_standup_latched_ = false;
   }
 
   if (!output_.posture_valid) {
@@ -374,17 +349,73 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else {
       standup_complete_ = false;
       standup_phase_ = 0;
+      standup_complete_left_ = true;
+      standup_complete_right_ = true;
     }
     theta_recovery_active_ = false;
   }
   prev_fsm_was_recovery_ = is_recovery_state;
 
-  // 起立三段式：先摆腿再收腿再摆腿
-  // Phase 0: 摆腿 — 正常腿长 + 摆角 PID 到目标值
-  // Phase 1: 收腿 — 低腿长 + 保持摆角目标
-  // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
-  // Phase 3: 起立完成，锁存
+  // 起立：负角度腿收腿+摆腿同时执行，正角度腿直入 LQR；双腿正角度时走原三段式
   if (!standup_complete_) {
+    constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+    constexpr float kPi = static_cast<float>(M_PI);
+
+    auto is_theta_negative = [](float theta) -> bool {
+      float a = std::fmod(theta, kTwoPi);
+      if (a < 0) a += kTwoPi;
+      return a > kPi;
+    };
+
+    const bool left_neg = is_theta_negative(state_output.current.theta_ll);
+    const bool right_neg = is_theta_negative(state_output.current.theta_lr);
+
+    // 仅一条腿为负且超过阈值 → 不走负角度路径，走原三段式或 theta 恢复
+    const bool single_far_neg =
+        (left_neg != right_neg) &&
+        ((left_neg && state_output.current.theta_ll <
+                          -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad) ||
+         (right_neg && state_output.current.theta_lr <
+                           -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad));
+
+    if ((left_neg || right_neg) && !single_far_neg) {
+      // ── 负角度路径：所有未完成腿统一收腿+摆腿向 0，各自到位后一起进 LQR ──
+      constexpr float kLqrThetaTol = wheel_legged::params::active::chassis::kStandupDirectLqrThetaTolRad;
+
+      if (standup_complete_left_ && standup_complete_right_) {
+        standup_complete_left_ = false;
+        standup_complete_right_ = false;
+      }
+
+      auto theta_near_zero = [&](float theta) -> bool {
+        float a = std::fmod(theta, kTwoPi);
+        if (a < 0) a += kTwoPi;
+        return std::min(a, kTwoPi - a) < kLqrThetaTol;
+      };
+
+      if (!standup_complete_left_ && theta_near_zero(state_output.current.theta_ll))
+        standup_complete_left_ = true;
+      if (!standup_complete_right_ && theta_near_zero(state_output.current.theta_lr))
+        standup_complete_right_ = true;
+
+      // 仍有腿未完成 → 收腿+摆腿同时
+      if (!standup_complete_left_ || !standup_complete_right_) {
+        force_low_leg_ = true;
+        standup_theta_target_ = 0.0f;
+      }
+
+      if (standup_complete_left_ && standup_complete_right_) {
+        standup_complete_ = true;
+        force_low_leg_ = false;
+        standup_theta_target_ = 0.0f;
+      }
+      standup_phase_ = 1;  // 非 Phase 0，确保腿长力生效
+    } else {
+    // ── 原三段式：双腿正角度时保持不变 ──
+    // Phase 0: 摆腿 — 正常腿长 + 摆角 PID 到目标值
+    // Phase 1: 收腿 — 低腿长 + 保持摆角目标
+    // Phase 2: 摆腿 — 腿长 0.1m + 摆角斜坡回 0，完成后轮端开放
+    // Phase 3: 起立完成，锁存
     constexpr float kThetaInit = wheel_legged::params::active::chassis::kStandupPhase0ThetaTargetRad;
     constexpr float kPhase0Len = wheel_legged::params::active::chassis::kStandupPhase0TargetLengthM;
     constexpr float kPhase0ThetaTol = wheel_legged::params::active::chassis::kStandupPhase0ThetaTolRad;
@@ -392,8 +423,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
     constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
     constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
-    constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
-    constexpr float kPi = static_cast<float>(M_PI);
 
     auto theta_near_target = [](float theta, float target) {
       float a = std::fmod(theta, kTwoPi);
@@ -433,8 +462,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         standup_theta_target_ -= kRampStep;
         if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
       }
-      const float theta_tol =
-          trigger_standup_latched_ ? wheel_legged::params::active::chassis::kStandupPhase1ThetaTolStairRad : kThetaTol;
+      const float theta_tol = kThetaTol;
       const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
       const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
       const float theta_ll_pos = theta_ll_0_2pi < 0 ? theta_ll_0_2pi + kTwoPi : theta_ll_0_2pi;
@@ -447,7 +475,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         standup_theta_target_ = 0.0f;
       }
     }
-  }
+    }  // else（原三段式）
+  }  // !standup_complete_
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
@@ -548,6 +577,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
 void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              const ChassisStateEstimatorOutput &state_output) {
   output_.off_ground_in_mid_high_leg = false;
+  output_.pitch_fall_retract_active = false;
 
   const auto set_all_zero = [this]() {
     output_.lb_tau = 0.0f;
@@ -639,12 +669,27 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         a += kTwoPi;
       return a;
     };
-    const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
-    const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_theta_target_);
-    left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_ll_wrapped,
-                                              -state_output.current.theta_ll_dot, 2);
-    right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_lr_wrapped,
-                                               -state_output.current.theta_lr_dot, 2);
+    if (!standup_complete_left_ || !standup_complete_right_) {
+      // 负角度路径：所有未完成腿统一更新 standup PID 摆向 0
+      if (!standup_complete_left_) {
+        const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
+        left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_ll_wrapped,
+                                                  -state_output.current.theta_ll_dot, 2);
+      }
+      if (!standup_complete_right_) {
+        const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_theta_target_);
+        right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_lr_wrapped,
+                                                   -state_output.current.theta_lr_dot, 2);
+      }
+    } else {
+      // 原三段式路径不变
+      const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
+      const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_theta_target_);
+      left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_ll_wrapped,
+                                                -state_output.current.theta_ll_dot, 2);
+      right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_lr_wrapped,
+                                                 -state_output.current.theta_lr_dot, 2);
+    }
   }
 
   const bool use_jump_retract1 = (input.fsm_mode == Fsm::State::kJumpPrep);
@@ -765,8 +810,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     rm::f32 t_br_cmd;
 
     if (!standup_complete_) {
-      t_bl_cmd = -left_leg_angle_pid_standup_.out();
-      t_br_cmd = -right_leg_angle_pid_standup_.out();
+      if (!standup_complete_left_ || !standup_complete_right_) {
+        // 负角度路径：未完成腿用 standup PID
+        t_bl_cmd = standup_complete_left_ ? -base_torque_.t_bl : -left_leg_angle_pid_standup_.out();
+        t_br_cmd = standup_complete_right_ ? -base_torque_.t_br : -right_leg_angle_pid_standup_.out();
+      } else {
+        // 原三段式路径不变
+        t_bl_cmd = -left_leg_angle_pid_standup_.out();
+        t_br_cmd = -right_leg_angle_pid_standup_.out();
+      }
     } else if (use_stair_target) {
       t_bl_cmd = -left_stair_theta_pid_.out();
       t_br_cmd = -right_stair_theta_pid_.out();
@@ -786,10 +838,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     output_.lf_tau = -output_.lf_tau;
     output_.lb_tau = -output_.lb_tau;
   } else {
-    if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
-        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
-        imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
-        imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
+    // theta 恢复需要 pitch 在范围内
+    const bool pitch_in_range =
+        state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
+        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
+    if (pitch_in_range &&
+               imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
+               imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
       // pitch/roll正常但theta异常 → 先等云台归中，再摆腿恢复
       // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
       if (!theta_recovery_active_) {
@@ -823,43 +878,16 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const bool ll_in_range = ThetaInRange(state_output.current.theta_ll, kThetaLegMin, kThetaLegMax);
         const bool lr_in_range = ThetaInRange(state_output.current.theta_lr, kThetaLegMin, kThetaLegMax);
 
-        auto wrap_near = [](float theta, float target) {
-          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
-          constexpr float kPi = static_cast<float>(M_PI);
-          float a = std::fmod(theta, kTwoPi);
-          if (a < 0) a += kTwoPi;
-          float diff = a - target;
-          if (diff > kPi)
-            a -= kTwoPi;
-          else if (diff < -kPi)
-            a += kTwoPi;
-          return a;
-        };
-
         float ll_pid_out = 0.0f;
         float lr_pid_out = 0.0f;
         if (!ll_in_range) {
-          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
-          float a = std::fmod(state_output.current.theta_ll - kThetaLegMin, kTwoPi);
-          if (a < 0) a += kTwoPi;
-          const float boundary = (a - (kThetaLegMax - kThetaLegMin) < kTwoPi - a) ? kThetaLegMax : kThetaLegMin;
-          const float theta_near = wrap_near(state_output.current.theta_ll, boundary);
-          const float prox = RecoveryProximityScale(theta_near, boundary, kDecelZoneRad);
-          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
-          left_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_ll_dot);
+          left_leg_turn_pid_.Update(kRecoverVel, state_output.current.theta_ll_dot);
           ll_pid_out = -left_leg_turn_pid_.out();
         } else {
           left_leg_turn_pid_.Clear();
         }
         if (!lr_in_range) {
-          constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
-          float a = std::fmod(state_output.current.theta_lr - kThetaLegMin, kTwoPi);
-          if (a < 0) a += kTwoPi;
-          const float boundary = (a - (kThetaLegMax - kThetaLegMin) < kTwoPi - a) ? kThetaLegMax : kThetaLegMin;
-          const float theta_near = wrap_near(state_output.current.theta_lr, boundary);
-          const float prox = RecoveryProximityScale(theta_near, boundary, kDecelZoneRad);
-          const float scaled_vel = ApplyRecoveryDecel(kRecoverVel, prox, kMinSpeedRadS);
-          right_leg_turn_pid_.Update(scaled_vel, state_output.current.theta_lr_dot);
+          right_leg_turn_pid_.Update(kRecoverVel, state_output.current.theta_lr_dot);
           lr_pid_out = -right_leg_turn_pid_.out();
         } else {
           right_leg_turn_pid_.Clear();
@@ -867,9 +895,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
         if (ll_in_range && lr_in_range) {
-          standup_complete_ = false;
-          standup_phase_ = 1;
+          standup_complete_ = true;
+          force_low_leg_ = true;
           standup_theta_target_ = 0.0f;
+          standup_complete_left_ = true;
+          standup_complete_right_ = true;
           theta_recovery_active_ = false;
           standup_from_recovery_latch_ = true;
         }
@@ -888,7 +918,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         output_.lw_tau = 0.0f;
         output_.rw_tau = 0.0f;
       }
-    } else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad ||
+    }  // else if（pitch_in_range && roll in range）
+    else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad ||
                state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
       theta_recovery_phase_ = 0;
       theta_recovery_active_ = false;
