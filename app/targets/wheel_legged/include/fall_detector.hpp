@@ -22,9 +22,8 @@ enum class FallDirection : uint8_t {
 enum class FallCause : uint8_t {
   kNone = 0,
   kTiltExceeded = 1,   ///< 机身倾斜超限（tilt_cos 低于阈值）
-  kSevereTilt = 2,     ///< 严重倾斜（快速路径）
-  kLegOutOfRange = 3,  ///< 腿摆角越界（pitch/roll 正常，但 theta 超限）
-  kSensorInvalid = 4,  ///< 传感器数据无效
+  kLegOutOfRange = 2,  ///< 腿摆角越界（pitch/roll 正常，但 theta 超限）
+  kSensorInvalid = 3,  ///< 传感器数据无效
 };
 
 /// @brief 腿状态上下文
@@ -44,7 +43,6 @@ struct FallDetection {
   bool body_upright_confirmed{true};
   bool fall_candidate{false};
   bool fall_confirmed{false};
-  bool severe_fall{false};
 
   // 腿
   bool leg_fall_candidate{false};    ///< 腿摆角超限（pitch/roll 正常但 theta 越界）

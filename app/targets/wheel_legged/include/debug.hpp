@@ -319,13 +319,6 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   // ── 发射机构（三摩擦变体 hero）──
   float booster_raw_pos_rad;        // DM 拨盘当前位置 (hero)
   float booster_target_rad;         // DM 拨盘目标角度 (hero)
-  float fw_raw_rpm_1;               // 摩擦轮1 RPM (hero)
-  float fw_raw_rpm_2;               // 摩擦轮2 RPM (hero)
-  float fw_raw_rpm_3;               // 摩擦轮3 RPM (hero)
-  uint8_t shoot_hero_state;         // Hero ShootController 状态机 (0=kStop,1=kInit,2=kReady,3=kShooting,4=kCooling)
-  uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
-  uint8_t shoot_hero_enter;         // Hero 进入射击模式
-  int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）
   int32_t hero_remaining_ammo;      // Hero 剩余弹量（本地跟踪）
   float hero_displacement_bias;     // Hero 动态位移偏置 [m]
 
@@ -426,8 +419,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t policy_ok;           // 最近一次推理成功标志
 
   // ── 四元数倒地检测影子输出 ──
+  float fall_up_body_x;               // up_body.x in body frame
+  float fall_up_body_y;               // up_body.y in body frame
   float fall_tilt_cos;                // up_body.z = cos(tilt angle)
-  uint8_t fall_flags;                 // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5:severe, bit6-7:cause
+  uint8_t fall_flags;                 // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
   uint8_t fall_aux_flags;             // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
   uint8_t posture_fault_flags;        // PostureObservation::fault_flags (PostureFault bitmask)
   uint8_t _fall_pad2;                 // padding

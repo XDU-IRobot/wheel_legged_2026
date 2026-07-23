@@ -38,10 +38,8 @@ struct PostureObserverParams {
 /// @brief 倒地检测器参数（滞回阈值 + 定时确认）
 struct FallDetectorParams {
   float fall_enter_cos;              ///< 倒地进入阈值 cos(tilt) [1]，低于此值触发候选
-  float severe_fall_cos;             ///< 严重倒地阈值 cos(tilt) [1]，低于此值走快速路径
   float upright_exit_cos;            ///< 直立退出阈值 cos(tilt) [1]，高于此值且角速度低才确认直立
   std::uint32_t fall_confirm_ms;     ///< 倒地候选需持续满足此时间才确认 [ms]
-  std::uint32_t severe_confirm_ms;   ///< 严重倒地快速确认时间 [ms]
   std::uint32_t upright_confirm_ms;  ///< 直立需持续满足此时间才确认已恢复 [ms]
   float upright_gyro_max_rad_s;      ///< 直立确认时允许的最大角速度模长 [rad/s]
   float direction_dominance_ratio;   ///< 方向判定主导轴比例阈值 [1]
@@ -770,10 +768,8 @@ constexpr PostureObserverParams kParams{
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
     .fall_enter_cos = 0.643f,             // cos(50°)
-    .severe_fall_cos = 0.208f,            // cos(78°)
     .upright_exit_cos = 0.883f,           // cos(28°)
     .fall_confirm_ms = 220U,
-    .severe_confirm_ms = 80U,
     .upright_confirm_ms = 400U,
     .upright_gyro_max_rad_s = 0.5f,
     .direction_dominance_ratio = 0.5f,
@@ -1357,10 +1353,8 @@ constexpr PostureObserverParams kParams{
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
     .fall_enter_cos = 0.643f,             // cos(50°)
-    .severe_fall_cos = 0.208f,            // cos(78°)
     .upright_exit_cos = 0.883f,           // cos(28°)
     .fall_confirm_ms = 220U,
-    .severe_confirm_ms = 80U,
     .upright_confirm_ms = 400U,
     .upright_gyro_max_rad_s = 0.5f,
     .direction_dominance_ratio = 0.5f,
@@ -1928,10 +1922,8 @@ constexpr PostureObserverParams kParams{
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
     .fall_enter_cos = 0.643f,             // cos(50°)
-    .severe_fall_cos = 0.208f,            // cos(78°)
     .upright_exit_cos = 0.883f,           // cos(28°)
     .fall_confirm_ms = 220U,
-    .severe_confirm_ms = 80U,
     .upright_confirm_ms = 400U,
     .upright_gyro_max_rad_s = 0.5f,
     .direction_dominance_ratio = 0.5f,

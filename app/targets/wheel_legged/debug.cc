@@ -400,12 +400,13 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.policy_ok = static_cast<uint8_t>(p.ok);
 
   // ── 四元数倒地检测影子输出 ──
+  wl_debug.fall_up_body_x = posture_obs.up_body_x;
+  wl_debug.fall_up_body_y = posture_obs.up_body_y;
   wl_debug.fall_tilt_cos = posture_obs.up_body_z;
   wl_debug.fall_flags = (static_cast<uint8_t>(fall_detection.fall_candidate) << 0) |
                         (static_cast<uint8_t>(fall_detection.fall_confirmed) << 1) |
                         ((static_cast<uint8_t>(fall_detection.direction) & 0x07) << 2) |
-                        (static_cast<uint8_t>(fall_detection.severe_fall) << 5) |
-                        ((static_cast<uint8_t>(fall_detection.cause) & 0x03) << 6);
+                        ((static_cast<uint8_t>(fall_detection.cause) & 0x03) << 5);
   wl_debug.fall_aux_flags = (static_cast<uint8_t>(fall_detection.body_upright_confirmed) << 0) |
                             (static_cast<uint8_t>(fall_detection.sensor_valid) << 1) |
                             (static_cast<uint8_t>(fall_detection.leg_configuration_safe) << 2) |

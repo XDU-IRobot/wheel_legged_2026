@@ -735,13 +735,6 @@ void ControlLoop() {
     globals->shoot_controller.Update(shooter_enter, fire_flag, true, heat_delta);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.booster_target_rad = globals->shoot_controller.booster_target();
-    wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
-    wl_debug.shoot_hero_fire_trigger = fire_flag ? 1U : 0U;
-    wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
-    wl_debug.shoot_hero_heat_delta = heat_delta;
-    wl_debug.fw_raw_rpm_1 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_2 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_3 = 0.0f;  // 当前 CAN 协议仅传输 2 个摩擦轮转速
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
 
     if (gimbal_rx_valid && globals->gimbal_rx->PopShotDetected()) {

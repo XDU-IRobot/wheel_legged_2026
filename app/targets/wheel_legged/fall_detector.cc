@@ -52,8 +52,6 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
   // ── 1. 机身倾斜倒地候选 ──
   const bool raw_upright = obs.up_body_z >= config_.params.upright_exit_cos;
   const bool tilt_fall_candidate = obs.up_body_z < config_.params.fall_enter_cos;
-  const bool severe_candidate = obs.up_body_z < config_.params.severe_fall_cos;
-
   // ── 2. 腿摆角越界倒地候选 ──
   // 当 pitch/roll 在正常范围但腿摆角超出安全区间时，也视为倒地
   // 这对应 chassis.cc 中 pitch_roll_valid_theta_invalid 分支的场景
@@ -74,12 +72,7 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
   }
 
   // ── 4. 倒地确认 ──
-  out.severe_fall = severe_candidate;
-  if (severe_candidate) {
-    out.fall_confirmed = out.condition_hold_ms >= config_.params.severe_confirm_ms;
-  } else {
-    out.fall_confirmed = fall_candidate && out.condition_hold_ms >= config_.params.fall_confirm_ms;
-  }
+  out.fall_confirmed = fall_candidate && out.condition_hold_ms >= config_.params.fall_confirm_ms;
 
   // ── 5. 方向分类（仅在上升沿锁定）──
   if (out.fall_confirmed && !direction_locked_) {
@@ -90,7 +83,7 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
     } else {
       out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y, obs.up_body_z,
                                         config_.params.direction_dominance_ratio, config_.params.inverted_tilt_cos);
-      out.cause = severe_candidate ? FallCause::kSevereTilt : FallCause::kTiltExceeded;
+      out.cause = FallCause::kTiltExceeded;
     }
     locked_direction_ = out.direction;
     direction_locked_ = true;
