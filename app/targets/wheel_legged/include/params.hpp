@@ -10,7 +10,7 @@
 #define WHEEL_LEGGED_ROBOT_VARIANT 2
 #endif
 
-#include "../tools/kctrlp_generated.hpp"
+#include "../tools/lqr/generated/kctrlp_generated.hpp"
 
 namespace wheel_legged::params {
 
