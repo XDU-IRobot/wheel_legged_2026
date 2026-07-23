@@ -1330,7 +1330,6 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 
-
   // ── 中腿长下压退出：下降沿清除中腿长保持，走斜坡到低腿长 ──
   {
     static bool prev_dip_active = false;

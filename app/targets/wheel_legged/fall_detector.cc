@@ -20,7 +20,7 @@ FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, co
   if (uy < -threshold) return FallDirection::kLeft;
   if (uy > threshold) return FallDirection::kRight;
   return std::abs(ux) >= std::abs(uy) ? (ux < 0 ? FallDirection::kFront : FallDirection::kBack)
-                                       : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
+                                      : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
 }
 
 bool FallDetector::CheckLegSafe(const LegSafetyContext& legs) {
@@ -77,8 +77,7 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
     if (!tilt_fall_candidate && out.leg_fall_candidate) {
       out.direction = FallDirection::kUnknown;
     } else {
-      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y,
-                                        config_.params.direction_threshold);
+      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y, config_.params.direction_threshold);
     }
     // 原因：腿越界优先（腿和机身倾斜同时存在时，腿是决定性因素）
     out.cause = out.leg_fall_candidate ? FallCause::kLegOutOfRange : FallCause::kTiltExceeded;

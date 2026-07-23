@@ -35,8 +35,7 @@ class Chassis {
     bool position_hold_active{false};                   ///< 位置锚定激活中，触发 LQR 误差缩放
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
-    wheel_legged::FallDirection recovery_direction{
-        wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
+    wheel_legged::FallDirection recovery_direction{wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
   };
 
   /**

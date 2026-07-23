@@ -419,15 +419,15 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t policy_ok;           // 最近一次推理成功标志
 
   // ── 四元数倒地检测影子输出 ──
-  float fall_up_body_x;                // up_body.x in body frame
-  float fall_up_body_y;                // up_body.y in body frame
-  float fall_tilt_cos;                 // up_body.z = cos(tilt angle)
-  uint8_t fall_flags;                  // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
-  uint8_t fall_aux_flags;              // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
-  uint16_t fall_condition_hold_ms;     // FallDetector 倒地条件持续时间 [ms]
-  uint16_t fall_upright_hold_ms;       // FallDetector 直立确认持续时间 [ms]
-  uint8_t posture_fault_flags;         // PostureObservation::fault_flags (PostureFault bitmask)
-  uint8_t legacy_posture_valid;        // 旧 Euler 判据 posture_valid（用于新旧对比）
+  float fall_up_body_x;             // up_body.x in body frame
+  float fall_up_body_y;             // up_body.y in body frame
+  float fall_tilt_cos;              // up_body.z = cos(tilt angle)
+  uint8_t fall_flags;               // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
+  uint8_t fall_aux_flags;           // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
+  uint16_t fall_condition_hold_ms;  // FallDetector 倒地条件持续时间 [ms]
+  uint16_t fall_upright_hold_ms;    // FallDetector 直立确认持续时间 [ms]
+  uint8_t posture_fault_flags;      // PostureObservation::fault_flags (PostureFault bitmask)
+  uint8_t legacy_posture_valid;     // 旧 Euler 判据 posture_valid（用于新旧对比）
 };
 static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 
