@@ -8,7 +8,9 @@
 #include <array>
 
 #include "include/ai/policy_runner.hpp"
+#include "include/fall_detector.hpp"
 #include "include/globals.hpp"
+#include "include/posture_observer.hpp"
 
 namespace {
 
@@ -71,7 +73,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
-                         const chassis::StairClimbSequence::Output &stair_sequence_output) {
+                         const chassis::StairClimbSequence::Output &stair_sequence_output,
+                         const wheel_legged::PostureObservation &posture_obs,
+                         const wheel_legged::FallDetection &fall_detection) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
   wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
@@ -394,4 +398,18 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.policy_infer_us = p.last_infer_us;
   wl_debug.policy_step_count = p.step_count;
   wl_debug.policy_ok = static_cast<uint8_t>(p.ok);
+
+  // ── 四元数倒地检测影子输出 ──
+  wl_debug.fall_tilt_cos = posture_obs.up_body_z;
+  wl_debug.fall_flags = (static_cast<uint8_t>(fall_detection.fall_candidate) << 0) |
+                        (static_cast<uint8_t>(fall_detection.fall_confirmed) << 1) |
+                        ((static_cast<uint8_t>(fall_detection.direction) & 0x07) << 2) |
+                        (static_cast<uint8_t>(fall_detection.severe_fall) << 5) |
+                        ((static_cast<uint8_t>(fall_detection.cause) & 0x03) << 6);
+  wl_debug.fall_aux_flags = (static_cast<uint8_t>(fall_detection.body_upright_confirmed) << 0) |
+                            (static_cast<uint8_t>(fall_detection.sensor_valid) << 1) |
+                            (static_cast<uint8_t>(fall_detection.leg_configuration_safe) << 2) |
+                            (static_cast<uint8_t>(fall_detection.leg_fall_candidate) << 3);
+  wl_debug.posture_fault_flags = posture_obs.fault_flags;
+  wl_debug._fall_pad2 = 0;
 }

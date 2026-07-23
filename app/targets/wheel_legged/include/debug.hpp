@@ -8,6 +8,12 @@
 #include "gimbal/gimbal.hpp"
 #include "input.hpp"
 
+// 前向声明（用于 UpdateDebugSnapshot 参数，避免循环依赖）
+namespace wheel_legged {
+struct PostureObservation;
+struct FallDetection;
+}  // namespace wheel_legged
+
 /**
  * @file  targets/wheel_legged/include/debug.hpp
  * @brief 调试快照结构体（SRAM4）与填充函数声明
@@ -418,6 +424,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint32_t policy_infer_us;    // 最近一次推理耗时 [us]
   uint32_t policy_step_count;  // 推理步数累计
   uint8_t policy_ok;           // 最近一次推理成功标志
+
+  // ── 四元数倒地检测影子输出 ──
+  float fall_tilt_cos;                // up_body.z = cos(tilt angle)
+  uint8_t fall_flags;                 // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5:severe, bit6-7:cause
+  uint8_t fall_aux_flags;             // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
+  uint8_t posture_fault_flags;        // PostureObservation::fault_flags (PostureFault bitmask)
+  uint8_t _fall_pad2;                 // padding
 };
 static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 
@@ -437,4 +450,6 @@ void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::Inp
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
-                         const chassis::StairClimbSequence::Output &stair_sequence_output);
+                         const chassis::StairClimbSequence::Output &stair_sequence_output,
+                         const wheel_legged::PostureObservation &posture_obs,
+                         const wheel_legged::FallDetection &fall_detection);
