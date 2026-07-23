@@ -61,6 +61,13 @@ gimbal::Fsm::State ResolveMode(const gimbal::Fsm::Input &input, const gimbal::Fs
   if (normal_mode == gimbal::Fsm::State::kRecoveryYawCentering) {
     return normal_mode;
   }
+  // 恢复归中退出后跳过 kRecoveryAlign，直接进 kStartupAlign
+  // 避免 yaw 目标在 SelectNearestYawCenterTarget（固定标定角）↔ chassis_yaw_rad
+  // （底盘实时朝向）之间来回跳变
+  if (normal_mode == gimbal::Fsm::State::kRecoveryAlign &&
+      current_mode == gimbal::Fsm::State::kRecoveryYawCentering) {
+    return gimbal::Fsm::State::kStartupAlign;
+  }
   if (current_mode == gimbal::Fsm::State::kDisabled) {
     return gimbal::Fsm::State::kStartupAlign;
   }

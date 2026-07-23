@@ -411,6 +411,8 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
                             (static_cast<uint8_t>(fall_detection.sensor_valid) << 1) |
                             (static_cast<uint8_t>(fall_detection.leg_configuration_safe) << 2) |
                             (static_cast<uint8_t>(fall_detection.leg_fall_candidate) << 3);
+  wl_debug.fall_condition_hold_ms = static_cast<uint16_t>(fall_detection.condition_hold_ms);
+  wl_debug.fall_upright_hold_ms = static_cast<uint16_t>(fall_detection.upright_hold_ms);
   wl_debug.posture_fault_flags = posture_obs.fault_flags;
-  wl_debug._fall_pad2 = 0;
+  wl_debug.legacy_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }

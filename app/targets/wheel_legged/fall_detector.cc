@@ -14,20 +14,13 @@ inline bool ThetaInCircularRange(const float theta, const float min, const float
 }
 }  // namespace
 
-FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, const float uz,
-                                              const float dominance_ratio, const float inverted_cos) {
-  if (uz < inverted_cos) {
-    return FallDirection::kInverted;
-  }
-  const float ax = std::abs(ux);
-  const float ay = std::abs(uy);
-  if (ax > ay && ax > dominance_ratio * std::max(ax, ay)) {
-    return ux < 0.0f ? FallDirection::kFront : FallDirection::kBack;
-  }
-  if (ay > ax && ay > dominance_ratio * std::max(ax, ay)) {
-    return uy < 0.0f ? FallDirection::kLeft : FallDirection::kRight;
-  }
-  return FallDirection::kDiagonal;
+FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, const float threshold) {
+  if (ux < -threshold) return FallDirection::kFront;
+  if (ux > threshold) return FallDirection::kBack;
+  if (uy < -threshold) return FallDirection::kLeft;
+  if (uy > threshold) return FallDirection::kRight;
+  return std::abs(ux) >= std::abs(uy) ? (ux < 0 ? FallDirection::kFront : FallDirection::kBack)
+                                       : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
 }
 
 bool FallDetector::CheckLegSafe(const LegSafetyContext& legs) {
@@ -49,9 +42,13 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
     return out;
   }
 
-  // ── 1. 机身倾斜倒地候选 ──
-  const bool raw_upright = obs.up_body_z >= config_.params.upright_exit_cos;
-  const bool tilt_fall_candidate = obs.up_body_z < config_.params.fall_enter_cos;
+  // ── 1. 机身倾斜倒地候选（ux/uy 超阈值判断）──
+  const float ux_abs = std::abs(obs.up_body_x);
+  const float uy_abs = std::abs(obs.up_body_y);
+  const bool raw_upright =
+      ux_abs <= config_.params.upright_exit_uxy_abs && uy_abs <= config_.params.upright_exit_uxy_abs;
+  const bool tilt_fall_candidate =
+      ux_abs > config_.params.fall_enter_uxy_abs || uy_abs > config_.params.fall_enter_uxy_abs;
   // ── 2. 腿摆角越界倒地候选 ──
   // 当 pitch/roll 在正常范围但腿摆角超出安全区间时，也视为倒地
   // 这对应 chassis.cc 中 pitch_roll_valid_theta_invalid 分支的场景
@@ -76,30 +73,31 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
 
   // ── 5. 方向分类（仅在上升沿锁定）──
   if (out.fall_confirmed && !direction_locked_) {
+    // 方向：纯腿越界标 Unknown，有机身倾斜则按 up_body 判定
     if (!tilt_fall_candidate && out.leg_fall_candidate) {
-      // 腿越界但机身直立 → 方向暂标 Unknown，由现有 theta 恢复逻辑处理
       out.direction = FallDirection::kUnknown;
-      out.cause = FallCause::kLegOutOfRange;
     } else {
-      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y, obs.up_body_z,
-                                        config_.params.direction_dominance_ratio, config_.params.inverted_tilt_cos);
-      out.cause = FallCause::kTiltExceeded;
+      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y,
+                                        config_.params.direction_threshold);
     }
+    // 原因：腿越界优先（腿和机身倾斜同时存在时，腿是决定性因素）
+    out.cause = out.leg_fall_candidate ? FallCause::kLegOutOfRange : FallCause::kTiltExceeded;
     locked_direction_ = out.direction;
+    locked_cause_ = out.cause;
     direction_locked_ = true;
   } else if (out.fall_confirmed) {
     out.direction = locked_direction_;
-    // 保持锁定时的 cause
+    out.cause = locked_cause_;
   } else {
     direction_locked_ = false;
     locked_direction_ = FallDirection::kUnknown;
+    locked_cause_ = FallCause::kNone;
     out.direction = FallDirection::kUnknown;
     out.cause = FallCause::kNone;
   }
 
   // ── 6. 直立确认（退出滞回）──
-  const bool upright_candidate =
-      raw_upright && out.leg_configuration_safe && (obs.gyro_norm_rad_s < config_.params.upright_gyro_max_rad_s);
+  const bool upright_candidate = raw_upright && out.leg_configuration_safe;
 
   if (upright_candidate) {
     if (!prev_upright_candidate_) {
@@ -127,6 +125,7 @@ void FallDetector::Reset() {
   prev_upright_candidate_ = false;
   upright_start_ms_ = 0;
   locked_direction_ = FallDirection::kUnknown;
+  locked_cause_ = FallCause::kNone;
   direction_locked_ = false;
 }
 

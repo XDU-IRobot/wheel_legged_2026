@@ -61,8 +61,8 @@ struct SharedResources {
   std::optional<GimbalToChassisRxBridge> gimbal_rx{};         ///< 云台→底盘 CAN 桥（惯导+键鼠）
   std::optional<ChassisToGimbalTxBridge> chassis_tx{};        ///< 底盘→云台 CAN 桥（combat标志）
   std::optional<rm::device::AimbotCanCommunicator> aimbot{};  ///< 自瞄 CAN 通信 (gimbal_can)
-  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV120>> referee{};         ///< 裁判系统串口w
-  std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV120>> subReferee{};  ///< 裁判子协议
+  std::optional<rm::device::Referee<rm::device::RefereeRevision::kNewV200>> referee{};         ///< 裁判系统串口w
+  std::optional<rm::device::RefereeUser<rm::device::RefereeRevision::kNewV200>> subReferee{};  ///< 裁判子协议
   std::optional<rm::device::GkSupercap> supercap{};  ///< 超级电容 (wheel_can)
   std::optional<rm::device::Vl53l4cd> left_front_tof{};
   std::optional<rm::device::Vl53l4cd> right_front_tof{};

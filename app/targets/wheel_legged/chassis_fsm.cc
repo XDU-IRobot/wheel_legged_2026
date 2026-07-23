@@ -190,6 +190,17 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.jump_phase = 0U;
       break;
 
+    case chassis::Fsm::State::kRecoveryFailed:
+      control.enable_dm = true;
+      control.run_chassis_update = false;
+      control.spin_enable = false;
+      control.recovery_enable = true;
+      control.safe_output_required = false;
+      control.leg_profile = wheel_legged::LegProfile::kLow;
+      control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
+      control.jump_phase = 0U;
+      break;
+
     case chassis::Fsm::State::kStairTask:
       control.enable_dm = true;
       control.run_chassis_update = true;
@@ -446,9 +457,16 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
 
     case State::kRecoverySelfRight:
       if (elapsed_ms >= wheel_legged::params::active::chassis_fsm::kRecoverySelfRightTimeoutMs) {
-        next_mode = State::kDisabled;
+        next_mode = State::kRecoveryFailed;
       } else if (request.upright_stable) {
         next_mode = requested_normal_state;
+      }
+      break;
+
+    case State::kRecoveryFailed:
+      if (request.domain_request == wheel_legged::DomainRequest::kDisabled ||
+          elapsed_ms >= wheel_legged::params::active::chassis_fsm::kRecoveryFailedTimeoutMs) {
+        next_mode = State::kDisabled;
       }
       break;
 

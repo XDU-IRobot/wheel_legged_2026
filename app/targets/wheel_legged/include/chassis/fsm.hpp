@@ -29,6 +29,7 @@ class Fsm {
     kJumpRecover,
     kRecoveryFallCheck,
     kRecoverySelfRight,
+    kRecoveryFailed,
     kStairTask,
     kStairDescendApproach,
     kStairDescendPush,

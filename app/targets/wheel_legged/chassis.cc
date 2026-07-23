@@ -173,6 +173,18 @@ void chassis::Chassis::Init() {
   const auto &right_leg_turn_pid = wheel_legged::params::active::chassis::kRightLegTurnPid;
   init_pid(right_leg_turn_pid_, right_leg_turn_pid.kp, right_leg_turn_pid.ki, right_leg_turn_pid.kd,
            right_leg_turn_pid.max_out, right_leg_turn_pid.max_iout);
+  const auto &left_leg_turn_pid_front = wheel_legged::params::active::chassis::kLeftLegTurnPidFrontRecovery;
+  init_pid(left_leg_turn_pid_front_, left_leg_turn_pid_front.kp, left_leg_turn_pid_front.ki,
+           left_leg_turn_pid_front.kd, left_leg_turn_pid_front.max_out, left_leg_turn_pid_front.max_iout);
+  const auto &right_leg_turn_pid_front = wheel_legged::params::active::chassis::kRightLegTurnPidFrontRecovery;
+  init_pid(right_leg_turn_pid_front_, right_leg_turn_pid_front.kp, right_leg_turn_pid_front.ki,
+           right_leg_turn_pid_front.kd, right_leg_turn_pid_front.max_out, right_leg_turn_pid_front.max_iout);
+  const auto &left_leg_turn_pid_back = wheel_legged::params::active::chassis::kLeftLegTurnPidBackRecovery;
+  init_pid(left_leg_turn_pid_back_, left_leg_turn_pid_back.kp, left_leg_turn_pid_back.ki,
+           left_leg_turn_pid_back.kd, left_leg_turn_pid_back.max_out, left_leg_turn_pid_back.max_iout);
+  const auto &right_leg_turn_pid_back = wheel_legged::params::active::chassis::kRightLegTurnPidBackRecovery;
+  init_pid(right_leg_turn_pid_back_, right_leg_turn_pid_back.kp, right_leg_turn_pid_back.ki,
+           right_leg_turn_pid_back.kd, right_leg_turn_pid_back.max_out, right_leg_turn_pid_back.max_iout);
   const auto &left_leg_turn_pid_manual = wheel_legged::params::active::chassis::kLeftLegTurnPidManual;
   init_pid(left_leg_turn_pid_manual_, left_leg_turn_pid_manual.kp, left_leg_turn_pid_manual.ki,
            left_leg_turn_pid_manual.kd, left_leg_turn_pid_manual.max_out, left_leg_turn_pid_manual.max_iout);
@@ -312,7 +324,28 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     standup_from_recovery_latch_ = false;
   }
 
-  if (!output_.posture_valid) {
+  const bool is_recovery_state =
+      (input.fsm_mode == Fsm::State::kRecoveryFallCheck ||
+       input.fsm_mode == Fsm::State::kRecoverySelfRight ||
+       input.fsm_mode == Fsm::State::kRecoveryFailed);
+
+  // 恢复→正常过渡
+  if (prev_fsm_was_recovery_ && !is_recovery_state) {
+    if (standup_from_recovery_latch_) {
+      standup_from_recovery_latch_ = false;
+    } else {
+      standup_complete_ = false;
+      standup_phase_ = 0;
+      standup_complete_left_ = true;
+      standup_complete_right_ = true;
+    }
+    theta_recovery_active_ = false;
+  }
+  prev_fsm_was_recovery_ = is_recovery_state;
+
+  if ((is_recovery_state || output_.pitch_roll_valid_theta_invalid) && !standup_from_recovery_latch_) {
+    theta_recovery_phase_ = 0;
+
     if (!input.enable_output || !input.run_chassis_update || IsSafeStopMode(input.fsm_mode)) {
       SafeStop();
       prev_enable_output_ = false;
@@ -337,24 +370,6 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     prev_enable_output_ = false;
     return;
   }
-
-  const bool is_recovery_state =
-      (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight);
-
-  // 恢复→正常过渡
-  if (prev_fsm_was_recovery_ && !is_recovery_state) {
-    if (standup_from_recovery_latch_) {
-      // theta恢复已完成并设置起立Phase 1，跳过standup复位
-      standup_from_recovery_latch_ = false;
-    } else {
-      standup_complete_ = false;
-      standup_phase_ = 0;
-      standup_complete_left_ = true;
-      standup_complete_right_ = true;
-    }
-    theta_recovery_active_ = false;
-  }
-  prev_fsm_was_recovery_ = is_recovery_state;
 
   // 起立：负角度腿收腿+摆腿同时执行，正角度腿直入 LQR；双腿正角度时走原三段式
   if (!standup_complete_) {
@@ -719,7 +734,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const rm::f32 grav_left = off_ground_for_force ? 0.0f : gravity_ff_left;
   const rm::f32 grav_right = off_ground_for_force ? 0.0f : gravity_ff_right;
   debug_posture_valid = output_.posture_valid;
-  if (output_.posture_valid) {
+  {
+    const bool is_recovery_state =
+        (input.fsm_mode == Fsm::State::kRecoveryFallCheck ||
+         input.fsm_mode == Fsm::State::kRecoverySelfRight ||
+         input.fsm_mode == Fsm::State::kRecoveryFailed);
+    if ((!is_recovery_state && !output_.pitch_roll_valid_theta_invalid) || standup_from_recovery_latch_) {
     roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
     rm::f32 leg_length_force = length_force_base;
 
@@ -840,8 +860,18 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     const bool pitch_in_range =
         state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
-    if (pitch_in_range && imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
-        imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad) {
+    const bool roll_in_range =
+        imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
+        imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad;
+
+    const bool is_pitch_fall =
+        input.recovery_direction == wheel_legged::FallDirection::kFront ||
+        input.recovery_direction == wheel_legged::FallDirection::kBack;
+    const bool is_roll_fall =
+        input.recovery_direction == wheel_legged::FallDirection::kLeft ||
+        input.recovery_direction == wheel_legged::FallDirection::kRight;
+
+    if (!is_pitch_fall && !is_roll_fall && pitch_in_range && roll_in_range) {
       // pitch/roll正常但theta异常 → 先等云台归中，再摆腿恢复
       // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
       if (!theta_recovery_active_) {
@@ -892,7 +922,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
         if (ll_in_range && lr_in_range) {
-          standup_complete_ = true;
+          standup_complete_ = false;
+          standup_phase_ = 1;
           force_low_leg_ = true;
           standup_theta_target_ = 0.0f;
           standup_complete_left_ = true;
@@ -915,9 +946,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         output_.lw_tau = 0.0f;
         output_.rw_tau = 0.0f;
       }
-    }  // else if（pitch_in_range && roll in range）
-    else if (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad ||
-             state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMaxRad) {
+    }  // pitch/roll normal → theta recovery
+    else if (is_pitch_fall) {
       theta_recovery_phase_ = 0;
       theta_recovery_active_ = false;
       constexpr rm::f32 kVel = wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget;
@@ -933,71 +963,109 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const rm::f32 rw = state_output.current.theta_lr;
 
       const bool is_front =
-          (state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMinRad);
-      const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
-      const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
-      const rm::f32 dir = is_front ? kVel : -kVel;
+          (input.recovery_direction == wheel_legged::FallDirection::kFront);
+
+      // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
+      const bool body_is_upright = pitch_in_range && roll_in_range;
+      constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
+      constexpr rm::f32 kLegSafeMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
+      const rm::f32 tgt_min = body_is_upright ? kLegSafeMin : (is_front ? kRangeLowMin : kRangeHighMin);
+      const rm::f32 tgt_max = body_is_upright ? kLegSafeMax : (is_front ? kRangeLowMax : kRangeHighMax);
+      const rm::f32 dir = body_is_upright ? (is_front ? kVel : -kVel) : (is_front ? -kVel : kVel);
+
+      // 前倒/后倒使用不同的摆角恢复 PID 参数
+      auto& left_pid = is_front ? left_leg_turn_pid_front_ : left_leg_turn_pid_back_;
+      auto& right_pid = is_front ? right_leg_turn_pid_front_ : right_leg_turn_pid_back_;
 
       const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
       const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
 
-      if (l_in && r_in) {
-        left_leg_turn_pid_.Update(dir, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(dir, state_output.current.theta_lr_dot);
+      // Per-leg hold 检测：每条腿独立判断是否越过目标边界
+      const bool is_back = !is_front;
+      const bool l_hold = !body_is_upright && (is_front
+          ? ThetaInRange(lw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
+          : ThetaInRange(lw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
+      const bool r_hold = !body_is_upright && (is_front
+          ? ThetaInRange(rw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
+          : ThetaInRange(rw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
+
+      const rm::f32 kHoldTorque =
+          is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
+                   : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
+
+      if (l_hold && r_hold) {
+        // 双腿均越过边界 → 同步输出恒定转轴力
+        left_pid.Clear();
+        right_pid.Clear();
+        ll_pid_out = kHoldTorque;
+        lr_pid_out = kHoldTorque;
+      } else if (l_hold) {
+        // 仅左腿越过边界 → 左腿停转等待，右腿继续 PID
+        left_pid.Clear();
+        right_pid.Update(dir, state_output.current.theta_lr_dot);
+        ll_pid_out = 0.0f;
+        lr_pid_out = -right_pid.out();
+      } else if (r_hold) {
+        // 仅右腿越过边界 → 右腿停转等待，左腿继续 PID
+        right_pid.Clear();
+        left_pid.Update(dir, state_output.current.theta_ll_dot);
+        ll_pid_out = -left_pid.out();
+        lr_pid_out = 0.0f;
+      } else if (l_in && r_in) {
+        left_pid.Update(dir, state_output.current.theta_ll_dot);
+        right_pid.Update(dir, state_output.current.theta_lr_dot);
+        const float err_pitch = std::copysign(state_output.current.theta_b, left_pid.out());
+        ll_pid_out = -(left_pid.out() +
+                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
+        lr_pid_out = -(right_pid.out() +
+                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
       } else {
+        // PID 阶段：一条腿到位则速度目标置 0，等待另一条腿
         const rm::f32 lv = l_in ? 0.0f : dir;
         const rm::f32 rv = r_in ? 0.0f : dir;
-        left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
+        left_pid.Update(lv, state_output.current.theta_ll_dot);
+        right_pid.Update(rv, state_output.current.theta_lr_dot);
+        ll_pid_out = -left_pid.out();
+        lr_pid_out = -right_pid.out();
       }
       left_force_ = 0.0f;
       right_force_ = 0.0f;
-      if (l_in && r_in) {
-        const float err_pitch = std::copysign(state_output.current.theta_b, left_leg_turn_pid_.out());
-        ll_pid_out = -(left_leg_turn_pid_.out() +
-                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
-        lr_pid_out = -(right_leg_turn_pid_.out() +
-                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
-      } else {
-        ll_pid_out = -1.8 * left_leg_turn_pid_.out();
-        lr_pid_out = -1.8 * right_leg_turn_pid_.out();
-      }
 
       output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * ll_pid_out;
       output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * ll_pid_out;
       output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
       output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
 
-      left_ = left_leg_turn_pid_.out();
-      right_ = right_leg_turn_pid_.out();
+      left_ = left_pid.out();
+      right_ = right_pid.out();
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;
 
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
-    } else if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
-               state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
-               (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad ||
-                imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMaxRad)) {
+    }  // pitch recovery
+    else if (is_roll_fall) {
       theta_recovery_phase_ = 0;
       theta_recovery_active_ = false;
+      const rm::f32 kRollHoldTorque =
+          wheel_legged::params::active::chassis::kRecoveryRollFallHoldTorqueNm;
+
       float ll_pid_out = 0.0f;
       float lr_pid_out = 0.0f;
 
-      if (imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMaxRad) {
-        right_leg_turn_pid_.Update(-1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                                   state_output.current.theta_lr_dot);
-        const float err_roll = std::copysign(imu_roll_, right_leg_turn_pid_.out());
+      const bool is_right =
+          (input.recovery_direction == wheel_legged::FallDirection::kRight);
+      const bool is_left =
+          (input.recovery_direction == wheel_legged::FallDirection::kLeft);
+
+      if (is_right) {
+        right_leg_turn_pid_.Clear();
         ll_pid_out = 0;
-        lr_pid_out =
-            -(right_leg_turn_pid_.out() + wheel_legged::params::active::chassis::kRecoveryRollFeedforwardKp * err_roll);
-      } else if (imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMinRad) {
-        left_leg_turn_pid_.Update(-1.5f * wheel_legged::params::active::chassis::kLegRecoverThetaDotTarget,
-                                  state_output.current.theta_ll_dot);
-        const float err_roll = std::copysign(imu_roll_, left_leg_turn_pid_.out());
-        ll_pid_out =
-            -(left_leg_turn_pid_.out() + wheel_legged::params::active::chassis::kRecoveryRollFeedforwardKp * err_roll);
+        lr_pid_out = kRollHoldTorque;
+      } else if (is_left) {
+        left_leg_turn_pid_.Clear();
+        ll_pid_out = kRollHoldTorque;
         lr_pid_out = 0;
       }
 
@@ -1015,10 +1083,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.lw_tau = 0.0f;
       output_.rw_tau = 0.0f;
 
-    } else {
+    }  // roll recovery
+    else {
       set_all_zero();
     }
-  }
+  }  // is_recovery_state → recovery path
+  }  // is_recovery_state scope
   output_.left_force_n = left_force_;
   output_.right_force_n = right_force_;
 }

@@ -3,6 +3,7 @@
 #include "state.hpp"
 #include "fsm.hpp"
 #include "lqr.hpp"
+#include "../fall_detector.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
 
@@ -34,6 +35,8 @@ class Chassis {
     bool position_hold_active{false};                   ///< 位置锚定激活中，触发 LQR 误差缩放
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
+    wheel_legged::FallDirection recovery_direction{
+        wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
   };
 
   /**
@@ -211,6 +214,10 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_leg_turn_pid_front_{};   ///< 前倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_front_{};  ///< 前倒恢复右腿摆角速度 PID
+  rm::modules::PID left_leg_turn_pid_back_{};    ///< 后倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_back_{};   ///< 后倒恢复右腿摆角速度 PID
   rm::modules::PID left_leg_angle_pid_standup_{};
   rm::modules::PID right_leg_angle_pid_standup_{};
   rm::modules::PID left_leg_turn_pid_manual_{};

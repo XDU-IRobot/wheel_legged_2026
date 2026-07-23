@@ -5,6 +5,8 @@
 #include "params.hpp"
 #include "posture_observer.hpp"
 
+
+
 namespace wheel_legged {
 
 /// @brief 倒地方向（在倒地确认瞬间锁定，动作过程中不再重新分类）
@@ -14,14 +16,12 @@ enum class FallDirection : uint8_t {
   kBack = 2,      ///< 后躺
   kLeft = 3,      ///< 左侧躺
   kRight = 4,     ///< 右侧躺
-  kInverted = 5,  ///< 倒扣
-  kDiagonal = 6,  ///< 斜向倒地
 };
 
 /// @brief 倒地原因
 enum class FallCause : uint8_t {
   kNone = 0,
-  kTiltExceeded = 1,   ///< 机身倾斜超限（tilt_cos 低于阈值）
+  kTiltExceeded = 1,   ///< 机身倾斜超限（|ux| 或 |uy| 超过进入阈值）
   kLegOutOfRange = 2,  ///< 腿摆角越界（pitch/roll 正常，但 theta 超限）
   kSensorInvalid = 3,  ///< 传感器数据无效
 };
@@ -86,9 +86,10 @@ class FallDetector {
   uint32_t upright_start_ms_{0};
 
   FallDirection locked_direction_{FallDirection::kUnknown};
+  FallCause locked_cause_{FallCause::kNone};
   bool direction_locked_{false};
 
-  static FallDirection ClassifyDirection(float ux, float uy, float uz, float dominance_ratio, float inverted_cos);
+  static FallDirection ClassifyDirection(float ux, float uy, float threshold);
   static bool CheckLegSafe(const LegSafetyContext& legs);
 };
 

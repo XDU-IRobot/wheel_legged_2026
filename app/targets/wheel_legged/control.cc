@@ -17,6 +17,7 @@
 #include "ui/ui_snapshot.hpp"
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
+
 bool init_flag;
 uint32_t times = 0;
 
@@ -368,14 +369,14 @@ void ControlLoop() {
   static Dr16SemanticState dr16_state{};
   static TcSemanticState tc_state{};
   static ChassisStateContext ctx{};
-  static uint32_t fall_start_ms = 0;
-  static bool was_posture_invalid = false;
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
 
   // ── 四元数倒地检测（影子模式）──
   static wheel_legged::PostureObserver posture_observer{};
   static wheel_legged::FallDetector fall_detector{};
+  static wheel_legged::PostureObservation posture_obs{};
+  static wheel_legged::FallDetection fall_det{};
   static bool fall_detector_initialized = false;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
@@ -457,7 +458,33 @@ void ControlLoop() {
       .tick_ms = now_ms,
   });
 
-  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output, fall_start_ms, was_posture_invalid);
+  // ── 四元数倒地检测（同周期，在 FSM 之前运行）──
+  {
+    const float raw_qw = globals->chassis_imu->quat_w();
+    const float raw_qx = globals->chassis_imu->quat_x();
+    const float raw_qy = globals->chassis_imu->quat_y();
+    const float raw_qz = globals->chassis_imu->quat_z();
+    const float raw_gx = globals->chassis_imu->gyro_x();
+    const float raw_gy = globals->chassis_imu->gyro_y();
+    const float raw_gz = globals->chassis_imu->gyro_z();
+    const float raw_ax = globals->chassis_imu->acc_x();
+    const float raw_ay = globals->chassis_imu->acc_y();
+    const float raw_az = globals->chassis_imu->acc_z();
+
+    posture_obs =
+        posture_observer.Update(raw_qw, raw_qx, raw_qy, raw_qz, raw_gx, raw_gy, raw_gz, raw_ax, raw_ay, raw_az, now_ms);
+
+    wheel_legged::LegSafetyContext leg_ctx{};
+    leg_ctx.theta_ll_rad = chassis_control_output.current_state.theta_ll;
+    leg_ctx.theta_lr_rad = chassis_control_output.current_state.theta_lr;
+    leg_ctx.left_leg_length_m = chassis_control_output.current_state.l_l;
+    leg_ctx.right_leg_length_m = chassis_control_output.current_state.l_r;
+
+    fall_det = fall_detector.Update(posture_obs, leg_ctx, now_ms);
+    input.fall_detection = fall_det;
+  }
+
+  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   if (stair_task_output.request_high_leg) {
     chassis_input.request.leg_request = wheel_legged::LegProfile::kHigh;
   }
@@ -880,6 +907,7 @@ void ControlLoop() {
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
   chassis_update_input.yaw_centering_complete = gimbal_control_output.yaw_centered;
+  chassis_update_input.recovery_direction = input.fall_detection.direction;
 
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;
@@ -1302,32 +1330,6 @@ void ControlLoop() {
   globals->chassis.Update(chassis_update_input);
   chassis_control_output = globals->chassis.GetOutput();
 
-  // ── 影子：四元数倒地检测（不影响控制决策，仅输出遥测）──
-  wheel_legged::PostureObservation posture_obs{};
-  wheel_legged::FallDetection fall_det{};
-  {
-    const float raw_qw = globals->chassis_imu->quat_w();
-    const float raw_qx = globals->chassis_imu->quat_x();
-    const float raw_qy = globals->chassis_imu->quat_y();
-    const float raw_qz = globals->chassis_imu->quat_z();
-    const float raw_gx = globals->chassis_imu->gyro_x();
-    const float raw_gy = globals->chassis_imu->gyro_y();
-    const float raw_gz = globals->chassis_imu->gyro_z();
-    const float raw_ax = globals->chassis_imu->acc_x();
-    const float raw_ay = globals->chassis_imu->acc_y();
-    const float raw_az = globals->chassis_imu->acc_z();
-
-    posture_obs =
-        posture_observer.Update(raw_qw, raw_qx, raw_qy, raw_qz, raw_gx, raw_gy, raw_gz, raw_ax, raw_ay, raw_az, now_ms);
-
-    wheel_legged::LegSafetyContext leg_ctx{};
-    leg_ctx.theta_ll_rad = chassis_control_output.current_state.theta_ll;
-    leg_ctx.theta_lr_rad = chassis_control_output.current_state.theta_lr;
-    leg_ctx.left_leg_length_m = chassis_control_output.current_state.l_l;
-    leg_ctx.right_leg_length_m = chassis_control_output.current_state.l_r;
-
-    fall_det = fall_detector.Update(posture_obs, leg_ctx, now_ms);
-  }
 
   // ── 中腿长下压退出：下降沿清除中腿长保持，走斜坡到低腿长 ──
   {
