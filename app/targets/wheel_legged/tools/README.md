@@ -4,16 +4,16 @@ The controller-generation files are organized by responsibility:
 
 ```text
 tools/
-├─ wheel_legged_model.py          Shared five-DOF physical model
-├─ lqr/
-│  ├─ generate_scheduled_kctrlp.py
-│  ├─ generated/kctrlp_generated.hpp
-│  ├─ reports/kctrlp_fit_report_*.html
-│  └─ legacy/HerKules_VOCAL_SJ_LQR_v4_with_data.m
-└─ leso/
-   ├─ generate_scheduled_leso.py
-   ├─ generated/leso_model_generated.hpp
-   └─ reports/leso_model_fit_report.html
+|-- wheel_legged_model.py          Shared five-DOF physical model
+|-- lqr/
+|   |-- generate_scheduled_kctrlp.py
+|   |-- generated/kctrlp_generated.hpp
+|   |-- reports/kctrlp_fit_report_*.html
+|   `-- legacy/HerKules_VOCAL_SJ_LQR_v4_with_data.m
+`-- leso/
+    |-- generate_scheduled_leso.py
+    |-- generated/leso_model_generated.hpp
+    `-- reports/leso_model_fit_report.html
 ```
 
 `wheel_legged_model.py` is the single source of truth for the model equation,

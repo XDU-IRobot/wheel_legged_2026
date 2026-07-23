@@ -3,6 +3,7 @@
 #include "state.hpp"
 #include "fsm.hpp"
 #include "lqr.hpp"
+#include "leso.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
 
@@ -18,6 +19,18 @@ namespace chassis {
  */
 class Chassis {
  public:
+  enum class LesoDisableReason : uint8_t {
+    kActive = 0,
+    kObserverDisabled,
+    kOutputDisabled,
+    kStandupIncomplete,
+    kInvalidPosture,
+    kUnsupportedMode,
+    kMidLegDip,
+    kOffGround,
+    kInvalidInput,
+  };
+
   /**
    * @brief 单次控制更新输入
    */
@@ -32,6 +45,7 @@ class Chassis {
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
     bool position_hold_active{false};                   ///< 位置锚定激活中，触发 LQR 误差缩放
+    bool stair_sequence_controls_motion{false};         ///< 台阶动作序列是否已经接管运动控制
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
   };
@@ -40,6 +54,18 @@ class Chassis {
    * @brief 单次控制更新输出
    */
   struct UpdateOutput {
+    rm::f32 lqr_scaled_err_s{0.0f};
+    rm::f32 lqr_scaled_err_s_dot{0.0f};
+    bool position_hold_active{false};
+    std::array<rm::f32, 5> leso_generalized_disturbance{};
+    std::array<rm::f32, 4> leso_virtual_disturbance{};
+    std::array<rm::f32, 4> leso_previous_virtual_command{};
+    std::array<rm::f32, 5> leso_momentum_error{};
+    std::array<rm::f32, 4> leso_applied_compensation{};
+    bool leso_enabled{false};
+    bool leso_initialized{false};
+    LesoDisableReason leso_disable_reason{LesoDisableReason::kObserverDisabled};
+
     rm::f32 lf_tau{0.0f};  ///< 左前关节电机力矩
     rm::f32 lb_tau{0.0f};  ///< 左后关节电机力矩
     rm::f32 rf_tau{0.0f};  ///< 右前关节电机力矩
@@ -125,6 +151,9 @@ class Chassis {
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
+  wbr::MomentumLeso leso_{};
+  std::array<rm::f32, 4> previous_final_virtual_command_{};
+  std::array<rm::f32, 4> applied_leso_compensation_{};
   bool prev_spin_active_{false};  ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};

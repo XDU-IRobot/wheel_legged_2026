@@ -130,6 +130,18 @@ PositionVelocityScales ResolvePositionVelocityScales(const chassis::Fsm::State m
   }
 }
 
+float ResolveDisplacementBias(const chassis::Fsm::State mode) {
+  switch (mode) {
+    case chassis::Fsm::State::kLowLeg:
+      return params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
+    case chassis::Fsm::State::kHighLeg:
+    case chassis::Fsm::State::kStairTask:
+      return params::active::control_loop::kExpectedDisplacementBiasMHighLeg;
+    default:
+      return params::active::control_loop::kExpectedDisplacementBiasMMidLeg;
+  }
+}
+
 SdotRampParams ResolveSdotRampParams(const chassis::Fsm::State mode) {
   switch (mode) {
     case chassis::Fsm::State::kLowLeg:
