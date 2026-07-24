@@ -1096,21 +1096,21 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
             !body_is_upright && (is_front ? ThetaInRange(rw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
                                           : ThetaInRange(rw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
 
-      if (l_in && r_in) {
-        left_leg_turn_pid_.Clear();
-        right_leg_turn_pid_.Clear();
-        ll_pid_out = kHoldTorque;
-        lr_pid_out = kHoldTorque;
-      } else {
-        const rm::f32 lv = l_in ? 0.0f : dir;
-        const rm::f32 rv = r_in ? 0.0f : dir;
-        left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
-        right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
-        ll_pid_out = -left_leg_turn_pid_.out();
-        lr_pid_out = -right_leg_turn_pid_.out();
-      }
-      left_force_ = 0.0f;
-      right_force_ = 0.0f;
+        if (l_in && r_in) {
+          left_leg_turn_pid_.Clear();
+          right_leg_turn_pid_.Clear();
+          ll_pid_out = kHoldTorque;
+          lr_pid_out = kHoldTorque;
+        } else {
+          const rm::f32 lv = l_in ? 0.0f : dir;
+          const rm::f32 rv = r_in ? 0.0f : dir;
+          left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
+          right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
+          ll_pid_out = -left_leg_turn_pid_.out();
+          lr_pid_out = -right_leg_turn_pid_.out();
+        }
+        left_force_ = 0.0f;
+        right_force_ = 0.0f;
         if (l_hold && r_hold) {
           // 双腿均越过边界 → 同步输出恒定转轴力
           left_pid.Clear();
