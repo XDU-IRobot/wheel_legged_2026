@@ -349,6 +349,10 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
   wl_debug.chassis_pitch_fall_retract = static_cast<uint8_t>(chassis_control_output.pitch_fall_retract_active);
+  wl_debug.chassis_recovery_sub_phase = static_cast<uint8_t>(chassis_control_output.recovery_sub_phase);
+  wl_debug.chassis_recovery_direction = static_cast<uint8_t>(chassis_control_output.recovery_effective_direction);
+  wl_debug.chassis_recovery_pitch_candidate = static_cast<uint8_t>(chassis_control_output.recovery_pitch_candidate);
+  wl_debug.chassis_recovery_pitch_confirm_ticks = chassis_control_output.recovery_pitch_confirm_ticks;
   wl_debug.chassis_standup_theta_target_rad = chassis_control_output.standup_theta_target;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──

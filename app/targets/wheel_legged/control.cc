@@ -909,7 +909,10 @@ void ControlLoop() {
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
   chassis_update_input.yaw_centering_complete = gimbal_control_output.yaw_centered;
-  chassis_update_input.recovery_direction = input.fall_detection.direction;
+  chassis_update_input.recovery_body_raw_upright = input.fall_detection.body_raw_upright;
+  chassis_update_input.recovery_sensor_valid = input.fall_detection.sensor_valid;
+  chassis_update_input.recovery_up_body_x = posture_obs.up_body_x;
+  chassis_update_input.recovery_up_body_y = posture_obs.up_body_y;
 
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;

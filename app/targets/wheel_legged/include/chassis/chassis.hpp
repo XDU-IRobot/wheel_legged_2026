@@ -20,6 +20,13 @@ namespace chassis {
  */
 class Chassis {
  public:
+  enum class RecoverySubPhase : uint8_t {
+    kNone = 0,
+    kSidePush,
+    kPitchRecovery,
+    kThetaRecovery,
+  };
+
   enum class LesoDisableReason : uint8_t {
     kActive = 0,
     kObserverDisabled,
@@ -49,7 +56,10 @@ class Chassis {
     bool stair_sequence_controls_motion{false};         ///< 台阶动作序列是否已经接管运动控制
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
-    wheel_legged::FallDirection recovery_direction{wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
+    bool recovery_body_raw_upright{false};  ///< FallDetector 原始机身直立判据（不含腿角确认）
+    bool recovery_sensor_valid{false};      ///< FallDetector 姿态传感器有效
+    float recovery_up_body_x{0.0f};         ///< 世界竖直方向在机体系的前后分量
+    float recovery_up_body_y{0.0f};         ///< 世界竖直方向在机体系的左右分量
   };
 
   /**
@@ -111,6 +121,12 @@ class Chassis {
     float standup_theta_target{0.0f};            ///< 起立摆角 PID 目标当前值 [rad]
     bool mid_leg_dip_active{false};              ///< 中腿长下压激活中
     bool pitch_fall_retract_active{false};       ///< 俯仰倒地恢复后主动收腿中
+    RecoverySubPhase recovery_sub_phase{RecoverySubPhase::kNone};  ///< 当前恢复内部阶段
+    wheel_legged::FallDirection recovery_effective_direction{
+        wheel_legged::FallDirection::kUnknown};  ///< 经确认并锁存后实际用于控制的方向
+    wheel_legged::FallDirection recovery_pitch_candidate{
+        wheel_legged::FallDirection::kUnknown};  ///< 侧倒转前后倒的待确认方向
+    uint16_t recovery_pitch_confirm_ticks{0};    ///< 前后倒方向连续确认周期数
     rm::f32 stair_t_bl_cmd{0.0f};                ///< 上台阶左腿摆角控制输出（PID 或 LQR）
     rm::f32 stair_t_br_cmd{0.0f};                ///< 上台阶右腿摆角控制输出（PID 或 LQR）
 
@@ -215,6 +231,10 @@ class Chassis {
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
   bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
+  RecoverySubPhase recovery_sub_phase_{RecoverySubPhase::kNone};
+  wheel_legged::FallDirection recovery_effective_direction_{wheel_legged::FallDirection::kUnknown};
+  wheel_legged::FallDirection recovery_pitch_candidate_{wheel_legged::FallDirection::kUnknown};
+  uint16_t recovery_pitch_confirm_ticks_{0};
 
   bool trigger_standup_latched_{false};     ///< 台阶 step2 触发起立的防重锁
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数

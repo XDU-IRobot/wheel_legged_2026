@@ -15,16 +15,24 @@ inline bool ThetaInCircularRange(const float theta, const float min, const float
 }  // namespace
 
 FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, const float threshold) {
-  // 按较大分量决定方向，避免 pitch 无条件优先于 roll
-  if (std::abs(ux) >= std::abs(uy)) {
-    if (ux < -threshold) return FallDirection::kFront;
-    if (ux > threshold) return FallDirection::kBack;
-  } else {
-    if (uy < -threshold) return FallDirection::kLeft;
-    if (uy > threshold) return FallDirection::kRight;
+  const auto classify_side_direction = [ux, uy]() {
+    const bool front = ux < 0.0f;
+    if (uy < 0.0f) {
+      return front ? FallDirection::kLeftFront : FallDirection::kLeftBack;
+    }
+    return front ? FallDirection::kRightFront : FallDirection::kRightBack;
+  };
+
+  // 侧倒优先：|uy| 超过设定阈值时不再考虑 ux。
+  if (std::abs(uy) > threshold) {
+    return classify_side_direction();
   }
-  return std::abs(ux) >= std::abs(uy) ? (ux < 0 ? FallDirection::kFront : FallDirection::kBack)
-                                      : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
+
+  // 未触发侧倒优先阈值时，仍按较大分量决定方向。
+  if (std::abs(ux) >= std::abs(uy)) {
+    return ux < 0.0f ? FallDirection::kFront : FallDirection::kBack;
+  }
+  return classify_side_direction();
 }
 
 bool FallDetector::CheckLegSafe(const LegSafetyContext& legs) {

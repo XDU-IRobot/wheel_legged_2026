@@ -10,10 +10,12 @@ namespace wheel_legged {
 /// @brief 倒地方向（每周期重分类，支持倒地期间方向切换）
 enum class FallDirection : uint8_t {
   kUnknown = 0,
-  kFront = 1,  ///< 前趴
-  kBack = 2,   ///< 后躺
-  kLeft = 3,   ///< 左侧躺
-  kRight = 4,  ///< 右侧躺
+  kFront = 1,       ///< 前趴
+  kBack = 2,        ///< 后躺
+  kLeftFront = 3,   ///< 左前侧躺
+  kLeftBack = 4,    ///< 左后侧躺
+  kRightFront = 5,  ///< 右前侧躺
+  kRightBack = 6,   ///< 右后侧躺
 };
 
 /// @brief 倒地原因

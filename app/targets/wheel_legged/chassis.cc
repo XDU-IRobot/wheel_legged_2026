@@ -109,6 +109,7 @@ constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecovery
 constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
 constexpr float kJumpPushForceN = wheel_legged::params::active::chassis::kJumpPushForceN;
+constexpr uint16_t kRecoverySideToPitchConfirmTicks = 10U;  ///< 20 ms @ 500 Hz
 
 /// 检查 theta 是否在环形区间 [min, max] 内（跨 2π 等价角也正确处理）
 inline bool ThetaInRange(const float theta, const float min, const float max) {
@@ -347,6 +348,110 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   const bool is_recovery_state =
       (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight ||
        input.fsm_mode == Fsm::State::kRecoveryFailed);
+  const bool entering_recovery = !prev_fsm_was_recovery_ && is_recovery_state;
+
+  constexpr float kSideFallPriorityThreshold = wheel_legged::params::active::fall_detector::kParams.direction_threshold;
+  const auto pitch_dominant = [&]() {
+    const float x_abs = std::abs(input.recovery_up_body_x);
+    const float y_abs = std::abs(input.recovery_up_body_y);
+    const bool side_priority = y_abs > kSideFallPriorityThreshold;
+    return !side_priority && x_abs >= y_abs;
+  };
+  const auto resolve_pitch_direction = [&]() {
+    return input.recovery_up_body_x < 0.0f ? wheel_legged::FallDirection::kFront : wheel_legged::FallDirection::kBack;
+  };
+  const auto resolve_side_direction = [&]() {
+    const bool front = input.recovery_up_body_x < 0.0f;
+    if (input.recovery_up_body_y < 0.0f) {
+      return front ? wheel_legged::FallDirection::kLeftFront : wheel_legged::FallDirection::kLeftBack;
+    }
+    return front ? wheel_legged::FallDirection::kRightFront : wheel_legged::FallDirection::kRightBack;
+  };
+  const auto reset_recovery_direction_state = [&]() {
+    recovery_sub_phase_ = RecoverySubPhase::kNone;
+    recovery_effective_direction_ = wheel_legged::FallDirection::kUnknown;
+    recovery_pitch_candidate_ = wheel_legged::FallDirection::kUnknown;
+    recovery_pitch_confirm_ticks_ = 0U;
+  };
+  const auto initialize_recovery_direction_state = [&]() {
+    if (!input.recovery_sensor_valid || input.recovery_body_raw_upright) {
+      recovery_sub_phase_ = RecoverySubPhase::kThetaRecovery;
+      recovery_effective_direction_ = wheel_legged::FallDirection::kUnknown;
+    } else if (pitch_dominant()) {
+      recovery_sub_phase_ = RecoverySubPhase::kPitchRecovery;
+      recovery_effective_direction_ = resolve_pitch_direction();
+    } else {
+      // 模糊区域优先按侧倒处理，并锁存当前左右方向。
+      recovery_sub_phase_ = RecoverySubPhase::kSidePush;
+      recovery_effective_direction_ = resolve_side_direction();
+    }
+  };
+
+  if (entering_recovery) {
+    reset_recovery_direction_state();
+    left_leg_turn_pid_.Clear();
+    right_leg_turn_pid_.Clear();
+    left_leg_turn_pid_front_.Clear();
+    right_leg_turn_pid_front_.Clear();
+    left_leg_turn_pid_back_.Clear();
+    right_leg_turn_pid_back_.Clear();
+    initialize_recovery_direction_state();
+  } else if (!is_recovery_state) {
+    reset_recovery_direction_state();
+  } else if (recovery_sub_phase_ == RecoverySubPhase::kNone) {
+    initialize_recovery_direction_state();
+  }
+
+  if (is_recovery_state && !input.recovery_sensor_valid) {
+    // 姿态数据失效时暂停候选确认；保留已锁存阶段，数据恢复后继续且不发生反向回退。
+    recovery_pitch_candidate_ = wheel_legged::FallDirection::kUnknown;
+    recovery_pitch_confirm_ticks_ = 0U;
+  } else if (is_recovery_state && recovery_sub_phase_ == RecoverySubPhase::kSidePush) {
+    if (input.recovery_body_raw_upright) {
+      // 侧撑若直接将机身推回直立，则停止侧撑并交给腿角安全区恢复。
+      recovery_sub_phase_ = RecoverySubPhase::kThetaRecovery;
+      recovery_effective_direction_ = wheel_legged::FallDirection::kUnknown;
+      recovery_pitch_candidate_ = wheel_legged::FallDirection::kUnknown;
+      recovery_pitch_confirm_ticks_ = 0U;
+    } else if (pitch_dominant()) {
+      const wheel_legged::FallDirection pitch_direction = resolve_pitch_direction();
+      if (recovery_pitch_candidate_ == pitch_direction) {
+        if (recovery_pitch_confirm_ticks_ < kRecoverySideToPitchConfirmTicks) {
+          ++recovery_pitch_confirm_ticks_;
+        }
+      } else {
+        recovery_pitch_candidate_ = pitch_direction;
+        recovery_pitch_confirm_ticks_ = 1U;
+      }
+
+      if (recovery_pitch_confirm_ticks_ >= kRecoverySideToPitchConfirmTicks) {
+        // SidePush → PitchRecovery 为单向切换；本次恢复结束前不再退回侧倒控制。
+        recovery_sub_phase_ = RecoverySubPhase::kPitchRecovery;
+        recovery_effective_direction_ = recovery_pitch_candidate_;
+        recovery_pitch_candidate_ = wheel_legged::FallDirection::kUnknown;
+        recovery_pitch_confirm_ticks_ = 0U;
+      }
+    } else {
+      // Side 或 Unknown 均继续使用已锁存的侧倒方向；仅清除前后倒候选计数。
+      recovery_pitch_candidate_ = wheel_legged::FallDirection::kUnknown;
+      recovery_pitch_confirm_ticks_ = 0U;
+    }
+  } else if (is_recovery_state && recovery_sub_phase_ == RecoverySubPhase::kThetaRecovery &&
+             !input.recovery_body_raw_upright) {
+    // 初始方向未知时，允许在后续获得可靠倾倒方向后进入对应恢复阶段。
+    if (pitch_dominant()) {
+      recovery_sub_phase_ = RecoverySubPhase::kPitchRecovery;
+      recovery_effective_direction_ = resolve_pitch_direction();
+    } else {
+      recovery_sub_phase_ = RecoverySubPhase::kSidePush;
+      recovery_effective_direction_ = resolve_side_direction();
+    }
+  }
+
+  output_.recovery_sub_phase = recovery_sub_phase_;
+  output_.recovery_effective_direction = recovery_effective_direction_;
+  output_.recovery_pitch_candidate = recovery_pitch_candidate_;
+  output_.recovery_pitch_confirm_ticks = recovery_pitch_confirm_ticks_;
 
   // 恢复→正常过渡
   if (prev_fsm_was_recovery_ && !is_recovery_state) {
@@ -998,19 +1103,17 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;
     } else {
-      // theta 恢复需要 pitch 在范围内
-      const bool pitch_in_range =
-          state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
-          state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
-      const bool roll_in_range = imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
-                                 imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad;
+      const bool is_pitch_fall = recovery_effective_direction_ == wheel_legged::FallDirection::kFront ||
+                                 recovery_effective_direction_ == wheel_legged::FallDirection::kBack;
+      const bool is_roll_fall = recovery_effective_direction_ == wheel_legged::FallDirection::kLeftFront ||
+                                recovery_effective_direction_ == wheel_legged::FallDirection::kLeftBack ||
+                                recovery_effective_direction_ == wheel_legged::FallDirection::kRightFront ||
+                                recovery_effective_direction_ == wheel_legged::FallDirection::kRightBack;
+      const bool detector_body_upright = input.recovery_sensor_valid && input.recovery_body_raw_upright;
 
-      const bool is_pitch_fall = input.recovery_direction == wheel_legged::FallDirection::kFront ||
-                                 input.recovery_direction == wheel_legged::FallDirection::kBack;
-      const bool is_roll_fall = input.recovery_direction == wheel_legged::FallDirection::kLeft ||
-                                input.recovery_direction == wheel_legged::FallDirection::kRight;
-
-      if (!is_pitch_fall && !is_roll_fall && pitch_in_range && roll_in_range) {
+      if (is_recovery_state && !input.recovery_sensor_valid) {
+        set_all_zero();
+      } else if (!is_pitch_fall && !is_roll_fall && detector_body_upright) {
         // pitch/roll正常但theta异常 → 先等云台归中，再摆腿恢复
         // 首次进入时清零 PID，避免历史积分残留导致每次恢复行为不一致
         if (!theta_recovery_active_) {
@@ -1101,10 +1204,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const rm::f32 lw = state_output.current.theta_ll;
         const rm::f32 rw = state_output.current.theta_lr;
 
-        const bool is_front = (input.recovery_direction == wheel_legged::FallDirection::kFront);
+        const bool is_front = (recovery_effective_direction_ == wheel_legged::FallDirection::kFront);
 
         // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
-        const bool body_is_upright = pitch_in_range && roll_in_range;
+        const bool body_is_upright = detector_body_upright;
         constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
         constexpr rm::f32 kLegSafeMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
         const rm::f32 tgt_min = body_is_upright ? kLegSafeMin : (is_front ? kRangeLowMin : kRangeHighMin);
@@ -1120,57 +1223,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         const rm::f32 kHoldTorque = is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
                                              : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
-        // Per-leg hold 检测：每条腿独立判断是否越过目标边界
-        const bool l_hold =
-            !body_is_upright && (is_front ? ThetaInRange(lw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
-                                          : ThetaInRange(lw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
-        const bool r_hold =
-            !body_is_upright && (is_front ? ThetaInRange(rw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
-                                          : ThetaInRange(rw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
-
-        if (l_in && r_in) {
-          left_leg_turn_pid_.Clear();
-          right_leg_turn_pid_.Clear();
-          ll_pid_out = kHoldTorque;
-          lr_pid_out = kHoldTorque;
-        } else {
-          const rm::f32 lv = l_in ? 0.0f : dir;
-          const rm::f32 rv = r_in ? 0.0f : dir;
-          left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
-          right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
-          ll_pid_out = -left_leg_turn_pid_.out();
-          lr_pid_out = -right_leg_turn_pid_.out();
-        }
-        left_force_ = 0.0f;
-        right_force_ = 0.0f;
-        if (l_hold && r_hold) {
-          // 双腿均越过边界 → 同步输出恒定转轴力
+        if (!body_is_upright && l_in && r_in) {
+          // 机身未直立且双腿都真正进入翻身目标区间后，统一切换为恒定转轴力矩
           left_pid.Clear();
           right_pid.Clear();
           ll_pid_out = kHoldTorque;
           lr_pid_out = kHoldTorque;
-        } else if (l_hold) {
-          // 仅左腿越过边界 → 左腿停转等待，右腿继续 PID
-          left_pid.Clear();
-          right_pid.Update(dir, state_output.current.theta_lr_dot);
-          ll_pid_out = 0.0f;
-          lr_pid_out = -right_pid.out();
-        } else if (r_hold) {
-          // 仅右腿越过边界 → 右腿停转等待，左腿继续 PID
-          right_pid.Clear();
-          left_pid.Update(dir, state_output.current.theta_ll_dot);
-          ll_pid_out = -left_pid.out();
-          lr_pid_out = 0.0f;
-        } else if (l_in && r_in) {
-          left_pid.Update(dir, state_output.current.theta_ll_dot);
-          right_pid.Update(dir, state_output.current.theta_lr_dot);
-          const float err_pitch = std::copysign(state_output.current.theta_b, left_pid.out());
-          ll_pid_out =
-              -(left_pid.out() + wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
-          lr_pid_out =
-              -(right_pid.out() + wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
         } else {
-          // PID 阶段：一条腿到位则速度目标置 0，等待另一条腿
+          // 未到位腿继续运动；已到位腿以零速度闭环制动，等待另一条腿
           const rm::f32 lv = l_in ? 0.0f : dir;
           const rm::f32 rv = r_in ? 0.0f : dir;
           left_pid.Update(lv, state_output.current.theta_ll_dot);
@@ -1200,21 +1260,26 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       else if (is_roll_fall) {
         theta_recovery_phase_ = 0;
         theta_recovery_active_ = false;
-        const rm::f32 kRollHoldTorque = wheel_legged::params::active::chassis::kRecoveryRollFallHoldTorqueNm;
 
         float ll_pid_out = 0.0f;
         float lr_pid_out = 0.0f;
 
-        const bool is_right = (input.recovery_direction == wheel_legged::FallDirection::kRight);
-        const bool is_left = (input.recovery_direction == wheel_legged::FallDirection::kLeft);
+        const bool is_right_front = recovery_effective_direction_ == wheel_legged::FallDirection::kRightFront;
+        const bool is_right_back = recovery_effective_direction_ == wheel_legged::FallDirection::kRightBack;
+        const bool is_left_front = recovery_effective_direction_ == wheel_legged::FallDirection::kLeftFront;
+        const bool is_left_back = recovery_effective_direction_ == wheel_legged::FallDirection::kLeftBack;
+        const bool is_right = is_right_front || is_right_back;
+        const bool is_left = is_left_front || is_left_back;
 
         if (is_right) {
           right_leg_turn_pid_.Clear();
           ll_pid_out = 0;
-          lr_pid_out = kRollHoldTorque;
+          lr_pid_out = is_right_front ? wheel_legged::params::active::chassis::kRecoveryRightFrontFallHoldTorqueNm
+                                      : wheel_legged::params::active::chassis::kRecoveryRightBackFallHoldTorqueNm;
         } else if (is_left) {
           left_leg_turn_pid_.Clear();
-          ll_pid_out = kRollHoldTorque;
+          ll_pid_out = is_left_front ? wheel_legged::params::active::chassis::kRecoveryLeftFrontFallHoldTorqueNm
+                                     : wheel_legged::params::active::chassis::kRecoveryLeftBackFallHoldTorqueNm;
           lr_pid_out = 0;
         }
 
