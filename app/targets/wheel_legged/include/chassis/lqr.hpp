@@ -81,7 +81,7 @@ class WbrController {
     rm::f32 x_err[10]{};
     x_err[0] = (current.s - expected.s) * position_error_scale + displacement_bias_m;
     x_err[1] = (current.s_dot - expected.s_dot) * velocity_error_scale;
-    x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi)*1.3;
+    x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi) * 1.3;
     x_err[3] = current.phi_dot - expected.phi_dot;
     x_err[4] = (current.theta_ll - expected.theta_ll);
     x_err[5] = current.theta_ll_dot - expected.theta_ll_dot;
