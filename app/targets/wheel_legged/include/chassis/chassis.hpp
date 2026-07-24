@@ -49,8 +49,7 @@ class Chassis {
     bool stair_sequence_controls_motion{false};         ///< 台阶动作序列是否已经接管运动控制
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
-    wheel_legged::FallDirection recovery_direction{
-        wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
+    wheel_legged::FallDirection recovery_direction{wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
   };
 
   /**

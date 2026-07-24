@@ -24,7 +24,7 @@ FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, co
     if (uy > threshold) return FallDirection::kRight;
   }
   return std::abs(ux) >= std::abs(uy) ? (ux < 0 ? FallDirection::kFront : FallDirection::kBack)
-                                       : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
+                                      : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
 }
 
 bool FallDetector::CheckLegSafe(const LegSafetyContext& legs) {

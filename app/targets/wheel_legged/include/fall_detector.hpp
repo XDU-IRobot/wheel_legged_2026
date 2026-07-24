@@ -5,17 +5,15 @@
 #include "params.hpp"
 #include "posture_observer.hpp"
 
-
-
 namespace wheel_legged {
 
 /// @brief 倒地方向（每周期重分类，支持倒地期间方向切换）
 enum class FallDirection : uint8_t {
   kUnknown = 0,
-  kFront = 1,     ///< 前趴
-  kBack = 2,      ///< 后躺
-  kLeft = 3,      ///< 左侧躺
-  kRight = 4,     ///< 右侧躺
+  kFront = 1,  ///< 前趴
+  kBack = 2,   ///< 后躺
+  kLeft = 3,   ///< 左侧躺
+  kRight = 4,  ///< 右侧躺
 };
 
 /// @brief 倒地原因
