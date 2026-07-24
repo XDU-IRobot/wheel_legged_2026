@@ -396,30 +396,67 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
     constexpr float kPi = static_cast<float>(M_PI);
 
-    auto is_theta_negative = [](float theta) -> bool {
+    // 归一化到 [0, 2π)：[0, π] 为正角度腿，(π, 2π) 为负角度腿
+    auto is_theta_positive = [](float theta) -> bool {
       float a = std::fmod(theta, kTwoPi);
       if (a < 0) a += kTwoPi;
-      return a > kPi;
+      return a <= kPi;
     };
 
-    const bool left_neg = is_theta_negative(state_output.current.theta_ll);
-    const bool right_neg = is_theta_negative(state_output.current.theta_lr);
+    auto wrap_near_zero = [](float theta) -> float {
+      float a = std::fmod(theta, kTwoPi);
+      if (a < 0) a += kTwoPi;
+      if (a > kPi) a -= kTwoPi;
+      return a;
+    };
 
-    // 仅一条腿为负且超过阈值 → 不走负角度路径，走原三段式或 theta 恢复
+    const bool left_neg = !is_theta_positive(state_output.current.theta_ll);
+    const bool right_neg = !is_theta_positive(state_output.current.theta_lr);
+
+    // 仅一条腿为负且偏离阈值较大 → 不走负角度路径，走原三段式
+    const float kFarNegThres = wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad;
     const bool single_far_neg =
         (left_neg != right_neg) &&
-        ((left_neg &&
-          state_output.current.theta_ll < -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad) ||
-         (right_neg &&
-          state_output.current.theta_lr < -wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad));
+        ((left_neg && wrap_near_zero(state_output.current.theta_ll) < -kFarNegThres) ||
+         (right_neg && wrap_near_zero(state_output.current.theta_lr) < -kFarNegThres));
 
     if ((left_neg || right_neg) && !single_far_neg) {
-      // ── 负角度路径：所有未完成腿统一收腿+摆腿向 0，各自到位后一起进 LQR ──
+      // ── 负角度路径：负角度腿收腿+摆腿直接向 0，正角度腿 PID 斜坡向 0 ──
       constexpr float kLqrThetaTol = wheel_legged::params::active::chassis::kStandupDirectLqrThetaTolRad;
+      constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
 
-      if (standup_complete_left_ && standup_complete_right_) {
-        standup_complete_left_ = false;
-        standup_complete_right_ = false;
+      // 首次进入负角度路径时，为正角度腿初始化斜坡起点
+      const bool first_entry = standup_complete_left_ && standup_complete_right_;
+
+      standup_complete_left_ = false;
+      standup_complete_right_ = false;
+
+      // 左腿目标：负角度→0，正角度→从 wrap_near_zero 斜坡到 0
+      if (left_neg) {
+        standup_target_left_ = 0.0f;
+      } else {
+        if (first_entry) standup_target_left_ = wrap_near_zero(state_output.current.theta_ll);
+        if (standup_target_left_ > 0.0f) {
+          standup_target_left_ -= kRampStep;
+          if (standup_target_left_ < 0.0f) standup_target_left_ = 0.0f;
+        } else if (standup_target_left_ < 0.0f) {
+          standup_target_left_ += kRampStep;
+          if (standup_target_left_ > 0.0f) standup_target_left_ = 0.0f;
+        }
+      }
+
+      // 右腿目标
+      if (right_neg) {
+        standup_target_right_ = 0.0f;
+      } else {
+        if (first_entry) standup_target_right_ = wrap_near_zero(state_output.current.theta_lr);
+        if (standup_target_right_ > 0.0f) {
+          standup_target_right_ -= kRampStep;
+          if (standup_target_right_ < 0.0f) standup_target_right_ = 0.0f;
+        } else if (standup_target_right_ < 0.0f) {
+          standup_target_right_ += kRampStep;
+          if (standup_target_right_ > 0.0f) standup_target_right_ = 0.0f;
+        }
       }
 
       auto theta_near_zero = [&](float theta) -> bool {
@@ -434,13 +471,13 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       // 仍有腿未完成 → 收腿+摆腿同时
       if (!standup_complete_left_ || !standup_complete_right_) {
         force_low_leg_ = true;
-        standup_theta_target_ = 0.0f;
       }
 
       if (standup_complete_left_ && standup_complete_right_) {
         standup_complete_ = true;
         force_low_leg_ = false;
-        standup_theta_target_ = 0.0f;
+        standup_target_left_ = 0.0f;
+        standup_target_right_ = 0.0f;
       }
       standup_phase_ = 1;  // 非 Phase 0，确保腿长力生效
     } else {
@@ -788,15 +825,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       return a;
     };
     if (!standup_complete_left_ || !standup_complete_right_) {
-      // 负角度路径：所有未完成腿统一更新 standup PID 摆向 0
+      // 负角度路径：未完成腿用各自 per-leg 目标（负角度→0，正角度→斜坡）
       if (!standup_complete_left_) {
-        const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_theta_target_);
-        left_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_ll_wrapped,
+        const float theta_ll_wrapped = wrap_near_target(state_output.current.theta_ll, standup_target_left_);
+        left_leg_angle_pid_standup_.UpdateExtDiff(standup_target_left_, theta_ll_wrapped,
                                                   -state_output.current.theta_ll_dot, 2);
       }
       if (!standup_complete_right_) {
-        const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_theta_target_);
-        right_leg_angle_pid_standup_.UpdateExtDiff(standup_theta_target_, theta_lr_wrapped,
+        const float theta_lr_wrapped = wrap_near_target(state_output.current.theta_lr, standup_target_right_);
+        right_leg_angle_pid_standup_.UpdateExtDiff(standup_target_right_, theta_lr_wrapped,
                                                    -state_output.current.theta_lr_dot, 2);
       }
     } else {

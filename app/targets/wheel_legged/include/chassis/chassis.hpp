@@ -209,6 +209,8 @@ class Chassis {
   float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
   bool standup_complete_left_{true};         ///< 左腿起立完成（仅负角度路径使用，默认 true）
   bool standup_complete_right_{true};        ///< 右腿起立完成（仅负角度路径使用，默认 true）
+  float standup_target_left_{0.0f};          ///< 负角度路径左腿摆角 PID 目标 [rad]
+  float standup_target_right_{0.0f};         ///< 负角度路径右腿摆角 PID 目标 [rad]
   uint8_t theta_recovery_phase_{0};          ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
