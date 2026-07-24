@@ -1268,14 +1268,14 @@ using namespace common::main;
 
 // ── 自瞄通信 ──
 namespace aimbot {
-constexpr uint8_t kRobotId = 3U;                                     ///< 机器人 ID
-constexpr float kBulletSpeedMps = 23.0f;                             ///< 弹速 [m/s]
-constexpr float kBulletDefaultSpeedMps = 23.f;                       ///< 默认弹速
-constexpr float kBulletBoundarySpeedMps = 20.f;                      ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{35.0f, 0.f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄偏航速度 PID（打装甲板）
+constexpr uint8_t kRobotId = 3U;                                    ///< 机器人 ID
+constexpr float kBulletSpeedMps = 23.0f;                            ///< 弹速 [m/s]
+constexpr float kBulletDefaultSpeedMps = 23.f;                      ///< 默认弹速
+constexpr float kBulletBoundarySpeedMps = 20.f;                     ///< 区分裁判系统返回值是否正确
+constexpr PidGains kYawPositionPid{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
 constexpr PidGains kPitchPositionPid{35.0f, 0.f, 1.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.8f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.8f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
