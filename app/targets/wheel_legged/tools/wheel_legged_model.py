@@ -44,55 +44,81 @@ class RobotModelParams:
 
 
 @dataclass(frozen=True)
+class LegMassProperties:
+    """Equivalent single-leg properties in the sagittal virtual-leg frame.
+
+    ``com_parallel_from_upper_m`` is positive from the virtual-leg upper pivot
+    towards the wheel axle. ``com_normal_m`` is positive along the in-plane
+    normal obtained by rotating that direction counter-clockwise. The CAD
+    coordinate convention used for the current table therefore produces a
+    negative normal offset.
+    """
+
+    com_parallel_from_upper_m: float
+    com_normal_m: float
+    pitch_inertia_com_kg_m2: float
+
+
+@dataclass(frozen=True)
 class FiveDofModel:
     mass: np.ndarray
     gravity: np.ndarray
     input_map: np.ndarray
 
 
-# Columns: leg length, wheel-side COM distance, body-side COM distance,
-# leg pitch inertia.
+# CAD source:
+#   outputs/solidworks_leg_measurement_20260724/leg_mass_properties_raw.csv
+#
+# Columns:
+#   virtual-leg length,
+#   COM projection from the upper pivot along upper-pivot -> wheel,
+#   signed in-plane COM normal offset,
+#   pitch inertia about the COM (global CAD X / wheel-axle direction).
+#
+# The old table forced the COM onto the virtual-leg line. This table retains
+# the measured two-dimensional COM vector. See leg_params() and
+# build_five_dof_model() for the exact linearized reduction used by LQR/LESO.
 _COMMON_LEG_DATA = np.array(
     [
-        [0.110000, 0.061990, 0.048010, 0.045494],
-        [0.120000, 0.067466, 0.052534, 0.044995],
-        [0.130000, 0.072986, 0.057014, 0.044639],
-        [0.140000, 0.078550, 0.061450, 0.044425],
-        [0.150000, 0.084158, 0.065842, 0.044354],
-        [0.160000, 0.089810, 0.070190, 0.044425],
-        [0.170000, 0.095506, 0.074494, 0.044639],
-        [0.180000, 0.101246, 0.078754, 0.044995],
-        [0.190000, 0.107030, 0.082970, 0.045494],
-        [0.200000, 0.112858, 0.087142, 0.046135],
-        [0.210000, 0.118730, 0.091270, 0.046919],
-        [0.220000, 0.124646, 0.095354, 0.047845],
-        [0.230000, 0.130606, 0.099394, 0.048914],
-        [0.240000, 0.136610, 0.103390, 0.050125],
-        [0.250000, 0.142658, 0.107342, 0.051479],
-        [0.260000, 0.148750, 0.111250, 0.052975],
-        [0.270000, 0.154886, 0.115114, 0.054614],
-        [0.280000, 0.161066, 0.118934, 0.056396],
-        [0.290000, 0.167290, 0.122710, 0.058320],
-        [0.300000, 0.173558, 0.126442, 0.060387],
-        [0.310000, 0.179870, 0.130130, 0.062597],
-        [0.320000, 0.186226, 0.133774, 0.064949],
-        [0.330000, 0.192626, 0.137374, 0.067444],
-        [0.340000, 0.199070, 0.140930, 0.070081],
+        [0.110000, -0.002223478, -0.086718091, 0.0146738336],
+        [0.120000, 0.003731177, -0.087073613, 0.0147945296],
+        [0.130000, 0.009212570, -0.087155441, 0.0149124178],
+        [0.140000, 0.014321405, -0.087027371, 0.0150303403],
+        [0.150000, 0.019131471, -0.086731423, 0.0151502099],
+        [0.160000, 0.023698014, -0.086296060, 0.0152733568],
+        [0.170000, 0.028063223, -0.085740970, 0.0154007342],
+        [0.180000, 0.032259877, -0.085079952, 0.0155330443],
+        [0.190000, 0.036313893, -0.084322717, 0.0156708193],
+        [0.200000, 0.040245854, -0.083476092, 0.0158144659],
+        [0.210000, 0.044072538, -0.082544730, 0.0159643094],
+        [0.220000, 0.047807637, -0.081531657, 0.0161206112],
+        [0.230000, 0.051462465, -0.080438607, 0.0162835867],
+        [0.240000, 0.055046451, -0.079266254, 0.0164534165],
+        [0.250000, 0.058567518, -0.078014363, 0.0166302550],
+        [0.260000, 0.062032369, -0.076681880, 0.0168142368],
+        [0.270000, 0.065446714, -0.075266984, 0.0170054807],
+        [0.280000, 0.068815442, -0.073767091, 0.0172040935],
+        [0.290000, 0.072142762, -0.072178828, 0.0174101730],
+        [0.300000, 0.075432312, -0.070497968, 0.0176238097],
+        [0.310000, 0.078687244, -0.068719336, 0.0178450891],
+        [0.320000, 0.081910299, -0.066836653, 0.0180740929],
+        [0.330000, 0.085103856, -0.064842333, 0.0183109005],
+        [0.336337, 0.087113357, -0.063516607, 0.0184650458],
     ],
     dtype=float,
 )
 
 
 # TODO(model-identification): replace each profile with measured/CAD values.
-# Current values intentionally match the latest shared LQR model, except for
-# the confirmed wheel radius and Hero half-track.
+# The three variants intentionally share the current CAD single-leg mass until
+# independent CAD/measurement results are available.
 ROBOT_MODEL_PARAMS: dict[str, RobotModelParams] = {
     "hero": RobotModelParams(
         wheel_radius_m=0.0575,
         half_track_m=0.24,
         body_com_offset_m=0.024,
         wheel_mass_kg=0.3,
-        leg_mass_kg=2.3,
+        leg_mass_kg=1.640907,
         body_mass_kg=20.0,
         wheel_inertia_kg_m2=0.001009,
         body_pitch_inertia_kg_m2=0.3,
@@ -103,7 +129,7 @@ ROBOT_MODEL_PARAMS: dict[str, RobotModelParams] = {
         half_track_m=0.2025,
         body_com_offset_m=0.024,
         wheel_mass_kg=0.3,
-        leg_mass_kg=2.3,
+        leg_mass_kg=1.640907,
         body_mass_kg=20.0,
         wheel_inertia_kg_m2=0.001009,
         body_pitch_inertia_kg_m2=0.3,
@@ -114,7 +140,7 @@ ROBOT_MODEL_PARAMS: dict[str, RobotModelParams] = {
         half_track_m=0.2025,
         body_com_offset_m=0.024,
         wheel_mass_kg=0.3,
-        leg_mass_kg=2.3,
+        leg_mass_kg=1.640907,
         body_mass_kg=20.0,
         wheel_inertia_kg_m2=0.001009,
         body_pitch_inertia_kg_m2=0.3,
@@ -156,20 +182,32 @@ def interp_or_extrapolate(x: float, xp: np.ndarray, fp: np.ndarray) -> float:
     return float(np.interp(x, xp, fp))
 
 
-def leg_params(variant: str, leg_length_m: float) -> tuple[float, float, float]:
+def leg_params(variant: str, leg_length_m: float) -> LegMassProperties:
     data = leg_data(variant)
     lengths = data[:, 0]
-    l_w = interp_or_extrapolate(leg_length_m, lengths, data[:, 1])
-    l_b = interp_or_extrapolate(leg_length_m, lengths, data[:, 2])
-    i_l = interp_or_extrapolate(leg_length_m, lengths, data[:, 3])
-    return l_w, l_b, i_l
+    return LegMassProperties(
+        com_parallel_from_upper_m=interp_or_extrapolate(leg_length_m, lengths, data[:, 1]),
+        com_normal_m=interp_or_extrapolate(leg_length_m, lengths, data[:, 2]),
+        pitch_inertia_com_kg_m2=interp_or_extrapolate(leg_length_m, lengths, data[:, 3]),
+    )
 
 
 def build_five_dof_model(variant: str, l_l: float, l_r: float) -> FiveDofModel:
     """Build M, G and B_tau for M*q_ddot + G*q = B_tau*u + d."""
     p = model_params(variant)
-    l_wl, l_bl, i_ll = leg_params(variant, l_l)
-    l_wr, l_br, i_lr = leg_params(variant, l_r)
+    left_leg = leg_params(variant, l_l)
+    right_leg = leg_params(variant, l_r)
+
+    # The legacy collinear model used l_b from the upper pivot to the COM and
+    # l_w = l_0 - l_b from the wheel to the COM. In the upright linearization,
+    # the translational and gravity couplings use the tangent projection
+    # c_parallel. The normal offset contributes through the parallel-axis term
+    # m*c_normal^2. This reduction is exactly the legacy model when
+    # c_normal == 0.
+    l_bl = left_leg.com_parallel_from_upper_m
+    l_br = right_leg.com_parallel_from_upper_m
+    l_wl = l_l - l_bl
+    l_wr = l_r - l_br
 
     r_w = p.wheel_radius_m
     r_l = p.half_track_m
@@ -178,6 +216,8 @@ def build_five_dof_model(variant: str, l_l: float, l_r: float) -> FiveDofModel:
     m_l = p.leg_mass_kg
     m_b = p.body_mass_kg
     i_w = p.wheel_inertia_kg_m2
+    i_ll = left_leg.pitch_inertia_com_kg_m2 + m_l * left_leg.com_normal_m**2
+    i_lr = right_leg.pitch_inertia_com_kg_m2 + m_l * right_leg.com_normal_m**2
     i_b = p.body_pitch_inertia_kg_m2
     i_z = p.body_yaw_inertia_kg_m2
     gravity_accel = p.gravity_mps2
