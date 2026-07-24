@@ -37,8 +37,8 @@ struct PostureObserverParams {
 
 /// @brief 倒地检测器参数（滞回阈值 + 定时确认）
 struct FallDetectorParams {
-  float fall_enter_uxy_abs;            ///< 倒地进入阈值 [1]，|ux| 或 |uy| 超过此值触发候选（sin(50°)≈0.766）
-  float upright_exit_uxy_abs;          ///< 直立退出阈值 [1]，|ux| 且 |uy| 低于此值且角速度低才确认直立（sin(28°)≈0.469）
+  float fall_enter_uxy_abs;  ///< 倒地进入阈值 [1]，|ux| 或 |uy| 超过此值触发候选（sin(50°)≈0.766）
+  float upright_exit_uxy_abs;  ///< 直立退出阈值 [1]，|ux| 且 |uy| 低于此值且角速度低才确认直立（sin(28°)≈0.469）
   std::uint32_t fall_confirm_ms;     ///< 倒地候选需持续满足此时间才确认 [ms]
   std::uint32_t upright_confirm_ms;  ///< 直立需持续满足此时间才确认已恢复 [ms]
   float upright_gyro_max_rad_s;      ///< 直立确认时允许的最大角速度模长 [rad/s]
@@ -362,7 +362,7 @@ constexpr StairClimbParams kStairClimbStep2{
 // ==== 倒地自起 ====
 constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;  ///< 倒地确认时间（持续倒地超过此值进入自启） [ms]
 constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自启超时（超时后强制停机） [ms]
-constexpr std::uint32_t kRecoveryFailedTimeoutMs = 3000U;      ///< 自启失败锁定超时 [ms]
+constexpr std::uint32_t kRecoveryFailedTimeoutMs = 3000U;     ///< 自启失败锁定超时 [ms]
 
 // ==== 跳跃（低腿长）====
 constexpr std::uint32_t kJumpLowPrepMs = 100U;     ///< 跳跃预备阶段持续时间 [ms]
@@ -1110,13 +1110,13 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====]
-constexpr float kRecoveryThetaRangeLowMin = -2.f;   ///< 前倒恢复腿摆角下限 [rad]1
-constexpr float kRecoveryThetaRangeLowMax = -0.8f;   ///< 前倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryThetaRangeLowMin = -2.f;         ///< 前倒恢复腿摆角下限 [rad]1
+constexpr float kRecoveryThetaRangeLowMax = -0.8f;        ///< 前倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;  ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryThetaRangeHighMin = -5.6f;  ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -5.f;  ///< 后倒恢复腿摆角上限 [rad]1
-constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;  ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryRollFallHoldTorqueNm = -24.0f;  ///< 侧倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryThetaRangeHighMin = -5.6f;       ///< 后倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -5.f;        ///< 后倒恢复腿摆角上限 [rad]1
+constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;    ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
+constexpr float kRecoveryRollFallHoldTorqueNm = -24.0f;   ///< 侧倒恢复恒定转轴力矩 [Nm]
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 20.0f;  ///< 支撑力低于此值判定为离地 [N]

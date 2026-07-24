@@ -903,12 +903,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
       }
 
-    const bool is_mid_or_high_leg = input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg ||
-                                    input.fsm_mode == Fsm::State::kStairTask;
-    const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ && is_mid_or_high_leg &&
-                                            (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
-                                             right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
-    output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
+      const bool is_mid_or_high_leg = input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg ||
+                                      input.fsm_mode == Fsm::State::kStairTask;
+      const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ && is_mid_or_high_leg &&
+                                              (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
+                                               right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
+      output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
 
       // 离地时支持力限幅
       if (off_ground_in_mid_high_leg) {
@@ -950,15 +950,15 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         t_br_cmd = -base_torque_.t_br;
       }
 
-    previous_final_virtual_command_[0] = -output_.lw_tau;
-    previous_final_virtual_command_[1] = output_.rw_tau;
-    previous_final_virtual_command_[2] = -t_bl_cmd;
-    previous_final_virtual_command_[3] = -t_br_cmd;
+      previous_final_virtual_command_[0] = -output_.lw_tau;
+      previous_final_virtual_command_[1] = output_.rw_tau;
+      previous_final_virtual_command_[2] = -t_bl_cmd;
+      previous_final_virtual_command_[3] = -t_br_cmd;
 
-    output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
-    output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
-    output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * t_br_cmd;
-    output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * t_br_cmd;
+      output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
+      output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
+      output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * t_br_cmd;
+      output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * t_br_cmd;
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;
@@ -1024,17 +1024,17 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
             right_leg_turn_pid_.Clear();
           }
 
-        // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
-        if (ll_in_range && lr_in_range) {
-          standup_complete_ = false;
-          standup_phase_ = 0;
-          force_low_leg_ = true;
-          standup_theta_target_ = 0.0f;
-          standup_complete_left_ = true;
-          standup_complete_right_ = true;
-          theta_recovery_active_ = false;
-          standup_from_recovery_latch_ = true;
-        }
+          // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
+          if (ll_in_range && lr_in_range) {
+            standup_complete_ = false;
+            standup_phase_ = 0;
+            force_low_leg_ = true;
+            standup_theta_target_ = 0.0f;
+            standup_complete_left_ = true;
+            standup_complete_right_ = true;
+            theta_recovery_active_ = false;
+            standup_from_recovery_latch_ = true;
+          }
 
           left_force_ = 0.0f;
           right_force_ = 0.0f;
@@ -1068,6 +1068,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         const bool is_front = (input.recovery_direction == wheel_legged::FallDirection::kFront);
 
+        const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
+        const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
+        const rm::f32 dir = is_front ? -kVel : kVel;
         // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
         const bool body_is_upright = pitch_in_range && roll_in_range;
         constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
@@ -1083,9 +1086,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
         const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
 
-      const rm::f32 kHoldTorque =
-          is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
-                   : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
+        const rm::f32 kHoldTorque = is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
+                                             : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
         // Per-leg hold 检测：每条腿独立判断是否越过目标边界
         const bool l_hold =
             !body_is_upright && (is_front ? ThetaInRange(lw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
@@ -1152,8 +1154,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
         output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
 
-      left_ = left_leg_turn_pid_.out();
-      right_ = right_leg_turn_pid_.out();
+        left_ = left_leg_turn_pid_.out();
+        right_ = right_leg_turn_pid_.out();
         left_ = left_pid.out();
         right_ = right_pid.out();
 
