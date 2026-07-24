@@ -898,6 +898,8 @@ void ControlLoop() {
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
+  chassis_update_input.stair_sequence_controls_motion = stair_sequence_output.controls_motion;
+  wl_debug.leso_stair_motion_active = stair_sequence_output.controls_motion ? 1U : 0U;
   const bool stair_descend_wheels_disabled = chassis_output.mode == chassis::Fsm::State::kStairDescendRetract;
   chassis_update_input.motion_target.disable_wheel_torque = stair_descend_wheels_disabled;
   if (stair_sequence_output.controls_motion && chassis_output.mode == chassis::Fsm::State::kStairTask) {
@@ -1321,10 +1323,14 @@ void ControlLoop() {
   {
     const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
     chassis_update_input.displacement_bias =
-        ns::control_loop::kExpectedDisplacementBiasMLowLeg + shots_fired * ns::control_loop::kDisplacementBiasPerShot;
+        wheel_legged::control_loop::ResolveDisplacementBias(chassis_update_input.fsm_mode) +
+        shots_fired * ns::control_loop::kDisplacementBiasPerShot;
     wl_debug.hero_remaining_ammo = hero_remaining_ammo;
     wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
   }
+#else
+  chassis_update_input.displacement_bias =
+      wheel_legged::control_loop::ResolveDisplacementBias(chassis_update_input.fsm_mode);
 #endif
   chassis_update_input.position_hold_active = ctx.integrate_position;
   globals->chassis.Update(chassis_update_input);
@@ -1343,6 +1349,9 @@ void ControlLoop() {
   // ── LQR 状态误差调试 ──
   wl_debug.lqr_err_s = chassis_control_output.current_state.s - chassis_update_input.expected.s;
   wl_debug.lqr_err_s_dot = chassis_control_output.current_state.s_dot - chassis_update_input.expected.s_dot;
+  wl_debug.lqr_scaled_err_s = chassis_control_output.lqr_scaled_err_s;
+  wl_debug.lqr_scaled_err_s_dot = chassis_control_output.lqr_scaled_err_s_dot;
+  wl_debug.lqr_position_hold_active = chassis_control_output.position_hold_active ? 1U : 0U;
   wl_debug.lqr_err_phi =
       rm::modules::Wrap(chassis_control_output.current_state.phi - chassis_update_input.expected.phi, -kPi, kPi);
   wl_debug.lqr_err_phi_dot = chassis_control_output.current_state.phi_dot - chassis_update_input.expected.phi_dot;

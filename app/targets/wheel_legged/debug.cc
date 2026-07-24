@@ -78,6 +78,31 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
                          const wheel_legged::FallDetection &fall_detection) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
+  wl_debug.leso_enabled = static_cast<uint8_t>(chassis_control_output.leso_enabled);
+  wl_debug.leso_initialized = static_cast<uint8_t>(chassis_control_output.leso_initialized);
+  wl_debug.leso_disable_reason = static_cast<uint8_t>(chassis_control_output.leso_disable_reason);
+  wl_debug.leso_previous_t_wl = chassis_control_output.leso_previous_virtual_command[0];
+  wl_debug.leso_previous_t_wr = chassis_control_output.leso_previous_virtual_command[1];
+  wl_debug.leso_previous_t_bl = chassis_control_output.leso_previous_virtual_command[2];
+  wl_debug.leso_previous_t_br = chassis_control_output.leso_previous_virtual_command[3];
+  wl_debug.leso_momentum_error_wl = chassis_control_output.leso_momentum_error[0];
+  wl_debug.leso_momentum_error_wr = chassis_control_output.leso_momentum_error[1];
+  wl_debug.leso_momentum_error_ll = chassis_control_output.leso_momentum_error[2];
+  wl_debug.leso_momentum_error_lr = chassis_control_output.leso_momentum_error[3];
+  wl_debug.leso_momentum_error_pitch = chassis_control_output.leso_momentum_error[4];
+  wl_debug.leso_generalized_d_wl = chassis_control_output.leso_generalized_disturbance[0];
+  wl_debug.leso_generalized_d_wr = chassis_control_output.leso_generalized_disturbance[1];
+  wl_debug.leso_generalized_d_ll = chassis_control_output.leso_generalized_disturbance[2];
+  wl_debug.leso_generalized_d_lr = chassis_control_output.leso_generalized_disturbance[3];
+  wl_debug.leso_generalized_d_pitch = chassis_control_output.leso_generalized_disturbance[4];
+  wl_debug.leso_virtual_d_wl = chassis_control_output.leso_virtual_disturbance[0];
+  wl_debug.leso_virtual_d_wr = chassis_control_output.leso_virtual_disturbance[1];
+  wl_debug.leso_virtual_d_bl = chassis_control_output.leso_virtual_disturbance[2];
+  wl_debug.leso_virtual_d_br = chassis_control_output.leso_virtual_disturbance[3];
+  wl_debug.leso_compensation_t_wl = chassis_control_output.leso_applied_compensation[0];
+  wl_debug.leso_compensation_t_wr = chassis_control_output.leso_applied_compensation[1];
+  wl_debug.leso_compensation_t_bl = chassis_control_output.leso_applied_compensation[2];
+  wl_debug.leso_compensation_t_br = chassis_control_output.leso_applied_compensation[3];
   wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
   wl_debug.gimbal_fsm_state = static_cast<uint8_t>(gimbal_output.mode);
   wl_debug.chassis_fsm_state_changed = static_cast<uint8_t>(chassis_output.state_changed);

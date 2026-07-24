@@ -99,6 +99,14 @@ bool IsSafeStopMode(const chassis::Fsm::State mode) { return mode == chassis::Fs
 
 bool IsStandbyMode(const chassis::Fsm::State mode) { return mode == chassis::Fsm::State::kStandby; }
 
+bool IsLesoSupportedMode(const chassis::Fsm::State mode, const bool stair_sequence_controls_motion) {
+  return mode == chassis::Fsm::State::kLowLeg || mode == chassis::Fsm::State::kMidLeg ||
+         mode == chassis::Fsm::State::kHighLeg ||
+         (mode == chassis::Fsm::State::kStairTask && !stair_sequence_controls_motion);
+}
+
+constexpr float kDecelZoneRad = wheel_legged::params::active::chassis::kRecoveryDecelZoneRad;
+constexpr float kMinSpeedRadS = wheel_legged::params::active::chassis::kRecoveryMinSpeedRadS;
 constexpr float kGravityRampScale = wheel_legged::params::active::chassis::kRecoveryGravityRampScale;
 constexpr float kJumpPushForceN = wheel_legged::params::active::chassis::kJumpPushForceN;
 
@@ -241,6 +249,18 @@ void chassis::Chassis::SafeStop() {
   output_.rb_tau = 0.0f;
   output_.lw_tau = 0.0f;
   output_.rw_tau = 0.0f;
+  leso_.Reset();
+  previous_final_virtual_command_.fill(0.0f);
+  applied_leso_compensation_.fill(0.0f);
+  output_.leso_generalized_disturbance.fill(0.0f);
+  output_.leso_virtual_disturbance.fill(0.0f);
+  output_.leso_previous_virtual_command.fill(0.0f);
+  output_.leso_momentum_error.fill(0.0f);
+  output_.leso_applied_compensation.fill(0.0f);
+  output_.leso_enabled = false;
+  output_.leso_initialized = false;
+  output_.leso_disable_reason = LesoDisableReason::kOutputDisabled;
+  was_off_ground_ = false;
   imu_acc_x_integral_mps_ = 0.0f;
 }
 
@@ -358,6 +378,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else {
       off_ground_duration_ticks_ = 0;
     }
+    was_off_ground_ = output_.off_ground_in_mid_high_leg;
     output_.off_ground_gravity_off = off_ground_duration_ticks_ >= 50;  // 0.1s
     return;
   }
@@ -488,8 +509,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
           standup_theta_target_ = 0.0f;
         }
       }
-    }  // else（原三段式）
-  }  // !standup_complete_
+    }
+  }
   prev_enable_output_ = input.enable_output;
   output_.standup_complete = standup_complete_;
   output_.standup_phase = standup_phase_;
@@ -581,6 +602,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   } else {
     off_ground_duration_ticks_ = 0;
   }
+  was_off_ground_ = output_.off_ground_in_mid_high_leg;
   output_.off_ground_gravity_off = off_ground_duration_ticks_ >= 50;  // 0.1s
 }
 
@@ -591,6 +613,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                              const ChassisStateEstimatorOutput &state_output) {
   output_.off_ground_in_mid_high_leg = false;
   output_.pitch_fall_retract_active = false;
+  output_.lqr_scaled_err_s = 0.0f;
+  output_.lqr_scaled_err_s_dot = 0.0f;
+  output_.position_hold_active = input.position_hold_active;
 
   const auto set_all_zero = [this]() {
     output_.lb_tau = 0.0f;
@@ -603,6 +628,17 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   if (IsSafeStopMode(input.fsm_mode)) {
     set_all_zero();
+    leso_.Reset();
+    previous_final_virtual_command_.fill(0.0f);
+    applied_leso_compensation_.fill(0.0f);
+    output_.leso_generalized_disturbance.fill(0.0f);
+    output_.leso_virtual_disturbance.fill(0.0f);
+    output_.leso_previous_virtual_command.fill(0.0f);
+    output_.leso_momentum_error.fill(0.0f);
+    output_.leso_applied_compensation.fill(0.0f);
+    output_.leso_enabled = false;
+    output_.leso_initialized = false;
+    output_.leso_disable_reason = LesoDisableReason::kOutputDisabled;
     output_.left_force_n = 0.0f;
     output_.right_force_n = 0.0f;
     return;
@@ -619,6 +655,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const auto pv_scales = wheel_legged::control_loop::ResolvePositionVelocityScales(input.fsm_mode);
   const float pos_scale = input.position_hold_active ? pv_scales.position_scale : 1.0f;
   const float vel_scale = input.position_hold_active ? pv_scales.velocity_scale : 1.0f;
+  output_.lqr_scaled_err_s = (filtered_state.s - input.expected.s) * pos_scale + input.displacement_bias;
+  output_.lqr_scaled_err_s_dot = (filtered_state.s_dot - input.expected.s_dot) * vel_scale;
+  output_.position_hold_active = input.position_hold_active;
 
   // 进入/退出小陀螺时切换 LQR 增益矩阵
   const bool now_spin = (input.fsm_mode == Fsm::State::kSpin);
@@ -627,8 +666,76 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     prev_spin_active_ = now_spin;
   }
 
+  LesoDisableReason leso_disable_reason = LesoDisableReason::kActive;
+  if (!wheel_legged::params::leso::kObserverEnabled) {
+    leso_disable_reason = LesoDisableReason::kObserverDisabled;
+  } else if (!input.enable_output) {
+    leso_disable_reason = LesoDisableReason::kOutputDisabled;
+  } else if (!standup_complete_) {
+    leso_disable_reason = LesoDisableReason::kStandupIncomplete;
+  } else if (!output_.posture_valid) {
+    leso_disable_reason = LesoDisableReason::kInvalidPosture;
+  } else if (!IsLesoSupportedMode(input.fsm_mode, input.stair_sequence_controls_motion)) {
+    leso_disable_reason = LesoDisableReason::kUnsupportedMode;
+  } else if (mid_leg_dip_active_) {
+    leso_disable_reason = LesoDisableReason::kMidLegDip;
+  } else if (was_off_ground_) {
+    leso_disable_reason = LesoDisableReason::kOffGround;
+  }
+
+  const bool leso_requested = leso_disable_reason == LesoDisableReason::kActive;
+  if (leso_requested) {
+    wbr::MomentumLesoInput leso_input{};
+    leso_input.state = filtered_state;
+    leso_input.left_leg_rate_mps = left_leg_.l0_dot();
+    leso_input.right_leg_rate_mps = right_leg_.l0_dot();
+    leso_input.wheel_radius_m = wheel_legged::params::active::state_estimator::kWheelRadiusM;
+    leso_input.half_track_m = wheel_legged::params::active::chassis::kWheelRadiusM;
+    leso_input.dt_s = kControlDtS;
+    leso_input.previous_final_virtual_command = previous_final_virtual_command_;
+    static_cast<void>(leso_.Update(leso_input));
+  } else {
+    leso_.Reset();
+    previous_final_virtual_command_.fill(0.0f);
+    applied_leso_compensation_.fill(0.0f);
+  }
+
+  const wbr::MomentumLesoOutput &leso_output = leso_.output();
+  if (leso_requested && !leso_output.initialized) {
+    leso_disable_reason = LesoDisableReason::kInvalidInput;
+  }
+  const bool leso_enabled = leso_disable_reason == LesoDisableReason::kActive;
+  if (!leso_enabled) {
+    previous_final_virtual_command_.fill(0.0f);
+    applied_leso_compensation_.fill(0.0f);
+  }
+  output_.leso_generalized_disturbance = leso_output.generalized_disturbance;
+  output_.leso_virtual_disturbance = leso_output.virtual_disturbance;
+  output_.leso_previous_virtual_command = previous_final_virtual_command_;
+  for (std::size_t i = 0; i < output_.leso_momentum_error.size(); ++i) {
+    output_.leso_momentum_error[i] = leso_output.measured_momentum[i] - leso_output.estimated_momentum[i];
+  }
+  output_.leso_enabled = leso_enabled;
+  output_.leso_initialized = leso_output.initialized;
+  output_.leso_disable_reason = leso_disable_reason;
+
   base_torque_ =
       lqr_controller_.ComputeControl(filtered_state, input.expected, input.displacement_bias, pos_scale, vel_scale);
+  if (leso_enabled && leso_output.initialized) {
+    for (std::size_t i = 0; i < applied_leso_compensation_.size(); ++i) {
+      const rm::f32 compensation_gain = std::max(0.0f, wheel_legged::params::leso::kCompensationGain[i]);
+      const rm::f32 limit = std::max(0.0f, wheel_legged::params::leso::kCompensationLimitNm[i]);
+      const rm::f32 target = std::clamp(compensation_gain * leso_output.virtual_disturbance[i], -limit, limit);
+      const rm::f32 slew = std::max(0.0f, wheel_legged::params::leso::kCompensationSlewPerTickNm[i]);
+      const rm::f32 delta = std::clamp(target - applied_leso_compensation_[i], -slew, slew);
+      applied_leso_compensation_[i] += delta;
+    }
+  }
+  output_.leso_applied_compensation = applied_leso_compensation_;
+  base_torque_.t_wl -= applied_leso_compensation_[0];
+  base_torque_.t_wr -= applied_leso_compensation_[1];
+  base_torque_.t_bl -= applied_leso_compensation_[2];
+  base_torque_.t_br -= applied_leso_compensation_[3];
 
   const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
   const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
@@ -802,8 +909,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
     }
 
-    const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ &&
-                                            input.fsm_mode == Fsm::State::kMidLeg &&
+    const bool is_mid_or_high_leg = input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg ||
+                                    input.fsm_mode == Fsm::State::kStairTask;
+    const bool off_ground_in_mid_high_leg = !is_jump_state && !mid_leg_dip_active_ && is_mid_or_high_leg &&
                                             (left_support_force_est_n_ < kOffGroundSupportForceThresholdN ||
                                              right_support_force_est_n_ < kOffGroundSupportForceThresholdN);
     output_.off_ground_in_mid_high_leg = off_ground_in_mid_high_leg;
@@ -848,6 +956,11 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       t_br_cmd = -base_torque_.t_br;
     }
 
+    previous_final_virtual_command_[0] = -output_.lw_tau;
+    previous_final_virtual_command_[1] = output_.rw_tau;
+    previous_final_virtual_command_[2] = -t_bl_cmd;
+    previous_final_virtual_command_[3] = -t_br_cmd;
+
     output_.lb_tau = left_leg_.jacobi_00() * left_force_ + left_leg_.jacobi_01() * t_bl_cmd;
     output_.lf_tau = left_leg_.jacobi_10() * left_force_ + left_leg_.jacobi_11() * t_bl_cmd;
     output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * t_br_cmd;
@@ -861,6 +974,9 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
     const bool roll_in_range =
+    previous_final_virtual_command_.fill(0.0f);
+    if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
+        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
         imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad;
 

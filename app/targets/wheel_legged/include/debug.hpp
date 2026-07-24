@@ -23,6 +23,37 @@ struct FallDetection;
  * @brief 调试快照，放置于 SRAM4 供调试器/DMA 直接读取
  */
 struct __attribute__((packed, aligned(4))) DebugSnapshot {
+  float lqr_scaled_err_s;
+  float lqr_scaled_err_s_dot;
+  uint8_t lqr_position_hold_active;
+  // LESO observer state in model coordinates.
+  uint8_t leso_enabled;
+  uint8_t leso_initialized;
+  uint8_t leso_disable_reason;
+  uint8_t leso_stair_motion_active;
+  float leso_previous_t_wl;  // Previous cycle final T_wl in model coordinates
+  float leso_previous_t_wr;  // Previous cycle final T_wr in model coordinates
+  float leso_previous_t_bl;  // Previous cycle final T_bl in model coordinates
+  float leso_previous_t_br;  // Previous cycle final T_br in model coordinates
+  float leso_momentum_error_wl;
+  float leso_momentum_error_wr;
+  float leso_momentum_error_ll;
+  float leso_momentum_error_lr;
+  float leso_momentum_error_pitch;
+  float leso_generalized_d_wl;
+  float leso_generalized_d_wr;
+  float leso_generalized_d_ll;
+  float leso_generalized_d_lr;
+  float leso_generalized_d_pitch;
+  float leso_virtual_d_wl;
+  float leso_virtual_d_wr;
+  float leso_virtual_d_bl;
+  float leso_virtual_d_br;
+  float leso_compensation_t_wl;
+  float leso_compensation_t_wr;
+  float leso_compensation_t_bl;
+  float leso_compensation_t_br;
+
   // ── 时间戳与状态机 ──
   uint32_t tick_ms;                   // 系统 tick
   uint8_t chassis_fsm_state;          // 底盘状态机当前状态

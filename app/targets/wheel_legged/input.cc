@@ -647,6 +647,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 下台阶：向下 ToF 切换完成后才允许进入 0.25 m 接近阶段；单帧双侧小于阈值即触发。
   input.mode_request.stair_descend_request = tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend;
+  // input.mode_request.stair_descend_request = false;  // 下台阶 FSM 已关闭，ToF 硬件切换不受影响
   input.mode_request.stair_descend_ready = false;
   input.mode_request.stair_descend_trigger = false;
   if (input.mode_request.stair_descend_request && g.active_tof_mode == wheel_legged::TofMode::kStairDescend &&
