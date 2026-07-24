@@ -194,7 +194,7 @@ INFANTRY3_QR_POINTS: list[QrPoint] = [
         np.diag([2.6, 2.6, 0.8, 0.8]),
     ),
     QrPoint(
-        0.15,
+        0.16,
         np.diag([200.0, 140.0, 200.0, 1.0, 1200.0, 1.0, 1200.0, 1.0, 4000.0, 1.0]),
         np.diag([2.6, 2.6, 0.8, 0.8]),
     ),
@@ -707,6 +707,16 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
     fitted_gain_array = np.array([eval_kctrlp(coeffs, l_l, l_r).reshape(-1) for l_l, l_r in sample_array])
     abs_error = np.abs(fitted_gain_array - gain_array)
     rel_error = abs_error / np.maximum(np.abs(gain_array), 1e-3)
+    fitted_max_real_part = -math.inf
+    fitted_unstable_points = 0
+    for (l_l, l_r), fitted_gain in zip(sample_array, fitted_gain_array, strict=True):
+        A, B = build_ab(variant, float(l_l), float(l_r))
+        fitted_closed_loop_max_real = float(
+            np.max(np.real(np.linalg.eigvals(A - B @ fitted_gain.reshape(4, 10))))
+        )
+        fitted_max_real_part = max(fitted_max_real_part, fitted_closed_loop_max_real)
+        if fitted_closed_loop_max_real >= 0.0:
+            fitted_unstable_points += 1
 
     equal_errors = []
     for l in grid:
@@ -727,6 +737,8 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
             f"max fit rel error : {float(np.max(rel_error)):.6g}",
             f"equal-line max abs: {float(equal_abs_error):.6g}",
             f"direct LQR max Re(lambda(A-BK)): {max_real_part:.6g}",
+            f"fitted LQR max Re(lambda(A-BK)): {fitted_max_real_part:.6g}",
+            f"fitted unstable grid points     : {fitted_unstable_points}",
         ]
     )
     return coeffs, report
