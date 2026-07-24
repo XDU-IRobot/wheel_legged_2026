@@ -459,10 +459,10 @@ void ControlLoop() {
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
-  // if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk &&
-  //     globals->referee->data().robot_status.power_management_chassis_output == 0) {
-  //   chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
-  // }
+  if (globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk &&
+      globals->referee->data().robot_status.power_management_chassis_output == 0) {
+    chassis_input.request.domain_request = wheel_legged::DomainRequest::kDisabled;
+  }
   // 只有 Q 键 / Ctrl+Q 或 DR16 拨杆能从 Disabled 切到其他状态（DR16 优先）
   {
     static uint8_t prev_domain_state = 0U;
