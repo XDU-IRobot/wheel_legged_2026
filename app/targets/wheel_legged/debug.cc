@@ -7,7 +7,10 @@
 
 #include <array>
 
+#include "include/ai/policy_runner.hpp"
+#include "include/fall_detector.hpp"
 #include "include/globals.hpp"
+#include "include/posture_observer.hpp"
 
 namespace {
 
@@ -70,7 +73,9 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
-                         const chassis::StairClimbSequence::Output &stair_sequence_output) {
+                         const chassis::StairClimbSequence::Output &stair_sequence_output,
+                         const wheel_legged::PostureObservation &posture_obs,
+                         const wheel_legged::FallDetection &fall_detection) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
   wl_debug.leso_enabled = static_cast<uint8_t>(chassis_control_output.leso_enabled);
@@ -283,6 +288,16 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.imu_raw_acc_y_mps2 = motor.imu.acc_y_mps2;
   wl_debug.imu_raw_acc_z_mps2 = motor.imu.acc_z_mps2;
 
+  // ── 四元数解算欧拉角（对比 IMU 内置欧拉角，排查万向节死锁）──
+  {
+    float q[4] = {motor.imu.quat_w, motor.imu.quat_x, motor.imu.quat_y, motor.imu.quat_z};
+    float euler[3];
+    rm::modules::QuatToEuler(q, euler);
+    wl_debug.imu_quat_roll_rad = euler[1];
+    wl_debug.imu_quat_pitch_rad = -euler[0];
+    wl_debug.imu_quat_yaw_rad = euler[2];
+  }
+
   // ── 底盘状态向量 ──
   const auto &x = chassis_control_output.current_state;
   wl_debug.state_s_m = x.s;
@@ -333,6 +348,7 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
+  wl_debug.chassis_pitch_fall_retract = static_cast<uint8_t>(chassis_control_output.pitch_fall_retract_active);
   wl_debug.chassis_standup_theta_target_rad = chassis_control_output.standup_theta_target;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
@@ -343,4 +359,21 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.input_host_target_valid = static_cast<uint8_t>(input.mode_request.host_target_valid);
   wl_debug.gimbal_target_yaw_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.gimbal_target_pitch_rad = -gimbal_control_output.pitch_target_rad;
+
+  // ── 四元数倒地检测影子输出 ──
+  wl_debug.fall_up_body_x = posture_obs.up_body_x;
+  wl_debug.fall_up_body_y = posture_obs.up_body_y;
+  wl_debug.fall_tilt_cos = posture_obs.up_body_z;
+  wl_debug.fall_flags = (static_cast<uint8_t>(fall_detection.fall_candidate) << 0) |
+                        (static_cast<uint8_t>(fall_detection.fall_confirmed) << 1) |
+                        ((static_cast<uint8_t>(fall_detection.direction) & 0x07) << 2) |
+                        ((static_cast<uint8_t>(fall_detection.cause) & 0x03) << 5);
+  wl_debug.fall_aux_flags = (static_cast<uint8_t>(fall_detection.body_upright_confirmed) << 0) |
+                            (static_cast<uint8_t>(fall_detection.sensor_valid) << 1) |
+                            (static_cast<uint8_t>(fall_detection.leg_configuration_safe) << 2) |
+                            (static_cast<uint8_t>(fall_detection.leg_fall_candidate) << 3);
+  wl_debug.fall_condition_hold_ms = static_cast<uint16_t>(fall_detection.condition_hold_ms);
+  wl_debug.fall_upright_hold_ms = static_cast<uint16_t>(fall_detection.upright_hold_ms);
+  wl_debug.posture_fault_flags = posture_obs.fault_flags;
+  wl_debug.legacy_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }

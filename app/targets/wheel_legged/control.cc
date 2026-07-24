@@ -4,6 +4,8 @@
 #include "include/chassis/stair_climb_sequence.hpp"
 #include "include/chassis/stair_task_coordinator.hpp"
 #include "include/debug.hpp"
+#include "include/fall_detector.hpp"
+#include "include/posture_observer.hpp"
 #include "tools/theta_bias_generated.hpp"
 #include "main.h"
 #include <algorithm>
@@ -15,6 +17,7 @@
 #include "ui/ui_snapshot.hpp"
 #include "include/input.hpp"
 #include "include/state_ctx.hpp"
+
 bool init_flag;
 uint32_t times = 0;
 
@@ -366,16 +369,28 @@ void ControlLoop() {
   static Dr16SemanticState dr16_state{};
   static TcSemanticState tc_state{};
   static ChassisStateContext ctx{};
-  static uint32_t fall_start_ms = 0;
-  static bool was_posture_invalid = false;
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
+
+  // ── 四元数倒地检测（影子模式）──
+  static wheel_legged::PostureObserver posture_observer{};
+  static wheel_legged::FallDetector fall_detector{};
+  static wheel_legged::PostureObservation posture_obs{};
+  static wheel_legged::FallDetection fall_det{};
+  static bool fall_detector_initialized = false;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
 #endif
 
   // ── 一次性初始化 ──
   (void)0;
+
+  // ── 四元数倒地检测初始化（影子模式，首次运行时执行）──
+  if (!fall_detector_initialized) {
+    posture_observer.Init({.params = wheel_legged::params::active::posture_observer::kParams});
+    fall_detector.Init({.params = wheel_legged::params::active::fall_detector::kParams});
+    fall_detector_initialized = true;
+  }
 
   // 云台 C 板通信断开时强制退出中腿长保持
   if (!(globals->gimbal_rx.has_value() && globals->gimbal_rx->frame_count() > 0)) {
@@ -443,7 +458,33 @@ void ControlLoop() {
       .tick_ms = now_ms,
   });
 
-  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output, fall_start_ms, was_posture_invalid);
+  // ── 四元数倒地检测（同周期，在 FSM 之前运行）──
+  {
+    const float raw_qw = globals->chassis_imu->quat_w();
+    const float raw_qx = globals->chassis_imu->quat_x();
+    const float raw_qy = globals->chassis_imu->quat_y();
+    const float raw_qz = globals->chassis_imu->quat_z();
+    const float raw_gx = globals->chassis_imu->gyro_x();
+    const float raw_gy = globals->chassis_imu->gyro_y();
+    const float raw_gz = globals->chassis_imu->gyro_z();
+    const float raw_ax = globals->chassis_imu->acc_x();
+    const float raw_ay = globals->chassis_imu->acc_y();
+    const float raw_az = globals->chassis_imu->acc_z();
+
+    posture_obs =
+        posture_observer.Update(raw_qw, raw_qx, raw_qy, raw_qz, raw_gx, raw_gy, raw_gz, raw_ax, raw_ay, raw_az, now_ms);
+
+    wheel_legged::LegSafetyContext leg_ctx{};
+    leg_ctx.theta_ll_rad = chassis_control_output.current_state.theta_ll;
+    leg_ctx.theta_lr_rad = chassis_control_output.current_state.theta_lr;
+    leg_ctx.left_leg_length_m = chassis_control_output.current_state.l_l;
+    leg_ctx.right_leg_length_m = chassis_control_output.current_state.l_r;
+
+    fall_det = fall_detector.Update(posture_obs, leg_ctx, now_ms);
+    input.fall_detection = fall_det;
+  }
+
+  auto chassis_input = BuildChassisFsmInput(input, now_ms, chassis_control_output);
   if (stair_task_output.request_high_leg) {
     chassis_input.request.leg_request = wheel_legged::LegProfile::kHigh;
   }
@@ -721,13 +762,6 @@ void ControlLoop() {
     globals->shoot_controller.Update(shooter_enter, fire_flag, true, heat_delta);
     wl_debug.booster_raw_pos_rad = globals->shoot_controller.booster_pos();
     wl_debug.booster_target_rad = globals->shoot_controller.booster_target();
-    wl_debug.shoot_hero_state = static_cast<uint8_t>(globals->shoot_controller.state());
-    wl_debug.shoot_hero_fire_trigger = fire_flag ? 1U : 0U;
-    wl_debug.shoot_hero_enter = shooter_enter ? 1U : 0U;
-    wl_debug.shoot_hero_heat_delta = heat_delta;
-    wl_debug.fw_raw_rpm_1 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_left_rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_2 = gimbal_rx_valid ? static_cast<float>(globals->gimbal_rx->fric_right_rpm()) : 0.0f;
-    wl_debug.fw_raw_rpm_3 = 0.0f;  // 当前 CAN 协议仅传输 2 个摩擦轮转速
     rm::device::DjiMotorBase::SendCommand(*globals->gimbal_can);
 
     if (gimbal_rx_valid && globals->gimbal_rx->PopShotDetected()) {
@@ -875,6 +909,7 @@ void ControlLoop() {
   chassis_update_input.estimator_input = input.estimator_input;
   chassis_update_input.estimator_input.dt_s = kControlLoopDtS;
   chassis_update_input.yaw_centering_complete = gimbal_control_output.yaw_centered;
+  chassis_update_input.recovery_direction = input.fall_detection.direction;
 
   // ── 7b. 模式切换处理 ──
   const auto &current_state = chassis_control_output.current_state;
@@ -1623,7 +1658,7 @@ void ControlLoop() {
   }
 
   UpdateDebugSnapshot(now_ms, input, chassis_output, gimbal_output, chassis_control_output, gimbal_control_output,
-                      stair_task_output, stair_sequence_output);
+                      stair_task_output, stair_sequence_output, posture_obs, fall_det);
 
   if (!init_flag) {
     static_UI_add();

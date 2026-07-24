@@ -3,6 +3,7 @@
 #include "state.hpp"
 #include "fsm.hpp"
 #include "lqr.hpp"
+#include "../fall_detector.hpp"
 #include "leso.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
@@ -48,6 +49,7 @@ class Chassis {
     bool stair_sequence_controls_motion{false};         ///< 台阶动作序列是否已经接管运动控制
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
+    wheel_legged::FallDirection recovery_direction{wheel_legged::FallDirection::kUnknown};  ///< 四元数倒地方向
   };
 
   /**
@@ -108,6 +110,7 @@ class Chassis {
     uint8_t standup_phase{0};                    ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
     float standup_theta_target{0.0f};            ///< 起立摆角 PID 目标当前值 [rad]
     bool mid_leg_dip_active{false};              ///< 中腿长下压激活中
+    bool pitch_fall_retract_active{false};       ///< 俯仰倒地恢复后主动收腿中
     rm::f32 stair_t_bl_cmd{0.0f};                ///< 上台阶左腿摆角控制输出（PID 或 LQR）
     rm::f32 stair_t_br_cmd{0.0f};                ///< 上台阶右腿摆角控制输出（PID 或 LQR）
 
@@ -204,11 +207,14 @@ class Chassis {
   bool standup_complete_{false};             ///< 起立完成
   uint8_t standup_phase_{0};                 ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
   float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
+  bool standup_complete_left_{true};         ///< 左腿起立完成（仅负角度路径使用，默认 true）
+  bool standup_complete_right_{true};        ///< 右腿起立完成（仅负角度路径使用，默认 true）
   uint8_t theta_recovery_phase_{0};          ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
   bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
 
+  bool trigger_standup_latched_{false};     ///< 台阶 step2 触发起立的防重锁
   uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
   uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
   bool force_low_leg_{false};               ///< 离地后腿长过短时强制低腿长
@@ -236,6 +242,10 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_leg_turn_pid_front_{};   ///< 前倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_front_{};  ///< 前倒恢复右腿摆角速度 PID
+  rm::modules::PID left_leg_turn_pid_back_{};    ///< 后倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_back_{};   ///< 后倒恢复右腿摆角速度 PID
   rm::modules::PID left_leg_angle_pid_standup_{};
   rm::modules::PID right_leg_angle_pid_standup_{};
   rm::modules::PID left_leg_turn_pid_manual_{};

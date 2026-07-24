@@ -57,6 +57,11 @@ struct ImuFeedback {
   rm::f32 acc_x_mps2{0.0f};
   rm::f32 acc_y_mps2{0.0f};
   rm::f32 acc_z_mps2{0.0f};
+
+  rm::f32 quat_w{0.0f};
+  rm::f32 quat_x{0.0f};
+  rm::f32 quat_y{0.0f};
+  rm::f32 quat_z{0.0f};
 };
 
 /**
