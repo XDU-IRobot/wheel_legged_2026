@@ -846,14 +846,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
          input.fsm_mode == Fsm::State::kRecoveryFailed);
     if ((!is_recovery_state && !output_.pitch_roll_valid_theta_invalid) || standup_from_recovery_latch_) {
       roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
-      rm::f32 leg_length_force = length_force_base;
-
       // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
       if (use_jump_extend) {
         left_l0_pid_jump_two_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
         right_l0_pid_jump_two_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
-        const float left_leg_length_force = left_l0_pid_jump_two_.out();
-        const float right_leg_length_force = right_l0_pid_jump_two_.out();
         // left_force_ = left_leg_length_force + roll_pid_.out();
         // right_force_ = right_leg_length_force - roll_pid_.out();
         // left_force_ = left_leg_length_force + roll_pid_.out() + l_spring_torque_;
@@ -1072,9 +1068,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         const bool is_front = (input.recovery_direction == wheel_legged::FallDirection::kFront);
 
-      const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
-      const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
-      const rm::f32 dir = is_front ? -kVel : kVel;
         // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
         const bool body_is_upright = pitch_in_range && roll_in_range;
         constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
@@ -1094,16 +1087,12 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
                    : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
         // Per-leg hold 检测：每条腿独立判断是否越过目标边界
-        const bool is_back = !is_front;
         const bool l_hold =
             !body_is_upright && (is_front ? ThetaInRange(lw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
                                           : ThetaInRange(lw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
         const bool r_hold =
             !body_is_upright && (is_front ? ThetaInRange(rw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
                                           : ThetaInRange(rw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
-
-        const rm::f32 kHoldTorque = is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
-                                             : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
 
       if (l_in && r_in) {
         left_leg_turn_pid_.Clear();
