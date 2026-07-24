@@ -974,9 +974,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
         state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad;
     const bool roll_in_range =
-    previous_final_virtual_command_.fill(0.0f);
-    if (state_output.current.theta_b > wheel_legged::params::active::chassis::kPostureThetaBMinRad &&
-        state_output.current.theta_b < wheel_legged::params::active::chassis::kPostureThetaBMaxRad &&
         imu_roll_ > wheel_legged::params::active::chassis::kPostureRollMinRad &&
         imu_roll_ < wheel_legged::params::active::chassis::kPostureRollMaxRad;
 
