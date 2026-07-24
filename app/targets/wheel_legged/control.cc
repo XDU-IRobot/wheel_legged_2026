@@ -1683,12 +1683,12 @@ void ControlLoop() {
   // baseline. UI tasks use blocking HAL_UART_Transmit() and previously ran
   // inside this TIM13 ISR. Keep task registration/snapshots intact so this can
   // be restored after the timing test.
-  // if (times % 17 == 0) {
-  //   schedule.schedule();
-  //   if (globals->ui_refresh_key) {
-  //     static_UI_add();
-  //   }
-  // }
+  if (times % 17 == 0) {
+    schedule.schedule();
+    if (globals->ui_refresh_key) {
+      static_UI_add();
+    }
+  }
 
   if (SystemCoreClock != 0U) {
     static uint32_t control_exec_max_us = 0U;
