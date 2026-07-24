@@ -9,7 +9,7 @@
 
 namespace wheel_legged {
 
-/// @brief 倒地方向（在倒地确认瞬间锁定，动作过程中不再重新分类）
+/// @brief 倒地方向（每周期重分类，支持倒地期间方向切换）
 enum class FallDirection : uint8_t {
   kUnknown = 0,
   kFront = 1,     ///< 前趴
@@ -51,7 +51,7 @@ struct FallDetection {
   // 传感器
   bool sensor_valid{false};
 
-  // 方向与原因（fall_confirmed 上升沿锁定）
+  // 方向与原因（每周期更新）
   FallDirection direction{FallDirection::kUnknown};
   FallCause cause{FallCause::kNone};
 
@@ -85,9 +85,6 @@ class FallDetector {
   bool prev_upright_candidate_{false};
   uint32_t upright_start_ms_{0};
 
-  FallDirection locked_direction_{FallDirection::kUnknown};
-  FallCause locked_cause_{FallCause::kNone};
-  bool direction_locked_{false};
 
   static FallDirection ClassifyDirection(float ux, float uy, float threshold);
   static bool CheckLegSafe(const LegSafetyContext& legs);

@@ -923,7 +923,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         // 双腿回到安全范围 → 直接进起立 Phase 1（收腿），跳过 LQR
         if (ll_in_range && lr_in_range) {
           standup_complete_ = false;
-          standup_phase_ = 1;
+          standup_phase_ = 0;
           force_low_leg_ = true;
           standup_theta_target_ = 0.0f;
           standup_complete_left_ = true;
@@ -965,68 +965,29 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       const bool is_front =
           (input.recovery_direction == wheel_legged::FallDirection::kFront);
 
-      // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
-      const bool body_is_upright = pitch_in_range && roll_in_range;
-      constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;
-      constexpr rm::f32 kLegSafeMax = wheel_legged::params::active::chassis::kPostureThetaLegMaxRad;
-      const rm::f32 tgt_min = body_is_upright ? kLegSafeMin : (is_front ? kRangeLowMin : kRangeHighMin);
-      const rm::f32 tgt_max = body_is_upright ? kLegSafeMax : (is_front ? kRangeLowMax : kRangeHighMax);
-      const rm::f32 dir = body_is_upright ? (is_front ? kVel : -kVel) : (is_front ? -kVel : kVel);
-
-      // 前倒/后倒使用不同的摆角恢复 PID 参数
-      auto& left_pid = is_front ? left_leg_turn_pid_front_ : left_leg_turn_pid_back_;
-      auto& right_pid = is_front ? right_leg_turn_pid_front_ : right_leg_turn_pid_back_;
+      const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
+      const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
+      const rm::f32 dir = is_front ? -kVel : kVel;
 
       const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
       const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
-
-      // Per-leg hold 检测：每条腿独立判断是否越过目标边界
-      const bool is_back = !is_front;
-      const bool l_hold = !body_is_upright && (is_front
-          ? ThetaInRange(lw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
-          : ThetaInRange(lw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
-      const bool r_hold = !body_is_upright && (is_front
-          ? ThetaInRange(rw, kRangeLowMin, kRangeLowMin + static_cast<float>(M_PI))
-          : ThetaInRange(rw, kRangeHighMax - static_cast<float>(M_PI), kRangeHighMax));
 
       const rm::f32 kHoldTorque =
           is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
                    : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
 
-      if (l_hold && r_hold) {
-        // 双腿均越过边界 → 同步输出恒定转轴力
-        left_pid.Clear();
-        right_pid.Clear();
+      if (l_in && r_in) {
+        left_leg_turn_pid_.Clear();
+        right_leg_turn_pid_.Clear();
         ll_pid_out = kHoldTorque;
         lr_pid_out = kHoldTorque;
-      } else if (l_hold) {
-        // 仅左腿越过边界 → 左腿停转等待，右腿继续 PID
-        left_pid.Clear();
-        right_pid.Update(dir, state_output.current.theta_lr_dot);
-        ll_pid_out = 0.0f;
-        lr_pid_out = -right_pid.out();
-      } else if (r_hold) {
-        // 仅右腿越过边界 → 右腿停转等待，左腿继续 PID
-        right_pid.Clear();
-        left_pid.Update(dir, state_output.current.theta_ll_dot);
-        ll_pid_out = -left_pid.out();
-        lr_pid_out = 0.0f;
-      } else if (l_in && r_in) {
-        left_pid.Update(dir, state_output.current.theta_ll_dot);
-        right_pid.Update(dir, state_output.current.theta_lr_dot);
-        const float err_pitch = std::copysign(state_output.current.theta_b, left_pid.out());
-        ll_pid_out = -(left_pid.out() +
-                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
-        lr_pid_out = -(right_pid.out() +
-                       wheel_legged::params::active::chassis::kRecoveryPitchFeedforwardKp * err_pitch);
       } else {
-        // PID 阶段：一条腿到位则速度目标置 0，等待另一条腿
         const rm::f32 lv = l_in ? 0.0f : dir;
         const rm::f32 rv = r_in ? 0.0f : dir;
-        left_pid.Update(lv, state_output.current.theta_ll_dot);
-        right_pid.Update(rv, state_output.current.theta_lr_dot);
-        ll_pid_out = -left_pid.out();
-        lr_pid_out = -right_pid.out();
+        left_leg_turn_pid_.Update(lv, state_output.current.theta_ll_dot);
+        right_leg_turn_pid_.Update(rv, state_output.current.theta_lr_dot);
+        ll_pid_out = -left_leg_turn_pid_.out();
+        lr_pid_out = -right_leg_turn_pid_.out();
       }
       left_force_ = 0.0f;
       right_force_ = 0.0f;
@@ -1036,8 +997,8 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
       output_.rb_tau = right_leg_.jacobi_00() * right_force_ + right_leg_.jacobi_01() * lr_pid_out;
       output_.rf_tau = right_leg_.jacobi_10() * right_force_ + right_leg_.jacobi_11() * lr_pid_out;
 
-      left_ = left_pid.out();
-      right_ = right_pid.out();
+      left_ = left_leg_turn_pid_.out();
+      right_ = right_leg_turn_pid_.out();
 
       output_.lf_tau = -output_.lf_tau;
       output_.lb_tau = -output_.lb_tau;

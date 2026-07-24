@@ -15,10 +15,14 @@ inline bool ThetaInCircularRange(const float theta, const float min, const float
 }  // namespace
 
 FallDirection FallDetector::ClassifyDirection(const float ux, const float uy, const float threshold) {
-  if (ux < -threshold) return FallDirection::kFront;
-  if (ux > threshold) return FallDirection::kBack;
-  if (uy < -threshold) return FallDirection::kLeft;
-  if (uy > threshold) return FallDirection::kRight;
+  // 按较大分量决定方向，避免 pitch 无条件优先于 roll
+  if (std::abs(ux) >= std::abs(uy)) {
+    if (ux < -threshold) return FallDirection::kFront;
+    if (ux > threshold) return FallDirection::kBack;
+  } else {
+    if (uy < -threshold) return FallDirection::kLeft;
+    if (uy > threshold) return FallDirection::kRight;
+  }
   return std::abs(ux) >= std::abs(uy) ? (ux < 0 ? FallDirection::kFront : FallDirection::kBack)
                                        : (uy < 0 ? FallDirection::kLeft : FallDirection::kRight);
 }
@@ -37,7 +41,7 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
   out.sensor_valid = obs.sensor_valid;
 
   if (!obs.sensor_valid) {
-    out.direction = locked_direction_;
+    out.direction = FallDirection::kUnknown;
     out.cause = FallCause::kSensorInvalid;
     return out;
   }
@@ -71,27 +75,17 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
   // ── 4. 倒地确认 ──
   out.fall_confirmed = fall_candidate && out.condition_hold_ms >= config_.params.fall_confirm_ms;
 
-  // ── 5. 方向分类（仅在上升沿锁定）──
-  if (out.fall_confirmed && !direction_locked_) {
-    // 方向：纯腿越界标 Unknown，有机身倾斜则按 up_body 判定
+  // ── 5. 方向分类（fall_candidate 即可分类，不等 fall_confirmed，FSM 用 fall_candidate 触发）──
+  if (fall_candidate) {
     if (!tilt_fall_candidate && out.leg_fall_candidate) {
       out.direction = FallDirection::kUnknown;
+      out.cause = FallCause::kLegOutOfRange;
     } else {
       out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y,
                                         config_.params.direction_threshold);
+      out.cause = out.leg_fall_candidate ? FallCause::kLegOutOfRange : FallCause::kTiltExceeded;
     }
-    // 原因：腿越界优先（腿和机身倾斜同时存在时，腿是决定性因素）
-    out.cause = out.leg_fall_candidate ? FallCause::kLegOutOfRange : FallCause::kTiltExceeded;
-    locked_direction_ = out.direction;
-    locked_cause_ = out.cause;
-    direction_locked_ = true;
-  } else if (out.fall_confirmed) {
-    out.direction = locked_direction_;
-    out.cause = locked_cause_;
   } else {
-    direction_locked_ = false;
-    locked_direction_ = FallDirection::kUnknown;
-    locked_cause_ = FallCause::kNone;
     out.direction = FallDirection::kUnknown;
     out.cause = FallCause::kNone;
   }
@@ -124,9 +118,6 @@ void FallDetector::Reset() {
   fall_candidate_start_ms_ = 0;
   prev_upright_candidate_ = false;
   upright_start_ms_ = 0;
-  locked_direction_ = FallDirection::kUnknown;
-  locked_cause_ = FallCause::kNone;
-  direction_locked_ = false;
 }
 
 }  // namespace wheel_legged

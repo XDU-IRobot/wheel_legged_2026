@@ -1080,13 +1080,13 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====]
-constexpr float kRecoveryThetaRangeLowMin = -2.f;   ///< 前倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeLowMin = -2.f;   ///< 前倒恢复腿摆角下限 [rad]1
 constexpr float kRecoveryThetaRangeLowMax = -0.8f;   ///< 前倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;  ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
 constexpr float kRecoveryThetaRangeHighMin = -5.6f;  ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -5.f;  ///< 后倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -5.f;  ///< 后倒恢复腿摆角上限 [rad]1
 constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;  ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryRollFallHoldTorqueNm = -18.0f;  ///< 侧倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryRollFallHoldTorqueNm = -24.0f;  ///< 侧倒恢复恒定转轴力矩 [Nm]
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 20.0f;  ///< 支撑力低于此值判定为离地 [N]
@@ -1332,10 +1332,10 @@ constexpr uint8_t kRobotId = 3U;                                     ///< 机器
 constexpr float kBulletSpeedMps = 23.0f;                             ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;                       ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 20.f;                      ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{40.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.45f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
-constexpr PidGains kPitchPositionPid{45.0f, 0.f, 0.5f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打装甲板）
+constexpr PidGains kYawPositionPid{45.0f, 0.f, 1.f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.35f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
+constexpr PidGains kPitchPositionPid{45.0f, 0.f, 1.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{30.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄偏航速度 PID（打符）
