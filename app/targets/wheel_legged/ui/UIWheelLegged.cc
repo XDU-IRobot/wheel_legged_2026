@@ -24,6 +24,13 @@ u8 dataBox[256];
 extern SharedResources *globals;
 extern SharedResourcesNoDtcm globals_no_dtcm;
 
+// Non-blocking async send: skip frame if TX is still busy from previous call
+static inline void ui_async_send(u8 len) {
+  if (!globals_no_dtcm.referee_uart.IsTxBusy()) {
+    globals_no_dtcm.referee_uart.WriteAsync(dataBox, len, nullptr);
+  }
+}
+
 // ── Shared working variables for leg kinematics ──
 static f32 x, y;
 static i16 s_ang = 0, e_ang = 0;
@@ -73,7 +80,7 @@ void UIWheelLeggedLabelPY_add() {
   memcpy(fig.data, "P:\nY:", 5);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedLabelLeg_add() {
@@ -83,7 +90,7 @@ void UIWheelLeggedLabelLeg_add() {
   memcpy(fig.data, "L M H", 10);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedLabelAD_add() {
@@ -93,7 +100,7 @@ void UIWheelLeggedLabelAD_add() {
   memcpy(fig.data, "AD", 2);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -118,7 +125,7 @@ void UIWheelLeggedCrosshair_add() {
   crosshair.figure2.fillLine("rl", UIFigure::Operation::Add, 0, UIFigure::Color::Cyan, 5, 1378, 86, 1170, end_y);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, crosshair, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedCrosshair_edit() {
@@ -139,7 +146,7 @@ void UIWheelLeggedCrosshair_edit() {
   crosshair.figure2.fillLine("rl", UIFigure::Operation::Edit, 0, UIFigure::Color::Cyan, 5, 1378, 86, 1170, end_y);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, crosshair, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,7 +161,7 @@ void UIWheelLeggedGimbalData_add() {
                         static_cast<u16>(690.988), 25, ui_snapshot.gimbal_yaw_rad * 1000);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedGimbalData_edit() {
@@ -165,7 +172,7 @@ void UIWheelLeggedGimbalData_edit() {
                         static_cast<u16>(690.988), 25, ui_snapshot.gimbal_yaw_rad * 1000);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -184,7 +191,7 @@ void UIWheelLeggedSupercap_add() {
   fig.figure1.fillLine("l1", UIFigure::Operation::Add, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedSupercap_edit() {
@@ -199,7 +206,7 @@ void UIWheelLeggedSupercap_edit() {
   fig.figure1.fillLine("l1", UIFigure::Operation::Edit, 0, cap_color, 34, 598, 103, 598 + cap_len, 103);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedSupercapBox_add() {
@@ -207,7 +214,7 @@ void UIWheelLeggedSupercapBox_add() {
   fig.figure1.fillRec("r2_", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3, 598, 86, 1315, 120);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -235,7 +242,7 @@ void UIWheelLeggedLegBox_add() {
   fig.figure1.fillRec("r1", UIFigure::Operation::Add, 0, UIFigure::Color::White, 2, rec_x_start, 320, rec_x_end, 390);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedLegBox_edit() {
@@ -259,7 +266,7 @@ void UIWheelLeggedLegBox_edit() {
   fig.figure1.fillRec("r1", UIFigure::Operation::Edit, 0, UIFigure::Color::White, 2, rec_x_start, 320, rec_x_end, 390);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -343,7 +350,7 @@ void UIWheelLeggedLegPose_add() {
   fig.figure5.fillArc("a1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedLegPose_edit() {
@@ -423,7 +430,7 @@ void UIWheelLeggedLegPose_edit() {
   fig.figure5.fillArc("a1", UIFigure::Operation::Edit, 0, UIFigure::Color::Yellow, 5, 957, 538, s_ang, e_ang, 77, 77);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -441,7 +448,7 @@ void UIWheelLeggedFricRPM_add() {
                             static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 #else
   static UIFigure2 fig;
   fig.figure1.fillIntegrate("fL_", UIFigure::Operation::Add, 0, UIFigure::Color::Green, 3, 1450, 646, 20,
@@ -450,7 +457,7 @@ void UIWheelLeggedFricRPM_add() {
                             static_cast<i32>(ui_snapshot.fric_right_rpm));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 #endif
 }
 
@@ -465,7 +472,7 @@ void UIWheelLeggedFricRPM_edit() {
                             static_cast<i32>(ui_snapshot.fw_raw_rpm_3));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 50);
+  ui_async_send(len);
 #else
   static UIFigure2 fig;
   fig.figure1.fillIntegrate("fL_", UIFigure::Operation::Edit, 0, UIFigure::Color::Green, 3, 1450, 646, 20,
@@ -474,7 +481,7 @@ void UIWheelLeggedFricRPM_edit() {
                             static_cast<i32>(-ui_snapshot.fric_right_rpm));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 #endif
 }
 
@@ -490,7 +497,7 @@ void UIWheelLeggedBulletData_add() {
                             static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedBulletData_edit() {
@@ -501,7 +508,7 @@ void UIWheelLeggedBulletData_edit() {
                             static_cast<u16>(472.9), 25, static_cast<i32>(ui_snapshot.projectile_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -514,7 +521,7 @@ void UIWheelLeggedStatusLabel_add_st1() {
   fig.character.fillCharacter("st1", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 308, 20, 22);
   memcpy(fig.data, "DISABLE STANDBY ENABLE", 22);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedStatusLabel_add_st2() {
@@ -523,7 +530,7 @@ void UIWheelLeggedStatusLabel_add_st2() {
   fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 16);
   memcpy(fig.data, "SPIN CROSS", 10);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedStatusLabel_add_st3() {
@@ -532,7 +539,7 @@ void UIWheelLeggedStatusLabel_add_st3() {
   fig.character.fillCharacter("st3", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 228, 20, 16);
   memcpy(fig.data, "NORMAL SMALL BIG", 16);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -603,7 +610,7 @@ void UIWheelLeggedStateIndicator_add() {
 
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedStateIndicator_edit() {
@@ -674,7 +681,7 @@ void UIWheelLeggedStateIndicator_edit() {
 
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -704,7 +711,7 @@ void UIWheelLeggedAimbotBox_add() {
 
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, box, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedAimbotBox_edit() {
@@ -730,7 +737,7 @@ void UIWheelLeggedAimbotBox_edit() {
 
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, box, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -748,7 +755,7 @@ void UIWheelLeggedShooterX_add() {
   }
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIWheelLeggedShooterX_edit() {
@@ -762,5 +769,5 @@ void UIWheelLeggedShooterX_edit() {
   }
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }

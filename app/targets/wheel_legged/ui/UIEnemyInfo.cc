@@ -16,6 +16,12 @@ using namespace rm::device;
 extern u8 dataBox[256];
 extern SharedResourcesNoDtcm globals_no_dtcm;
 
+static inline void ui_async_send(u8 len) {
+  if (!globals_no_dtcm.referee_uart.IsTxBusy()) {
+    globals_no_dtcm.referee_uart.WriteAsync(dataBox, len, nullptr);
+  }
+}
+
 static bool is_red_team() { return ui_snapshot.referee_robot_id > 0 && ui_snapshot.referee_robot_id <= 100; }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -29,7 +35,7 @@ void UIEnemyHeaderRed_add() {
   memcpy(hp_header.data, "HRO1 ENG2 STD3 STD4 DRO6 SEN7", 30);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, hp_header, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -51,7 +57,7 @@ void UIEnemyHPRed_add() {
                             static_cast<i32>(ui_snapshot.sentry_7_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIEnemyHPRed_edit() {
@@ -78,7 +84,7 @@ void UIEnemyHPRed_edit() {
                             static_cast<i32>(ui_snapshot.sentry_7_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -100,7 +106,7 @@ void UIEnemyAllowanceRed_add() {
                             static_cast<i32>(ui_snapshot.enemy_sentry_7_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIEnemyAllowanceRed_edit() {
@@ -118,7 +124,7 @@ void UIEnemyAllowanceRed_edit() {
                             static_cast<i32>(ui_snapshot.enemy_sentry_7_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -132,7 +138,7 @@ void UIEnemyHeaderBlue_add() {
   memcpy(hp_header.data, "SEN7 DRO6 STD4 STD3 ENG2 HRO1", 29);
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, hp_header, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,7 +160,7 @@ void UIEnemyHPBlue_add() {
                             static_cast<i32>(ui_snapshot.hero_1_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIEnemyHPBlue_edit() {
@@ -181,7 +187,7 @@ void UIEnemyHPBlue_edit() {
                             static_cast<i32>(ui_snapshot.hero_1_HP));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -203,7 +209,7 @@ void UIEnemyAllowanceBlue_add() {
                             static_cast<i32>(ui_snapshot.enemy_hero_1_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIEnemyAllowanceBlue_edit() {
@@ -221,7 +227,7 @@ void UIEnemyAllowanceBlue_edit() {
                             static_cast<i32>(ui_snapshot.enemy_hero_1_allowance));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -236,7 +242,7 @@ void UIGoldCoin_add() {
                             static_cast<i32>(ui_snapshot.enemy_gold_remaining));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
 
 void UIGoldCoin_edit() {
@@ -247,5 +253,5 @@ void UIGoldCoin_edit() {
                             static_cast<i32>(ui_snapshot.enemy_gold_remaining));
   u8 sender = ui_snapshot.referee_robot_id;
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
-  globals_no_dtcm.referee_uart.Write(dataBox, len, 10);
+  ui_async_send(len);
 }
