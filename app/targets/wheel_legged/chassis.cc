@@ -769,7 +769,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   }
   output_.left_l0_pid_out = mid_leg_dip_active_ ? left_l0_pid_dip_.out() : left_l0_pid_.out();
   output_.right_l0_pid_out = mid_leg_dip_active_ ? right_l0_pid_dip_.out() : right_l0_pid_.out();
-  const rm::f32 length_force_base = 0.5f * (output_.left_l0_pid_out + output_.right_l0_pid_out);
 
   l_spring_torque_ = ComputeLeftSpringTorque(left_leg_.l0());
   r_spring_torque_ = ComputeRightSpringTorque(right_leg_.l0());
@@ -1068,9 +1067,6 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         const bool is_front = (input.recovery_direction == wheel_legged::FallDirection::kFront);
 
-        const rm::f32 tgt_min = is_front ? kRangeLowMin : kRangeHighMin;
-        const rm::f32 tgt_max = is_front ? kRangeLowMax : kRangeHighMax;
-        const rm::f32 dir = is_front ? -kVel : kVel;
         // 机身直立后将目标切换为腿安全范围，使 leg_configuration_safe 满足后触发起立
         const bool body_is_upright = pitch_in_range && roll_in_range;
         constexpr rm::f32 kLegSafeMin = wheel_legged::params::active::chassis::kPostureThetaLegMinRad;

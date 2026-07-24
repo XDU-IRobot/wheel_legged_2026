@@ -748,7 +748,7 @@ constexpr float kYawSpeedFeedforwardRadS[4] = {0.0f, 0.0f, 0.0f, 0.0f};  ///< �
 
 // ── LESO 观测器 ──
 namespace leso {
-constexpr bool kObserverEnabled = true;  ///< Run the observer in stable support modes.
+constexpr bool kObserverEnabled = false;  ///< Run the observer in stable support modes.
 // T_wl, T_wr, T_bl, T_br. Keep left/right equal unless an identified asymmetry justifies otherwise.
 constexpr std::array<float, 4> kCompensationGain{1.f, 1.f, 1.f, 1.f};
 constexpr std::array<float, 5> kBandwidthRadS{5.0f, 5.0f, 5.0f, 5.0f, 10.0f};
@@ -1421,7 +1421,7 @@ constexpr FallDetectorParams kParams{
 
 // ── LESO 观测器 ──
 namespace leso {
-constexpr bool kObserverEnabled = true;  ///< Run the observer in stable support modes.
+constexpr bool kObserverEnabled = false;  ///< Run the observer in stable support modes.
 // T_wl, T_wr, T_bl, T_br. Keep left/right equal unless an identified asymmetry justifies otherwise.
 constexpr std::array<float, 4> kCompensationGain{1.f, 1.f, 1.f, 1.f};
 constexpr std::array<float, 5> kBandwidthRadS{5.0f, 5.0f, 5.0f, 5.0f, 10.0f};
@@ -2046,7 +2046,7 @@ constexpr FallDetectorParams kParams{
 
 // ── LESO 观测器 ──
 namespace leso {
-constexpr bool kObserverEnabled = true;  ///< Run the observer in stable support modes.
+constexpr bool kObserverEnabled = false;  ///< Run the observer in stable support modes.
 // T_wl, T_wr, T_bl, T_br. Keep left/right equal unless an identified asymmetry justifies otherwise.
 constexpr std::array<float, 4> kCompensationGain{1.f, 1.f, 1.f, 1.f};
 constexpr std::array<float, 5> kBandwidthRadS{5.0f, 5.0f, 5.0f, 5.0f, 10.0f};
