@@ -18,7 +18,8 @@ extern SharedResourcesNoDtcm globals_no_dtcm;
 
 static inline void ui_async_send(u8 len) {
   if (!globals_no_dtcm.referee_uart.IsTxBusy()) {
-    globals_no_dtcm.referee_uart.WriteAsync(dataBox, len, nullptr);
+    std::memcpy(globals_no_dtcm.referee_tx_buffer.data(), dataBox, len);
+    globals_no_dtcm.referee_uart.WriteAsync(globals_no_dtcm.referee_tx_buffer.data(), len, nullptr);
   }
 }
 

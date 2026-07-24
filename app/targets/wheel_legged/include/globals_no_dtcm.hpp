@@ -19,6 +19,7 @@ struct SharedResourcesNoDtcm {
   rm::hal::Serial<wheel_legged::params::active::globals::kRefereeUartRxBufferSize> referee_uart{huart1, true, true};
   rm::hal::Serial<wheel_legged::params::common::gimbal_ident_common::kIdentUartTxBufSize> ident_uart{huart7, true,
                                                                                                      false};
+  std::array<rm::u8, 256> referee_tx_buffer{};
   std::array<rm::u8, wheel_legged::params::common::gimbal_ident_common::kIdentUartTxBufSize> ident_tx_buffer{};
 };
 
