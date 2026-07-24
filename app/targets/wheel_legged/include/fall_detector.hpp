@@ -83,7 +83,6 @@ class FallDetector {
   bool prev_upright_candidate_{false};
   uint32_t upright_start_ms_{0};
 
-
   static FallDirection ClassifyDirection(float ux, float uy, float threshold);
   static bool CheckLegSafe(const LegSafetyContext& legs);
 };

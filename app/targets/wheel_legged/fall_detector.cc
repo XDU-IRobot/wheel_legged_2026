@@ -81,8 +81,7 @@ FallDetection FallDetector::Update(const PostureObservation& obs, const LegSafet
       out.direction = FallDirection::kUnknown;
       out.cause = FallCause::kLegOutOfRange;
     } else {
-      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y,
-                                        config_.params.direction_threshold);
+      out.direction = ClassifyDirection(obs.up_body_x, obs.up_body_y, config_.params.direction_threshold);
       out.cause = out.leg_fall_candidate ? FallCause::kLegOutOfRange : FallCause::kTiltExceeded;
     }
   } else {
