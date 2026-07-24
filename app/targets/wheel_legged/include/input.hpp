@@ -7,6 +7,7 @@
 #include "chassis/chassis.hpp"
 #include "chassis/state.hpp"
 #include "chassis/fsm.hpp"
+#include "fall_detector.hpp"
 #include "fsm_common.hpp"
 #include "gimbal/fsm.hpp"
 #include "tof_mode.hpp"
@@ -120,6 +121,7 @@ struct InputSnapshot {
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
   float gimbal_imu_gyro_z_rad_s{0.0f};                    ///< 云台惯导 Z 轴角速度（偏航轴）
   float gimbal_imu_gyro_x_rad_s{0.0f};                    ///< 云台惯导 X 轴角速度（俯仰轴）
+  wheel_legged::FallDetection fall_detection{};           ///< 同周期四元数倒地检测结果
 };
 
 /**
@@ -231,14 +233,11 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
  * @brief 从 InputSnapshot 构建底盘 FSM 输入
  * @param input               输入快照
  * @param tick_ms             当前系统 tick
- * @param chassis_output      上周期底盘控制输出（回灌腿长、摆角）
- * @param fall_start_ms       倒地开始时刻 [ms]（跨周期保持）
- * @param was_posture_invalid 上一周期姿态是否异常（跨周期保持）
+ * @param chassis_output      底盘控制输出（回灌腿长、摆角）
  * @return 底盘 FSM 输入
  */
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
-                                         bool &was_posture_invalid);
+                                         const chassis::Chassis::UpdateOutput &chassis_output);
 
 /**
  * @brief 从 InputSnapshot 和底盘 FSM 输出构建云台 FSM 输入

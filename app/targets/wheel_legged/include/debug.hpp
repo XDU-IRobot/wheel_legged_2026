@@ -8,6 +8,12 @@
 #include "gimbal/gimbal.hpp"
 #include "input.hpp"
 
+// 前向声明（用于 UpdateDebugSnapshot 参数，避免循环依赖）
+namespace wheel_legged {
+struct PostureObservation;
+struct FallDetection;
+}  // namespace wheel_legged
+
 /**
  * @file  targets/wheel_legged/include/debug.hpp
  * @brief 调试快照结构体（SRAM4）与填充函数声明
@@ -147,6 +153,9 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float imu_raw_acc_x_mps2;    // 加速度 X
   float imu_raw_acc_y_mps2;    // 加速度 Y
   float imu_raw_acc_z_mps2;    // 加速度 Z
+  float imu_quat_roll_rad;     // 四元数解算 roll（对比内置欧拉角排查万向节死锁）
+  float imu_quat_pitch_rad;    // 四元数解算 pitch
+  float imu_quat_yaw_rad;      // 四元数解算 yaw
 
   // ── 云台 IMU ──
   float gimbal_imu_pitch_rad;     // 云台 IMU 俯仰
@@ -211,51 +220,56 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float lqr_err_theta_b_dot;   // theta_b_dot 误差
 
   // ── 底盘状态 ──
-  float chassis_leg_target_length_m;       // 斜坡平滑后的腿长目标
-  float chassis_mean_leg_length_m;         // 平均腿长
-  float chassis_left_leg_length_m;         // 左腿长度
-  float chassis_right_leg_length_m;        // 右腿长度
-  float chassis_left_l0_dot_mps;           // 左腿腿长变化率
-  float chassis_right_l0_dot_mps;          // 右腿腿长变化率
-  float chassis_left_l0_ddot_mps2;         // 左腿腿长加速度
-  float chassis_right_l0_ddot_mps2;        // 右腿腿长加速度
-  float chassis_left_l0_pid_out;           // 左腿腿长 PID 输出
-  float chassis_right_l0_pid_out;          // 右腿腿长 PID 输出
-  float chassis_speed_mps;                 // 车体融合速度
-  float chassis_raw_wheel_speed_mps;       // 原始轮速观测
-  float chassis_filtered_wheel_speed_mps;  // 低通滤波后轮速
-  float chassis_raw_accel_speed_mps;       // 原始加速度积分速度
-  float chassis_imu_acc_x_integral_mps;    // IMU X轴加速度直接积分速度
-  float chassis_left_force_n;              // 左腿竖直力
-  float chassis_right_force_n;             // 右腿竖直力
-  float chassis_left_support_force_n;      // 左腿支撑力
-  float chassis_right_support_force_n;     // 右腿支撑力
-  float chassis_left_F_bh_n;               // 左腿雅可比反力
-  float chassis_right_F_bh_n;              // 右腿雅可比反力
-  float chassis_left_gravity_support_n;    // 左腿重力支撑
-  float chassis_right_gravity_support_n;   // 右腿重力支撑
-  float chassis_left_dyn_support_n;        // 左腿动力学补偿
-  float chassis_right_dyn_support_n;       // 右腿动力学补偿
-  uint8_t chassis_posture_valid;           // 姿态有效
-  uint8_t chassis_off_ground;              // 离地
-  uint8_t chassis_standup_complete;        // 起立完成
-  uint8_t chassis_standup_phase;           // 起立阶段 (0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成)
-  float chassis_standup_theta_target_rad;  // 起立摆角 PID 目标 [rad]
-  uint8_t dm_enabled_latched;              // DM 电机使能锁存
-  uint8_t gimbal_motors_enabled_latched;   // 云台电机使能锁存
-  uint8_t position_frozen_by_timeout;      // 位置锚定原因: 0=速度低于阈值, 1=超时强冻
-  uint8_t motor_reenable_chassis_trig;     // 底盘电机重使能触发（心跳恢复脉冲，单周期）
-  uint8_t motor_reenable_gimbal_trig;      // 云台电机重使能触发（心跳恢复脉冲，单周期）
-  uint8_t dm_lf_online;                    // 左前 DM 电机在线状态 (Device::online_status)
-  uint8_t dm_lb_online;                    // 左后 DM 电机在线状态
-  uint8_t dm_rf_online;                    // 右前 DM 电机在线状态
-  uint8_t dm_rb_online;                    // 右后 DM 电机在线状态
-  uint8_t yaw_motor_online;                // 偏航电机在线状态
-  uint8_t pitch_motor_online;              // 俯仰电机在线状态
-  float expected_theta_ll_rad;             // LQR 期望左腿摆角
-  float expected_theta_lr_rad;             // LQR 期望右腿摆角
-  float filtered_theta_ll_dot_rad_s;       // 滤波后左腿摆角速度
-  float filtered_theta_lr_dot_rad_s;       // 滤波后右腿摆角速度
+  float chassis_leg_target_length_m;              // 斜坡平滑后的腿长目标
+  float chassis_mean_leg_length_m;                // 平均腿长
+  float chassis_left_leg_length_m;                // 左腿长度
+  float chassis_right_leg_length_m;               // 右腿长度
+  float chassis_left_l0_dot_mps;                  // 左腿腿长变化率
+  float chassis_right_l0_dot_mps;                 // 右腿腿长变化率
+  float chassis_left_l0_ddot_mps2;                // 左腿腿长加速度
+  float chassis_right_l0_ddot_mps2;               // 右腿腿长加速度
+  float chassis_left_l0_pid_out;                  // 左腿腿长 PID 输出
+  float chassis_right_l0_pid_out;                 // 右腿腿长 PID 输出
+  float chassis_speed_mps;                        // 车体融合速度
+  float chassis_raw_wheel_speed_mps;              // 原始轮速观测
+  float chassis_filtered_wheel_speed_mps;         // 低通滤波后轮速
+  float chassis_raw_accel_speed_mps;              // 原始加速度积分速度
+  float chassis_imu_acc_x_integral_mps;           // IMU X轴加速度直接积分速度
+  float chassis_left_force_n;                     // 左腿竖直力
+  float chassis_right_force_n;                    // 右腿竖直力
+  float chassis_left_support_force_n;             // 左腿支撑力
+  float chassis_right_support_force_n;            // 右腿支撑力
+  float chassis_left_F_bh_n;                      // 左腿雅可比反力
+  float chassis_right_F_bh_n;                     // 右腿雅可比反力
+  float chassis_left_gravity_support_n;           // 左腿重力支撑
+  float chassis_right_gravity_support_n;          // 右腿重力支撑
+  float chassis_left_dyn_support_n;               // 左腿动力学补偿
+  float chassis_right_dyn_support_n;              // 右腿动力学补偿
+  uint8_t chassis_posture_valid;                  // 姿态有效
+  uint8_t chassis_off_ground;                     // 离地
+  uint8_t chassis_standup_complete;               // 起立完成
+  uint8_t chassis_standup_phase;                  // 起立阶段 (0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成)
+  uint8_t chassis_pitch_fall_retract;             // 俯仰倒地恢复后主动收腿中
+  uint8_t chassis_recovery_sub_phase;             // 0=None, 1=SidePush, 2=PitchRecovery, 3=ThetaRecovery
+  uint8_t chassis_recovery_direction;             // 实际用于恢复控制的锁存方向
+  uint8_t chassis_recovery_pitch_candidate;       // SidePush 阶段待确认的 Front/Back 方向
+  uint16_t chassis_recovery_pitch_confirm_ticks;  // Front/Back 连续确认周期数
+  float chassis_standup_theta_target_rad;         // 起立摆角 PID 目标 [rad]
+  uint8_t dm_enabled_latched;                     // DM 电机使能锁存
+  uint8_t gimbal_motors_enabled_latched;          // 云台电机使能锁存
+  uint8_t position_frozen_by_timeout;             // 位置锚定原因: 0=速度低于阈值, 1=超时强冻
+  uint8_t motor_reenable_chassis_trig;            // 底盘电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t motor_reenable_gimbal_trig;             // 云台电机重使能触发（心跳恢复脉冲，单周期）
+  uint8_t dm_lf_online;                           // 左前 DM 电机在线状态 (Device::online_status)
+  uint8_t dm_lb_online;                           // 左后 DM 电机在线状态
+  uint8_t dm_rf_online;                           // 右前 DM 电机在线状态
+  uint8_t dm_rb_online;                           // 右后 DM 电机在线状态
+  uint8_t yaw_motor_online;                       // 偏航电机在线状态
+  uint8_t pitch_motor_online;                     // 俯仰电机在线状态
+  float expected_theta_ll_rad;                    // LQR 期望左腿摆角
+  float expected_theta_lr_rad;                    // LQR 期望右腿摆角
+  float filtered_theta_ll_dot_rad_s;              // 滤波后左腿摆角速度
+  float filtered_theta_lr_dot_rad_s;              // 滤波后右腿摆角速度
 
   // ── 四路 ToF 与硬件模式 ──
   uint8_t tof_runtime_enabled;  // 0 for the current no-ToF baseline build
@@ -338,17 +352,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float shoot_loader_spd_feedback;  // 拨盘速度环反馈 [rpm]
   float shoot_loader_spd_pid_out;   // 拨盘速度环 PID 输出（最终给电机）
   // ── 发射机构（三摩擦变体 hero）──
-  float booster_raw_pos_rad;        // DM 拨盘当前位置 (hero)
-  float booster_target_rad;         // DM 拨盘目标角度 (hero)
-  float fw_raw_rpm_1;               // 摩擦轮1 RPM (hero)
-  float fw_raw_rpm_2;               // 摩擦轮2 RPM (hero)
-  float fw_raw_rpm_3;               // 摩擦轮3 RPM (hero)
-  uint8_t shoot_hero_state;         // Hero ShootController 状态机 (0=kStop,1=kInit,2=kReady,3=kShooting,4=kCooling)
-  uint8_t shoot_hero_fire_trigger;  // Hero 发射触发标志
-  uint8_t shoot_hero_enter;         // Hero 进入射击模式
-  int32_t shoot_hero_heat_delta;    // Hero 热量余量（heat_limit - current_heat）
-  int32_t hero_remaining_ammo;      // Hero 剩余弹量（本地跟踪）
-  float hero_displacement_bias;     // Hero 动态位移偏置 [m]
+  float booster_raw_pos_rad;     // DM 拨盘当前位置 (hero)
+  float booster_target_rad;      // DM 拨盘目标角度 (hero)
+  int32_t hero_remaining_ammo;   // Hero 剩余弹量（本地跟踪）
+  float hero_displacement_bias;  // Hero 动态位移偏置 [m]
 
   // ── 本地热量闭环 ──
   float shoot_local_heat;         // 本地估算枪口热量
@@ -385,6 +392,17 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t aimbot_rx_nuc_start_flag;  // NUC 启动标志
   float aimbot_rx_yaw_rad;           // NUC 下发的偏航目标
   float aimbot_rx_pitch_rad;         // NUC 下发的俯仰目标
+
+  // ── 四元数倒地检测影子输出 ──
+  float fall_up_body_x;             // up_body.x in body frame
+  float fall_up_body_y;             // up_body.y in body frame
+  float fall_tilt_cos;              // up_body.z = cos(tilt angle)
+  uint8_t fall_flags;               // bit0:candidate, bit1:confirmed, bit2-4:direction, bit5-6:cause
+  uint8_t fall_aux_flags;           // bit0:upright_confirmed, bit1:sensor_valid, bit2:leg_safe, bit3:leg_fall_candidate
+  uint16_t fall_condition_hold_ms;  // FallDetector 倒地条件持续时间 [ms]
+  uint16_t fall_upright_hold_ms;    // FallDetector 直立确认持续时间 [ms]
+  uint8_t posture_fault_flags;      // PostureObservation::fault_flags (PostureFault bitmask)
+  uint8_t legacy_posture_valid;     // 旧 Euler 判据 posture_valid（用于新旧对比）
 };
 static_assert(sizeof(DebugSnapshot) <= 1024, "DebugSnapshot must fit in 1024 bytes for efficient DMA");
 
@@ -404,4 +422,6 @@ void UpdateDebugSnapshot(uint32_t tick_ms, const wheel_legged::control_loop::Inp
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
-                         const chassis::StairClimbSequence::Output &stair_sequence_output);
+                         const chassis::StairClimbSequence::Output &stair_sequence_output,
+                         const wheel_legged::PostureObservation &posture_obs,
+                         const wheel_legged::FallDetection &fall_detection);
