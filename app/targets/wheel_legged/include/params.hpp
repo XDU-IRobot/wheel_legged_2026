@@ -1397,31 +1397,31 @@ constexpr float kYawSpeedFeedforwardRadS[4] = {0.0f, 0.0f, 0.0f, 0.0f};  ///< �
 // ── 四元数姿态观测器（影子模式）──
 namespace posture_observer {
 constexpr PostureObserverParams kParams{
-  .quat_norm_tolerance = 0.1f,
-  .imu_stale_ms = 100U,
-  .quat_discontinuity_threshold = 0.5f,
-  .R_bs_00 = 0.0f,
-  .R_bs_01 = -1.0f,
-  .R_bs_02 = 0.0f,
-  .R_bs_10 = 1.0f,
-  .R_bs_11 = 0.0f,
-  .R_bs_12 = 0.0f,
-  .R_bs_20 = 0.0f,
-  .R_bs_21 = 0.0f,
-  .R_bs_22 = 1.0f,
-  .accel_low_dynamic_threshold_mps2 = 2.0f,
+    .quat_norm_tolerance = 0.1f,
+    .imu_stale_ms = 100U,
+    .quat_discontinuity_threshold = 0.5f,
+    .R_bs_00 = 0.0f,
+    .R_bs_01 = -1.0f,
+    .R_bs_02 = 0.0f,
+    .R_bs_10 = 1.0f,
+    .R_bs_11 = 0.0f,
+    .R_bs_12 = 0.0f,
+    .R_bs_20 = 0.0f,
+    .R_bs_21 = 0.0f,
+    .R_bs_22 = 1.0f,
+    .accel_low_dynamic_threshold_mps2 = 2.0f,
 };
 }  // namespace posture_observer
 
 // ── 四元数倒地检测器（影子模式）──
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
-  .fall_enter_uxy_abs = 0.5f,
-  .upright_exit_uxy_abs = 0.5f,
-  .fall_confirm_ms = 300U,
-  .upright_confirm_ms = 2U,
-  .upright_gyro_max_rad_s = 1.f,
-  .direction_threshold = 0.5f,
+    .fall_enter_uxy_abs = 0.5f,
+    .upright_exit_uxy_abs = 0.5f,
+    .fall_confirm_ms = 300U,
+    .upright_confirm_ms = 2U,
+    .upright_gyro_max_rad_s = 1.f,
+    .direction_threshold = 0.5f,
 };
 }  // namespace fall_detector
 
