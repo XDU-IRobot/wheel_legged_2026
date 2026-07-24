@@ -416,9 +416,8 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     // 仅一条腿为负且偏离阈值较大 → 不走负角度路径，走原三段式
     const float kFarNegThres = wheel_legged::params::active::chassis::kStandupSingleNegThetaRecoveryRad;
     const bool single_far_neg =
-        (left_neg != right_neg) &&
-        ((left_neg && wrap_near_zero(state_output.current.theta_ll) < -kFarNegThres) ||
-         (right_neg && wrap_near_zero(state_output.current.theta_lr) < -kFarNegThres));
+        (left_neg != right_neg) && ((left_neg && wrap_near_zero(state_output.current.theta_ll) < -kFarNegThres) ||
+                                    (right_neg && wrap_near_zero(state_output.current.theta_lr) < -kFarNegThres));
 
     if ((left_neg || right_neg) && !single_far_neg) {
       // ── 负角度路径：负角度腿收腿+摆腿直接向 0，正角度腿 PID 斜坡向 0 ──

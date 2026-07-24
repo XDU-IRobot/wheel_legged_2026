@@ -1079,21 +1079,21 @@ constexpr float kStandupPhase0TargetLengthM = 0.33f;  ///< 起立 Phase 0 目标
 constexpr float kStandupPhase0ThetaTolRad = 0.4f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
 constexpr float kStandupPhase1ThetaTolRad = 0.6f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupDirectLqrThetaTolRad = 0.6f;      ///< 起立单腿直入 LQR 摆角阈值 [rad]
+constexpr float kStandupDirectLqrThetaTolRad = 0.6f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.2f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
-constexpr float kStandupThetaRampStepRad = 0.02f;         ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
-constexpr float kPostureRollMinRad = -1.f;                ///< 横滚角安全下限 [rad]
-constexpr float kPostureRollMaxRad = 1.f;                 ///< 横滚角安全上限 [rad]
-constexpr float kPostureThetaBMinRad = -0.7f;             ///< 机体俯仰角安全下限 [rad]
-constexpr float kPostureThetaBMaxRad = 0.7f;              ///< 机体俯仰角安全上限 [rad]
-constexpr float kPostureThetaLegMinRad = -1.5f;           ///< 腿摆角安全下限 [rad]
-constexpr float kPostureThetaLegMaxRad = 2.8f;            ///< 腿摆角安全上限 [rad]
-constexpr float kLegRecoverThetaDotTarget = -3.5f;        ///< 倒地恢复时腿摆角速度目标 [rad/s]
-constexpr float kLegRecoverThetaDotRampStep = 0.008f;     ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
-constexpr float kManualRecoveryLegSpeedRadS = 0.5f;       ///< 手动倒地恢复腿摆角速度 [rad/s]
-constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;       ///< 倒地恢复零力矩区间下限 [rad]
-constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;       ///< 倒地恢复零力矩区间上限 [rad]
-                                                          // ==== 倒地恢复软着陆 ====
+constexpr float kStandupThetaRampStepRad = 0.02f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
+constexpr float kPostureRollMinRad = -1.f;                 ///< 横滚角安全下限 [rad]
+constexpr float kPostureRollMaxRad = 1.f;                  ///< 横滚角安全上限 [rad]
+constexpr float kPostureThetaBMinRad = -0.7f;              ///< 机体俯仰角安全下限 [rad]
+constexpr float kPostureThetaBMaxRad = 0.7f;               ///< 机体俯仰角安全上限 [rad]
+constexpr float kPostureThetaLegMinRad = -1.5f;            ///< 腿摆角安全下限 [rad]
+constexpr float kPostureThetaLegMaxRad = 2.8f;             ///< 腿摆角安全上限 [rad]
+constexpr float kLegRecoverThetaDotTarget = -3.5f;         ///< 倒地恢复时腿摆角速度目标 [rad/s]
+constexpr float kLegRecoverThetaDotRampStep = 0.008f;      ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
+constexpr float kManualRecoveryLegSpeedRadS = 0.5f;        ///< 手动倒地恢复腿摆角速度 [rad/s]
+constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;        ///< 倒地恢复零力矩区间下限 [rad]
+constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 倒地恢复零力矩区间上限 [rad]
+                                                           // ==== 倒地恢复软着陆 ====
 constexpr float kRecoveryDecelZoneRad = 0.7f;   ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
 constexpr float kRecoveryMinSpeedRadS = 0.07f;  ///< 恢复减速区边界最低速度 [rad/s]
 constexpr float kRecoveryGravityRampScale = 0.35f;   ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
@@ -1702,7 +1702,7 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupPhase0ThetaTargetRad = 1.6f;   ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
 constexpr float kStandupPhase0TargetLengthM = 0.33f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
 constexpr float kStandupPhase0ThetaTolRad = 0.6f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
@@ -1715,7 +1715,7 @@ constexpr float kPostureRollMaxRad = 0.7f;                 ///< 横滚角安全�
 constexpr float kPostureThetaBMinRad = -0.7f;              ///< 机体俯仰角安全下限 [rad]
 constexpr float kPostureThetaBMaxRad = 0.7f;               ///< 机体俯仰角安全上限 [rad]
 constexpr float kPostureThetaLegMinRad = -1.5f;            ///< 腿摆角安全下限 [rad]
-constexpr float kPostureThetaLegMaxRad = 2.4f;              ///< 摆角安全上限 [rad]
+constexpr float kPostureThetaLegMaxRad = 2.4f;             ///< 摆角安全上限 [rad]
 constexpr float kLegRecoverThetaDotTarget = -3.0f;         ///< 倒地恢复时腿摆角速度目标 [rad/s]
 constexpr float kLegRecoverThetaDotRampStep = 0.06f;       ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
 constexpr float kManualRecoveryLegSpeedRadS = 0.5f;        ///< 手动倒地恢复腿摆角速度 [rad/s]
@@ -1725,10 +1725,9 @@ constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 倒地恢复零�
 // ==== 倒地恢复软着陆 ====
 constexpr float kRecoveryDecelZoneRad = 0.6f;   ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
 constexpr float kRecoveryMinSpeedRadS = 0.08f;  ///< 恢复减速区边界最低速度 [rad/s]
-constexpr float kRecoveryGravityRampScale = 0.35f;     ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
-constexpr float kRecoveryPitchFeedforwardKp = 30.0f;   ///< 倒地恢复俯仰角前馈系数
-constexpr float kRecoveryRollFeedforwardKp = 5.0f;     ///< 倒地恢复横滚角前馈系数
-
+constexpr float kRecoveryGravityRampScale = 0.35f;    ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
+constexpr float kRecoveryPitchFeedforwardKp = 30.0f;  ///< 倒地恢复俯仰角前馈系数
+constexpr float kRecoveryRollFeedforwardKp = 5.0f;    ///< 倒地恢复横滚角前馈系数
 
 // ==== pitch 恢复刹车 ====
 constexpr float kPitchBrakeZoneRad = 0.55f;           ///< pitch 恢复刹车区间 [rad]
@@ -1845,7 +1844,7 @@ constexpr float kGimbalStartupYawAlignVelRadS = 0.25f;            ///< 归中完
 constexpr std::uint32_t kGimbalStartupYawAlignStableTicks = 10U;  ///< 归中判稳所需连续满足周期数
 
 // -- 偏航就绪判稳 --
-constexpr float kYawFollowDriveReadyErrorRad = 0.2f;           ///< 偏航就绪位置误差阈值 [rad]
+constexpr float kYawFollowDriveReadyErrorRad = 0.2f;            ///< 偏航就绪位置误差阈值 [rad]
 constexpr float kYawFollowDriveReadyVelRadS = 0.25f;            ///< 偏航就绪速度阈值 [rad/s]
 constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 10U;  ///< 偏航就绪判稳所需连续周期数
 
@@ -1963,8 +1962,8 @@ constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< �
 // -- 关节零位偏移 --
 constexpr float kLeftPhi1OffsetRad = -2.5436f - 1.4352f + 0.2614f + M_PI;  ///< 左腿前关节零位偏移 [rad]
 constexpr float kLeftPhi4OffsetRad = -2.718f - 0.8015f;                    ///< 左腿后关节零位偏移 [rad]
-constexpr float kRightPhi1OffsetRad = 1.6f + M_PI - 9.5f + 0.011f;                  ///< 右腿前关节零位偏移 [rad]
-constexpr float kRightPhi4OffsetRad = 1.34f - 2.52f + M_PI;                       ///< 右腿后关节零位偏移 [rad]
+constexpr float kRightPhi1OffsetRad = 1.6f + M_PI - 9.5f + 0.011f;         ///< 右腿前关节零位偏移 [rad]
+constexpr float kRightPhi4OffsetRad = 1.34f - 2.52f + M_PI;                ///< 右腿后关节零位偏移 [rad]
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──
@@ -2036,12 +2035,12 @@ constexpr PostureObserverParams kParams{
 // ── 四元数倒地检测器（影子模式）──
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
-  .fall_enter_uxy_abs = 0.5f,
-  .upright_exit_uxy_abs = 0.5f,
-  .fall_confirm_ms = 300U,
-  .upright_confirm_ms = 2U,
-  .upright_gyro_max_rad_s = 1.f,
-  .direction_threshold = 0.6f,
+    .fall_enter_uxy_abs = 0.5f,
+    .upright_exit_uxy_abs = 0.5f,
+    .fall_confirm_ms = 300U,
+    .upright_confirm_ms = 2U,
+    .upright_gyro_max_rad_s = 1.f,
+    .direction_threshold = 0.6f,
 };
 }  // namespace fall_detector
 
