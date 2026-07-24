@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Momentum LESO scheduled-model report</title>
+  <style>
+    body { margin: 24px; font-family: Arial, "Microsoft YaHei", sans-serif; color: #172033; }
+    section { margin-bottom: 30px; }
+    pre { background: #172033; color: #e5edf7; padding: 14px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d9e0ea; padding: 7px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Momentum LESO scheduled-model report</h1>
+  <p>Validation uses a denser grid than fitting and includes float32 replay,
+     pseudoinverse checks, complete-coordinate-transform checks, and a
+     noise-free constant-disturbance LESO convergence test.</p>
+  <section><h2>hero</h2><pre>variant                         : hero
+fit mode                       : quadrant
+leg range                      : 0.1400 .. 0.3500 m
+training / validation step     : 0.0050 / 0.0025 m
+region split                   : 0.2450 m
+max cond(M)                    : 31.7348
+max cond(B_tau)                : 14.512
+max pinv identity residual     : 1.56541e-14
+max Pitch common-mode mismatch : 0
+synthetic LESO generalized err : 1.75934e-07
+synthetic LESO motor-map err   : 2.12178e-07
+mass            : max=1.60561e-05, rms=2.24585e-06, max_rel=8.1882e-05, f32=1.19209e-08, boundary=1.81603e-05, worst=(0.1400,0.2475)
+gravity         : max=0.00273932, rms=0.000248857, max_rel=0.000170091, f32=7.76381e-07, boundary=0.00304785, worst=(0.2475,0.1400)
+input_map       : max=4.9738e-14, rms=6.20209e-15, max_rel=8.91676e-15, f32=1.161e-07, boundary=7.30435e-06, worst=(0.1400,0.1400)
+disturbance_map : max=0.000617416, rms=5.64049e-05, max_rel=0.000889569, f32=3.22192e-08, boundary=0.000611327, worst=(0.1400,0.1400)</pre><table><thead><tr><th>field</th><th>max abs</th><th>RMS</th><th>max Fro rel</th><th>float32</th><th>boundary jump</th><th>worst L/R</th></tr></thead><tbody><tr><td>mass</td><td>1.60561e-05</td><td>2.24585e-06</td><td>8.1882e-05</td><td>1.19209e-08</td><td>1.81603e-05</td><td>0.1400, 0.2475</td></tr><tr><td>gravity</td><td>0.00273932</td><td>0.000248857</td><td>0.000170091</td><td>7.76381e-07</td><td>0.00304785</td><td>0.2475, 0.1400</td></tr><tr><td>input_map</td><td>4.9738e-14</td><td>6.20209e-15</td><td>8.91676e-15</td><td>1.161e-07</td><td>7.30435e-06</td><td>0.1400, 0.1400</td></tr><tr><td>disturbance_map</td><td>0.000617416</td><td>5.64049e-05</td><td>0.000889569</td><td>3.22192e-08</td><td>0.000611327</td><td>0.1400, 0.1400</td></tr></tbody></table></section><section><h2>infantry3</h2><pre>variant                         : infantry3
+fit mode                       : quadrant
+leg range                      : 0.1400 .. 0.3500 m
+training / validation step     : 0.0050 / 0.0025 m
+region split                   : 0.2450 m
+max cond(M)                    : 37.1654
+max cond(B_tau)                : 15.1998
+max pinv identity residual     : 2.35367e-14
+max Pitch common-mode mismatch : 0
+synthetic LESO generalized err : 1.75934e-07
+synthetic LESO motor-map err   : 2.12178e-07
+mass            : max=1.60561e-05, rms=2.24585e-06, max_rel=7.6859e-05, f32=1.19209e-08, boundary=1.81603e-05, worst=(0.1400,0.2475)
+gravity         : max=0.00273932, rms=0.000248857, max_rel=0.000170091, f32=7.76381e-07, boundary=0.00304785, worst=(0.2475,0.1400)
+input_map       : max=1.9984e-14, rms=2.965e-15, max_rel=4.12742e-15, f32=1.161e-07, boundary=7.30435e-06, worst=(0.2475,0.2475)
+disturbance_map : max=0.000609754, rms=5.8764e-05, max_rel=0.000880146, f32=4.07952e-08, boundary=0.000573002, worst=(0.1400,0.1400)</pre><table><thead><tr><th>field</th><th>max abs</th><th>RMS</th><th>max Fro rel</th><th>float32</th><th>boundary jump</th><th>worst L/R</th></tr></thead><tbody><tr><td>mass</td><td>1.60561e-05</td><td>2.24585e-06</td><td>7.6859e-05</td><td>1.19209e-08</td><td>1.81603e-05</td><td>0.1400, 0.2475</td></tr><tr><td>gravity</td><td>0.00273932</td><td>0.000248857</td><td>0.000170091</td><td>7.76381e-07</td><td>0.00304785</td><td>0.2475, 0.1400</td></tr><tr><td>input_map</td><td>1.9984e-14</td><td>2.965e-15</td><td>4.12742e-15</td><td>1.161e-07</td><td>7.30435e-06</td><td>0.2475, 0.2475</td></tr><tr><td>disturbance_map</td><td>0.000609754</td><td>5.8764e-05</td><td>0.000880146</td><td>4.07952e-08</td><td>0.000573002</td><td>0.1400, 0.1400</td></tr></tbody></table></section><section><h2>infantry4</h2><pre>variant                         : infantry4
+fit mode                       : quadrant
+leg range                      : 0.1400 .. 0.3500 m
+training / validation step     : 0.0050 / 0.0025 m
+region split                   : 0.2450 m
+max cond(M)                    : 37.1654
+max cond(B_tau)                : 15.1998
+max pinv identity residual     : 2.35367e-14
+max Pitch common-mode mismatch : 0
+synthetic LESO generalized err : 1.75934e-07
+synthetic LESO motor-map err   : 2.12178e-07
+mass            : max=1.60561e-05, rms=2.24585e-06, max_rel=7.6859e-05, f32=1.19209e-08, boundary=1.81603e-05, worst=(0.1400,0.2475)
+gravity         : max=0.00273932, rms=0.000248857, max_rel=0.000170091, f32=7.76381e-07, boundary=0.00304785, worst=(0.2475,0.1400)
+input_map       : max=1.9984e-14, rms=2.965e-15, max_rel=4.12742e-15, f32=1.161e-07, boundary=7.30435e-06, worst=(0.2475,0.2475)
+disturbance_map : max=0.000609754, rms=5.8764e-05, max_rel=0.000880146, f32=4.07952e-08, boundary=0.000573002, worst=(0.1400,0.1400)</pre><table><thead><tr><th>field</th><th>max abs</th><th>RMS</th><th>max Fro rel</th><th>float32</th><th>boundary jump</th><th>worst L/R</th></tr></thead><tbody><tr><td>mass</td><td>1.60561e-05</td><td>2.24585e-06</td><td>7.6859e-05</td><td>1.19209e-08</td><td>1.81603e-05</td><td>0.1400, 0.2475</td></tr><tr><td>gravity</td><td>0.00273932</td><td>0.000248857</td><td>0.000170091</td><td>7.76381e-07</td><td>0.00304785</td><td>0.2475, 0.1400</td></tr><tr><td>input_map</td><td>1.9984e-14</td><td>2.965e-15</td><td>4.12742e-15</td><td>1.161e-07</td><td>7.30435e-06</td><td>0.2475, 0.2475</td></tr><tr><td>disturbance_map</td><td>0.000609754</td><td>5.8764e-05</td><td>0.000880146</td><td>4.07952e-08</td><td>0.000573002</td><td>0.1400, 0.1400</td></tr></tbody></table></section>
+</body>
+</html>

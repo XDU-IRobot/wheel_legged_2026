@@ -21,36 +21,36 @@ Usage examples (run from this script's directory):
   # 1) Dry run: print on-screen C++ header & fit statistics (default params)
   python generate_scheduled_kctrlp.py
 
-  # 2) Generate the C++ header file (overwrites kctrlp_generated.hpp)
-  python generate_scheduled_kctrlp.py --output kctrlp_generated.hpp
+  # 2) Generate the C++ header at lqr/generated/kctrlp_generated.hpp
+  python generate_scheduled_kctrlp.py --output
 
   # 3) Custom leg-length range & finer grid step (header only)
   python generate_scheduled_kctrlp.py \\
       --leg-min 0.14 --leg-max 0.34 --grid-step 0.005 \\
-      --output kctrlp_generated.hpp
+      --output
 
   # 4) Generate HTML fit-visualisation reports for all three robot variants
   python generate_scheduled_kctrlp.py \\
-      --html-report kctrlp_fit_reports/ --report-variant all
+      --html-report --report-variant all
 
   # 5) Generate only the infantry3 HTML report (single file)
   python generate_scheduled_kctrlp.py \\
-      --html-report kctrlp_fit_report_infantry3.html --report-variant infantry3
+      --html-report reports/kctrlp_fit_report_infantry3.html --report-variant infantry3
 
   # 6) ★ Final one-shot: C++ header + all HTML reports, full leg range, fine grid
   python generate_scheduled_kctrlp.py \\
       --leg-min 0.14 --leg-max 0.35 --grid-step 0.005 \\
-      --output kctrlp_generated.hpp \\
-      --html-report kctrlp_fit_reports/ --report-variant all
+      --output \\
+      --html-report --report-variant all
 
-      python generate_scheduled_kctrlp.py --leg-min 0.14 --leg-max 0.35 --grid-step 0.005 --output kctrlp_generated.hpp --html-report kctrlp_fit_reports/ --report-variant all
+      python generate_scheduled_kctrlp.py --leg-min 0.14 --leg-max 0.35 --grid-step 0.005 --output --html-report --report-variant all
 
 Arguments summary:
   --leg-min FLOAT       Min leg length for 2-D fit grid        [default: 0.15]
   --leg-max FLOAT       Max leg length for 2-D fit grid        [default: 0.35]
   --grid-step FLOAT     Leg length grid step                   [default: 0.01]
-  --output PATH         Write C++ constexpr header to PATH
-  --html-report PATH    Write HTML/SVG fit report(s):
+  --output [PATH]       Write header; omitted PATH uses generated/kctrlp_generated.hpp
+  --html-report [PATH]  Write reports; omitted PATH uses reports/:
                         - a directory  → one .html per variant inside it
                         - a .html file → single variant report (see next arg)
   --report-variant STR  Variant(s) for --html-report:
@@ -63,11 +63,22 @@ from __future__ import annotations
 import argparse
 import html
 import math
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
 import numpy as np
+
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
+from wheel_legged_model import build_ab, leg_data
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_OUTPUT = SCRIPT_DIR / "generated" / "kctrlp_generated.hpp"
+DEFAULT_REPORT_DIR = SCRIPT_DIR / "reports"
 
 try:
     from scipy.linalg import solve_continuous_are
@@ -180,19 +191,39 @@ INFANTRY3_QR_POINTS: list[QrPoint] = [
 
 INFANTRY4_QR_POINTS: list[QrPoint] = [
     QrPoint(
-        0.16,
-        np.diag([200.0, 100.0, 200.0, 1.0, 800.0, 1.0, 800.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.4, 2.4, 1.0, 1.0]),
+        0.14,
+        np.diag([200.0, 140.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+        np.diag([2.6, 2.6, 0.2, 0.2]),
     ),
     QrPoint(
-        0.23,
-        np.diag([200.0, 120.0, 200.0, 1.0, 1200.0, 4.0, 1200.0, 4.0, 3200.0, 1.0]),
-        np.diag([3.5, 3.5, 0.5, 0.5]),
+        0.17,
+        np.diag([200.0, 140.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+        np.diag([2.8, 2.8, 0.25, 0.25]),
+    ),
+    # QrPoint(
+    #     0.155,
+    #     np.diag([200.0, 120.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4000.0, 1.0]),
+    #     np.diag([2.8, 2.8, 0.4, 0.4]),
+    # ),
+    # QrPoint(
+    #     0.185,
+    #     np.diag([200.0, 100.0, 200.0, 1.0, 1300.0, 1.0, 1300.0, 1.0, 3400.0, 1.0]),
+    #     np.diag([3.6, 3.6, 0.5, 0.5]),
+    # ),
+    #  QrPoint(
+    #      0.195,
+    #      np.diag([200.0, 120.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4200.0, 1.0]),
+    #      np.diag([3.6, 3.6, 0.45, 0.45]),
+    # ),
+    QrPoint(
+        0.245,
+        np.diag([160.0, 100.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4200.0, 1.0]),
+        np.diag([3.2, 3.2, 0.3, 0.3]),
     ),
     QrPoint(
         0.33,
-        np.diag([150.0, 60.0, 200.0, 1.0, 1200.0, 1.0, 1200.0, 1.0, 3200.0, 1.0]),
-        np.diag([4.0, 4.0, 0.5, 0.5]),
+        np.diag([150.0, 250.0, 200.0, 2.0, 2000.0, 1.0, 2000.0, 1.0, 4500.0, 1.0]),
+        np.diag([3.2, 3.2, 0.3, 0.3]),
     ),
 ]
 
@@ -217,9 +248,9 @@ INFANTRY3_SPIN_QR_POINTS: list[QrPoint] = [
 
 INFANTRY4_SPIN_QR_POINTS: list[QrPoint] = [
     QrPoint(
-        0.18,
-        np.diag([80.0, 50.0, 400.0, 10.0, 800.0, 1.0, 800.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.0, 2.0, 1.0, 1.0]),
+        0.17,
+        np.diag([80.0, 100.0, 200.0, 1.0, 5000.0, 1.0, 5000.0, 1.0, 8000.0, 1.0]),
+        np.diag([3., 3., 0.2, 0.2]),
     ),
 ]
 
@@ -275,73 +306,6 @@ STATE_DESCRIPTIONS = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# 2) Physical parameters and leg data copied from the MATLAB script
-# ---------------------------------------------------------------------------
-
-G = 9.81
-
-R_W = 0.058
-R_L = 0.2025
-L_C = 0.024
-M_W = 0.3
-M_L = 2.3
-M_B = 20.0
-I_W = 0.001009
-I_B = 0.3
-I_Z = 0.53302282
-
-# Columns: leg_length, l_w, l_b, I_l
-LEG_DATA = np.array(
-    [
-        [0.110000, 0.061990, 0.048010, 0.045494],
-        [0.120000, 0.067466, 0.052534, 0.044995],
-        [0.130000, 0.072986, 0.057014, 0.044639],
-        [0.140000, 0.078550, 0.061450, 0.044425],
-        [0.150000, 0.084158, 0.065842, 0.044354],
-        [0.160000, 0.089810, 0.070190, 0.044425],
-        [0.170000, 0.095506, 0.074494, 0.044639],
-        [0.180000, 0.101246, 0.078754, 0.044995],
-        [0.190000, 0.107030, 0.082970, 0.045494],
-        [0.200000, 0.112858, 0.087142, 0.046135],
-        [0.210000, 0.118730, 0.091270, 0.046919],
-        [0.220000, 0.124646, 0.095354, 0.047845],
-        [0.230000, 0.130606, 0.099394, 0.048914],
-        [0.240000, 0.136610, 0.103390, 0.050125],
-        [0.250000, 0.142658, 0.107342, 0.051479],
-        [0.260000, 0.148750, 0.111250, 0.052975],
-        [0.270000, 0.154886, 0.115114, 0.054614],
-        [0.280000, 0.161066, 0.118934, 0.056396],
-        [0.290000, 0.167290, 0.122710, 0.058320],
-        [0.300000, 0.173558, 0.126442, 0.060387],
-        [0.310000, 0.179870, 0.130130, 0.062597],
-        [0.320000, 0.186226, 0.133774, 0.064949],
-        [0.330000, 0.192626, 0.137374, 0.067444],
-        [0.340000, 0.199070, 0.140930, 0.070081],
-    ],
-    dtype=float,
-)
-
-
-def interp_or_extrapolate(x: float, xp: np.ndarray, fp: np.ndarray) -> float:
-    """Linear interpolation with linear extrapolation at the two ends."""
-    if x <= xp[0]:
-        slope = (fp[1] - fp[0]) / (xp[1] - xp[0])
-        return float(fp[0] + slope * (x - xp[0]))
-    if x >= xp[-1]:
-        slope = (fp[-1] - fp[-2]) / (xp[-1] - xp[-2])
-        return float(fp[-1] + slope * (x - xp[-1]))
-    return float(np.interp(x, xp, fp))
-
-
-def leg_params(leg_length_m: float) -> tuple[float, float, float]:
-    lengths = LEG_DATA[:, 0]
-    l_w = interp_or_extrapolate(leg_length_m, lengths, LEG_DATA[:, 1])
-    l_b = interp_or_extrapolate(leg_length_m, lengths, LEG_DATA[:, 2])
-    i_l = interp_or_extrapolate(leg_length_m, lengths, LEG_DATA[:, 3])
-    return l_w, l_b, i_l
-
-
 def validate_qr_points(points: Iterable[QrPoint]) -> list[QrPoint]:
     sorted_points = sorted(points, key=lambda p: p.leg_length_m)
     if len(sorted_points) < 1:
@@ -380,82 +344,6 @@ def scheduled_qr(mean_leg_length_m: float, points: list[QrPoint]) -> tuple[np.nd
     Q = (1.0 - alpha) * lo.Q + alpha * hi.Q
     R = (1.0 - alpha) * lo.R + alpha * hi.R
     return Q, R
-
-
-def build_ab(l_l: float, l_r: float) -> tuple[np.ndarray, np.ndarray]:
-    l_wl, l_bl, i_ll = leg_params(l_l)
-    l_wr, l_br, i_lr = leg_params(l_r)
-
-    m = np.zeros((5, 5), dtype=float)
-    gravity_theta = np.zeros((5, 3), dtype=float)
-    torque = np.zeros((5, 4), dtype=float)
-
-    m[0, 0] = I_W * l_l / R_W + M_W * R_W * l_l + M_L * R_W * l_bl
-    m[0, 2] = M_L * l_wl * l_bl - i_ll
-    gravity_theta[0, 0] = (M_L * l_wl + M_B * l_l / 2.0) * G
-    torque[0, :] = [-(1.0 + l_l / R_W), 0.0, 1.0, 0.0]
-
-    m[1, 1] = I_W * l_r / R_W + M_W * R_W * l_r + M_L * R_W * l_br
-    m[1, 3] = M_L * l_wr * l_br - i_lr
-    gravity_theta[1, 1] = (M_L * l_wr + M_B * l_r / 2.0) * G
-    torque[1, :] = [0.0, -(1.0 + l_r / R_W), 0.0, 1.0]
-
-    wheel_inertia = M_W * R_W * R_W + I_W + M_L * R_W * R_W + M_B * R_W * R_W / 2.0
-    m[2, 0] = -wheel_inertia
-    m[2, 1] = -wheel_inertia
-    m[2, 2] = -(M_L * R_W * l_wl + M_B * R_W * l_l / 2.0)
-    m[2, 3] = -(M_L * R_W * l_wr + M_B * R_W * l_r / 2.0)
-    torque[2, :] = [1.0, 1.0, 0.0, 0.0]
-
-    wheel_body = M_W * R_W * L_C + I_W * L_C / R_W + M_L * R_W * L_C
-    m[3, 0] = wheel_body
-    m[3, 1] = wheel_body
-    m[3, 2] = M_L * l_wl * L_C
-    m[3, 3] = M_L * l_wr * L_C
-    m[3, 4] = -I_B
-    gravity_theta[3, 2] = M_B * G * L_C
-    torque[3, :] = [-L_C / R_W, -L_C / R_W, -1.0, -1.0]
-
-    yaw_wheel = I_Z * R_W / (2.0 * R_L) + I_W * R_L / R_W
-    m[4, 0] = yaw_wheel
-    m[4, 1] = -yaw_wheel
-    m[4, 2] = I_Z * l_l / (2.0 * R_L)
-    m[4, 3] = -I_Z * l_r / (2.0 * R_L)
-    torque[4, :] = [-R_L / R_W, R_L / R_W, 0.0, 0.0]
-
-    j_a = -np.linalg.solve(m, gravity_theta)
-    j_b = -np.linalg.solve(m, torque)
-
-    A = np.zeros((10, 10), dtype=float)
-    B = np.zeros((10, 4), dtype=float)
-
-    for row in range(0, 10, 2):
-        A[row, row + 1] = 1.0
-
-    for p in (4, 6, 8):
-        a_idx = (p - 4) // 2
-        A[1, p] = R_W * (j_a[0, a_idx] + j_a[1, a_idx]) / 2.0
-        A[3, p] = (
-            R_W * (-j_a[0, a_idx] + j_a[1, a_idx]) / (2.0 * R_L)
-            - l_l * j_a[2, a_idx] / (2.0 * R_L)
-            + l_r * j_a[3, a_idx] / (2.0 * R_L)
-        )
-        A[5, p] = j_a[2, a_idx]
-        A[7, p] = j_a[3, a_idx]
-        A[9, p] = j_a[4, a_idx]
-
-    for h in range(4):
-        B[1, h] = R_W * (j_b[0, h] + j_b[1, h]) / 2.0
-        B[3, h] = (
-            R_W * (-j_b[0, h] + j_b[1, h]) / (2.0 * R_L)
-            - l_l * j_b[2, h] / (2.0 * R_L)
-            + l_r * j_b[3, h] / (2.0 * R_L)
-        )
-        B[5, h] = j_b[2, h]
-        B[7, h] = j_b[3, h]
-        B[9, h] = j_b[4, h]
-
-    return A, B
 
 
 def lqr_gain(A: np.ndarray, B: np.ndarray, Q: np.ndarray, R: np.ndarray) -> np.ndarray:
@@ -646,7 +534,7 @@ def build_html_report(
     for idx, leg_length in enumerate(x_values):
         leg = float(leg_length)
         Q, R = scheduled_qr(leg, points)
-        A, B = build_ab(leg, leg)
+        A, B = build_ab(variant, leg, leg)
         direct_k = lqr_gain(A, B, Q, R).reshape(-1)
         fitted_k = eval_kctrlp(coeffs, leg, leg).reshape(-1)
         direct[idx, :] = direct_k
@@ -778,9 +666,11 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
     points = validate_qr_points(qr_points)
     grid = make_grid(args.leg_min, args.leg_max, args.grid_step)
 
-    if args.leg_min < LEG_DATA[0, 0] or args.leg_max > LEG_DATA[-1, 0]:
+    variant_leg_data = leg_data(variant)
+    if args.leg_min < variant_leg_data[0, 0] or args.leg_max > variant_leg_data[-1, 0]:
         print(
-            f"warning: leg data range is {LEG_DATA[0, 0]:.3f}..{LEG_DATA[-1, 0]:.3f}; "
+            f"warning: {variant} leg data range is "
+            f"{variant_leg_data[0, 0]:.3f}..{variant_leg_data[-1, 0]:.3f}; "
             "values outside it use linear extrapolation."
         )
 
@@ -792,7 +682,7 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
         for l_r in grid:
             mean_l = 0.5 * (float(l_l) + float(l_r))
             Q, R = scheduled_qr(mean_l, points)
-            A, B = build_ab(float(l_l), float(l_r))
+            A, B = build_ab(variant, float(l_l), float(l_r))
             K = lqr_gain(A, B, Q, R)
             max_real_part = max(max_real_part, float(np.max(np.real(np.linalg.eigvals(A - B @ K)))))
             samples.append((float(l_l), float(l_r)))
@@ -805,11 +695,21 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
     fitted_gain_array = np.array([eval_kctrlp(coeffs, l_l, l_r).reshape(-1) for l_l, l_r in sample_array])
     abs_error = np.abs(fitted_gain_array - gain_array)
     rel_error = abs_error / np.maximum(np.abs(gain_array), 1e-3)
+    fitted_max_real_part = -math.inf
+    fitted_unstable_points = 0
+    for (l_l, l_r), fitted_gain in zip(sample_array, fitted_gain_array, strict=True):
+        A, B = build_ab(variant, float(l_l), float(l_r))
+        fitted_closed_loop_max_real = float(
+            np.max(np.real(np.linalg.eigvals(A - B @ fitted_gain.reshape(4, 10))))
+        )
+        fitted_max_real_part = max(fitted_max_real_part, fitted_closed_loop_max_real)
+        if fitted_closed_loop_max_real >= 0.0:
+            fitted_unstable_points += 1
 
     equal_errors = []
     for l in grid:
         Q, R = scheduled_qr(float(l), points)
-        A, B = build_ab(float(l), float(l))
+        A, B = build_ab(variant, float(l), float(l))
         direct = lqr_gain(A, B, Q, R)
         fitted = eval_kctrlp(coeffs, float(l), float(l))
         equal_errors.append(np.abs(fitted - direct))
@@ -825,6 +725,8 @@ def generate(args: argparse.Namespace, variant: str, qr_points: list[QrPoint]) -
             f"max fit rel error : {float(np.max(rel_error)):.6g}",
             f"equal-line max abs: {float(equal_abs_error):.6g}",
             f"direct LQR max Re(lambda(A-BK)): {max_real_part:.6g}",
+            f"fitted LQR max Re(lambda(A-BK)): {fitted_max_real_part:.6g}",
+            f"fitted unstable grid points     : {fitted_unstable_points}",
         ]
     )
     return coeffs, report
@@ -835,8 +737,20 @@ def main() -> None:
     parser.add_argument("--leg-min", type=float, default=0.15, help="minimum leg length for the 2-D fit grid")
     parser.add_argument("--leg-max", type=float, default=0.35, help="maximum leg length for the 2-D fit grid")
     parser.add_argument("--grid-step", type=float, default=0.01, help="leg length grid step")
-    parser.add_argument("--output", type=Path, help="optional file path for the generated conditional C++ header")
-    parser.add_argument("--html-report", type=Path, help="optional HTML/SVG report path or directory")
+    parser.add_argument(
+        "--output",
+        nargs="?",
+        const=DEFAULT_OUTPUT,
+        type=Path,
+        help="write the C++ header; omit PATH to use lqr/generated/",
+    )
+    parser.add_argument(
+        "--html-report",
+        nargs="?",
+        const=DEFAULT_REPORT_DIR,
+        type=Path,
+        help="write HTML/SVG reports; omit PATH to use lqr/reports/",
+    )
     parser.add_argument(
         "--report-variant",
         choices=["hero", "infantry3", "infantry4", "hero_spin", "infantry3_spin", "infantry4_spin", "all"],
@@ -862,6 +776,7 @@ def main() -> None:
     print(cpp)
 
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(cpp + "\n", encoding="utf-8")
         print()
         print(f"wrote: {args.output}")
