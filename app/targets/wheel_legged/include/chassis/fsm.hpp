@@ -95,9 +95,9 @@ class Fsm {
   uint32_t jump_push_reached_tick_ms_{0};                                      ///< 蹬伸腿长到位时刻
   bool stair_descend_condition_active_{false};
   uint32_t stair_descend_condition_tick_ms_{0};
-  bool spin_lock_low_{false};      ///< 小陀螺后锁定低腿长，仅手动切档解锁
+  bool spin_lock_low_{false};     ///< 小陀螺后锁定低腿长，仅手动切档解锁
   bool ctrl_spin_active_{false};  ///< Ctrl+小陀螺活跃标志（记录进入时的触发类型）
-  bool stair_step2_{false};        ///< 双台阶第二步
+  bool stair_step2_{false};       ///< 双台阶第二步
   wheel_legged::LegProfile prev_leg_request_{wheel_legged::LegProfile::kLow};  ///< 上周期腿长请求（检测手动切档）
   uint32_t state_enter_tick_ms_{0};
   Output output_{};
