@@ -950,11 +950,11 @@ constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单�
 constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
 constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
-constexpr uint16_t kDefaultHeatLimit = 240;       ///< 裁判系统离线时默认热量上限
-constexpr uint16_t kDefaultCoolingRate = 40;      ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
+constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
+constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
 constexpr uint16_t kLowHeatLimitThreshold = 40;  ///< 低热量上限阈值：低于此值时降频并使用本地热量
 constexpr float kLowHeatShootFrequencyHz = 6.0f;  ///< 低热量上限时发射频率 [Hz]
-constexpr float kNormalShootFrequencyHz = 15.0f;   ///< 正常发射频率 [Hz]
+constexpr float kNormalShootFrequencyHz = 15.0f;  ///< 正常发射频率 [Hz]
 }  // namespace shoot
 
 // ── 底盘状态机 ──
@@ -1040,7 +1040,7 @@ constexpr std::uint32_t kSpinExitTimeoutMs = 3000U;  ///< 小陀螺预测退出�
 constexpr float kSpinEntrySpeedThresholdMps = 0.3f;  ///< 进入小陀螺的速度阈值 [m/s]
 constexpr float kSpinCtrlMinLegLengthM = 0.14f;      ///< Ctrl+小陀螺最低腿长 [m]
 constexpr float kSpinCtrlMaxLegLengthM = 0.24f;      ///< Ctrl+小陀螺最高腿长 [m]
-constexpr float kSpinCtrlLegOscillationHz = 1.f;    ///< Ctrl+小陀螺腿长振荡频率 [Hz]
+constexpr float kSpinCtrlLegOscillationHz = 1.f;     ///< Ctrl+小陀螺腿长振荡频率 [Hz]
 }  // namespace chassis_fsm
 
 // ── 底盘控制 ──
@@ -1295,7 +1295,7 @@ constexpr float kSpinTargetYawDotRadNoScS2 = -8.0f;   ///< 无超电小陀螺目
 constexpr float kSpinTargetYawDotRadNoScS3 = -9.0f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] 65-75W
 constexpr float kSpinTargetYawDotRadNoScS4 = -10.f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 1.f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
-constexpr float kYawResetRampStepRad = 0.02f;        ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
+constexpr float kYawResetRampStepRad = 0.02f;         ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
 constexpr float kYawResetMaxSpeedMps = 0.3f;          ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.4f;  ///< 小陀螺平移增益（系数2补偿 cos² 平均衰减，使平均车速=摇杆指令值）
 constexpr float kSpinThetaLlBiasRad = 0.0f;   ///< 小陀螺时左腿摆角偏置 [rad]
@@ -1372,14 +1372,14 @@ using namespace common::main;
 
 // ── 自瞄通信 ──
 namespace aimbot {
-constexpr uint8_t kRobotId = 3U;                                    ///< 机器人 ID
-constexpr float kBulletSpeedMps = 23.0f;                            ///< 弹速 [m/s]
-constexpr float kBulletDefaultSpeedMps = 23.f;                      ///< 默认弹速
-constexpr float kBulletBoundarySpeedMps = 20.f;                     ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打装甲板）
+constexpr uint8_t kRobotId = 3U;                                      ///< 机器人 ID
+constexpr float kBulletSpeedMps = 23.0f;                              ///< 弹速 [m/s]
+constexpr float kBulletDefaultSpeedMps = 23.f;                        ///< 默认弹速
+constexpr float kBulletBoundarySpeedMps = 20.f;                       ///< 区分裁判系统返回值是否正确
+constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};        ///< 自瞄偏航速度 PID（打装甲板）
 constexpr PidGains kPitchPositionPid{20.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
@@ -1584,11 +1584,11 @@ constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单�
 constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
 constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
-constexpr uint16_t kDefaultHeatLimit = 240;       ///< 裁判系统离线时默认热量上限
-constexpr uint16_t kDefaultCoolingRate = 40;      ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
+constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
+constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
 constexpr uint16_t kLowHeatLimitThreshold = 40;  ///< 低热量上限阈值：低于此值时降频并使用本地热量
 constexpr float kLowHeatShootFrequencyHz = 6.0f;  ///< 低热量上限时发射频率 [Hz]
-constexpr float kNormalShootFrequencyHz = 15.0f;   ///< 正常发射频率 [Hz]
+constexpr float kNormalShootFrequencyHz = 15.0f;  ///< 正常发射频率 [Hz]
 }  // namespace shoot
 
 // ── 底盘状态机 ──

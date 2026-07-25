@@ -174,9 +174,9 @@ class Chassis {
   wbr::MomentumLeso leso_{};
   std::array<rm::f32, 4> previous_final_virtual_command_{};
   std::array<rm::f32, 4> applied_leso_compensation_{};
-  bool prev_spin_active_{false};          ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
-  bool prev_ctrl_spin_active_{false};     ///< 上一周期 Ctrl+小陀螺状态，用于初始化相位
-  float ctrl_spin_phase_rad_{0.0f};       ///< Ctrl+小陀螺腿长振荡相位累加器 [rad]
+  bool prev_spin_active_{false};       ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
+  bool prev_ctrl_spin_active_{false};  ///< 上一周期 Ctrl+小陀螺状态，用于初始化相位
+  float ctrl_spin_phase_rad_{0.0f};    ///< Ctrl+小陀螺腿长振荡相位累加器 [rad]
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,
