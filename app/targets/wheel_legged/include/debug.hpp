@@ -362,6 +362,7 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint16_t shoot_heat_limit;      // 当前热量上限
   uint16_t shoot_cooling_rate;    // 当前冷却速率 [单位/秒]
   uint8_t shoot_heat_suppressed;  // 热量超限抑制中
+  uint8_t shoot_low_heat_mode;    // 当前处于低热量模式
 
   // ── 裁判系统 ──
   uint8_t referee_online;          // 裁判系统是否在线（收到过有效包）

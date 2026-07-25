@@ -45,6 +45,7 @@ class Shoot {
   uint16_t heat_limit() const { return heat_limit_; }
   uint16_t cooling_rate() const { return cooling_rate_; }
   bool heat_over_limit() const { return heat_suppressed_; }
+  bool low_heat_mode() const { return prev_low_heat_mode_; }
   bool fric_ready() const { return fric_ready_; }
   uint8_t shoot_mode() const { return static_cast<uint8_t>(controller_.mode()); }
   bool single_complete() const { return controller_.shoot_flag(); }
@@ -66,6 +67,7 @@ class Shoot {
   uint16_t heat_limit_{240};
   uint16_t cooling_rate_{40};
   bool heat_suppressed_{false};
+  bool prev_low_heat_mode_{false};
 
   // 单发间隔计数器：每周期自增，达到阈值后允许下一发
   static constexpr uint32_t kSingleShotCycleThreshold = 200;  // 0.4s @ 500Hz

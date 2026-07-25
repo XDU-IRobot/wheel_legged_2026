@@ -49,6 +49,7 @@ class Chassis {
     bool enable_output{false};                          ///< 是否允许输出电机命令
     bool run_chassis_update{false};                     ///< 是否执行底盘控制计算
     bool spin_enable{false};                            ///< 是否开启小陀螺
+    bool ctrl_spin_active{false};                       ///< Ctrl+小陀螺活跃（可变腿长振荡）
     bool keyboard_active{false};                        ///< 图传键鼠是否在线
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
@@ -173,7 +174,9 @@ class Chassis {
   wbr::MomentumLeso leso_{};
   std::array<rm::f32, 4> previous_final_virtual_command_{};
   std::array<rm::f32, 4> applied_leso_compensation_{};
-  bool prev_spin_active_{false};  ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
+  bool prev_spin_active_{false};          ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
+  bool prev_ctrl_spin_active_{false};     ///< 上一周期 Ctrl+小陀螺状态，用于初始化相位
+  float ctrl_spin_phase_rad_{0.0f};       ///< Ctrl+小陀螺腿长振荡相位累加器 [rad]
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
   wbr::LegKinematics right_leg_{wheel_legged::params::active::chassis::kLegL1M,

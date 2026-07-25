@@ -273,6 +273,11 @@ Dr16ModeResult ResolveDr16Mode(const Dr16RawInput &dr16, TcSemanticState &tc_sta
       r.spin_hold = true;
       r.spin_dir = -1.0f;
     }
+    // Ctrl+Shift 键盘小陀螺（可变腿长），与拨轮小陀螺互斥
+    if ((dr16.keyboard & (kRcKeyCtrl | kRcKeyShift)) == (kRcKeyCtrl | kRcKeyShift)) {
+      r.spin_ctrl_hold = true;
+      r.spin_hold = false;
+    }
   }
 
   return r;
@@ -303,8 +308,13 @@ TcModeResult ResolveTcMode(const TcRemoteInput &tc_remote, TcSemanticState &tc_s
   // 腿长
   r.leg = tc_state.mid_leg_hold ? wheel_legged::LegProfile::kMid : wheel_legged::LegProfile::kLow;
 
-  // 小陀螺：Shift 键
-  r.spin_hold = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
+  // 小陀螺：Shift 键（普通），Ctrl+Shift（可变腿长）
+  {
+    const bool ctrl_pressed = (tc_remote.keyboard_value & kRcKeyCtrl) != 0U;
+    const bool shift_pressed = (tc_remote.keyboard_value & kRcKeyShift) != 0U;
+    r.spin_hold = shift_pressed && !ctrl_pressed;
+    r.spin_ctrl_hold = shift_pressed && ctrl_pressed;
+  }
 
   // 跳跃：鼠标滚轮下滚 < -70（低腿）
   {
@@ -466,6 +476,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.gimbal_test_profile = r.gimbal_test;
     request.jump_trigger = r.jump_trigger;
     request.spin_hold = r.spin_hold;
+    request.spin_ctrl_hold = r.spin_ctrl_hold;
     request.spin_dir = r.spin_dir;
     combat_profile = r.combat;
     leg_request = r.leg;
@@ -479,6 +490,7 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
     request.domain_request = r.domain;
     request.jump_trigger = r.jump_trigger;
     request.spin_hold = r.spin_hold;
+    request.spin_ctrl_hold = r.spin_ctrl_hold;
     combat_profile = r.combat;
     leg_request = r.leg;
 
@@ -754,6 +766,7 @@ chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint3
       .combat_profile = m.combat_profile,
       .standby = m.standby,
       .spin_hold = m.spin_hold,
+      .spin_ctrl_hold = m.spin_ctrl_hold,
       .spin_dir = m.spin_dir,
       .jump_trigger = m.jump_trigger,
       .stair_descend_request = m.stair_descend_request,

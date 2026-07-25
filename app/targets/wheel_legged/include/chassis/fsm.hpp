@@ -56,6 +56,7 @@ class Fsm {
       bool enable_dm{false};            ///< DM 电机使能
       bool run_chassis_update{false};   ///< 是否执行底盘控制更新
       bool spin_enable{false};          ///< 速度估计是否使用轮速直通
+      bool ctrl_spin_active{false};     ///< Ctrl+小陀螺活跃（可变腿长振荡）
       bool recovery_enable{false};      ///< 是否使能恢复逻辑 (@todo 未接入 control_loop)
       bool safe_output_required{true};  ///< 是否要求安全输出（全零）(@todo 未接入 control_loop)
       wheel_legged::LegProfile leg_profile{wheel_legged::LegProfile::kLow};  ///< 当前腿长语义档位
@@ -94,8 +95,9 @@ class Fsm {
   uint32_t jump_push_reached_tick_ms_{0};                                      ///< 蹬伸腿长到位时刻
   bool stair_descend_condition_active_{false};
   uint32_t stair_descend_condition_tick_ms_{0};
-  bool spin_lock_low_{false};  ///< 小陀螺后锁定低腿长，仅手动切档解锁
-  bool stair_step2_{false};    ///< 双台阶第二步
+  bool spin_lock_low_{false};      ///< 小陀螺后锁定低腿长，仅手动切档解锁
+  bool ctrl_spin_active_{false};  ///< Ctrl+小陀螺活跃标志（记录进入时的触发类型）
+  bool stair_step2_{false};        ///< 双台阶第二步
   wheel_legged::LegProfile prev_leg_request_{wheel_legged::LegProfile::kLow};  ///< 上周期腿长请求（检测手动切档）
   uint32_t state_enter_tick_ms_{0};
   Output output_{};

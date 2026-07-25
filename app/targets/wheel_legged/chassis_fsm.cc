@@ -72,7 +72,7 @@ chassis::Fsm::State ResolveRequestedNormalState(const wheel_legged::LegProfile p
 chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State state,
                                                        const wheel_legged::LegProfile requested_leg_profile,
                                                        const wheel_legged::LegProfile jump_leg_profile,
-                                                       const bool stair_step2 = false) {
+                                                       const bool stair_step2, const bool ctrl_spin_active) {
   chassis::Fsm::Output::ControlOutput control{};
   control.leg_profile = wheel_legged::LegProfile::kLow;
   control.target_leg_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
@@ -127,6 +127,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = true;
+      control.ctrl_spin_active = ctrl_spin_active;
       control.recovery_enable = false;
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kLow;
@@ -138,6 +139,7 @@ chassis::Fsm::Output::ControlOutput BuildControlOutput(const chassis::Fsm::State
       control.enable_dm = true;
       control.run_chassis_update = true;
       control.spin_enable = true;
+      control.ctrl_spin_active = ctrl_spin_active;
       control.recovery_enable = false;
       control.safe_output_required = false;
       control.leg_profile = wheel_legged::LegProfile::kLow;
@@ -259,14 +261,16 @@ void chassis::Fsm::Init() {
   state_enter_tick_ms_ = 0U;
   output_ = {};
   output_.mode = mode_;
-  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_);
+  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_,
+                                         ctrl_spin_active_);
 }
 
 void chassis::Fsm::Transit(const State new_mode) {
   output_.state_changed = (new_mode != mode_);
   mode_ = new_mode;
   output_.mode = mode_;
-  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_);
+  output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_,
+                                         ctrl_spin_active_);
 }
 
 chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
@@ -346,7 +350,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kLow;
         next_mode = State::kJumpPrep;
-      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+      } else if ((request.spin_hold || request.spin_ctrl_hold) && std::fabs(request.current_s_dot) <
                                           wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
@@ -366,7 +370,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
       } else if (request.jump_trigger) {
         jump_leg_profile_ = wheel_legged::LegProfile::kMid;
         next_mode = State::kJumpPrep;
-      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+      } else if ((request.spin_hold || request.spin_ctrl_hold) && std::fabs(request.current_s_dot) <
                                           wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
@@ -383,7 +387,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kStairTask;
       } else if (request.stair_descend_request && request.stair_descend_ready) {
         next_mode = State::kStairDescendApproach;
-      } else if (request.spin_hold && std::fabs(request.current_s_dot) <
+      } else if ((request.spin_hold || request.spin_ctrl_hold) && std::fabs(request.current_s_dot) <
                                           wheel_legged::params::active::chassis_fsm::kSpinEntrySpeedThresholdMps) {
         next_mode = State::kSpin;
       } else {
@@ -396,7 +400,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
-      } else if (!request.spin_hold) {
+      } else if (!request.spin_hold && !request.spin_ctrl_hold) {
         spin_lock_low_ = true;
         next_mode = State::kSpinExitPending;
       }
@@ -407,7 +411,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
-      } else if (request.spin_hold) {
+      } else if (request.spin_hold || request.spin_ctrl_hold) {
         next_mode = State::kSpin;
       } else if (request.spin_exit_yaw_aligned ||
                  elapsed_ms >= wheel_legged::params::active::chassis_fsm::kSpinExitTimeoutMs) {
@@ -475,7 +479,7 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
         next_mode = State::kRecoveryFallCheck;
       } else if (request.standby) {
         next_mode = State::kStandby;
-      } else if (request.spin_hold) {
+      } else if (request.spin_hold || request.spin_ctrl_hold) {
         next_mode = State::kSpin;
       } else if (!request.stair_task_active) {
         next_mode = requested_stable_state;
@@ -521,6 +525,11 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
     state_enter_tick_ms_ = request.tick_ms;
     stair_descend_condition_active_ = false;
     stair_descend_condition_tick_ms_ = request.tick_ms;
+    if (next_mode == State::kSpin) {
+      ctrl_spin_active_ = request.spin_ctrl_hold;
+    } else if (mode_ == State::kSpin || mode_ == State::kSpinExitPending) {
+      ctrl_spin_active_ = false;
+    }
   }
 
   Transit(next_mode);
@@ -528,7 +537,8 @@ chassis::Fsm::Output chassis::Fsm::Update(const Input &input) {
   if (!IsJumpState(mode_) && !IsStairDescendState(mode_) &&
       (mode_ == State::kLowLeg || mode_ == State::kMidLeg || mode_ == State::kHighLeg || mode_ == State::kSpin ||
        mode_ == State::kStandby || mode_ == State::kStairTask)) {
-    output_.control = BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_);
+    output_.control =
+        BuildControlOutput(mode_, requested_leg_profile_, jump_leg_profile_, stair_step2_, ctrl_spin_active_);
   }
 
   return output_;
