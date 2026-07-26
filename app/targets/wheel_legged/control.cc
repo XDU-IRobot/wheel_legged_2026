@@ -1425,7 +1425,7 @@ void ControlLoop() {
         aimbot_mode = 3;
         break;
       case wheel_legged::CombatProfile::kAutoAimFuLongDistance:
-        aimbot_mode = 5;
+        aimbot_mode = 3;
         break;
       case wheel_legged::CombatProfile::kNormal:
       default:
