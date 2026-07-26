@@ -214,6 +214,7 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
       tc_state.auto_jump_tof_armed = true;
     }
     tc_state.z_auto_jump_armed = false;
+    tc_state.ctrl_z_highland_armed = false;  // 防止之后再按 Ctrl 误触中央高地
   }
   if (!z_pressed) tc_state.z_auto_jump_armed = true;
 
@@ -224,6 +225,7 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
       tc_state.highland_auto_jump_tof_armed = true;
     }
     tc_state.ctrl_z_highland_armed = false;
+    tc_state.z_auto_jump_armed = false;  // 防止 Z 单独已触发的情况下再按 Ctrl
   }
   if (!z_pressed || !ctrl_pressed) tc_state.ctrl_z_highland_armed = true;
 }
