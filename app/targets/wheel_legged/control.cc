@@ -543,22 +543,18 @@ void ControlLoop() {
     // 防止底盘旋转过程中 diff 符号翻转导致 target 跳变
     float target;
     const bool spin_exit_target_locked =
-        ctx.yaw_follow_target_initialized &&
-        ctx.last_chassis_mode == chassis::Fsm::State::kSpinExitPending;
+        ctx.yaw_follow_target_initialized && ctx.last_chassis_mode == chassis::Fsm::State::kSpinExitPending;
     if (spin_exit_target_locked) {
       target = ctx.yaw_follow_target.target_rad;
     } else {
-      const float diff =
-          rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+      const float diff = rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
       wl_debug.spin_exit_yaw_diff_rad = diff;
       const float norm = std::fabs(ctx.spin_accumulated_yaw_rad);
-      const float entry_diff = rm::modules::Wrap(
-          ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+      const float entry_diff = rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
       const bool entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f;
       wl_debug.spin_entry_from_rear = entry_from_rear ? 1 : 0;
       wl_debug.spin_accumulated_yaw_rad = ctx.spin_accumulated_yaw_rad;
-      target = ((norm < kPi) != entry_from_rear) ? (kYawFollowFixedTargetRad + kPi)
-                                                  : kYawFollowFixedTargetRad;
+      target = ((norm < kPi) != entry_from_rear) ? (kYawFollowFixedTargetRad + kPi) : kYawFollowFixedTargetRad;
     }
     const float yaw_err = rm::modules::Wrap(target - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
@@ -1034,8 +1030,8 @@ void ControlLoop() {
         ctx.spin_prev_yaw_motor_rad = input.estimator_input.yaw_motor_rad;
         ctx.spin_start_yaw_motor_rad = input.estimator_input.yaw_motor_rad;
         {
-          const float entry_diff = rm::modules::Wrap(
-              ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+          const float entry_diff =
+              rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
           wl_debug.spin_entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f ? 1 : 0;
         }
       }
@@ -1048,8 +1044,7 @@ void ControlLoop() {
       {
         const float net_rot = ctx.spin_accumulated_yaw_rad;
         const float norm = std::fabs(net_rot);
-        const float entry_diff = rm::modules::Wrap(
-            ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+        const float entry_diff = rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
         const bool entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f;
         wl_debug.spin_entry_from_rear = entry_from_rear ? 1 : 0;
         wl_debug.spin_accumulated_yaw_rad = net_rot;
@@ -1397,8 +1392,10 @@ void ControlLoop() {
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
     {
       float delta = input.estimator_input.yaw_motor_rad - ctx.spin_prev_yaw_motor_rad;
-      if (delta > kPi) delta -= 2.0f * kPi;
-      else if (delta < -kPi) delta += 2.0f * kPi;
+      if (delta > kPi)
+        delta -= 2.0f * kPi;
+      else if (delta < -kPi)
+        delta += 2.0f * kPi;
       ctx.spin_accumulated_yaw_rad += delta;
       if (ctx.spin_accumulated_yaw_rad >= 2.0f * kPi)
         ctx.spin_accumulated_yaw_rad -= 2.0f * kPi;
@@ -1449,7 +1446,8 @@ void ControlLoop() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   {
     const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
-    const float rear_delta = (ctx.yaw_follow_target.drive_sign < 0.0f) ? ns::control_loop::kDisplacementBiasRearDeltaM : 0.0f;
+    const float rear_delta =
+        (ctx.yaw_follow_target.drive_sign < 0.0f) ? ns::control_loop::kDisplacementBiasRearDeltaM : 0.0f;
     chassis_update_input.displacement_bias =
         wheel_legged::control_loop::ResolveDisplacementBias(chassis_update_input.fsm_mode) +
         shots_fired * ns::control_loop::kDisplacementBiasPerShot + rear_delta;
