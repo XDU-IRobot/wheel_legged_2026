@@ -287,7 +287,7 @@ constexpr uint16_t kCouplingRecordCycles = 3;
 namespace shoot {
 using DmMitSettings = rm::device::DmMotorSettings<rm::device::DmMotorControlMode::kMit>;
 
-inline constexpr float kBoosterZeroPointRad = 0.373674f;                       ///< 拨盘零位角度 [rad]
+inline constexpr float kBoosterZeroPointRad = 0.373674f;                     ///< 拨盘零位角度 [rad]
 inline constexpr float kSegmentAngleRad = kPi / 3.f;                         ///< 拨盘分段角度 [rad]
 inline constexpr uint16_t kInitDelayTicks = 600;                             ///< 初始化延迟周期数
 inline constexpr uint16_t kShootDelayTicks = 360;                            ///< 发射延迟周期数
@@ -701,10 +701,10 @@ constexpr std::array<float, 4> kKalmanP{10.0f, 0.0f, 0.0f, 10.0f};       ///< �
 constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< 观测矩阵 H
 
 // -- 关节零位偏移 --
-constexpr float kLeftPhi1OffsetRad = 2.f*M_PI;              ///< 左腿前关节零位偏移 [rad]  -pi
+constexpr float kLeftPhi1OffsetRad = 2.f * M_PI;       ///< 左腿前关节零位偏移 [rad]  -pi
 constexpr float kLeftPhi4OffsetRad = 0.644f;           ///< 左腿后关节零位偏移 [rad] -0.644
 constexpr float kRightPhi1OffsetRad = -2.875f + M_PI;  ///< 右腿前关节零位偏移 [rad] -2.875
-constexpr float kRightPhi4OffsetRad = 2.3768f;          ///< 右腿后关节零位偏移 [rad] 2.3768
+constexpr float kRightPhi4OffsetRad = 2.3768f;         ///< 右腿后关节零位偏移 [rad] 2.3768
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──
