@@ -727,12 +727,11 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     const auto &hl_right = *g.right_front_tof;
     const bool hl_measurements_valid =
         hl_left.ranging() && hl_right.ranging() && hl_left.data_valid() && hl_right.data_valid();
-    const bool highland_both_close =
-        hl_measurements_valid &&
-        (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 <
-            params::active::tof_highland::kAutoJumpTriggerDistanceMm &&
-        (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 >
-            params::active::tof_highland::kAutoJumpMinDistanceMm;
+    const bool highland_both_close = hl_measurements_valid &&
+                                     (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 <
+                                         params::active::tof_highland::kAutoJumpTriggerDistanceMm &&
+                                     (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 >
+                                         params::active::tof_highland::kAutoJumpMinDistanceMm;
     const bool highland_both_range_ok =
         hl_left.measurement().range_status == 0 && hl_right.measurement().range_status == 0;
     if (highland_both_range_ok) {
@@ -742,7 +741,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     }
     const bool highland_both_active =
         highland_both_range_ok && (now_ms - tc_state.highland_both_active_start_ms >=
-                                    params::active::tof_highland::kAutoJumpBothActiveDurationMs);
+                                   params::active::tof_highland::kAutoJumpBothActiveDurationMs);
     input.highland_auto_jump_both_close = highland_both_close;
     input.highland_auto_jump_tof_armed_debug = tc_state.highland_auto_jump_tof_armed;
     input.highland_auto_jump_both_active = highland_both_active;
