@@ -425,7 +425,8 @@ void ControlLoop() {
   }
   const auto effective_stair_request = [&]() {
     if (deferred_req != wheel_legged::StairTaskRequest::kNone) return deferred_req;
-    if (input.mode_request.spin_hold) return wheel_legged::StairTaskRequest::kCancel;
+    if (input.mode_request.spin_hold || input.mode_request.spin_ctrl_hold)
+      return wheel_legged::StairTaskRequest::kCancel;
     return input.mode_request.stair_task_request;
   }();
   const auto &stair_task_output = g_stair_task_coordinator.Update({
@@ -827,6 +828,7 @@ void ControlLoop() {
     wl_debug.shoot_heat_limit = globals->shoot.heat_limit();
     wl_debug.shoot_cooling_rate = globals->shoot.cooling_rate();
     wl_debug.shoot_heat_suppressed = globals->shoot.heat_over_limit() ? 1U : 0U;
+    wl_debug.shoot_low_heat_mode = globals->shoot.low_heat_mode() ? 1U : 0U;
     wl_debug.shoot_mode = globals->shoot.shoot_mode();
     wl_debug.shoot_single_complete = globals->shoot.single_complete() ? 1U : 0U;
     wl_debug.shoot_fire_flag = fire_flag ? 1U : 0U;
@@ -904,6 +906,7 @@ void ControlLoop() {
   chassis_update_input.enable_output = chassis_output_enable;
   chassis_update_input.run_chassis_update = chassis_output.control.run_chassis_update;
   chassis_update_input.spin_enable = chassis_output.control.spin_enable;
+  chassis_update_input.ctrl_spin_active = chassis_output.control.ctrl_spin_active;
   chassis_update_input.motion_target.leg_length_m = chassis_output.control.target_leg_length_m;
   chassis_update_input.stair_sequence_controls_motion = stair_sequence_output.controls_motion;
   wl_debug.leso_stair_motion_active = stair_sequence_output.controls_motion ? 1U : 0U;

@@ -30,7 +30,13 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
                           uint16_t referee_barrel_heat) {
   ShootOutput out{};
 
-  const bool low_heat_mode = heat_limit_ < ns::kLowHeatLimitThreshold;
+  const bool low_heat_mode = heat_limit_ - referee_barrel_heat <= ns::kLowHeatLimitThreshold;
+
+  // 进入低热量模式时同步裁判系统热量，消除本地模型与裁判端的初始偏移
+  if (low_heat_mode && !prev_low_heat_mode_) {
+    current_heat_ = static_cast<float>(referee_barrel_heat);
+  }
+  prev_low_heat_mode_ = low_heat_mode;
 
   if (shoot_enabled) {
     controller_.Enable(true);
@@ -101,9 +107,10 @@ ShootOutput Shoot::Update(float fric_left_rpm, float fric_right_rpm, float dial_
 
     const float effective_limit = static_cast<float>(heat_limit_);
     const float safety_margin = low_heat_mode ? ns::kLowHeatSafetyMargin : ns::kHeatSafetyMargin;
-    if (effective_heat > effective_limit - safety_margin) {
+    // 预判：当前热量 + 再打一发 > 上限 - 余量 时停火；迟滞：需冷却到安全线以下一定余量才恢复
+    if (effective_heat + ns::kHeatPerShot > effective_limit - safety_margin) {
       heat_suppressed_ = true;
-    } else {
+    } else if (effective_heat + ns::kHeatPerShot <= effective_limit - safety_margin - ns::kHeatResumeMargin) {
       heat_suppressed_ = false;
     }
   }

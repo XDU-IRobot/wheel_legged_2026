@@ -83,6 +83,7 @@ struct Dr16ModeResult {
   wheel_legged::CombatProfile combat{wheel_legged::CombatProfile::kNormal};
   wheel_legged::GimbalTestProfile gimbal_test{wheel_legged::GimbalTestProfile::kNormal};
   bool spin_hold{false};
+  bool spin_ctrl_hold{false};
   float spin_dir{0.0f};
   bool jump_trigger{false};
 };
@@ -95,6 +96,7 @@ struct TcModeResult {
   wheel_legged::LegProfile leg{wheel_legged::LegProfile::kLow};
   wheel_legged::CombatProfile combat{wheel_legged::CombatProfile::kNormal};
   bool spin_hold{false};
+  bool spin_ctrl_hold{false};
   bool jump_trigger{false};
 };
 

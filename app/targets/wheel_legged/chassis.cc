@@ -891,11 +891,31 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
   // 着地后腿长 PID D 项输入放大
   if (input.fsm_mode == Fsm::State::kSpin) {
+    float spin_leg_target = params_.leg_target_length_m;
+    if (input.ctrl_spin_active) {
+      constexpr float kMin = wheel_legged::params::active::chassis_fsm::kSpinCtrlMinLegLengthM;
+      constexpr float kMax = wheel_legged::params::active::chassis_fsm::kSpinCtrlMaxLegLengthM;
+      constexpr float kFreqHz = wheel_legged::params::active::chassis_fsm::kSpinCtrlLegOscillationHz;
+      constexpr float kDt = wheel_legged::params::active::chassis::kControlDtS;
+      constexpr float kTwoPi = 2.0f * static_cast<float>(M_PI);
+      if (!prev_ctrl_spin_active_) {
+        const float half_range = (kMax - kMin) * 0.5f;
+        const float mid = kMin + half_range;
+        float sin_val = (avg_leg_length_m - mid) / half_range;
+        if (sin_val > 1.0f) sin_val = 1.0f;
+        if (sin_val < -1.0f) sin_val = -1.0f;
+        ctrl_spin_phase_rad_ = std::asin(sin_val);
+      }
+      ctrl_spin_phase_rad_ += kTwoPi * kFreqHz * kDt;
+      if (ctrl_spin_phase_rad_ > kTwoPi) {
+        ctrl_spin_phase_rad_ -= kTwoPi;
+      }
+      spin_leg_target = kMin + (kMax - kMin) * (std::sin(ctrl_spin_phase_rad_) + 1.0f) * 0.5f;
+    }
+    prev_ctrl_spin_active_ = input.ctrl_spin_active;
     constexpr float kSpinLegLengthBiasM = wheel_legged::params::active::control_loop::kSpinLegLengthBiasM;
-    left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(),
-                               2);
-    right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m - kSpinLegLengthBiasM, right_leg_.l0(),
-                                -right_leg_.l0_dot(), 2);
+    left_l0_pid_.UpdateExtDiff(spin_leg_target + kSpinLegLengthBiasM, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+    right_l0_pid_.UpdateExtDiff(spin_leg_target - kSpinLegLengthBiasM, right_leg_.l0(), -right_leg_.l0_dot(), 2);
   } else if (use_stair_target) {
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);

@@ -140,6 +140,7 @@ struct ModeRequest {
   StairTaskRequest stair_task_request{StairTaskRequest::kNone};  ///< 上台阶任务命令
 
   bool spin_hold{false};              ///< 小陀螺保持请求
+  bool spin_ctrl_hold{false};         ///< Ctrl+小陀螺保持请求（可变腿长）
   float spin_dir{1.0f};               ///< 小陀螺方向（+1 正转，-1 反转）
   bool jump_trigger{false};           ///< 跳跃边沿触发请求
   bool stair_descend_request{false};  ///< 下台阶模式请求
@@ -201,6 +202,7 @@ struct ChassisFsmInput {
   CombatProfile combat_profile{CombatProfile::kNormal};    ///< 战斗域子模式
   bool standby{false};                                     ///< Standby: low-leg posture with wheel torque disabled
   bool spin_hold{false};                                   ///< 小陀螺保持请求
+  bool spin_ctrl_hold{false};                              ///< Ctrl+小陀螺保持请求（可变腿长）
   float spin_dir{1.0f};                                    ///< 小陀螺方向（+1 正转，-1 反转）
   bool spin_exit_yaw_aligned{false};                       ///< 小陀螺退出：yaw 已对齐目标方向
   bool jump_trigger{false};                                ///< 跳跃边沿触发请求
