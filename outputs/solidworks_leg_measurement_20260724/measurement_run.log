@@ -1,0 +1,26 @@
+kinematic_min: L=0.105769141 m, angle=24.331016 deg
+lookup_11cm: L=0.109999998 m, residual=-1.567E-009 m, angle=25.469778 deg, valid=True
+lookup_12cm: L=0.119999923 m, residual=-7.738E-008 m, angle=28.148348 deg, valid=True
+lookup_13cm: L=0.129999986 m, residual=-1.367E-008 m, angle=30.816511 deg, valid=True
+lookup_14cm: L=0.140000000 m, residual=3.144E-010 m, angle=33.481676 deg, valid=True
+lookup_15cm: L=0.149999990 m, residual=-9.726E-009 m, angle=36.149650 deg, valid=True
+lookup_16cm: L=0.159999967 m, residual=-3.258E-008 m, angle=38.825187 deg, valid=True
+lookup_17cm: L=0.169999937 m, residual=-6.313E-008 m, angle=41.512377 deg, valid=True
+lookup_18cm: L=0.179999901 m, residual=-9.915E-008 m, angle=44.214891 deg, valid=True
+lookup_19cm: L=0.190000000 m, residual=-2.057E-012 m, angle=46.936191 deg, valid=True
+lookup_20cm: L=0.200000000 m, residual=-3.557E-012 m, angle=49.679512 deg, valid=True
+lookup_21cm: L=0.210000000 m, residual=-5.724E-012 m, angle=52.448148 deg, valid=True
+lookup_22cm: L=0.220000000 m, residual=-8.746E-012 m, angle=55.245415 deg, valid=True
+lookup_23cm: L=0.230000000 m, residual=-1.290E-011 m, angle=58.074741 deg, valid=True
+lookup_24cm: L=0.240000000 m, residual=-1.856E-011 m, angle=60.939738 deg, valid=True
+lookup_25cm: L=0.250000000 m, residual=-2.626E-011 m, angle=63.844259 deg, valid=True
+lookup_26cm: L=0.260000000 m, residual=-3.674E-011 m, angle=66.792472 deg, valid=True
+lookup_27cm: L=0.270000000 m, residual=-5.105E-011 m, angle=69.788939 deg, valid=True
+lookup_28cm: L=0.280000000 m, residual=-7.073E-011 m, angle=72.838700 deg, valid=True
+lookup_29cm: L=0.290000000 m, residual=-9.798E-011 m, angle=75.947387 deg, valid=True
+lookup_30cm: L=0.300000000 m, residual=-1.361E-010 m, angle=79.121351 deg, valid=True
+lookup_31cm: L=0.310000000 m, residual=-1.901E-010 m, angle=82.367832 deg, valid=True
+lookup_32cm: L=0.320000000 m, residual=-2.677E-010 m, angle=85.695162 deg, valid=True
+lookup_33cm: L=0.330000000 m, residual=-3.811E-010 m, angle=89.113046 deg, valid=True
+kinematic_max: L=0.336337200 m, angle=91.331016 deg, rebuild=True
+WROTE D:\rm\2026_code\1\embedded-2026-h7\outputs\solidworks_leg_measurement_20260724\leg_mass_properties_raw.csv

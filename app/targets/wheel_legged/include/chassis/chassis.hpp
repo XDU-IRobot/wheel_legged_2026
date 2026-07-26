@@ -3,6 +3,8 @@
 #include "state.hpp"
 #include "fsm.hpp"
 #include "lqr.hpp"
+#include "../fall_detector.hpp"
+#include "leso.hpp"
 #include "../params.hpp"
 #include "../fsm_common.hpp"
 
@@ -18,6 +20,25 @@ namespace chassis {
  */
 class Chassis {
  public:
+  enum class RecoverySubPhase : uint8_t {
+    kNone = 0,
+    kSidePush,
+    kPitchRecovery,
+    kThetaRecovery,
+  };
+
+  enum class LesoDisableReason : uint8_t {
+    kActive = 0,
+    kObserverDisabled,
+    kOutputDisabled,
+    kStandupIncomplete,
+    kInvalidPosture,
+    kUnsupportedMode,
+    kMidLegDip,
+    kOffGround,
+    kInvalidInput,
+  };
+
   /**
    * @brief 单次控制更新输入
    */
@@ -32,14 +53,31 @@ class Chassis {
     wheel_legged::ChassisMotionTarget motion_target{};  ///< 本周期解析后的唯一运动目标
     bool yaw_centering_complete{false};                 ///< 云台恢复归中是否完成
     bool position_hold_active{false};                   ///< 位置锚定激活中，触发 LQR 误差缩放
+    bool stair_sequence_controls_motion{false};         ///< 台阶动作序列是否已经接管运动控制
     rm::f32 displacement_bias{
         wheel_legged::params::active::control_loop::kExpectedDisplacementBiasMLowLeg};  ///< 低腿长期望位移偏置 [m]
+    bool recovery_body_raw_upright{false};  ///< FallDetector 原始机身直立判据（不含腿角确认）
+    bool recovery_sensor_valid{false};      ///< FallDetector 姿态传感器有效
+    float recovery_up_body_x{0.0f};         ///< 世界竖直方向在机体系的前后分量
+    float recovery_up_body_y{0.0f};         ///< 世界竖直方向在机体系的左右分量
   };
 
   /**
    * @brief 单次控制更新输出
    */
   struct UpdateOutput {
+    rm::f32 lqr_scaled_err_s{0.0f};
+    rm::f32 lqr_scaled_err_s_dot{0.0f};
+    bool position_hold_active{false};
+    std::array<rm::f32, 5> leso_generalized_disturbance{};
+    std::array<rm::f32, 4> leso_virtual_disturbance{};
+    std::array<rm::f32, 4> leso_previous_virtual_command{};
+    std::array<rm::f32, 5> leso_momentum_error{};
+    std::array<rm::f32, 4> leso_applied_compensation{};
+    bool leso_enabled{false};
+    bool leso_initialized{false};
+    LesoDisableReason leso_disable_reason{LesoDisableReason::kObserverDisabled};
+
     rm::f32 lf_tau{0.0f};  ///< 左前关节电机力矩
     rm::f32 lb_tau{0.0f};  ///< 左后关节电机力矩
     rm::f32 rf_tau{0.0f};  ///< 右前关节电机力矩
@@ -82,6 +120,13 @@ class Chassis {
     uint8_t standup_phase{0};                    ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
     float standup_theta_target{0.0f};            ///< 起立摆角 PID 目标当前值 [rad]
     bool mid_leg_dip_active{false};              ///< 中腿长下压激活中
+    bool pitch_fall_retract_active{false};       ///< 俯仰倒地恢复后主动收腿中
+    RecoverySubPhase recovery_sub_phase{RecoverySubPhase::kNone};  ///< 当前恢复内部阶段
+    wheel_legged::FallDirection recovery_effective_direction{
+        wheel_legged::FallDirection::kUnknown};  ///< 经确认并锁存后实际用于控制的方向
+    wheel_legged::FallDirection recovery_pitch_candidate{
+        wheel_legged::FallDirection::kUnknown};  ///< 侧倒转前后倒的待确认方向
+    uint16_t recovery_pitch_confirm_ticks{0};    ///< 前后倒方向连续确认周期数
     rm::f32 stair_t_bl_cmd{0.0f};                ///< 上台阶左腿摆角控制输出（PID 或 LQR）
     rm::f32 stair_t_br_cmd{0.0f};                ///< 上台阶右腿摆角控制输出（PID 或 LQR）
 
@@ -125,6 +170,9 @@ class Chassis {
 
   ChassisStateEstimator state_estimator_{};
   wbr::WbrController lqr_controller_{};
+  wbr::MomentumLeso leso_{};
+  std::array<rm::f32, 4> previous_final_virtual_command_{};
+  std::array<rm::f32, 4> applied_leso_compensation_{};
   bool prev_spin_active_{false};  ///< 上一周期是否处于自旋模式，用于切换 LQR 增益
   wbr::LegKinematics left_leg_{wheel_legged::params::active::chassis::kLegL1M,
                                wheel_legged::params::active::chassis::kLegL2M};
@@ -175,24 +223,33 @@ class Chassis {
   bool standup_complete_{false};             ///< 起立完成
   uint8_t standup_phase_{0};                 ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
   float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
+  bool standup_complete_left_{true};         ///< 左腿起立完成（仅负角度路径使用，默认 true）
+  bool standup_complete_right_{true};        ///< 右腿起立完成（仅负角度路径使用，默认 true）
+  float standup_target_left_{0.0f};          ///< 负角度路径左腿摆角 PID 目标 [rad]
+  float standup_target_right_{0.0f};         ///< 负角度路径右腿摆角 PID 目标 [rad]
   uint8_t theta_recovery_phase_{0};          ///< 仅theta异常恢复阶段：0=收腿到0.14f, 1=摆腿
   bool theta_recovery_active_{false};        ///< theta恢复激活中（退出时跳Phase 0直接进Phase 1）
   bool standup_from_recovery_latch_{false};  ///< theta恢复完成后直接进起立Phase 1
   bool prev_fsm_was_recovery_{false};        ///< 上一周期是否在恢复状态
-  bool trigger_standup_latched_{false};      ///< 台阶 step2 触发起立的防重锁
-  uint16_t standup_phase_stable_ticks_{0};   ///< 起立阶段切换所需的连续满足周期数
-  uint16_t off_ground_duration_ticks_{0};    ///< 离地持续时间（用于衰减气弹簧补偿）
-  bool force_low_leg_{false};                ///< 离地后腿长过短时强制低腿长
-  uint16_t force_low_leg_ticks_{0};          ///< 强制低腿长已持续时间
-  bool mid_leg_dip_active_{false};           ///< 中腿长下压激活中
-  bool mid_leg_dip_armed_{false};            ///< 中腿长下压待命（腿先低于阈值才可触发）
-  uint16_t mid_leg_dip_ticks_{0};            ///< 中腿长下压已持续时间
-  bool leg_was_high_{false};                 ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
-  bool off_ground_kd_active_{false};         ///< 着地边沿后 Kd 增大锁存
-  uint16_t kd_active_ticks_{0};              ///< Kd 增大已持续时间
-  bool was_off_ground_{false};               ///< 上一周期离地状态（用于检测着地边沿）
-  float spring_compensation_scale_{1.0f};    ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
-  bool off_ground_200ms_reached_{false};     ///< 离地已持续 200ms（落地后触发强制低腿长）
+  RecoverySubPhase recovery_sub_phase_{RecoverySubPhase::kNone};
+  wheel_legged::FallDirection recovery_effective_direction_{wheel_legged::FallDirection::kUnknown};
+  wheel_legged::FallDirection recovery_pitch_candidate_{wheel_legged::FallDirection::kUnknown};
+  uint16_t recovery_pitch_confirm_ticks_{0};
+
+  bool trigger_standup_latched_{false};     ///< 台阶 step2 触发起立的防重锁
+  uint16_t standup_phase_stable_ticks_{0};  ///< 起立阶段切换所需的连续满足周期数
+  uint16_t off_ground_duration_ticks_{0};   ///< 离地持续时间（用于衰减气弹簧补偿）
+  bool force_low_leg_{false};               ///< 离地后腿长过短时强制低腿长
+  uint16_t force_low_leg_ticks_{0};         ///< 强制低腿长已持续时间
+  bool mid_leg_dip_active_{false};          ///< 中腿长下压激活中
+  bool mid_leg_dip_armed_{false};           ///< 中腿长下压待命（腿先低于阈值才可触发）
+  uint16_t mid_leg_dip_ticks_{0};           ///< 中腿长下压已持续时间
+  bool leg_was_high_{false};                ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
+  bool off_ground_kd_active_{false};        ///< 着地边沿后 Kd 增大锁存
+  uint16_t kd_active_ticks_{0};             ///< Kd 增大已持续时间
+  bool was_off_ground_{false};              ///< 上一周期离地状态（用于检测着地边沿）
+  float spring_compensation_scale_{1.0f};   ///< 气弹簧补偿缩放（着地后衰减，腿长恢复后复原）
+  bool off_ground_200ms_reached_{false};    ///< 离地已持续 200ms（落地后触发强制低腿长）
 
   rm::modules::PID left_l0_pid_{};
   rm::modules::PID right_l0_pid_{};
@@ -207,6 +264,10 @@ class Chassis {
   rm::modules::PID roll_pid_{};
   rm::modules::PID left_leg_turn_pid_{};
   rm::modules::PID right_leg_turn_pid_{};
+  rm::modules::PID left_leg_turn_pid_front_{};   ///< 前倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_front_{};  ///< 前倒恢复右腿摆角速度 PID
+  rm::modules::PID left_leg_turn_pid_back_{};    ///< 后倒恢复左腿摆角速度 PID
+  rm::modules::PID right_leg_turn_pid_back_{};   ///< 后倒恢复右腿摆角速度 PID
   rm::modules::PID left_leg_angle_pid_standup_{};
   rm::modules::PID right_leg_angle_pid_standup_{};
   rm::modules::PID left_leg_turn_pid_manual_{};

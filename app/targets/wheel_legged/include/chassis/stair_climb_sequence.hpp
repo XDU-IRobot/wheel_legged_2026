@@ -33,7 +33,7 @@ class StairClimbSequence {
     bool running{false};
     bool succeeded{false};
     bool aborted{false};
-    bool trigger_standup{false};
+
     uint32_t phase_elapsed_ms{0U};
     uint32_t stable_elapsed_ms{0U};
     float theta_ll_error_rad{0.0f};

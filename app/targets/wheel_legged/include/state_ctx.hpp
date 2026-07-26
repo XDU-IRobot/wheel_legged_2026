@@ -160,6 +160,7 @@ struct PositionVelocityScales {
  * @brief 根据底盘状态机模式选择合适的纵向误差缩放系数
  */
 PositionVelocityScales ResolvePositionVelocityScales(chassis::Fsm::State mode);
+float ResolveDisplacementBias(chassis::Fsm::State mode);
 
 /**
  * @brief 根据底盘状态机模式选择合适的纵向速度斜坡参数

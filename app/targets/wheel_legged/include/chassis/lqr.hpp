@@ -83,9 +83,9 @@ class WbrController {
     x_err[1] = (current.s_dot - expected.s_dot) * velocity_error_scale;
     x_err[2] = rm::modules::Wrap(current.phi - expected.phi, -kPi, kPi);
     x_err[3] = current.phi_dot - expected.phi_dot;
-    x_err[4] = current.theta_ll - expected.theta_ll;
+    x_err[4] = (current.theta_ll - expected.theta_ll);
     x_err[5] = current.theta_ll_dot - expected.theta_ll_dot;
-    x_err[6] = current.theta_lr - expected.theta_lr;
+    x_err[6] = (current.theta_lr - expected.theta_lr);
     x_err[7] = current.theta_lr_dot - expected.theta_lr_dot;
     x_err[8] = current.theta_b - expected.theta_b;
     x_err[9] = current.theta_b_dot - expected.theta_b_dot;

@@ -8,7 +8,9 @@
 #include <array>
 
 #include "include/ai/policy_runner.hpp"
+#include "include/fall_detector.hpp"
 #include "include/globals.hpp"
+#include "include/posture_observer.hpp"
 
 namespace {
 
@@ -71,9 +73,36 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
                          const chassis::Chassis::UpdateOutput &chassis_control_output,
                          const gimbal::Gimbal::UpdateOutput &gimbal_control_output,
                          const chassis::StairTaskCoordinator::Output &stair_task_output,
-                         const chassis::StairClimbSequence::Output &stair_sequence_output) {
+                         const chassis::StairClimbSequence::Output &stair_sequence_output,
+                         const wheel_legged::PostureObservation &posture_obs,
+                         const wheel_legged::FallDetection &fall_detection) {
   // ── 时间戳与状态机 ──
   wl_debug.tick_ms = tick_ms;
+  wl_debug.leso_enabled = static_cast<uint8_t>(chassis_control_output.leso_enabled);
+  wl_debug.leso_initialized = static_cast<uint8_t>(chassis_control_output.leso_initialized);
+  wl_debug.leso_disable_reason = static_cast<uint8_t>(chassis_control_output.leso_disable_reason);
+  wl_debug.leso_previous_t_wl = chassis_control_output.leso_previous_virtual_command[0];
+  wl_debug.leso_previous_t_wr = chassis_control_output.leso_previous_virtual_command[1];
+  wl_debug.leso_previous_t_bl = chassis_control_output.leso_previous_virtual_command[2];
+  wl_debug.leso_previous_t_br = chassis_control_output.leso_previous_virtual_command[3];
+  wl_debug.leso_momentum_error_wl = chassis_control_output.leso_momentum_error[0];
+  wl_debug.leso_momentum_error_wr = chassis_control_output.leso_momentum_error[1];
+  wl_debug.leso_momentum_error_ll = chassis_control_output.leso_momentum_error[2];
+  wl_debug.leso_momentum_error_lr = chassis_control_output.leso_momentum_error[3];
+  wl_debug.leso_momentum_error_pitch = chassis_control_output.leso_momentum_error[4];
+  wl_debug.leso_generalized_d_wl = chassis_control_output.leso_generalized_disturbance[0];
+  wl_debug.leso_generalized_d_wr = chassis_control_output.leso_generalized_disturbance[1];
+  wl_debug.leso_generalized_d_ll = chassis_control_output.leso_generalized_disturbance[2];
+  wl_debug.leso_generalized_d_lr = chassis_control_output.leso_generalized_disturbance[3];
+  wl_debug.leso_generalized_d_pitch = chassis_control_output.leso_generalized_disturbance[4];
+  wl_debug.leso_virtual_d_wl = chassis_control_output.leso_virtual_disturbance[0];
+  wl_debug.leso_virtual_d_wr = chassis_control_output.leso_virtual_disturbance[1];
+  wl_debug.leso_virtual_d_bl = chassis_control_output.leso_virtual_disturbance[2];
+  wl_debug.leso_virtual_d_br = chassis_control_output.leso_virtual_disturbance[3];
+  wl_debug.leso_compensation_t_wl = chassis_control_output.leso_applied_compensation[0];
+  wl_debug.leso_compensation_t_wr = chassis_control_output.leso_applied_compensation[1];
+  wl_debug.leso_compensation_t_bl = chassis_control_output.leso_applied_compensation[2];
+  wl_debug.leso_compensation_t_br = chassis_control_output.leso_applied_compensation[3];
   wl_debug.chassis_fsm_state = static_cast<uint8_t>(chassis_output.mode);
   wl_debug.gimbal_fsm_state = static_cast<uint8_t>(gimbal_output.mode);
   wl_debug.chassis_fsm_state_changed = static_cast<uint8_t>(chassis_output.state_changed);
@@ -259,6 +288,16 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.imu_raw_acc_y_mps2 = motor.imu.acc_y_mps2;
   wl_debug.imu_raw_acc_z_mps2 = motor.imu.acc_z_mps2;
 
+  // ── 四元数解算欧拉角（对比 IMU 内置欧拉角，排查万向节死锁）──
+  {
+    float q[4] = {motor.imu.quat_w, motor.imu.quat_x, motor.imu.quat_y, motor.imu.quat_z};
+    float euler[3];
+    rm::modules::QuatToEuler(q, euler);
+    wl_debug.imu_quat_roll_rad = euler[1];
+    wl_debug.imu_quat_pitch_rad = -euler[0];
+    wl_debug.imu_quat_yaw_rad = euler[2];
+  }
+
   // ── 底盘状态向量 ──
   const auto &x = chassis_control_output.current_state;
   wl_debug.state_s_m = x.s;
@@ -309,6 +348,11 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
   wl_debug.chassis_standup_complete = static_cast<uint8_t>(chassis_control_output.standup_complete);
   wl_debug.chassis_standup_phase = chassis_control_output.standup_phase;
+  wl_debug.chassis_pitch_fall_retract = static_cast<uint8_t>(chassis_control_output.pitch_fall_retract_active);
+  wl_debug.chassis_recovery_sub_phase = static_cast<uint8_t>(chassis_control_output.recovery_sub_phase);
+  wl_debug.chassis_recovery_direction = static_cast<uint8_t>(chassis_control_output.recovery_effective_direction);
+  wl_debug.chassis_recovery_pitch_candidate = static_cast<uint8_t>(chassis_control_output.recovery_pitch_candidate);
+  wl_debug.chassis_recovery_pitch_confirm_ticks = chassis_control_output.recovery_pitch_confirm_ticks;
   wl_debug.chassis_standup_theta_target_rad = chassis_control_output.standup_theta_target;
 
   // ── 输入语义（便于调试时定位遥控器/状态机决策根因）──
@@ -320,67 +364,20 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.gimbal_target_yaw_rad = gimbal_control_output.yaw_target_rad;
   wl_debug.gimbal_target_pitch_rad = -gimbal_control_output.pitch_target_rad;
 
-  // ── AI Policy 网络观测输入 ──
-  const auto &p = wheel_legged::ai::ai_policy_debug;
-  // base_ang_vel * 0.25
-  wl_debug.policy_obs_gyro_x = p.observations[0];
-  wl_debug.policy_obs_gyro_y = p.observations[1];
-  wl_debug.policy_obs_gyro_z = p.observations[2];
-  // projected_gravity
-  wl_debug.policy_obs_gravity_x = p.observations[3];
-  wl_debug.policy_obs_gravity_y = p.observations[4];
-  wl_debug.policy_obs_gravity_z = p.observations[5];
-  // command
-  wl_debug.policy_obs_cmd_vx = p.observations[6];
-  wl_debug.policy_obs_cmd_yaw = p.observations[7];
-  wl_debug.policy_obs_cmd_height = p.observations[8];
-  // leg angle
-  wl_debug.policy_obs_theta_ll = p.observations[9];
-  wl_debug.policy_obs_theta_lr = p.observations[10];
-  // leg angle dot * 0.05
-  wl_debug.policy_obs_theta_dot_ll = p.observations[11];
-  wl_debug.policy_obs_theta_dot_lr = p.observations[12];
-  // leg length * 5.0
-  wl_debug.policy_obs_l_l = p.observations[13];
-  wl_debug.policy_obs_l_r = p.observations[14];
-  // leg length dot * 0.25
-  wl_debug.policy_obs_l_dot_l = p.observations[15];
-  wl_debug.policy_obs_l_dot_r = p.observations[16];
-  // wheel pos
-  wl_debug.policy_obs_wheel_pos_l = p.observations[17];
-  wl_debug.policy_obs_wheel_pos_r = p.observations[18];
-  // wheel vel * 0.05
-  wl_debug.policy_obs_wheel_vel_l = p.observations[19];
-  wl_debug.policy_obs_wheel_vel_r = p.observations[20];
-  // last action
-  wl_debug.policy_obs_prev_a_theta_l = p.observations[21];
-  wl_debug.policy_obs_prev_a_l0_l = p.observations[22];
-  wl_debug.policy_obs_prev_a_wheel_l = p.observations[23];
-  wl_debug.policy_obs_prev_a_theta_r = p.observations[24];
-  wl_debug.policy_obs_prev_a_l0_r = p.observations[25];
-  wl_debug.policy_obs_prev_a_wheel_r = p.observations[26];
-
-  // ── AI Policy 网络动作输出 ──
-  wl_debug.policy_act_theta_l = p.actions[0];
-  wl_debug.policy_act_l0_l = p.actions[1];
-  wl_debug.policy_act_wheel_l = p.actions[2];
-  wl_debug.policy_act_theta_r = p.actions[3];
-  wl_debug.policy_act_l0_r = p.actions[4];
-  wl_debug.policy_act_wheel_r = p.actions[5];
-
-  // ── AI Policy 网络动作输出 (物理单位转换) ──
-  constexpr float kL0Min = 0.12192586f;
-  constexpr float kL0Max = 0.30063868f;
-  auto clamp_l0 = [](float v) { return v < kL0Min ? kL0Min : (v > kL0Max ? kL0Max : v); };
-  wl_debug.policy_act_theta_l_rad = p.actions[0] * 0.5f;
-  wl_debug.policy_act_theta_r_rad = p.actions[3] * 0.5f;
-  wl_debug.policy_act_l0_l_m = clamp_l0(p.actions[1] * 0.1f + 0.17f);
-  wl_debug.policy_act_l0_r_m = clamp_l0(p.actions[4] * 0.1f + 0.17f);
-  wl_debug.policy_act_wheel_l_rad_s = p.actions[2] * 52.0f;
-  wl_debug.policy_act_wheel_r_rad_s = p.actions[5] * 52.0f;
-
-  // ── AI Policy 推理状态 ──
-  wl_debug.policy_infer_us = p.last_infer_us;
-  wl_debug.policy_step_count = p.step_count;
-  wl_debug.policy_ok = static_cast<uint8_t>(p.ok);
+  // ── 四元数倒地检测影子输出 ──
+  wl_debug.fall_up_body_x = posture_obs.up_body_x;
+  wl_debug.fall_up_body_y = posture_obs.up_body_y;
+  wl_debug.fall_tilt_cos = posture_obs.up_body_z;
+  wl_debug.fall_flags = (static_cast<uint8_t>(fall_detection.fall_candidate) << 0) |
+                        (static_cast<uint8_t>(fall_detection.fall_confirmed) << 1) |
+                        ((static_cast<uint8_t>(fall_detection.direction) & 0x07) << 2) |
+                        ((static_cast<uint8_t>(fall_detection.cause) & 0x03) << 5);
+  wl_debug.fall_aux_flags = (static_cast<uint8_t>(fall_detection.body_upright_confirmed) << 0) |
+                            (static_cast<uint8_t>(fall_detection.sensor_valid) << 1) |
+                            (static_cast<uint8_t>(fall_detection.leg_configuration_safe) << 2) |
+                            (static_cast<uint8_t>(fall_detection.leg_fall_candidate) << 3);
+  wl_debug.fall_condition_hold_ms = static_cast<uint16_t>(fall_detection.condition_hold_ms);
+  wl_debug.fall_upright_hold_ms = static_cast<uint16_t>(fall_detection.upright_hold_ms);
+  wl_debug.posture_fault_flags = posture_obs.fault_flags;
+  wl_debug.legacy_posture_valid = static_cast<uint8_t>(chassis_control_output.posture_valid);
 }

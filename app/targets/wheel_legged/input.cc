@@ -732,6 +732,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 下台阶：向下 ToF 切换完成后才允许进入 0.25 m 接近阶段；单帧双侧小于阈值即触发。
   input.mode_request.stair_descend_request = tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend;
+  // input.mode_request.stair_descend_request = false;  // 下台阶 FSM 已关闭，ToF 硬件切换不受影响
   input.mode_request.stair_descend_ready = false;
   input.mode_request.stair_descend_trigger = false;
   if (input.mode_request.stair_descend_request && g.active_tof_mode == wheel_legged::TofMode::kStairDescend &&
@@ -821,23 +822,13 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 }
 
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
-                                         const chassis::Chassis::UpdateOutput &chassis_output, uint32_t &fall_start_ms,
-                                         bool &was_posture_invalid) {
-  // 倒地检测：基于上周期底盘姿态（posture_valid 在 Chassis::Update 中计算，FSM 之前运行，因此用上一周期值）
-
-  const bool fall_detected = !chassis_output.posture_valid;
-  uint32_t fall_detected_hold_ms = 0;
-  bool upright_stable = false;
-
-  if (fall_detected) {
-    if (!was_posture_invalid) {
-      fall_start_ms = tick_ms;
-    }
-    fall_detected_hold_ms = tick_ms - fall_start_ms;
-  } else if (was_posture_invalid) {
-    upright_stable = true;
-  }
-  was_posture_invalid = fall_detected;
+                                         const chassis::Chassis::UpdateOutput &chassis_output) {
+  // 使用同周期四元数 FallDetector 结果，消除一拍延迟
+  (void)chassis_output;
+  const bool fall_detected = input.fall_detection.fall_candidate;
+  const uint32_t fall_detected_hold_ms = input.fall_detection.condition_hold_ms;
+  const bool upright_stable = input.fall_detection.body_upright_confirmed;
+  // 跨周期变量在新路径下不再需要（FallDetector 内部维护计时状态）
 
   chassis::Fsm::Input fsm_input{};
   const auto &m = input.mode_request;

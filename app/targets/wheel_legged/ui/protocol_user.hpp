@@ -158,9 +158,19 @@ struct EnemyGoldCoinRFID {
 
 struct EnemyRobotBuff {
   enum class SentryPosture : u8 {
-    ATTACK = 1,   // 进攻姿态
-    DEFENSE = 2,  // 防御姿态
-    MOBILE = 3    // 移动姿态
+    ATTACK = 1,            // 进攻姿态
+    DEFENSE = 2,           // 防御姿态
+    MOBILE = 3,            // 移动姿态
+    ENHANCED_ATTACK = 4,   // 强化进攻姿态
+    ENHANCED_DEFENSE = 5,  // 强化防御姿态
+    ENHANCED_MOBILE = 6,   // 强化移动姿态
+  };
+
+  enum class RobotStatus : u8 {
+    ALIVE = 0,                // 存活
+    DEAD = 1,                 // 战亡
+    INVINCIBLE = 2,           // 无敌但不虚弱
+    INVINCIBLE_WEAKENED = 3,  // 无敌且虚弱
   };
 
   struct RobotBuffInfo {
@@ -188,6 +198,13 @@ struct EnemyRobotBuff {
 
   // byte 35
   SentryPosture sentry_posture;
+
+  // byte 36~40
+  RobotStatus hero_status;
+  RobotStatus engineer_status;
+  RobotStatus infantry3_status;
+  RobotStatus infantry4_status;
+  RobotStatus sentry_status;
 };
 
 struct AllRadarInfo {
