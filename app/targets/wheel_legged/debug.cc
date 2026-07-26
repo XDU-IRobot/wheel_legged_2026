@@ -202,6 +202,15 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.auto_jump_tof_armed = static_cast<uint8_t>(input.auto_jump_tof_armed_debug);
   wl_debug.auto_jump_both_active = static_cast<uint8_t>(input.auto_jump_both_active);
   wl_debug.auto_jump_trigger_ready = static_cast<uint8_t>(input.auto_jump_trigger_ready);
+  wl_debug.auto_jump_mode = input.highland_auto_jump_enabled   ? 2U
+                            : input.auto_jump_enabled          ? 1U
+                                                               : 0U;
+  wl_debug.highland_auto_jump_triggered = static_cast<uint8_t>(input.highland_auto_jump_triggered);
+  wl_debug.highland_auto_jump_enabled = static_cast<uint8_t>(input.highland_auto_jump_enabled);
+  wl_debug.highland_auto_jump_both_close = static_cast<uint8_t>(input.highland_auto_jump_both_close);
+  wl_debug.highland_auto_jump_tof_armed = static_cast<uint8_t>(input.highland_auto_jump_tof_armed_debug);
+  wl_debug.highland_auto_jump_both_active = static_cast<uint8_t>(input.highland_auto_jump_both_active);
+  wl_debug.highland_auto_jump_trigger_ready = static_cast<uint8_t>(input.highland_auto_jump_trigger_ready);
   wl_debug.stair_descend_request = static_cast<uint8_t>(input.mode_request.stair_descend_request);
   wl_debug.stair_descend_ready = static_cast<uint8_t>(input.mode_request.stair_descend_ready);
   wl_debug.stair_descend_triggered = static_cast<uint8_t>(input.stair_descend_triggered);

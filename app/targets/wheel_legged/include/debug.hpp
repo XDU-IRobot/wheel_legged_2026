@@ -86,6 +86,13 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t auto_jump_tof_armed;      // 调试：auto_jump_tof_armed 条件
   uint8_t auto_jump_both_active;    // 调试：both_active 条件（含200ms消抖）
   uint8_t auto_jump_trigger_ready;  // 调试：both_close && tof_armed && both_active
+  uint8_t auto_jump_mode;                 // 当前跳跃模式：0=无 1=反飞坡(Z) 2=中央高地(Ctrl+Z)
+  uint8_t highland_auto_jump_triggered;      // Ctrl+Z 中央高地自动跳跃触发
+  uint8_t highland_auto_jump_enabled;        // 高地自动跳跃模式是否开启
+  uint8_t highland_auto_jump_both_close;     // 调试：高地 both_close 条件
+  uint8_t highland_auto_jump_tof_armed;      // 调试：高地 tof_armed 条件
+  uint8_t highland_auto_jump_both_active;    // 调试：高地 both_active 条件
+  uint8_t highland_auto_jump_trigger_ready;  // 调试：高地 trigger_ready
   uint8_t stair_descend_request;    // 下台阶模式请求
   uint8_t stair_descend_ready;      // 向下 ToF 数据已准备完成
   uint8_t stair_descend_triggered;  // 双侧向下 ToF 单帧触发

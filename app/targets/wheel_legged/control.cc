@@ -604,6 +604,17 @@ void ControlLoop() {
     input.auto_jump_enabled = false;
   }
 
+  // Ctrl+Z 中央高地自动跳跃生命周期：镜像 Z 键逻辑
+  if (input.highland_auto_jump_triggered && is_jump_state(chassis_output.mode)) {
+    tc_state.highland_auto_jump_in_progress = true;
+  }
+  if (tc_state.highland_auto_jump_in_progress && !is_jump_state(chassis_output.mode)) {
+    tc_state.highland_auto_jump_enabled = false;
+    tc_state.highland_auto_jump_in_progress = false;
+    tc_state.highland_auto_jump_tof_armed = true;
+    input.highland_auto_jump_enabled = false;
+  }
+
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
