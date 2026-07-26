@@ -449,7 +449,7 @@ constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆
 constexpr float kStandupPhase0TargetLengthM = 0.36f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
 constexpr float kStandupPhase0ThetaTolRad = 0.3f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
-constexpr float kStandupPhase1ThetaTolRad = 0.3f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1ThetaTolRad = 0.4f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.008f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
@@ -638,17 +638,17 @@ constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向�
 // ==== 期望状态偏置（腿摆角/机体俯仰）====
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;  ///< 低腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;  ///< 低腿长期望右腿摆角偏置 [rad]
-constexpr float kExpectedThetaBBiasRad = -0.075f;     ///< 期望机体俯仰偏置 [rad]
+constexpr float kExpectedThetaBBiasRad = -0.08f;     ///< 期望机体俯仰偏置 [rad]
 
 constexpr float kExpectedDisplacementBiasM = 0.0f;          ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = 0.f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMLowLeg = -0.2f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
 constexpr float kExpectedDisplacementBiasMMidLeg = 0.f;   ///< 中腿长期望位移偏置 [m]（满弹量时）
 constexpr float kExpectedDisplacementBiasMHighLeg = 0.f;  ///< 高腿长期望位移偏置 [m]（满弹量时）
 constexpr int kInitialAmmoCount = 60;                       ///< 初始弹量 [发]
 constexpr float kDisplacementBiasPerShot = 1.f / 120.f;  ///< 每发弹的位移偏置变化量 [m/发]（待标定）
 
 // ==== 速度斜坡参数（按腿长档位分级）====
-constexpr SdotRampParams kSdotRampLowLeg{0.007f, 0.007f};     ///< 低腿长速度斜坡（加速/制动步长）
+constexpr SdotRampParams kSdotRampLowLeg{0.006f, 0.007f};     ///< 低腿长速度斜坡（加速/制动步长）
 constexpr SdotRampParams kSdotRampMidLeg{0.0040f, 0.006f};    ///< 中腿长速度斜坡(C 键触发)
 constexpr SdotRampParams kSdotRampMidLegF{0.0055f, 0.0055f};  ///< 中腿长速度斜坡（G 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};    ///< 高腿长速度斜坡
@@ -822,23 +822,24 @@ using namespace common;
 
 namespace tof {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
-constexpr std::uint16_t kAutoJumpRearmDistanceMm = 450U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1000U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 900U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
 constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
 constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
+
 }  // namespace tof
 
 namespace tof_highland {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 950U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;
-constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
-constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 15U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 350U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
 constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
