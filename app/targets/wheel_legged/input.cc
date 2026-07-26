@@ -200,6 +200,8 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
       if (tc_state.requested_tof_mode == wheel_legged::TofMode::kStairDescend) {
         tc_state.auto_jump_enabled = false;
         tc_state.auto_jump_tof_armed = true;
+        tc_state.highland_auto_jump_enabled = false;
+        tc_state.highland_auto_jump_tof_armed = true;
       }
     }
   }
@@ -214,6 +216,16 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
     tc_state.z_auto_jump_armed = false;
   }
   if (!z_pressed) tc_state.z_auto_jump_armed = true;
+
+  // Ctrl+Z 组合键上升沿：在前向 ToF 模式下启动一次中央高地自动跳跃
+  if (z_pressed && ctrl_pressed && tc_state.ctrl_z_highland_armed) {
+    if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump && !tc_state.highland_auto_jump_enabled) {
+      tc_state.highland_auto_jump_enabled = true;
+      tc_state.highland_auto_jump_tof_armed = true;
+    }
+    tc_state.ctrl_z_highland_armed = false;
+  }
+  if (!z_pressed || !ctrl_pressed) tc_state.ctrl_z_highland_armed = true;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -562,6 +574,7 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 
   // 1. 从执行器采集关节/轮毂/IMU 反馈
   input.auto_jump_triggered = false;
+  input.highland_auto_jump_triggered = false;
   input.stair_descend_triggered = false;
   actuators.FillEstimatorInput(g, input.estimator_input);
 
@@ -720,7 +733,47 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
     }
   }
 
+  // 3c-2. Ctrl+Z 中央高地自动跳跃：使用 tof_highland 距离参数
+  if (tc_state.highland_auto_jump_enabled && g.left_front_tof.has_value() && g.right_front_tof.has_value()) {
+    const auto &hl_left = *g.left_front_tof;
+    const auto &hl_right = *g.right_front_tof;
+    const bool hl_measurements_valid =
+        hl_left.ranging() && hl_right.ranging() && hl_left.data_valid() && hl_right.data_valid();
+    const bool highland_both_close = hl_measurements_valid &&
+                                     (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 <
+                                         params::active::tof_highland::kAutoJumpTriggerDistanceMm &&
+                                     (hl_left.measurement().distance_mm + hl_right.measurement().distance_mm) / 2 >
+                                         params::active::tof_highland::kAutoJumpMinDistanceMm;
+    const bool highland_both_range_ok =
+        hl_left.measurement().range_status == 0 && hl_right.measurement().range_status == 0;
+    if (highland_both_range_ok) {
+      if (tc_state.highland_both_active_start_ms == 0) tc_state.highland_both_active_start_ms = now_ms;
+    } else {
+      tc_state.highland_both_active_start_ms = 0;
+    }
+    const bool highland_both_active =
+        highland_both_range_ok && (now_ms - tc_state.highland_both_active_start_ms >=
+                                   params::active::tof_highland::kAutoJumpBothActiveDurationMs);
+    input.highland_auto_jump_both_close = highland_both_close;
+    input.highland_auto_jump_tof_armed_debug = tc_state.highland_auto_jump_tof_armed;
+    input.highland_auto_jump_both_active = highland_both_active;
+    input.highland_auto_jump_trigger_ready =
+        highland_both_close && tc_state.highland_auto_jump_tof_armed && highland_both_active;
+    if (highland_both_close && tc_state.highland_auto_jump_tof_armed && highland_both_active) {
+      input.mode_request.jump_trigger = true;
+      input.highland_auto_jump_triggered = true;
+      tc_state.highland_auto_jump_tof_armed = false;
+      tc_state.highland_both_active_start_ms = 0;
+    }
+    const bool highland_both_clear =
+        hl_measurements_valid &&
+        hl_left.measurement().distance_mm > params::active::tof_highland::kAutoJumpRearmDistanceMm &&
+        hl_right.measurement().distance_mm > params::active::tof_highland::kAutoJumpRearmDistanceMm;
+    if (highland_both_clear) tc_state.highland_auto_jump_tof_armed = true;
+  }
+
   input.auto_jump_enabled = tc_state.auto_jump_enabled;
+  input.highland_auto_jump_enabled = tc_state.highland_auto_jump_enabled;
 
   // 3d. 自瞄上位机目标（NUC 反馈 → host_target，仅在自瞄模式下生效）
   const bool auto_aim_active = IsAutoAimProfile(input.mode_request.combat_profile);

@@ -179,6 +179,19 @@ constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
 }  // namespace tof
 
+namespace tof_highland {
+constexpr bool kEnabled = true;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 350U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
+constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
+constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
+constexpr float kPollRequestFrequencyHz = 100.0f;
+constexpr float kDebugLowPassAlpha = 0.2F;
+constexpr std::size_t kDebugMovingAverageWindow = 5U;
+}  // namespace tof_highland
+
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
 using namespace common::globals;
@@ -817,6 +830,19 @@ constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
 }  // namespace tof
 
+namespace tof_highland {
+constexpr bool kEnabled = true;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 950U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 15U;
+constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
+constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
+constexpr float kPollRequestFrequencyHz = 100.0f;
+constexpr float kDebugLowPassAlpha = 0.2F;
+constexpr std::size_t kDebugMovingAverageWindow = 5U;
+}  // namespace tof_highland
+
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
 using namespace common::globals;
@@ -1454,7 +1480,7 @@ using namespace common;
 
 namespace tof {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1150U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1000U;
 constexpr std::uint16_t kAutoJumpMinDistanceMm = 900U;
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
@@ -1463,7 +1489,21 @@ constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
 constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
+
 }  // namespace tof
+
+namespace tof_highland {
+constexpr bool kEnabled = true;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 350U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
+constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
+constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
+constexpr float kPollRequestFrequencyHz = 100.0f;
+constexpr float kDebugLowPassAlpha = 0.2F;
+constexpr std::size_t kDebugMovingAverageWindow = 5U;
+}  // namespace tof_highland
 
 // ── CAN 总线 ID 与电机配置 ──
 namespace globals {
@@ -1655,7 +1695,7 @@ constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自启超时 
 constexpr std::uint32_t kRecoveryFailedTimeoutMs = 3000U;     ///< 自启失败锁定超时 [ms]
 
 // ==== 跳跃 ====
-constexpr std::uint32_t kJumpLowPrepMs = 100U;      ///< 跳跃预备阶段持续时间 [ms]
+constexpr std::uint32_t kJumpLowPrepMs = 0U;        ///< 跳跃预备阶段持续时间 [ms]
 constexpr std::uint32_t kJumpLowPushMaxMs = 2500U;  ///< 跳跃蹬伸阶段最长持续时间 [ms]
 constexpr std::uint32_t kJumpLowRecoverMs = 1000U;  ///< 跳跃回收阶段持续时间（保底超时）[ms]
 constexpr std::uint32_t kJumpLowRecoverMinMs = 500U;  ///< 跳跃回收阶段最低维持时间（此后开始判断离地）[ms]
@@ -1869,7 +1909,7 @@ constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 10U;  ///< 偏航就�
 // ==== 基本运动 ====
 constexpr float kTargetForwardSpeedMaxMps = 2.1f;         ///< 最大前进速度 [m/s+]
 constexpr float kTargetForwardSpeedMaxNoScMps = 2.1f;     ///< 无超电最大前进速度 [m/s]
-constexpr float kTargetForwardSpeedMaxHighLegMps = 1.2f;  ///< 高腿长模式最大前进速度 [m/s]
+constexpr float kTargetForwardSpeedMaxHighLegMps = 1.6f;  ///< 高腿长模式最大前进速度 [m/s]
 constexpr float kTargetForwardSpeedMaxMidLegMps = 1.0f;   ///< F键中腿长模式最大前进速度 [m/s]
 constexpr float kTargetSpeedBiasLowLegMps = 0.f;          ///< 低腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目标速度偏置 [m/s]
@@ -1926,7 +1966,7 @@ constexpr float kSpinTargetYawDotRadNoScS2 = 8.0f;      ///< 无超电小陀螺�
 constexpr float kSpinTargetYawDotRadNoScS3 = 9.0f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] 65-75W
 constexpr float kSpinTargetYawDotRadNoScS4 = 10.f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 0.15f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
-constexpr float kYawResetRampStepRad = 0.005f;          ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
+constexpr float kYawResetRampStepRad = 0.02f;           ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
 constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.4f;            ///< 小陀螺平移增益
 constexpr float kSpinThetaLlBiasRad = 0.0f;             ///< 小陀螺时左腿摆角偏置 [rad]

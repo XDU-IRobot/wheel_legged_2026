@@ -75,24 +75,31 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   uint8_t dr16_online;  // DR16 在线
 
   // ── 遥控器/图传语义请求 ──
-  uint8_t input_domain_request;     // 解析后的工作域
-  uint8_t input_leg_profile;        // 腿长档位
-  uint8_t input_combat_profile;     // 战斗域子模式
-  uint8_t input_target_source;      // 目标来源
-  uint8_t input_host_target_valid;  // 上位机目标有效
-  uint8_t auto_jump_triggered;      // 自动跳跃触发（TOF 触发）
-  uint8_t auto_jump_enabled;        // 自动跳跃模式是否开启
-  uint8_t auto_jump_both_close;     // 调试：both_close 条件
-  uint8_t auto_jump_tof_armed;      // 调试：auto_jump_tof_armed 条件
-  uint8_t auto_jump_both_active;    // 调试：both_active 条件（含200ms消抖）
-  uint8_t auto_jump_trigger_ready;  // 调试：both_close && tof_armed && both_active
-  uint8_t stair_descend_request;    // 下台阶模式请求
-  uint8_t stair_descend_ready;      // 向下 ToF 数据已准备完成
-  uint8_t stair_descend_triggered;  // 双侧向下 ToF 单帧触发
-  uint8_t tc_remote_valid;          // 图传键鼠链路活跃（收到键盘帧）
-  uint8_t stair_high_leg_request;   // Stair coordinator requests high-leg standby
-  uint8_t stair_task_request;       // Stair command parsed this cycle
-  uint8_t stair_task_mode;          // Stair coordinator state
+  uint8_t input_domain_request;              // 解析后的工作域
+  uint8_t input_leg_profile;                 // 腿长档位
+  uint8_t input_combat_profile;              // 战斗域子模式
+  uint8_t input_target_source;               // 目标来源
+  uint8_t input_host_target_valid;           // 上位机目标有效
+  uint8_t auto_jump_triggered;               // 自动跳跃触发（TOF 触发）
+  uint8_t auto_jump_enabled;                 // 自动跳跃模式是否开启
+  uint8_t auto_jump_both_close;              // 调试：both_close 条件
+  uint8_t auto_jump_tof_armed;               // 调试：auto_jump_tof_armed 条件
+  uint8_t auto_jump_both_active;             // 调试：both_active 条件（含200ms消抖）
+  uint8_t auto_jump_trigger_ready;           // 调试：both_close && tof_armed && both_active
+  uint8_t auto_jump_mode;                    // 当前跳跃模式：0=无 1=反飞坡(Z) 2=中央高地(Ctrl+Z)
+  uint8_t highland_auto_jump_triggered;      // Ctrl+Z 中央高地自动跳跃触发
+  uint8_t highland_auto_jump_enabled;        // 高地自动跳跃模式是否开启
+  uint8_t highland_auto_jump_both_close;     // 调试：高地 both_close 条件
+  uint8_t highland_auto_jump_tof_armed;      // 调试：高地 tof_armed 条件
+  uint8_t highland_auto_jump_both_active;    // 调试：高地 both_active 条件
+  uint8_t highland_auto_jump_trigger_ready;  // 调试：高地 trigger_ready
+  uint8_t stair_descend_request;             // 下台阶模式请求
+  uint8_t stair_descend_ready;               // 向下 ToF 数据已准备完成
+  uint8_t stair_descend_triggered;           // 双侧向下 ToF 单帧触发
+  uint8_t tc_remote_valid;                   // 图传键鼠链路活跃（收到键盘帧）
+  uint8_t stair_high_leg_request;            // Stair coordinator requests high-leg standby
+  uint8_t stair_task_request;                // Stair command parsed this cycle
+  uint8_t stair_task_mode;                   // Stair coordinator state
   uint8_t stair_requested_attempts;
   uint8_t stair_completed_attempts;
   uint8_t stair_phase;  // Active sequence phase
