@@ -751,7 +751,6 @@ void UpdateRawFeedbackAndInputSnapshot(SharedResources &g, chassis_runtime::Actu
 chassis::Fsm::Input BuildChassisFsmInput(const InputSnapshot &input, const uint32_t tick_ms,
                                          const chassis::Chassis::UpdateOutput &chassis_output) {
   // 使用同周期四元数 FallDetector 结果，消除一拍延迟
-  (void)chassis_output;
   const bool fall_detected = input.fall_detection.fall_candidate;
   const uint32_t fall_detected_hold_ms = input.fall_detection.condition_hold_ms;
   const bool upright_stable = input.fall_detection.body_upright_confirmed;

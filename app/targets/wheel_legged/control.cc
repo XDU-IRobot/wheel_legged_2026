@@ -184,14 +184,32 @@ constexpr float kVxInputDeadbandNorm = ns::control_loop::kVxInputDeadbandNorm;
 constexpr float kVyInputDeadbandNorm = ns::control_loop::kVyInputDeadbandNorm;
 constexpr float kYawFollowRampStepRadS = ns::control_loop::kYawFollowRampStepRadS;
 constexpr float kYawFollowRampStepRadNoScS = ns::control_loop::kYawFollowRampStepRadNoScS;
-constexpr float kLargeTurnThresholdRad = ns::control_loop::kLargeTurnThresholdRad;
-constexpr float kSafeTurnSpeedMps = ns::control_loop::kSafeTurnSpeedMps;
-constexpr float kLargeTurnThetaThresholdRad = ns::control_loop::kLargeTurnThetaThresholdRad;
-constexpr float kLargeTurnRecoveryAccelScale = ns::control_loop::kLargeTurnRecoveryAccelScale;
-constexpr float kLargeTurnThresholdRadMidLeg = ns::control_loop::kLargeTurnThresholdRadMidLeg;
-constexpr float kSafeTurnSpeedMpsMidLeg = ns::control_loop::kSafeTurnSpeedMpsMidLeg;
-constexpr float kLargeTurnThetaThresholdRadMidLeg = ns::control_loop::kLargeTurnThetaThresholdRadMidLeg;
-constexpr float kLargeTurnRecoveryAccelScaleMidLeg = ns::control_loop::kLargeTurnRecoveryAccelScaleMidLeg;
+constexpr auto kYawFollowMotorErrorLowLeg = ns::control_loop::kYawFollowMotorErrorLowLeg;
+constexpr auto kYawFollowMotorErrorMidLeg = ns::control_loop::kYawFollowMotorErrorMidLeg;
+constexpr auto kYawFollowMotorErrorHighLeg = ns::control_loop::kYawFollowMotorErrorHighLeg;
+
+constexpr bool IsValidYawFollowMotorErrorSchedule(
+    const wheel_legged::params::YawFollowMotorErrorScheduleParams &params) {
+  return params.tight_speed_mps > params.wide_speed_mps && params.wide_limit_rad >= params.tight_limit_rad &&
+         params.tight_limit_rad > 0.0f;
+}
+
+static_assert(IsValidYawFollowMotorErrorSchedule(kYawFollowMotorErrorLowLeg));
+static_assert(IsValidYawFollowMotorErrorSchedule(kYawFollowMotorErrorMidLeg));
+static_assert(IsValidYawFollowMotorErrorSchedule(kYawFollowMotorErrorHighLeg));
+
+constexpr wheel_legged::params::YawFollowMotorErrorScheduleParams ResolveYawFollowMotorErrorSchedule(
+    const chassis::Fsm::State mode) {
+  switch (mode) {
+    case chassis::Fsm::State::kMidLeg:
+      return kYawFollowMotorErrorMidLeg;
+    case chassis::Fsm::State::kHighLeg:
+    case chassis::Fsm::State::kStairTask:
+      return kYawFollowMotorErrorHighLeg;
+    default:
+      return kYawFollowMotorErrorLowLeg;
+  }
+}
 constexpr float kSpinYawRampStepRadS = ns::control_loop::kSpinYawRampStepRadS;
 constexpr float kSpinExitYawRampStepRadS = ns::control_loop::kSpinExitYawRampStepRadS;
 constexpr float kSpinTargetYawDotRadS1 = ns::control_loop::kSpinTargetYawDotRadS1;
@@ -217,7 +235,6 @@ constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbal
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
 constexpr float kYawResetRampStepRad = ns::control_loop::kYawResetRampStepRad;
-constexpr float kYawResetMaxSpeedMps = ns::control_loop::kYawResetMaxSpeedMps;
 
 chassis_runtime::Actuators g_actuators{};
 chassis::StairTaskCoordinator g_stair_task_coordinator{};
@@ -1008,26 +1025,12 @@ void ControlLoop() {
     }
   }
 
-  // C/V/B 键重置底盘正方向：始终瞄准真正的正方向，使用斜坡平滑旋转
-  // 速度高于阈值时暂不激活斜坡，等降速后再转（类似小陀螺入口的速度检查）
+  // C/V/B 键重置底盘正方向：始终瞄准真正的正方向，使用斜坡平滑旋转。
   wl_debug.reset_yaw_request = input.mode_request.reset_yaw_request ? 1 : 0;
   if (input.mode_request.reset_yaw_request) {
     const float forward_target_rad = rm::modules::Wrap(kYawFollowFixedTargetRad, -kPi, kPi);
     ctx.defer_yaw_target_rad = forward_target_rad;
     ctx.yaw_reset_target_final_rad = forward_target_rad;
-    if (std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
-      ctx.yaw_reset_ramp_active = true;
-      ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
-      ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
-      ctx.yaw_follow_target_initialized = true;
-      ctx.yaw_follow_drive_ready = false;
-      ctx.yaw_follow_drive_ready_stable_ticks = 0U;
-      ctx.filtered_yaw_dot = 0.0f;
-    }
-  }
-
-  // 偏航复位延迟激活：defer 已设置但因车速高未激活，降速后补激活
-  if (ctx.defer_leg_change && !ctx.yaw_reset_ramp_active && std::fabs(current_state.s_dot) < kYawResetMaxSpeedMps) {
     ctx.yaw_reset_ramp_active = true;
     ctx.yaw_follow_target = {rm::modules::Wrap(input.estimator_input.yaw_motor_rad, -kPi, kPi), 1.0f};
     ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
@@ -1114,25 +1117,7 @@ void ControlLoop() {
       : (chassis_output.mode == chassis::Fsm::State::kHighLeg || chassis_output.mode == chassis::Fsm::State::kStairTask)
           ? kTargetSpeedBiasHighLegMps
           : 0.0f;
-  float forward_max_speed = forward_speed_base;
-  // 大转向时压低速度上限：先减速再转向，避免高速急转翻倒
-  const bool is_mid_leg = (chassis_output.mode == chassis::Fsm::State::kMidLeg);
-  const float large_turn_threshold = is_mid_leg ? kLargeTurnThresholdRadMidLeg : kLargeTurnThresholdRad;
-  const float safe_turn_speed = is_mid_leg ? kSafeTurnSpeedMpsMidLeg : kSafeTurnSpeedMps;
-  const float large_turn_theta_threshold = is_mid_leg ? kLargeTurnThetaThresholdRadMidLeg : kLargeTurnThetaThresholdRad;
-  const float motor_error =
-      rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-  if (std::fabs(motor_error) > large_turn_threshold &&
-      (std::fabs(current_state.s_dot) > safe_turn_speed ||
-       std::fabs(current_state.theta_ll) > large_turn_theta_threshold ||
-       std::fabs(current_state.theta_lr) > large_turn_theta_threshold)) {
-    forward_max_speed = std::min(forward_max_speed, safe_turn_speed);
-  }
-  // 限速激活时标记恢复状态，解除后用缓加速斜坡逐步恢复速度
-  static bool s_large_turn_recovery = false;
-  if (forward_max_speed < forward_speed_base) {
-    s_large_turn_recovery = true;
-  }
+  const float forward_max_speed = forward_speed_base;
   float target_s_dot = 0.0f;
   float spin_target_s_dot = 0.0f;
   if (spin_control_enabled) {
@@ -1144,10 +1129,6 @@ void ControlLoop() {
         rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
     spin_target_s_dot =
         kSpinTranslationGain * (-vx_gimbal * std::cos(spin_phase_rad) + vy_gimbal * std::sin(spin_phase_rad));
-    target_s_dot = 0.0f;
-  } else if (now_is_spin_exit_pending) {
-    target_s_dot = 0.0f;
-  } else if (!ctx.yaw_follow_drive_ready) {
     target_s_dot = 0.0f;
   } else if (forward_input_active) {
     target_s_dot = yaw_follow_drive_sign * forward_max_speed * forward_input_norm;
@@ -1162,21 +1143,33 @@ void ControlLoop() {
     target_s_dot = 0.0f;
   }
 
-  // // ── 摩擦圆限速（转向优先）──
-  // // 当目标偏航速率与目标速度的归一化矢量和超出单位圆时，限制速度以保证转向。
-  // if (target_s_dot != 0.0f && chassis_output_enable) {
-  //
-  //   const float yaw_dot = spin_control_enabled ? kSpinTargetYawDotRadS : ctx.filtered_yaw_dot;
-  //   const float speed_norm = std::fabs(target_s_dot) / forward_max_speed;
-  //   const float yaw_norm = std::fabs(yaw_dot) / ns::control_loop::kMaxSafeYawRateRadS;
-  //   const float sum_sq = speed_norm * speed_norm + yaw_norm * yaw_norm;
-  //   flag =0;
-  //   if (sum_sq > 1.0f) {
-  //     flag = 1;
-  //     const float max_speed = forward_max_speed * std::sqrt(1.0f - yaw_norm * yaw_norm);
-  //     target_s_dot = std::copysign(max_speed, target_s_dot);
-  //   }
-  // }
+  // ── yaw 跟随 motor_error 的速度调度限幅 ──
+  // motor_error 始终由“当前 yaw 跟随目标 - yaw 电机当前角度”得到；只改变送入 LQR 的误差，
+  // 不改目标本身，也不直接削减纵向速度。使用实际车速而非目标速度，使高速时转向更温和。
+  const auto yaw_follow_schedule_params = ResolveYawFollowMotorErrorSchedule(chassis_output.mode);
+  const float yaw_follow_actual_speed_abs_mps =
+      std::isfinite(current_state.s_dot) ? std::fabs(current_state.s_dot) : 0.0f;
+  const float yaw_follow_schedule =
+      std::clamp((yaw_follow_actual_speed_abs_mps - yaw_follow_schedule_params.wide_speed_mps) /
+                     (yaw_follow_schedule_params.tight_speed_mps - yaw_follow_schedule_params.wide_speed_mps),
+                 0.0f, 1.0f);
+  const float yaw_follow_motor_error_limit =
+      yaw_follow_schedule_params.wide_limit_rad +
+      yaw_follow_schedule * (yaw_follow_schedule_params.tight_limit_rad - yaw_follow_schedule_params.wide_limit_rad);
+  const float yaw_follow_motor_error_raw =
+      ctx.yaw_follow_target_initialized
+          ? rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi)
+          : 0.0f;
+  const float yaw_follow_motor_error_limited =
+      std::clamp(yaw_follow_motor_error_raw, -yaw_follow_motor_error_limit, yaw_follow_motor_error_limit);
+
+  wl_debug.yaw_follow_motor_error_raw_rad = yaw_follow_motor_error_raw;
+  wl_debug.yaw_follow_motor_error_limit_rad = yaw_follow_motor_error_limit;
+  wl_debug.yaw_follow_motor_error_limited_rad = yaw_follow_motor_error_limited;
+  wl_debug.yaw_follow_actual_speed_abs_mps = yaw_follow_actual_speed_abs_mps;
+  wl_debug.yaw_follow_wide_speed_mps = yaw_follow_schedule_params.wide_speed_mps;
+  wl_debug.yaw_follow_tight_speed_mps = yaw_follow_schedule_params.tight_speed_mps;
+  wl_debug.yaw_follow_schedule = yaw_follow_schedule;
 
   // ── 7i. 纵向位置 I 项管理（PI 风格：正常行驶仅 P=速度控制；摇杆归中后 I=位移锚定）──
   // 优先级从高到低：
@@ -1214,17 +1207,7 @@ void ControlLoop() {
     ctx.filtered_s_dot = current_state.s_dot;
   } else {
     const SdotRampParams ramp_params = ResolveSdotRampParams(chassis_output.mode, input.mode_request.mid_leg_f);
-    // 大转向限速解除后，用缓加速斜坡逐步恢复速度
-    float accel_scale = 1.0f;
-    if (s_large_turn_recovery && forward_max_speed >= forward_speed_base) {
-      accel_scale = (chassis_output.mode == chassis::Fsm::State::kMidLeg) ? kLargeTurnRecoveryAccelScaleMidLeg
-                                                                          : kLargeTurnRecoveryAccelScale;
-      if (std::fabs(ctx.filtered_s_dot - target_s_dot) < 0.05f) {
-        s_large_turn_recovery = false;
-      }
-    }
-    const SdotRampParams effective_ramp{ramp_params.accel_step * accel_scale, ramp_params.brake_step};
-    RampValueToTarget(target_s_dot, ctx.filtered_s_dot, effective_ramp);
+    RampValueToTarget(target_s_dot, ctx.filtered_s_dot, ramp_params);
   }
 
   // ── 7k. 期望状态填充（腿摆角偏置 + 偏航角速度）──
@@ -1244,9 +1227,7 @@ void ControlLoop() {
   // kSpinExitPending 阶段同样生效：主动转向使 yaw 电机靠拢正方向，避免被动等超时
   if (!spin_control_enabled && !ctx.flip_180_in_progress && chassis_output_enable &&
       ctx.yaw_follow_target_initialized) {
-    const float motor_error =
-        rm::modules::Wrap(ctx.yaw_follow_target.target_rad - input.estimator_input.yaw_motor_rad, -kPi, kPi);
-    chassis_update_input.expected.phi = current_state.phi - motor_error;
+    chassis_update_input.expected.phi = current_state.phi - yaw_follow_motor_error_limited;
   } else {
     chassis_update_input.expected.phi = current_state.phi;
   }
@@ -1310,11 +1291,7 @@ void ControlLoop() {
     ctx.filtered_yaw_dot = 0.0f;
   } else {
     const float target_yaw_dot = 0.0f;
-    // 高速时缩小 yaw 斜坡步长，降低转向响应速度以减少翻倒风险
-    const float speed_norm = std::fabs(current_state.s_dot) / forward_max_speed;
-    constexpr float kMinYawRampScale = 0.4f;
-    const float yaw_ramp_scale = std::clamp(1.0f - speed_norm, kMinYawRampScale, 1.0f);
-    const float yaw_follow_step = (has_supercap ? kYawFollowRampStepRadS : kYawFollowRampStepRadNoScS) * yaw_ramp_scale;
+    const float yaw_follow_step = has_supercap ? kYawFollowRampStepRadS : kYawFollowRampStepRadNoScS;
     const float ramp_step = ctx.spin_exit_recovery ? kSpinExitYawRampStepRadS : yaw_follow_step;
     RampYawDotToTarget(target_yaw_dot, ctx.filtered_yaw_dot, ramp_step);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;

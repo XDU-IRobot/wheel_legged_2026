@@ -191,21 +191,28 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float ff_pitch_friction;        // 俯仰摩擦项
 
   // ── 底盘模型状态向量 ──
-  float state_s_m;                 // 纵向位置
-  float state_s_dot_mps;           // 纵向速度
-  float expected_s_m;              // 期望纵向位置
-  float expected_s_dot_mps;        // 期望纵向速度（= filtered_s_dot）
-  float filtered_s_dot_mps;        // 斜坡滤波后的纵向速度（连接减速斜坡与 I 项积分）
-  float state_phi_rad;             // 偏航角
-  float state_phi_dot_rad_s;       // 偏航角速度
-  float state_theta_ll_rad;        // 左腿摆角
-  float state_theta_ll_dot_rad_s;  // 左腿摆角速度
-  float state_theta_lr_rad;        // 右腿摆角
-  float state_theta_lr_dot_rad_s;  // 右腿摆角速度
-  float state_theta_b_rad;         // 车体俯仰角
-  float state_theta_b_dot_rad_s;   // 车体俯仰角速度
-  float state_l_l_m;               // 左腿等效长度
-  float state_l_r_m;               // 右腿等效长度
+  float state_s_m;                           // 纵向位置
+  float state_s_dot_mps;                     // 纵向速度
+  float expected_s_m;                        // 期望纵向位置
+  float expected_s_dot_mps;                  // 期望纵向速度（= filtered_s_dot）
+  float filtered_s_dot_mps;                  // 斜坡滤波后的纵向速度（连接减速斜坡与 I 项积分）
+  float yaw_follow_motor_error_raw_rad;      // 当前 yaw 跟随目标与电机之间的原始 wrap 误差
+  float yaw_follow_motor_error_limit_rad;    // 根据实际车速调度出的误差上限
+  float yaw_follow_motor_error_limited_rad;  // 实际送入 LQR 的受限误差
+  float yaw_follow_actual_speed_abs_mps;     // 用于调度的实际车速绝对值
+  float yaw_follow_wide_speed_mps;           // 当前腿长参数的宽限幅速度端点
+  float yaw_follow_tight_speed_mps;          // 当前腿长参数的严限幅速度端点
+  float yaw_follow_schedule;                 // 两端点之间的插值比例 [0, 1]
+  float state_phi_rad;                       // 偏航角
+  float state_phi_dot_rad_s;                 // 偏航角速度
+  float state_theta_ll_rad;                  // 左腿摆角
+  float state_theta_ll_dot_rad_s;            // 左腿摆角速度
+  float state_theta_lr_rad;                  // 右腿摆角
+  float state_theta_lr_dot_rad_s;            // 右腿摆角速度
+  float state_theta_b_rad;                   // 车体俯仰角
+  float state_theta_b_dot_rad_s;             // 车体俯仰角速度
+  float state_l_l_m;                         // 左腿等效长度
+  float state_l_r_m;                         // 右腿等效长度
 
   // ── LQR 状态误差 ──
   float lqr_err_s;             // s 误差

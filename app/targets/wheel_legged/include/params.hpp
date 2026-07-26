@@ -23,6 +23,14 @@ struct PidGains {
   float max_iout;  ///< 积分输出限幅
 };
 
+/// @brief yaw 跟随误差随实际车速变化的分段线性限幅参数
+struct YawFollowMotorErrorScheduleParams {
+  float wide_speed_mps;   ///< 低于该实际速度时使用宽限幅 [m/s]
+  float tight_speed_mps;  ///< 高于该实际速度时使用严限幅 [m/s]
+  float wide_limit_rad;   ///< 低速端 motor_error 绝对值上限 [rad]
+  float tight_limit_rad;  ///< 高速端 motor_error 绝对值上限 [rad]
+};
+
 /// @brief 姿态观测器参数（四元数→up_body→质量检查）
 struct PostureObserverParams {
   float quat_norm_tolerance;           ///< 四元数范数允许偏差 [1]
@@ -601,18 +609,21 @@ constexpr float kTargetSpeedBiasLowLegMps = 0.0f;         ///< 低腿长目标�
 constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegFMps = 0.0f;        ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = 0.0f;        ///< 高腿长目标速度偏置 [m/s]
-constexpr float kMaxSafeYawRateRadS = 3.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.5f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.5f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.1f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
-constexpr float kLargeTurnRecoveryAccelScale = 0.6f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;        ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;             ///< 中腿长大转向安全速度上限 [m/s]
-constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;   ///< 中腿长大转向腿摆角阈值 [rad]
-constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.6f;  ///< 中腿长大转向恢复加速缩放
-constexpr float kVxInputDeadbandNorm = 0.1f;                ///< 前进输入死区（归一化值，低于此忽略）
-constexpr float kVyInputDeadbandNorm = 0.1f;                ///< 平移输入死区（归一化值）
-constexpr float kYawFollowRampStepRadS = 0.3f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorLowLeg{.wide_speed_mps = 0.5f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.5f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorMidLeg{.wide_speed_mps = 0.2f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.25f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorHighLeg{.wide_speed_mps = 0.2f,
+                                                                        .tight_speed_mps = 1.0f,
+                                                                        .wide_limit_rad = common::kPi,
+                                                                        .tight_limit_rad = 0.2f * common::kPi};
+constexpr float kVxInputDeadbandNorm = 0.1f;         ///< 前进输入死区（归一化值，低于此忽略）
+constexpr float kVyInputDeadbandNorm = 0.1f;         ///< 平移输入死区（归一化值）
+constexpr float kYawFollowRampStepRadS = 0.3f;       ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
 constexpr float kYawFollowRampStepRadNoScS = 0.15f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
 constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]（车速低于此值时锁定位置）
 
@@ -658,7 +669,6 @@ constexpr float kSpinTargetYawDotRadNoScS3 = 1.0f;      ///< 无超电小陀螺�
 constexpr float kSpinTargetYawDotRadNoScS4 = 2.0f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 0.15f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
 constexpr float kYawResetRampStepRad = 0.005f;          ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
-constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.3f;  ///< 小陀螺平移增益（将云台系前进指令投影到车体系的比例）
 constexpr float kSpinThetaLlBiasRad = 0.02f;   ///< 小陀螺时左腿摆角偏置 [rad]
 constexpr float kSpinThetaLrBiasRad = -0.05f;  ///< 小陀螺时右腿摆角偏置 [rad]
@@ -1258,18 +1268,21 @@ constexpr float kTargetSpeedBiasLowLegMps = 0.f;          ///< 低腿长目标�
 constexpr float kTargetSpeedBiasMidLegMps = 0.0f;         ///< C键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegFMps = 0.0f;        ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = 0.0f;        ///< 高腿长目标速度偏置 [m/s]
-constexpr float kMaxSafeYawRateRadS = 4.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.55f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.6f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.15f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
-constexpr float kLargeTurnRecoveryAccelScale = 0.5f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.3f;         ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;              ///< 中腿长大转向安全速度上限 [m/s]
-constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;    ///< 中腿长大转向腿摆角阈值 [rad]
-constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.42f;  ///< 中腿长大转向恢复加速缩放
-constexpr float kVxInputDeadbandNorm = 0.05f;                ///< 前进输入死区
-constexpr float kVyInputDeadbandNorm = 0.05f;                ///< 平移输入死区
-constexpr float kYawFollowRampStepRadS = 0.11f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorLowLeg{.wide_speed_mps = 0.5f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.5f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorMidLeg{.wide_speed_mps = 0.2f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.25f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorHighLeg{.wide_speed_mps = 0.2f,
+                                                                        .tight_speed_mps = 1.0f,
+                                                                        .wide_limit_rad = common::kPi,
+                                                                        .tight_limit_rad = 0.2f * common::kPi};
+constexpr float kVxInputDeadbandNorm = 0.05f;        ///< 前进输入死区
+constexpr float kVyInputDeadbandNorm = 0.05f;        ///< 平移输入死区
+constexpr float kYawFollowRampStepRadS = 0.11f;      ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
 constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
 
 constexpr float kPositionFreezeSpeedThresholdMps = 0.05f;  ///< 位置锚定冻结速度阈值 [m/s]
@@ -1312,7 +1325,6 @@ constexpr float kSpinTargetYawDotRadNoScS3 = -9.0f;   ///< 无超电小陀螺目
 constexpr float kSpinTargetYawDotRadNoScS4 = -10.f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 1.f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
 constexpr float kYawResetRampStepRad = 0.02f;         ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
-constexpr float kYawResetMaxSpeedMps = 0.3f;          ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.4f;  ///< 小陀螺平移增益（系数2补偿 cos² 平均衰减，使平均车速=摇杆指令值）
 constexpr float kSpinThetaLlBiasRad = 0.0f;   ///< 小陀螺时左腿摆角偏置 [rad]
 constexpr float kSpinThetaLrBiasRad = 0.05f;  ///< 小陀螺时右腿摆角偏置 [rad]
@@ -1899,18 +1911,22 @@ constexpr float kTargetSpeedBiasLowLegMps = 0.f;          ///< 低腿长目标�
 constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegFMps = 0.f;         ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = -0.f;        ///< 高腿长目标速度偏置 [m/s]
-constexpr float kMaxSafeYawRateRadS = 4.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.5f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.6f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.15f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
-constexpr float kLargeTurnRecoveryAccelScale = 0.4f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;        ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;             ///< 中腿长大转向安全速度上限 [m/s]
-constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;   ///< 中腿长大转向腿摆角阈值 [rad]
-constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.6f;  ///< 中腿长大转向恢复加速缩放
-constexpr float kVxInputDeadbandNorm = 0.05f;               ///< 前进输入死区
-constexpr float kVyInputDeadbandNorm = 0.05f;               ///< 平移输入死区
-constexpr float kYawFollowRampStepRadS = 0.5f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
+// yaw 跟随误差的速度调度限幅：低速允许较大的方向修正，高速只允许较小修正。
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorLowLeg{.wide_speed_mps = 0.5f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.5f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorMidLeg{.wide_speed_mps = 0.2f,
+                                                                       .tight_speed_mps = 2.0f,
+                                                                       .wide_limit_rad = common::kPi,
+                                                                       .tight_limit_rad = 0.25f * common::kPi};
+constexpr YawFollowMotorErrorScheduleParams kYawFollowMotorErrorHighLeg{.wide_speed_mps = 0.2f,
+                                                                        .tight_speed_mps = 1.0f,
+                                                                        .wide_limit_rad = common::kPi,
+                                                                        .tight_limit_rad = 0.2f * common::kPi};
+constexpr float kVxInputDeadbandNorm = 0.05f;        ///< 前进输入死区
+constexpr float kVyInputDeadbandNorm = 0.05f;        ///< 平移输入死区
+constexpr float kYawFollowRampStepRadS = 0.5f;       ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
 constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
 constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]
 constexpr uint32_t kPositionHoldTimeoutTicks =
@@ -1951,7 +1967,6 @@ constexpr float kSpinTargetYawDotRadNoScS3 = 9.0f;      ///< 无超电小陀螺�
 constexpr float kSpinTargetYawDotRadNoScS4 = 10.f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 0.15f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
 constexpr float kYawResetRampStepRad = 0.005f;          ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
-constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.4f;            ///< 小陀螺平移增益
 constexpr float kSpinThetaLlBiasRad = 0.0f;             ///< 小陀螺时左腿摆角偏置 [rad]
 constexpr float kSpinThetaLrBiasRad = 0.f;              ///< 小陀螺时右腿摆角偏置 [rad]
