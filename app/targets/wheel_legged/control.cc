@@ -632,6 +632,14 @@ void ControlLoop() {
         tc_state.mid_leg_f = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
         break;
+      case TcSemanticState::PendingAction::kZ:
+        tc_state.auto_jump_enabled = true;
+        tc_state.auto_jump_tof_armed = true;
+        break;
+      case TcSemanticState::PendingAction::kCtrlZ:
+        tc_state.highland_auto_jump_enabled = true;
+        tc_state.highland_auto_jump_tof_armed = true;
+        break;
       default:
         break;
     }
