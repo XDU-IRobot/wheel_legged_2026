@@ -237,6 +237,10 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_right_l0_ddot_mps2;               // 右腿腿长加速度
   float chassis_left_l0_pid_out;                  // 左腿腿长 PID 输出
   float chassis_right_l0_pid_out;                 // 右腿腿长 PID 输出
+  float spin_random_offset_rad_s;                 // 小陀螺变速随机偏移 [rad/s]
+  float spin_exit_yaw_diff_rad;                   // 松键退出 yaw 判定 diff [rad]
+  float spin_accumulated_yaw_rad;                 // 小陀螺净旋转累计量 [rad]
+  uint8_t spin_entry_from_rear;                   // 进入小陀螺时是否从 fixed+π 进入
   float chassis_speed_mps;                        // 车体融合速度
   float chassis_raw_wheel_speed_mps;              // 原始轮速观测
   float chassis_filtered_wheel_speed_mps;         // 低通滤波后轮速

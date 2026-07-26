@@ -67,9 +67,12 @@ struct ChassisStateContext {
   uint32_t yaw_follow_drive_ready_stable_ticks{0U};  ///< 偏航就绪判稳计数器
   bool chassis_has_been_driven{false};  ///< 使能后是否曾被摇杆驱动过（首次驱动前不启用定点锁定）
   bool spin_exit_recovery{false};       ///< 小陀螺退出恢复中，使用快速偏航斜坡
-  bool flip_180_in_progress{false};     ///< R 键云台 180° 旋转中，暂时抑制偏航跟随
-  uint32_t flip_180_ticks{0U};          ///< flip_180 抑制计数器
-  bool defer_leg_change{false};         ///< 等待偏航对齐后再变腿长
+  float spin_accumulated_yaw_rad{0.0f};  ///< 小陀螺期间累计 yaw 旋转量（编码器 unwrap）[rad]
+  float spin_prev_yaw_motor_rad{0.0f};   ///< 上一周期 yaw 电机角，用于 detect wrap 跳变 [rad]
+  float spin_start_yaw_motor_rad{0.0f};  ///< 进入小陀螺时的 yaw 电机角 [rad]
+  bool flip_180_in_progress{false};      ///< R 键云台 180° 旋转中，暂时抑制偏航跟随
+  uint32_t flip_180_ticks{0U};           ///< flip_180 抑制计数器
+  bool defer_leg_change{false};          ///< 等待偏航对齐后再变腿长
   wheel_legged::LegProfile pending_leg_profile{LegProfile::kLow};  ///< 待应用的腿长档位
   float defer_yaw_target_rad{0.0f};                                ///< defer 退出判据用的 yaw 目标 [rad]
   bool yaw_reset_ramp_active{false};                               ///< C/V/B 偏航复位斜坡激活中
@@ -99,6 +102,16 @@ void RampValueToTarget(float target, float &value, const SdotRampParams &ramp_pa
  * @param ramp_step        每周期步长
  */
 void RampYawDotToTarget(float target_yaw_dot, float &filtered_yaw_dot, float ramp_step);
+
+/**
+ * @brief 半分平面选择偏航目标角（双候选：fixed 与 fixed+pi）
+ *        将 yaw 电机角相对 fixed 做 Wrap 到 [-pi, pi)：
+ *        diff >= 0 → 选 fixed, diff < 0 → 选 fixed+pi
+ * @param yaw_motor_rad     当前偏航电机角
+ * @param target_offset_rad  目标偏移量（由对齐模式决定）
+ * @return 选定的目标角与驱动方向符号
+ */
+YawFollowTargetSelection SelectHalfPlaneYawTarget(float yaw_motor_rad, float target_offset_rad);
 
 /**
  * @brief 选择离当前偏航电机角最近的目标角（双候选：fixed 与 fixed+pi）

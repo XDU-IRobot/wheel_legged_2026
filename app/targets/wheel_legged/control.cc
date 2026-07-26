@@ -227,12 +227,55 @@ chassis::StairClimbSequence g_stair_sequence{};
 /// ≤55W / 55-65W / 65-75W / >75W 四档
 /// kBuckBoost(bit2) 或 kShortCircuit(bit3) 置位时使用无超电档位
 constexpr uint8_t kScFatalMask = (1U << 2) | (1U << 3);
-float ResolveSpinTargetYawDot(uint16_t chassis_power_limit, uint8_t supercap_error_code) {
+
+/// 小陀螺变速三角波发生器：偏移量在 0~2 rad/s 之间往复振荡
+/// 每次到达边界（0 或 2）后以随机速率反向，实现"变速小陀螺"
+/// @return 当前偏移量 [0, 2]
+float SpinVariableOffset() {
+  static float offset = 0.0f;
+  static float slope_rad_s2 = 0.5f;  // 正=向 2 增大，负=向 0 减小
+  static uint32_t seed = 0xDEADBEEF;
+
+  constexpr float kDt = wheel_legged::params::active::chassis::kControlDtS;
+  constexpr float kSlopeMin = 1.0f;  // 最慢变化率 [rad/s²]
+  constexpr float kSlopeMax = 3.0f;  // 最快变化率 [rad/s²]
+
+  offset += slope_rad_s2 * kDt;
+
+  auto next_random_slope = []() -> float {
+    seed = 1664525UL * seed + 1013904223UL;
+    return kSlopeMin +
+           static_cast<float>(seed % static_cast<uint32_t>((kSlopeMax - kSlopeMin) * 1000.0f + 1.0f)) / 1000.0f;
+  };
+
+  if (offset >= 2.0f) {
+    offset = 2.0f;
+    slope_rad_s2 = -next_random_slope();
+  }
+  if (offset <= 0.0f) {
+    offset = 0.0f;
+    slope_rad_s2 = next_random_slope();
+  }
+
+  return offset;
+}
+
+float ResolveSpinTargetYawDot(uint16_t chassis_power_limit, uint8_t supercap_error_code,
+                              float *out_random_offset = nullptr) {
   const bool has_supercap = (supercap_error_code & kScFatalMask) == 0;
-  if (chassis_power_limit <= 55) return has_supercap ? kSpinTargetYawDotRadS1 : kSpinTargetYawDotRadNoScS1;
-  if (chassis_power_limit <= 65) return has_supercap ? kSpinTargetYawDotRadS2 : kSpinTargetYawDotRadNoScS2;
-  if (chassis_power_limit <= 75) return has_supercap ? kSpinTargetYawDotRadS3 : kSpinTargetYawDotRadNoScS3;
-  return has_supercap ? kSpinTargetYawDotRadS4 : kSpinTargetYawDotRadNoScS4;
+  float base;
+  if (chassis_power_limit <= 55)
+    base = has_supercap ? kSpinTargetYawDotRadS1 : kSpinTargetYawDotRadNoScS1;
+  else if (chassis_power_limit <= 65)
+    base = has_supercap ? kSpinTargetYawDotRadS2 : kSpinTargetYawDotRadNoScS2;
+  else if (chassis_power_limit <= 75)
+    base = has_supercap ? kSpinTargetYawDotRadS3 : kSpinTargetYawDotRadNoScS3;
+  else
+    base = has_supercap ? kSpinTargetYawDotRadS4 : kSpinTargetYawDotRadNoScS4;
+  // 在模值上增加 0~2 rad/s 的三角波变速偏移，保持方向不变
+  const float signed_offset = std::copysign(SpinVariableOffset(), base);
+  if (out_random_offset) *out_random_offset = signed_offset;
+  return base + signed_offset;
 }
 
 float ClampPolicyAction(float value, std::uint32_t index) {
@@ -496,8 +539,24 @@ void ControlLoop() {
   chassis_input.request.stair_step2 = stair_task_output.completed_attempts > 0U;
   chassis_input.request.stair_task_recovery_required = stair_task_output.recovery_required;
   {
-    const float nearest_forward = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
-    const float yaw_err = rm::modules::Wrap(nearest_forward - input.estimator_input.yaw_motor_rad, -kPi, kPi);
+    // 松键退出判据：进入 kSpinExitPending 后沿用已锁定的目标，不再每周期重算
+    // 防止底盘旋转过程中 diff 符号翻转导致 target 跳变
+    float target;
+    const bool spin_exit_target_locked =
+        ctx.yaw_follow_target_initialized && ctx.last_chassis_mode == chassis::Fsm::State::kSpinExitPending;
+    if (spin_exit_target_locked) {
+      target = ctx.yaw_follow_target.target_rad;
+    } else {
+      const float diff = rm::modules::Wrap(input.estimator_input.yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+      wl_debug.spin_exit_yaw_diff_rad = diff;
+      const float norm = std::fabs(ctx.spin_accumulated_yaw_rad);
+      const float entry_diff = rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+      const bool entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f;
+      wl_debug.spin_entry_from_rear = entry_from_rear ? 1 : 0;
+      wl_debug.spin_accumulated_yaw_rad = ctx.spin_accumulated_yaw_rad;
+      target = ((norm < kPi) != entry_from_rear) ? (kYawFollowFixedTargetRad + kPi) : kYawFollowFixedTargetRad;
+    }
+    const float yaw_err = rm::modules::Wrap(target - input.estimator_input.yaw_motor_rad, -kPi, kPi);
     chassis_input.request.spin_exit_yaw_aligned = std::fabs(yaw_err) < kSpinExitYawAlignThresholdRad;
   }
   // 裁判系统电源管理：底盘输出为 0 时强制切到 Disabled
@@ -569,6 +628,14 @@ void ControlLoop() {
         tc_state.mid_leg_f = false;
         tc_state.deferred_stair_request = wheel_legged::StairTaskRequest::kArmDouble;
         break;
+      case TcSemanticState::PendingAction::kZ:
+        tc_state.auto_jump_enabled = true;
+        tc_state.auto_jump_tof_armed = true;
+        break;
+      case TcSemanticState::PendingAction::kCtrlZ:
+        tc_state.highland_auto_jump_enabled = true;
+        tc_state.highland_auto_jump_tof_armed = true;
+        break;
       default:
         break;
     }
@@ -617,10 +684,10 @@ void ControlLoop() {
   }
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
+  const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+                            chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
-    const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                              chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
     const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
@@ -687,6 +754,10 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
     gimbal_update_input.use_yaw_motor_feedback = true;
+  }
+  // 倒地状态下 pitch 抬到最高点，避免云台碰撞地面
+  if (is_recovery) {
+    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
   }
   if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
     // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变
@@ -955,12 +1026,34 @@ void ControlLoop() {
         // 进入小陀螺：继承当前车体角速度做平滑起步，强制对齐正前方
         ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
         ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
+        ctx.spin_accumulated_yaw_rad = 0.0f;
+        ctx.spin_prev_yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+        ctx.spin_start_yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+        {
+          const float entry_diff =
+              rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+          wl_debug.spin_entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f ? 1 : 0;
+        }
       }
     } else if (previous_mode == chassis::Fsm::State::kSpin && now_is_spin_exit_pending) {
       ctx.filtered_yaw_dot = chassis_control_output.current_state.phi_dot;
       ctx.spin_exit_recovery = true;
       ctx.yaw_follow_align_mode = YawFollowAlignMode::kForward;
-      ctx.yaw_follow_target = SelectNearestYawTarget(input.estimator_input.yaw_motor_rad, 0.0f);
+      // 松键退出小陀螺：按累计旋转量（相对 fixed）选目标
+      // |acc| mod 2π ∈ [0, π) → fixed+π, [π, 2π) → fixed
+      {
+        const float net_rot = ctx.spin_accumulated_yaw_rad;
+        const float norm = std::fabs(net_rot);
+        const float entry_diff = rm::modules::Wrap(ctx.spin_start_yaw_motor_rad - kYawFollowFixedTargetRad, -kPi, kPi);
+        const bool entry_from_rear = std::fabs(entry_diff) > kPi / 2.0f;
+        wl_debug.spin_entry_from_rear = entry_from_rear ? 1 : 0;
+        wl_debug.spin_accumulated_yaw_rad = net_rot;
+        if ((norm < kPi) != entry_from_rear) {
+          ctx.yaw_follow_target = {kYawFollowFixedTargetRad + kPi, -1.0f};
+        } else {
+          ctx.yaw_follow_target = {kYawFollowFixedTargetRad, 1.0f};
+        }
+      }
       ctx.yaw_follow_target_initialized = true;
     }
     ctx.last_chassis_mode = chassis_output.mode;
@@ -1294,9 +1387,23 @@ void ControlLoop() {
     const bool ref_online =
         globals->referee.has_value() && globals->referee->online_status() == rm::device::Device::kOk;
     const uint16_t power_limit = ref_online ? globals->referee->data().robot_status.chassis_power_limit : 0U;
-    const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err);
+    const float spin_target = ResolveSpinTargetYawDot(power_limit, sc_err, &wl_debug.spin_random_offset_rad_s);
     RampYawDotToTarget(input.mode_request.spin_dir * spin_target, ctx.filtered_yaw_dot, kSpinYawRampStepRadS);
     chassis_update_input.expected.phi_dot = ctx.filtered_yaw_dot;
+    {
+      float delta = input.estimator_input.yaw_motor_rad - ctx.spin_prev_yaw_motor_rad;
+      if (delta > kPi)
+        delta -= 2.0f * kPi;
+      else if (delta < -kPi)
+        delta += 2.0f * kPi;
+      ctx.spin_accumulated_yaw_rad += delta;
+      if (ctx.spin_accumulated_yaw_rad >= 2.0f * kPi)
+        ctx.spin_accumulated_yaw_rad -= 2.0f * kPi;
+      else if (ctx.spin_accumulated_yaw_rad < -2.0f * kPi)
+        ctx.spin_accumulated_yaw_rad += 2.0f * kPi;
+      ctx.spin_prev_yaw_motor_rad = input.estimator_input.yaw_motor_rad;
+      wl_debug.spin_accumulated_yaw_rad = ctx.spin_accumulated_yaw_rad;
+    }
   } else if (ctx.flip_180_in_progress) {
     // R 键云台 180° 旋转中：抑制偏航跟随，等待云台旋转完成
     ctx.filtered_yaw_dot = 0.0f;
@@ -1339,9 +1446,11 @@ void ControlLoop() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   {
     const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
+    const float rear_delta =
+        (ctx.yaw_follow_target.drive_sign < 0.0f) ? ns::control_loop::kDisplacementBiasRearDeltaM : 0.0f;
     chassis_update_input.displacement_bias =
         wheel_legged::control_loop::ResolveDisplacementBias(chassis_update_input.fsm_mode) +
-        shots_fired * ns::control_loop::kDisplacementBiasPerShot;
+        shots_fired * ns::control_loop::kDisplacementBiasPerShot + rear_delta;
     wl_debug.hero_remaining_ammo = hero_remaining_ammo;
     wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
   }
