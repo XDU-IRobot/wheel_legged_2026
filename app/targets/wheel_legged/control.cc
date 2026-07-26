@@ -669,10 +669,10 @@ void ControlLoop() {
   }
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
+  const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
+                            chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
-    const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                              chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
     const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
                                prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
     if (was_recovery && !is_recovery) {
@@ -739,6 +739,10 @@ void ControlLoop() {
     gimbal_update_input.target.yaw_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
     gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
     gimbal_update_input.use_yaw_motor_feedback = true;
+  }
+  // 倒地状态下 pitch 抬到最高点，避免云台碰撞地面
+  if (is_recovery) {
+    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
   }
   if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
     // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变

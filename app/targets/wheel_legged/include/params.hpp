@@ -377,6 +377,9 @@ constexpr std::uint32_t kJumpPushReachedHoldMs = 5U;  ///< 蹬伸腿长到位后
 
 // 自动跳跃已移除
 
+// ==== 起立 ====
+constexpr float kStandupRetractLegLengthM = 0.16f;  ///< 起立 Phase 1 收腿目标腿长 [m]
+
 // ==== 基本运动（腿长档位）====
 constexpr float kLowLegLengthM = 0.16f;      ///< 低腿长档位目标腿长 [m]
 constexpr float kMidLegLengthM = 0.21f;      ///< 中腿长档位目标腿长 [m]
@@ -806,10 +809,10 @@ using namespace common;
 
 namespace tof {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 950U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;
-constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
-constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 15U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
+constexpr std::uint16_t kAutoJumpRearmDistanceMm = 450U;
+constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
 constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
@@ -1032,7 +1035,7 @@ constexpr float kJumpLowPushReachedLegLengthM = 0.34f;  ///< 蹬伸到位判定�
 constexpr std::uint32_t kJumpPushReachedHoldMs = 3U;    ///< 蹬伸腿长到位后持续满足此时间才切换 [ms]
 
 // ==== 起立 ====
-constexpr float kStandupRetractLegLengthM = 0.13f;  ///< 起立 Phase 1 收腿目标腿长 [m]
+constexpr float kStandupRetractLegLengthM = 0.135f;  ///< 起立 Phase 1 收腿目标腿长 [m]
 
 // ==== 基本运动（腿长档位）====
 constexpr float kLowLegLengthM = 0.17f;              ///< 低腿长档位目标腿长 [m]

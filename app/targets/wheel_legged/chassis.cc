@@ -596,7 +596,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       constexpr float kPhase2Len = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
       constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
       constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
-      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM ;
+      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kStandupRetractLegLengthM + 0.02f;
 
       auto theta_near_target = [](float theta, float target) {
         float a = std::fmod(theta, kTwoPi);
@@ -690,7 +690,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   }
   if (force_low_leg_) {
     constexpr uint16_t kLowLegHoldTicks = 100;  // 4s @ 500Hz
-    params_.leg_target_length_m = wheel_legged::params::active::chassis_fsm::kLowLegLengthM;
+    params_.leg_target_length_m =
+        standup_complete_ ? wheel_legged::params::active::chassis_fsm::kLowLegLengthM
+                          : wheel_legged::params::active::chassis_fsm::kStandupRetractLegLengthM;
     if (!standup_complete_) {
       force_low_leg_ticks_ = 0;  // 起立全程不自动过期
     } else {
