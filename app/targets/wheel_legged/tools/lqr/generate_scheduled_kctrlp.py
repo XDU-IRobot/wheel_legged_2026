@@ -111,7 +111,7 @@ HERO_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.17,
         np.diag([200.0, 140.0, 200.0, 2.0, 2500.0, 1.0, 2500.0, 1.0, 5000.0, 1.0]),
-        np.diag([3., 3., 0.45, 0.45]),
+        np.diag([2.5, 2.5, 0.5, 0.5]),
     ),
     # QrPoint(
     #     0.155,
@@ -131,12 +131,12 @@ HERO_QR_POINTS: list[QrPoint] = [
     QrPoint(
         0.245,
         np.diag([200.0, 140.0, 200.0, 2.0, 2700.0, 1.0, 2700.0, 1.0, 5200.0, 1.0]),
-        np.diag([3.8, 3.8, 0.5, 0.5]),
+        np.diag([3., 3., 0.55, 0.55]),
     ),
     QrPoint(
         0.33,
         np.diag([200.0, 300.0, 200.0, 2.0, 4000.0, 1.5, 4000.0, 1.5, 5500.0, 1.0]),
-        np.diag([3.8, 3.8, 0.5, 0.5]),
+        np.diag([4., 4., 0.6, 0.6]),
     ),
 ]
 
@@ -222,9 +222,9 @@ INFANTRY4_QR_POINTS: list[QrPoint] = [
 # but the LQR cost weights stay constant across the spin leg-length range.
 HERO_SPIN_QR_POINTS: list[QrPoint] = [
     QrPoint(
-        0.14,
-        np.diag([80.0, 50.0, 400.0, 10.0, 1450.0, 1.0, 1450.0, 1.0, 3200.0, 1.0]),
-        np.diag([2.0, 2.0, 0.35, 0.35]),
+        0.17,
+        np.diag([80.0, 50.0, 200.0, 1.0, 5000.0, 1.0, 5000.0, 1.0, 8000.0, 1.0]),
+        np.diag([2.8, 2.8, 0.4, 0.4]),
     ),
 ]
 

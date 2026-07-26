@@ -339,6 +339,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
   if (input.fsm_mode == Fsm::State::kDisabled) {
     standup_complete_ = false;
     standup_phase_ = 0;
+    standup_phase_elapsed_ticks_ = 0;
     standup_theta_target_ = 0.0f;
     standup_complete_left_ = true;
     standup_complete_right_ = true;
@@ -460,6 +461,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
     } else {
       standup_complete_ = false;
       standup_phase_ = 0;
+      standup_phase_elapsed_ticks_ = 0;
       standup_complete_left_ = true;
       standup_complete_right_ = true;
     }
@@ -597,6 +599,9 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
       constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
       constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kStandupRetractLegLengthM + 0.02f;
+      constexpr uint16_t kPhase0TimeoutTicks = wheel_legged::params::active::chassis::kStandupPhase0TimeoutTicks;
+      constexpr uint16_t kPhase1TimeoutTicks = wheel_legged::params::active::chassis::kStandupPhase1TimeoutTicks;
+      constexpr uint16_t kPhase2TimeoutTicks = wheel_legged::params::active::chassis::kStandupPhase2TimeoutTicks;
 
       auto theta_near_target = [](float theta, float target) {
         float a = std::fmod(theta, kTwoPi);
@@ -613,18 +618,29 @@ void chassis::Chassis::Update(const UpdateInput &input) {
         // Phase 0: 摆腿 — 正常腿长，摆角到目标
         standup_theta_target_ = kThetaInit;
         params_.leg_target_length_m = kPhase0Len;
+        standup_phase_elapsed_ticks_++;
         if (theta_near_target(state_output.current.theta_ll, kThetaInit) < kPhase0ThetaTol &&
             theta_near_target(state_output.current.theta_lr, kThetaInit) < kPhase0ThetaTol) {
           standup_phase_ = 1;
+          standup_phase_elapsed_ticks_ = 0;
+        } else if (standup_phase_elapsed_ticks_ >= kPhase0TimeoutTicks) {
+          standup_phase_ = 1;
+          standup_phase_elapsed_ticks_ = 0;
         }
       }
 
       if (standup_phase_ == 1) {
         // Phase 1: 收腿 — 低腿长，保持摆角目标
         force_low_leg_ = true;
+        standup_phase_elapsed_ticks_++;
         if (left_leg_.l0() + right_leg_.l0() < 2 * kRetractLenThresholdM) {
           standup_phase_ = 2;
           force_low_leg_ = false;
+          standup_phase_elapsed_ticks_ = 0;
+        } else if (standup_phase_elapsed_ticks_ >= kPhase1TimeoutTicks) {
+          standup_phase_ = 2;
+          force_low_leg_ = false;
+          standup_phase_elapsed_ticks_ = 0;
         }
       }
 
@@ -636,6 +652,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
           standup_theta_target_ -= kRampStep;
           if (standup_theta_target_ < 0.0f) standup_theta_target_ = 0.0f;
         }
+        standup_phase_elapsed_ticks_++;
         const float theta_tol = kThetaTol;
         const float theta_ll_0_2pi = std::fmod(state_output.current.theta_ll, kTwoPi);
         const float theta_lr_0_2pi = std::fmod(state_output.current.theta_lr, kTwoPi);
@@ -647,6 +664,13 @@ void chassis::Chassis::Update(const UpdateInput &input) {
           standup_phase_ = 3;
           force_low_leg_ = false;
           standup_theta_target_ = 0.0f;
+          standup_phase_elapsed_ticks_ = 0;
+        } else if (standup_phase_elapsed_ticks_ >= kPhase2TimeoutTicks) {
+          standup_complete_ = true;
+          standup_phase_ = 3;
+          force_low_leg_ = false;
+          standup_theta_target_ = 0.0f;
+          standup_phase_elapsed_ticks_ = 0;
         }
       }
     }
@@ -1188,6 +1212,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
           if (ll_in_range && lr_in_range) {
             standup_complete_ = false;
             standup_phase_ = 0;
+            standup_phase_elapsed_ticks_ = 0;
             force_low_leg_ = true;
             standup_theta_target_ = 0.0f;
             standup_complete_left_ = true;

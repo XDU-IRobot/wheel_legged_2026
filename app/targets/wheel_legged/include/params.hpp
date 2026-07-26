@@ -224,8 +224,8 @@ constexpr float kPitchMinRad = -0.2f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.7f;   ///< 俯仰角上限 [rad]
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
-constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.5f, 1000.0f, 1.0f};    ///< 偏航位置 PID
-constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
+constexpr PidGains kYawPositionPid{20.0f, 0.0f, 1.f, 1000.0f, 1.0f};    ///< 偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.8f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{35.0f, 0.0f, 0.5f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 28.0f, 0.0f};         ///< 俯仰速度 PID
 
@@ -453,13 +453,16 @@ constexpr float kStandupPhase1ThetaTolRad = 0.5f;  ///< 起立 Phase 2 完成判
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.008f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
+constexpr uint16_t kStandupPhase0TimeoutTicks = 250U;     ///< 起立 Phase 0 超时 [tick]（3s @ 500Hz）
+constexpr uint16_t kStandupPhase1TimeoutTicks = 250U;     ///< 起立 Phase 1 超时 [tick]（2s @ 500Hz）
+constexpr uint16_t kStandupPhase2TimeoutTicks = 250U;     ///< 起立 Phase 2 超时 [tick]（4s @ 500Hz）
 constexpr float kPostureRollMinRad = -0.7f;                ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.7f;                 ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.58f;             ///< 机体俯仰角安全下限 [rad]
 constexpr float kPostureThetaBMaxRad = 0.5f;               ///< 机体俯仰角安全上限 [rad]
 constexpr float kPostureThetaLegMinRad = -1.5f;            ///< 腿摆角安全下限 [rad]
 constexpr float kPostureThetaLegMaxRad = 2.4f;              ///< 腿摆角安全上限 [rad]
-constexpr float kLegRecoverThetaDotTarget = -1.2f;  ///< 倒地恢复时腿摆角速度目标 [rad/s]（负号表示前摆方向）
+constexpr float kLegRecoverThetaDotTarget = -3.f;  ///< 倒地恢复时腿摆角速度目标 [rad/s]（负号表示前摆方向）
 constexpr float kLegRecoverThetaDotRampStep = 0.06f;  ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
 constexpr float kManualRecoveryLegSpeedRadS = 1.2f;   ///< 手动倒地恢复腿摆角速度 [rad/s]
 constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;   ///< 倒地恢复零力矩区间下限 [rad]
@@ -518,8 +521,8 @@ static constexpr const auto &kCtrlPLow = ::wheel_legged::params::generated::kCtr
 static constexpr const auto &kCtrlPSpin = ::wheel_legged::params::generated::kCtrlPSpin;
 
 // ==== 基本运动（PID 增益）====
-constexpr PidGains kLeftL0Pid{3000.0f, 0.1f, 130.0f, 170.0f, 10.0f};   ///< 左腿腿长 PID（常规）
-constexpr PidGains kRightL0Pid{3000.0f, 0.1f, 130.0f, 170.0f, 10.0f};  ///< 右腿腿长 PID（常规）
+constexpr PidGains kLeftL0Pid{3000.0f, 0.1f, 150.0f, 170.0f, 10.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0Pid{3000.0f, 0.1f, 150.0f, 170.0f, 10.0f};  ///< 右腿腿长 PID（常规）
 
 constexpr PidGains kRollPid{1000.0f, 0.1f, 20.0f, 140.0f, 40.0f};  ///< 横滚平衡 PID
 
@@ -1125,6 +1128,9 @@ constexpr float kStandupPhase1ThetaTolRad = 0.8f;  ///< 起立 Phase 2 完成判
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.02f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
+constexpr uint16_t kStandupPhase0TimeoutTicks = 250U;     ///< 起立 Phase 0 超时 [tick]（3s @ 500Hz）
+constexpr uint16_t kStandupPhase1TimeoutTicks = 250U;     ///< 起立 Phase 1 超时 [tick]（2s @ 500Hz）
+constexpr uint16_t kStandupPhase2TimeoutTicks = 250U;     ///< 起立 Phase 2 超时 [tick]（4s @ 500Hz）
 constexpr float kPostureRollMinRad = -0.7f;                ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.7f;                 ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.7f;              ///< 机体俯仰角安全下限 [rad]
@@ -1775,6 +1781,9 @@ constexpr float kStandupPhase1ThetaTolRad = 0.8f;  ///< 起立 Phase 2 完成判
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.01f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
+constexpr uint16_t kStandupPhase0TimeoutTicks = 250U;     ///< 起立 Phase 0 超时 [tick]（3s @ 500Hz）
+constexpr uint16_t kStandupPhase1TimeoutTicks = 250U;     ///< 起立 Phase 1 超时 [tick]（2s @ 500Hz）
+constexpr uint16_t kStandupPhase2TimeoutTicks = 250U;     ///< 起立 Phase 2 超时 [tick]（4s @ 500Hz）
 constexpr float kPostureRollMinRad = -0.7f;                ///< 横滚角安全下限 [rad]
 constexpr float kPostureRollMaxRad = 0.7f;                 ///< 横滚角安全上限 [rad]
 constexpr float kPostureThetaBMinRad = -0.7f;              ///< 机体俯仰角安全下限 [rad]
