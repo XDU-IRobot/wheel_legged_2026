@@ -66,6 +66,16 @@ void RampYawDotToTarget(const float target_yaw_dot, float &filtered_yaw_dot, con
   }
 }
 
+
+YawFollowTargetSelection SelectHalfPlaneYawTarget(const float yaw_motor_rad, const float target_offset_rad) {
+  // 以 fixed + offset 为基准，diff >= 0 选 A（fixed+offset），diff < 0 选 B（+π）
+  const float diff = rm::modules::Wrap(yaw_motor_rad - (kYawFollowFixedTargetRad + target_offset_rad), -kPi, kPi);
+  if (diff >= 0.0f) {
+    return {kYawFollowFixedTargetRad + kPi+ target_offset_rad, -1.0f};
+  }
+  return {kYawFollowFixedTargetRad  + target_offset_rad, 1.0f};
+}
+
 YawFollowTargetSelection SelectNearestYawTarget(const float yaw_motor_rad, const float target_offset_rad) {
   // 两个候选目标角（相差 pi），选择离当前电机角最近的一个
   const float yaw_target_a_rad = rm::modules::Wrap(kYawFollowFixedTargetRad + target_offset_rad, -kPi, kPi);

@@ -596,7 +596,7 @@ void chassis::Chassis::Update(const UpdateInput &input) {
       constexpr float kPhase2Len = wheel_legged::params::active::chassis::kStandupPhase1TargetLengthM;
       constexpr float kThetaTol = wheel_legged::params::active::chassis::kStandupPhase1ThetaTolRad;
       constexpr float kRampStep = wheel_legged::params::active::chassis::kStandupThetaRampStepRad;
-      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM + 0.02f;
+      constexpr float kRetractLenThresholdM = wheel_legged::params::active::chassis_fsm::kLowLegLengthM ;
 
       auto theta_near_target = [](float theta, float target) {
         float a = std::fmod(theta, kTwoPi);
