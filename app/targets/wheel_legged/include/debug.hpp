@@ -237,6 +237,14 @@ struct __attribute__((packed, aligned(4))) DebugSnapshot {
   float chassis_imu_acc_x_integral_mps;           // IMU X轴加速度直接积分速度
   float chassis_left_force_n;                     // 左腿竖直力
   float chassis_right_force_n;                    // 右腿竖直力
+  float chassis_turn_lateral_accel_mps2;          // 转向横向加速度估计 v_x * omega_z
+  float chassis_turn_load_transfer_ff_n;          // 左减右加的转向载荷转移前馈
+  float chassis_left_leg_eta;                     // 左腿轴向等效系数 l_w/l_0
+  float chassis_right_leg_eta;                    // 右腿轴向等效系数 l_w/l_0
+  float chassis_left_leg_com_height_m;            // 左腿 CAD 二维偏心质心离地高度
+  float chassis_right_leg_com_height_m;           // 右腿 CAD 二维偏心质心离地高度
+  float chassis_body_com_height_m;                // 车体质心离地高度
+  float chassis_turn_mass_height_kg_m;            // 车体和双腿关于地面的总质量一阶矩
   float chassis_left_support_force_n;             // 左腿支撑力
   float chassis_right_support_force_n;            // 右腿支撑力
   float chassis_left_F_bh_n;                      // 左腿雅可比反力

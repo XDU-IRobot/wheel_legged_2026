@@ -23,8 +23,10 @@ constexpr rm::f32 kLegL2M = wheel_legged::params::active::chassis::kLegL2M;
 constexpr rm::f32 kBodyMassKg = wheel_legged::params::active::chassis::kBodyMassKg;
 constexpr rm::f32 kLegMassKg = wheel_legged::params::active::chassis::kLegMassKg;
 constexpr rm::f32 kGravityMps2 = wheel_legged::params::active::chassis::kGravityMps2;
-constexpr rm::f32 kWheelRadiusM = wheel_legged::params::active::chassis::kWheelRadiusM;
+constexpr rm::f32 kHalfTrackM = wheel_legged::params::active::chassis::kWheelRadiusM;
 constexpr rm::f32 kWheelPhysicalRadiusM = wheel_legged::params::active::state_estimator::kWheelRadiusM;
+constexpr rm::f32 kBodyComOffsetM = wheel_legged::params::active::chassis::kBodyComOffsetM;
+constexpr rm::f32 kTurnLoadTransferGain = wheel_legged::params::active::chassis::kTurnLoadTransferGain;
 constexpr rm::f32 kOffGroundSupportForceThresholdN =
     wheel_legged::params::active::chassis::kOffGroundSupportForceThresholdN;
 constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::chassis::kOffGroundSupportForceClampN;
@@ -36,6 +38,7 @@ constexpr uint16_t kMidLegDipHoldTicks = wheel_legged::params::active::chassis::
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
 constexpr const auto &kEtaLookupLwM = wheel_legged::params::active::chassis::kEtaLookupLwM;
+constexpr const auto &kLegComNormalLookupM = wheel_legged::params::active::chassis::kLegComNormalLookupM;
 
 constexpr const auto &kCtrlPLow = wheel_legged::params::active::chassis::kCtrlPLow;
 constexpr const auto &kCtrlPSpin = wheel_legged::params::active::chassis::kCtrlPSpin;
@@ -51,8 +54,16 @@ std::array<std::array<rm::f32, 6>, 40> ToCoeffMatrix(const std::array<float, 240
 /**
  * @brief 根据腿长插值估算腿部等效质心系数
  */
-rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
+struct LegMassGeometry {
+  rm::f32 eta;
+  rm::f32 wheel_to_com_m;
+  rm::f32 com_normal_m;
+};
+
+LegMassGeometry ComputeLegMassGeometry(const rm::f32 leg_length_m) {
   constexpr size_t kCount = kEtaLookupLegLengthM.size();
+  static_assert(kEtaLookupLwM.size() == kCount);
+  static_assert(kLegComNormalLookupM.size() == kCount);
   const rm::f32 min_l = kEtaLookupLegLengthM[0];
   const rm::f32 max_l = kEtaLookupLegLengthM[kCount - 1];
   const rm::f32 l = rm::modules::Clamp(leg_length_m, min_l, max_l);
@@ -63,12 +74,20 @@ rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) {
     if (l >= l0 && l <= l1) {
       const rm::f32 ratio = (l - l0) / (l1 - l0);
       const rm::f32 lw = kEtaLookupLwM[i] + (kEtaLookupLwM[i + 1] - kEtaLookupLwM[i]) * ratio;
-      return lw / l;
+      const rm::f32 com_normal =
+          kLegComNormalLookupM[i] + (kLegComNormalLookupM[i + 1] - kLegComNormalLookupM[i]) * ratio;
+      return {.eta = lw / l, .wheel_to_com_m = lw, .com_normal_m = com_normal};
     }
   }
 
-  return kEtaLookupLwM[kCount - 1] / max_l;
+  return {
+      .eta = kEtaLookupLwM[kCount - 1] / max_l,
+      .wheel_to_com_m = kEtaLookupLwM[kCount - 1],
+      .com_normal_m = kLegComNormalLookupM[kCount - 1],
+  };
 }
+
+rm::f32 ComputeEtaFromLegLength(const rm::f32 leg_length_m) { return ComputeLegMassGeometry(leg_length_m).eta; }
 
 /**
  * @brief 左腿弹簧补偿力矩（三次多项式）
@@ -781,6 +800,14 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     output_.leso_disable_reason = LesoDisableReason::kOutputDisabled;
     output_.left_force_n = 0.0f;
     output_.right_force_n = 0.0f;
+    output_.turn_lateral_accel_mps2 = 0.0f;
+    output_.turn_load_transfer_ff_n = 0.0f;
+    output_.left_leg_eta = 0.0f;
+    output_.right_leg_eta = 0.0f;
+    output_.left_leg_com_height_m = 0.0f;
+    output_.right_leg_com_height_m = 0.0f;
+    output_.body_com_height_m = 0.0f;
+    output_.turn_mass_height_kg_m = 0.0f;
     return;
   }
 
@@ -877,13 +904,43 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   base_torque_.t_bl -= applied_leso_compensation_[2];
   base_torque_.t_br -= applied_leso_compensation_[3];
 
-  const rm::f32 eta_left = ComputeEtaFromLegLength(left_leg_.l0());
-  const rm::f32 eta_right = ComputeEtaFromLegLength(right_leg_.l0());
+  const LegMassGeometry left_mass_geometry = ComputeLegMassGeometry(left_leg_.l0());
+  const LegMassGeometry right_mass_geometry = ComputeLegMassGeometry(right_leg_.l0());
+  const rm::f32 eta_left = left_mass_geometry.eta;
+  const rm::f32 eta_right = right_mass_geometry.eta;
   const rm::f32 effective_mass_left_kg = 0.5f * kBodyMassKg + eta_left * kLegMassKg;
   const rm::f32 effective_mass_right_kg = 0.5f * kBodyMassKg + eta_right * kLegMassKg;
   const rm::f32 gravity_ff_left = effective_mass_left_kg * kGravityMps2;
   const rm::f32 gravity_ff_right = effective_mass_right_kg * kGravityMps2;
-  const rm::f32 wheel_radius_m = (kWheelRadiusM > 1e-5f) ? kWheelRadiusM : 1e-5f;
+  const rm::f32 half_track_m = (kHalfTrackM > 1e-5f) ? kHalfTrackM : 1e-5f;
+
+  // CAD c_normal is positive after rotating the upper-pivot -> wheel direction
+  // counter-clockwise. With theta_l=0 upright, the COM height above the axle is
+  // l_w*cos(theta_l) - c_normal*sin(theta_l).
+  const rm::f32 theta_ll = state_output.current.theta_ll;
+  const rm::f32 theta_lr = state_output.current.theta_lr;
+  const rm::f32 left_leg_com_height_m = kWheelPhysicalRadiusM + left_mass_geometry.wheel_to_com_m * std::cos(theta_ll) -
+                                        left_mass_geometry.com_normal_m * std::sin(theta_ll);
+  const rm::f32 right_leg_com_height_m = kWheelPhysicalRadiusM +
+                                         right_mass_geometry.wheel_to_com_m * std::cos(theta_lr) -
+                                         right_mass_geometry.com_normal_m * std::sin(theta_lr);
+  const rm::f32 body_com_height_m =
+      kWheelPhysicalRadiusM + 0.5f * (left_leg_.l0() * std::cos(theta_ll) + right_leg_.l0() * std::cos(theta_lr)) +
+      kBodyComOffsetM * std::cos(state_output.current.theta_b);
+  const rm::f32 turn_mass_height_kg_m =
+      kBodyMassKg * body_com_height_m + kLegMassKg * (left_leg_com_height_m + right_leg_com_height_m);
+  const rm::f32 lateral_accel_mps2 = state_output.current.phi_dot * state_output.current.s_dot;
+  const rm::f32 turn_load_transfer_ff_n =
+      kTurnLoadTransferGain * turn_mass_height_kg_m * lateral_accel_mps2 / (2.0f * half_track_m);
+
+  output_.turn_lateral_accel_mps2 = lateral_accel_mps2;
+  output_.turn_load_transfer_ff_n = 0.0f;
+  output_.left_leg_eta = eta_left;
+  output_.right_leg_eta = eta_right;
+  output_.left_leg_com_height_m = left_leg_com_height_m;
+  output_.right_leg_com_height_m = right_leg_com_height_m;
+  output_.body_com_height_m = body_com_height_m;
+  output_.turn_mass_height_kg_m = turn_mass_height_kg_m;
 
   const rm::f32 avg_leg_length_m = 0.5f * (left_leg_.l0() + right_leg_.l0());
 
@@ -1052,15 +1109,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         }
       } else {
         // 常规支撑时叠加腿长 PID、重力前馈、横滚补偿、惯性补偿和弹簧补偿。
-        const rm::f32 inertial_ff_left = effective_mass_left_kg *
-                                         ((left_leg_.l0() + kWheelPhysicalRadiusM) / (2.0f * wheel_radius_m)) *
-                                         state_output.current.phi_dot * state_output.current.s_dot;
-        const rm::f32 inertial_ff_right = effective_mass_right_kg *
-                                          ((right_leg_.l0() + kWheelPhysicalRadiusM) / (2.0f * wheel_radius_m)) *
-                                          state_output.current.phi_dot * state_output.current.s_dot;
-
-        left_force_ = output_.left_l0_pid_out + grav_left + roll_pid_.out() - inertial_ff_left + l_spring_torque_;
-        right_force_ = output_.right_l0_pid_out + grav_right - roll_pid_.out() + inertial_ff_right + r_spring_torque_;
+        // a_y*sum(m_i*h_i) is balanced by equal-and-opposite left/right support
+        // corrections across the full track 2*b.
+        output_.turn_load_transfer_ff_n = turn_load_transfer_ff_n;
+        left_force_ =
+            output_.left_l0_pid_out + grav_left + roll_pid_.out() - turn_load_transfer_ff_n + l_spring_torque_;
+        right_force_ =
+            output_.right_l0_pid_out + grav_right - roll_pid_.out() + turn_load_transfer_ff_n + r_spring_torque_;
       }
 
       const bool is_mid_or_high_leg = input.fsm_mode == Fsm::State::kMidLeg || input.fsm_mode == Fsm::State::kHighLeg ||

@@ -90,6 +90,14 @@ class Chassis {
     rm::f32 right_l0_pid_out{0.0f};          ///< 右腿腿长 PID 输出
     rm::f32 left_force_n{0.0f};              ///< 左腿竖直力
     rm::f32 right_force_n{0.0f};             ///< 右腿竖直力
+    rm::f32 turn_lateral_accel_mps2{0.0f};   ///< 转向横向加速度估计 v_x * omega_z
+    rm::f32 turn_load_transfer_ff_n{0.0f};   ///< 左减右加的转向载荷转移前馈
+    rm::f32 left_leg_eta{0.0f};              ///< 左腿重力/轴向等效系数 l_w/l_0
+    rm::f32 right_leg_eta{0.0f};             ///< 右腿重力/轴向等效系数 l_w/l_0
+    rm::f32 left_leg_com_height_m{0.0f};     ///< 左腿 CAD 二维偏心质心离地高度
+    rm::f32 right_leg_com_height_m{0.0f};    ///< 右腿 CAD 二维偏心质心离地高度
+    rm::f32 body_com_height_m{0.0f};         ///< 车体质心离地高度
+    rm::f32 turn_mass_height_kg_m{0.0f};     ///< 车体和双腿关于地面的总质量一阶矩
     rm::f32 left_support_force_n{0.0f};      ///< 左腿支撑力估计
     rm::f32 right_support_force_n{0.0f};     ///< 右腿支撑力估计
     rm::f32 left_F_bh_n{0.0f};               ///< 左腿雅可比反力（竖直分量）

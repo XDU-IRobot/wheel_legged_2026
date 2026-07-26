@@ -418,6 +418,8 @@ constexpr float kWheelRadiusM = 0.24f;  ///< 驱动轮轮距的一半（R_l） [
 // -- 腿长→等效质心轴向力臂查找表（用于支撑力/重力前馈的 eta 插值）--
 // CAD 二维偏心质心按虚拟腿轴线投影：l_w = l_0 - c_parallel，eta = l_w / l_0。
 // c_normal 不进入 eta；其惯量和常值重力矩影响由 LQR/LESO 模型处理。
+constexpr float kBodyComOffsetM = 0.024f;      ///< Body COM offset from the virtual-leg upper pivot [m]
+constexpr float kTurnLoadTransferGain = 0.5f;  ///< Commissioning gain; theoretical value is 1.0
 constexpr std::array<float, 24> kEtaLookupLegLengthM{
     0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f,
     0.23f, 0.24f, 0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f, 0.33f, 0.34f,
@@ -426,6 +428,12 @@ constexpr std::array<float, 24> kEtaLookupLwM{
     0.112223478f, 0.116268823f, 0.120787430f, 0.125678595f, 0.130868529f, 0.136301986f, 0.141936777f, 0.147740123f,
     0.153686107f, 0.159754146f, 0.165927462f, 0.172192363f, 0.178537535f, 0.184953549f, 0.191432482f, 0.197967631f,
     0.204553286f, 0.211184558f, 0.217857238f, 0.224567688f, 0.231312756f, 0.238089701f, 0.244896144f, 0.251725084f,
+};
+constexpr std::array<float, 24> kLegComNormalLookupM{
+    -0.086718091f, -0.087073613f, -0.087155441f, -0.087027371f, -0.086731423f, -0.086296060f,
+    -0.085740970f, -0.085079952f, -0.084322717f, -0.083476092f, -0.082544730f, -0.081531657f,
+    -0.080438607f, -0.079266254f, -0.078014363f, -0.076681880f, -0.075266984f, -0.073767091f,
+    -0.072178828f, -0.070497968f, -0.068719336f, -0.066836653f, -0.064842333f, -0.062750293f,
 };
 
 // ==== 姿态安全/倒地恢复 ====
@@ -1045,6 +1053,14 @@ constexpr float kSpinCtrlLegOscillationHz = 1.f;     ///< Ctrl+小陀螺腿长�
 
 // ── 底盘控制 ──
 namespace chassis {
+constexpr float kBodyComOffsetM = 0.024f;     ///< Body COM offset from the virtual-leg upper pivot [m]
+constexpr float kTurnLoadTransferGain = 1.f;  ///< Commissioning gain; theoretical value is 1.0
+constexpr std::array<float, 24> kLegComNormalLookupM{
+    -0.086718091f, -0.087073613f, -0.087155441f, -0.087027371f, -0.086731423f, -0.086296060f,
+    -0.085740970f, -0.085079952f, -0.084322717f, -0.083476092f, -0.082544730f, -0.081531657f,
+    -0.080438607f, -0.079266254f, -0.078014363f, -0.076681880f, -0.075266984f, -0.073767091f,
+    -0.072178828f, -0.070497968f, -0.068719336f, -0.066836653f, -0.064842333f, -0.062750293f,
+};
 
 // ==== 物理/机械参数 ====
 constexpr float kControlDtS = 0.002f;  ///< 底盘控制周期 [s]（500Hz）
@@ -1679,6 +1695,14 @@ constexpr float kSpinCtrlLegOscillationHz = 1.5f;    ///< Ctrl+小陀螺腿长�
 
 // ── 底盘控制 ──
 namespace chassis {
+constexpr float kBodyComOffsetM = 0.024f;      ///< Body COM offset from the virtual-leg upper pivot [m]
+constexpr float kTurnLoadTransferGain = 0.5f;  ///< Commissioning gain; theoretical value is 1.0
+constexpr std::array<float, 24> kLegComNormalLookupM{
+    -0.086718091f, -0.087073613f, -0.087155441f, -0.087027371f, -0.086731423f, -0.086296060f,
+    -0.085740970f, -0.085079952f, -0.084322717f, -0.083476092f, -0.082544730f, -0.081531657f,
+    -0.080438607f, -0.079266254f, -0.078014363f, -0.076681880f, -0.075266984f, -0.073767091f,
+    -0.072178828f, -0.070497968f, -0.068719336f, -0.066836653f, -0.064842333f, -0.062750293f,
+};
 
 // ==== 物理/机械参数 ====
 constexpr float kControlDtS = 0.002f;  ///< 底盘控制周期 [s]（500Hz）

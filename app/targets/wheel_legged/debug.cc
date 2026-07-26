@@ -240,6 +240,14 @@ void UpdateDebugSnapshot(const uint32_t tick_ms, const wheel_legged::control_loo
   wl_debug.chassis_imu_acc_x_integral_mps = chassis_control_output.imu_acc_x_integral_mps;
   wl_debug.chassis_left_force_n = chassis_control_output.left_force_n;
   wl_debug.chassis_right_force_n = chassis_control_output.right_force_n;
+  wl_debug.chassis_turn_lateral_accel_mps2 = chassis_control_output.turn_lateral_accel_mps2;
+  wl_debug.chassis_turn_load_transfer_ff_n = chassis_control_output.turn_load_transfer_ff_n;
+  wl_debug.chassis_left_leg_eta = chassis_control_output.left_leg_eta;
+  wl_debug.chassis_right_leg_eta = chassis_control_output.right_leg_eta;
+  wl_debug.chassis_left_leg_com_height_m = chassis_control_output.left_leg_com_height_m;
+  wl_debug.chassis_right_leg_com_height_m = chassis_control_output.right_leg_com_height_m;
+  wl_debug.chassis_body_com_height_m = chassis_control_output.body_com_height_m;
+  wl_debug.chassis_turn_mass_height_kg_m = chassis_control_output.turn_mass_height_kg_m;
   wl_debug.chassis_left_support_force_n = chassis_control_output.left_support_force_n;
   wl_debug.chassis_right_support_force_n = chassis_control_output.right_support_force_n;
   wl_debug.chassis_left_F_bh_n = chassis_control_output.left_F_bh_n;
