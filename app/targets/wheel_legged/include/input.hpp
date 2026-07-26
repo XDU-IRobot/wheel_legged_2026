@@ -118,6 +118,12 @@ struct InputSnapshot {
   bool auto_jump_tof_armed_debug{false};                  ///< 调试：auto_jump_tof_armed 条件
   bool auto_jump_both_active{false};                      ///< 调试：both_active 条件（含200ms消抖）
   bool auto_jump_trigger_ready{false};                    ///< 调试：both_close && tof_armed && both_active
+  bool highland_auto_jump_triggered{false};               ///< 本周期中央高地自动跳跃触发
+  bool highland_auto_jump_enabled{false};                 ///< 已按 Ctrl+Z，正在等待或执行
+  bool highland_auto_jump_both_close{false};              ///< 调试：高地 both_close 条件
+  bool highland_auto_jump_tof_armed_debug{false};         ///< 调试：高地 tof_armed 条件
+  bool highland_auto_jump_both_active{false};             ///< 调试：高地 both_active 条件
+  bool highland_auto_jump_trigger_ready{false};           ///< 调试：高地 trigger_ready
   bool ui_refresh_key{false};                             ///< E 键按下（UI 刷新使能）
   float gimbal_imu_yaw_rad{0.0f};                         ///< 云台惯导偏航角
   float gimbal_imu_pitch_rad{0.0f};                       ///< 云台惯导俯仰角
@@ -161,16 +167,21 @@ struct TcSemanticState {
   AimMode aim_mode{AimMode::kAmmo};  ///< 右键自瞄子模式
   bool r_flip_armed{true};           ///< R 键 180° 翻转上升沿检测
   wheel_legged::TofMode requested_tof_mode{wheel_legged::TofMode::kAutoJump};
-  bool x_tof_mode_armed{true};            ///< X 键 ToF 模式切换上升沿
-  bool stair_descend_in_progress{false};  ///< 预留：下台阶动作执行中时禁止 X 手动退出
-  bool stair_descend_completed{false};    ///< 预留：下台阶逻辑完成后置 true，自动切回前向 ToF
-  bool auto_jump_enabled{false};          ///< Z 键启动的一次性自动跳跃正在等待/执行
-  bool auto_jump_in_progress{false};      ///< 已由自动测距触发并进入底盘跳跃状态
-  bool z_auto_jump_armed{true};           ///< Z 键上升沿检测
-  bool auto_jump_tof_armed{true};         ///< 自动跳跃 TOF 边沿检测
-  uint32_t both_active_start_ms{0};       ///< both_active 条件首次满足的时刻
-  bool dial_jump_armed{true};             ///< DR16 拨轮跳跃边沿检测
-  bool mouse_z_jump_armed{true};          ///< 鼠标滚轮跳跃边沿检测
+  bool x_tof_mode_armed{true};                 ///< X 键 ToF 模式切换上升沿
+  bool stair_descend_in_progress{false};       ///< 预留：下台阶动作执行中时禁止 X 手动退出
+  bool stair_descend_completed{false};         ///< 预留：下台阶逻辑完成后置 true，自动切回前向 ToF
+  bool auto_jump_enabled{false};               ///< Z 键启动的一次性自动跳跃正在等待/执行
+  bool auto_jump_in_progress{false};           ///< 已由自动测距触发并进入底盘跳跃状态
+  bool z_auto_jump_armed{true};                ///< Z 键上升沿检测
+  bool auto_jump_tof_armed{true};              ///< 自动跳跃 TOF 边沿检测
+  uint32_t both_active_start_ms{0};            ///< both_active 条件首次满足的时刻
+  bool highland_auto_jump_enabled{false};      ///< Ctrl+Z 启动的中央高地跳跃正在等待/执行
+  bool highland_auto_jump_in_progress{false};  ///< 已由高地 TOF 触发并进入底盘跳跃状态
+  bool ctrl_z_highland_armed{true};            ///< Ctrl+Z 组合键上升沿检测
+  bool highland_auto_jump_tof_armed{true};     ///< 中央高地 TOF 边沿检测
+  uint32_t highland_both_active_start_ms{0};   ///< 中央高地 both_active 条件首次满足的时刻
+  bool dial_jump_armed{true};                  ///< DR16 拨轮跳跃边沿检测
+  bool mouse_z_jump_armed{true};               ///< 鼠标滚轮跳跃边沿检测
   wheel_legged::DomainRequest prev_domain{wheel_legged::DomainRequest::kDisabled};  ///< 使能边沿检测用
   enum class PendingAction : uint8_t { kNone, kC, kV, kB };
   PendingAction pending_action{PendingAction::kNone};   ///< yaw 对齐完成后待执行的动作
