@@ -1441,9 +1441,10 @@ void ControlLoop() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   {
     const float shots_fired = static_cast<float>(ns::control_loop::kInitialAmmoCount - hero_remaining_ammo);
+    const float rear_delta = (ctx.yaw_follow_target.drive_sign < 0.0f) ? ns::control_loop::kDisplacementBiasRearDeltaM : 0.0f;
     chassis_update_input.displacement_bias =
         wheel_legged::control_loop::ResolveDisplacementBias(chassis_update_input.fsm_mode) +
-        shots_fired * ns::control_loop::kDisplacementBiasPerShot;
+        shots_fired * ns::control_loop::kDisplacementBiasPerShot + rear_delta;
     wl_debug.hero_remaining_ammo = hero_remaining_ammo;
     wl_debug.hero_displacement_bias = chassis_update_input.displacement_bias;
   }

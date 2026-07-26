@@ -224,8 +224,8 @@ constexpr float kPitchMinRad = -0.2f;  ///< 俯仰角下限 [rad]
 constexpr float kPitchMaxRad = 0.7f;   ///< 俯仰角上限 [rad]
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
-constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.3f, 1000.0f, 1.0f};    ///< 偏航位置 PID
-constexpr PidGains kYawSpeedPid{1.5f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
+constexpr PidGains kYawPositionPid{25.0f, 0.0f, 0.5f, 1000.0f, 1.0f};    ///< 偏航位置 PID
+constexpr PidGains kYawSpeedPid{1.f, 0.0f, 0.0f, 10.0f, 0.4f};          ///< 偏航速度 PID
 constexpr PidGains kPitchPositionPid{35.0f, 0.0f, 0.5f, 1000.0f, 0.4f};  ///< 俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{2.f, 0.0f, 0.0f, 28.0f, 0.0f};         ///< 俯仰速度 PID
 
@@ -335,17 +335,17 @@ constexpr StairClimbParams kStairClimb{
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
-    .hook_theta_target_rad = 1.f,
-    .retract_theta_target_rad = 1.2f,
+    .hook_theta_target_rad = 1.6f,
+    .retract_theta_target_rad = 1.6f,
     .retract_theta_tolerance_rad = 0.6f,
-    .hook_theta_tolerance_rad = 0.3f,
-    .leg_length_tolerance_m = 0.08f,
+    .hook_theta_tolerance_rad = 0.5f,
+    .leg_length_tolerance_m = 0.07f,
     .settle_theta_tolerance_rad = 0.5f,
-    .settle_theta_target_rad = -0.f,
+    .settle_theta_target_rad = 0.f,
     .settle_theta_ramp_step_rad = 0.02f,
     .hook_stable_ms = 10U,
     .retract_stable_ms = 20U,
-    .settle_stable_ms = 100U,
+    .settle_stable_ms = 50U,
     .hook_timeout_ms = 1000U,
     .retract_timeout_ms = 1000U,
     .settle_timeout_ms = 1000U,
@@ -361,7 +361,7 @@ constexpr StairClimbParams kStairClimbStep2{
     .retract_theta_tolerance_rad = 0.6f,
     .hook_theta_tolerance_rad = 0.3f,
     .leg_length_tolerance_m = 0.08f,
-    .settle_theta_tolerance_rad = 0.4f,
+    .settle_theta_tolerance_rad = 1.f,
     .settle_theta_target_rad = -0.2f,
     .settle_theta_ramp_step_rad = 0.02f,
     .hook_stable_ms = 10U,
@@ -449,7 +449,7 @@ constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆
 constexpr float kStandupPhase0TargetLengthM = 0.36f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
 constexpr float kStandupPhase0ThetaTolRad = 0.3f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
-constexpr float kStandupPhase1ThetaTolRad = 0.4f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1ThetaTolRad = 0.5f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;       ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.008f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
@@ -587,7 +587,7 @@ constexpr float kDr16MouseYawRateMaxRadS = -6.0f;   ///< DR16 鼠标满偏时偏
 constexpr float kDr16MousePitchRateMaxRadS = 3.0f;  ///< DR16 鼠标满偏时俯仰积分速率 [rad/s]
 constexpr float kPitchTargetMinRad = -0.2f;         ///< RC 积分俯仰目标下限 [rad]
 constexpr float kPitchTargetMaxRad = 0.7f;          ///< RC 积分俯仰目标上限 [rad]
-constexpr float kKeyboardAccelRampStep = 0.008f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
+constexpr float kKeyboardAccelRampStep = 0.004f;    ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.008f;    ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
 // -- 云台启动归中判稳 --
@@ -641,14 +641,15 @@ constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;  ///< 低腿长期望右腿
 constexpr float kExpectedThetaBBiasRad = -0.08f;     ///< 期望机体俯仰偏置 [rad]
 
 constexpr float kExpectedDisplacementBiasM = 0.0f;          ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = -0.2f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
 constexpr float kExpectedDisplacementBiasMMidLeg = 0.f;   ///< 中腿长期望位移偏置 [m]（满弹量时）
 constexpr float kExpectedDisplacementBiasMHighLeg = 0.f;  ///< 高腿长期望位移偏置 [m]（满弹量时）
 constexpr int kInitialAmmoCount = 60;                       ///< 初始弹量 [发]
 constexpr float kDisplacementBiasPerShot = 1.f / 120.f;  ///< 每发弹的位移偏置变化量 [m/发]（待标定）
+constexpr float kDisplacementBiasRearDeltaM = -0.15f;      ///< 尾部朝向（+π 目标）时的位移偏置增量 [m]（待标定）
 
 // ==== 速度斜坡参数（按腿长档位分级）====
-constexpr SdotRampParams kSdotRampLowLeg{0.006f, 0.007f};     ///< 低腿长速度斜坡（加速/制动步长）
+constexpr SdotRampParams kSdotRampLowLeg{0.004f, 0.005f};     ///< 低腿长速度斜坡（加速/制动步长）
 constexpr SdotRampParams kSdotRampMidLeg{0.0040f, 0.006f};    ///< 中腿长速度斜坡(C 键触发)
 constexpr SdotRampParams kSdotRampMidLegF{0.0055f, 0.0055f};  ///< 中腿长速度斜坡（G 键触发）
 constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};    ///< 高腿长速度斜坡
@@ -785,7 +786,7 @@ constexpr std::array<float, 4> kCompensationSlewPerTickNm{0.003f, 0.003f, 0.005f
 namespace posture_observer {
 constexpr PostureObserverParams kParams{
     .quat_norm_tolerance = 0.01f,
-    .imu_stale_ms = 50U,
+    .imu_stale_ms = 100U,
     .quat_discontinuity_threshold = 0.5f,
     .R_bs_00 = 0.0f,
     .R_bs_01 = -1.0f,
@@ -803,12 +804,12 @@ constexpr PostureObserverParams kParams{
 // ── 四元数倒地检测器（影子模式）──
 namespace fall_detector {
 constexpr FallDetectorParams kParams{
-    .fall_enter_uxy_abs = 0.766f,    // sin(50°)
-    .upright_exit_uxy_abs = 0.469f,  // sin(28°)
-    .fall_confirm_ms = 220U,
-    .upright_confirm_ms = 400U,
-    .upright_gyro_max_rad_s = 0.5f,
-    .direction_threshold = 0.7f,
+  .fall_enter_uxy_abs = 0.5f,
+  .upright_exit_uxy_abs = 0.5f,
+  .fall_confirm_ms = 300U,
+  .upright_confirm_ms = 2U,
+  .upright_gyro_max_rad_s = 1.f,
+  .direction_threshold = 0.5f,
 };
 }  // namespace fall_detector
 
