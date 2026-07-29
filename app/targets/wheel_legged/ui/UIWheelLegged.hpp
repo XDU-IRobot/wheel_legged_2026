@@ -19,6 +19,11 @@ extern void UIWheelLeggedCrosshair_edit();
 extern void UIWheelLeggedGimbalData_add();
 extern void UIWheelLeggedGimbalData_edit();
 
+// ── Shoot recorded yaw/pitch display (hero variant) ──
+extern void UIWheelLeggedShootRecordedLabel_add();
+extern void UIWheelLeggedShootRecorded_add();
+extern void UIWheelLeggedShootRecorded_edit();
+
 // ── Supercap energy bar ──
 extern void UIWheelLeggedSupercapBox_add();
 extern void UIWheelLeggedSupercap_add();

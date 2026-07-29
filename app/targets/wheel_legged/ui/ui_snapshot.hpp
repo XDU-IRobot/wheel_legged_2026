@@ -10,6 +10,10 @@ struct UiSnapshot {
   float gimbal_yaw_rad{0.0f};
   float yaw_motor_raw_pos_rad{0.0f};
 
+  float shoot_recorded_pitch_rad{0.0f};  ///< 左键射击时记录的 pitch
+  float shoot_recorded_yaw_rad{0.0f};    ///< 左键射击时记录的 yaw
+  bool shoot_recorded_valid{false};      ///< 记录值是否有效
+
   float left_leg_length_m{0.0f};
   float right_leg_length_m{0.0f};
   float left_leg_theta_rad{0.0f};

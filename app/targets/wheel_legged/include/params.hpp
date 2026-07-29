@@ -391,7 +391,7 @@ constexpr std::uint32_t kJumpPushReachedHoldMs = 5U;  ///< 蹬伸腿长到位后
 // 自动跳跃已移除
 
 // ==== 起立 ====
-constexpr float kStandupRetractLegLengthM = 0.16f;  ///< 起立 Phase 1 收腿目标腿长 [m]
+constexpr float kStandupRetractLegLengthM = 0.14f;  ///< 起立 Phase 1 收腿目标腿长 [m]
 
 // ==== 基本运动（腿长档位）====
 constexpr float kLowLegLengthM = 0.16f;      ///< 低腿长档位目标腿长 [m]
@@ -497,11 +497,11 @@ constexpr float kRecoveryBackFallHoldTorqueNm = 5.0f;    ///< 后倒恢复到达
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 10.0f;  ///< 支撑力低于此值判定为离地 [N]
-constexpr float kOffGroundSupportForceClampN = 20.0f;      ///< 离地时支持力限幅值 [N]
+constexpr float kOffGroundSupportForceClampN = 100.0f;      ///< 离地时支持力限幅值 [N]
 
 // -- 中腿长下压 --
-constexpr float kMidLegDipTriggerLengthM = 0.26f;  ///< 中腿长模式下触发下压的腿长阈值 [m]
-constexpr float kMidLegDipTargetLengthM = 0.21f;   ///< 下压目标腿长 [m]
+constexpr float kMidLegDipTriggerLengthM = 0.3f;  ///< 中腿长模式下触发下压的腿长阈值 [m]
+constexpr float kMidLegDipTargetLengthM = 0.2f;   ///< 下压目标腿长 [m]
 constexpr uint16_t kMidLegDipHoldTicks = 500;      ///< 下压维持时间 [ticks @ 500Hz = 1s]
 
 // -- 上台阶退勾起立 --
@@ -538,10 +538,10 @@ constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};
 constexpr PidGains kRightLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 右腿摆角 PID（跳跃收腿第二阶段）
 
 // ==== 中腿长下压（PID 增益）====
-constexpr PidGains kLeftL0PidDip{500.0f, 0.f, 130.0f, 180.0f, 0.0f};   ///< 左腿下压腿长 PID
-constexpr PidGains kRightL0PidDip{500.0f, 0.f, 130.0f, 180.0f, 0.0f};  ///< 右腿下压腿长 PID
-// constexpr PidGains kLeftL0PidDip{1000.0f, 0.1f, 130.0f, 120.0f, 10.0f};   ///< 左腿腿长 PID（常规）
-// constexpr PidGains kRightL0PidDip{1000.0f, 0.1f, 130.0f, 120.0f, 10.0f};  ///< 右腿腿长 PID（常规）
+// constexpr PidGains kLeftL0PidDip{500.0f, 0.f, 130.0f, 180.0f, 0.0f};   ///< 左腿下压腿长 PID
+// constexpr PidGains kRightL0PidDip{500.0f, 0.f, 130.0f, 180.0f, 0.0f};  ///< 右腿下压腿长 PID
+constexpr PidGains kLeftL0PidDip{400.0f, 0.f, 160.0f, 120.0f, 0.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0PidDip{400.0f, 0.f, 160.0f, 120.0f, 0.0f};  ///< 右腿腿长 PID（常规）
 
 // ==== 倒地自启（腿摆速度 PID）====
 constexpr PidGains kLeftLegTurnPid{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 左腿摆角速度 PID（theta/roll 恢复用）
@@ -597,7 +597,7 @@ constexpr float kRcPitchRateMaxRadS_LongDistance_Shift = 0.1f;  ///< 吊射 Shif
 #endif
 constexpr float kPitchTargetMinRad = -0.2f;       ///< RC 积分俯仰目标下限 [rad]
 constexpr float kPitchTargetMaxRad = 0.7f;        ///< RC 积分俯仰目标上限 [rad]
-constexpr float kKeyboardAccelRampStep = 0.008f;  ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
+constexpr float kKeyboardAccelRampStep = 0.004f;  ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.008f;  ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
 // -- 云台启动归中判稳 --
@@ -614,7 +614,7 @@ constexpr std::uint32_t kYawFollowDriveReadyStableTicks = 10U;  ///< 偏航就�
 constexpr float kTargetForwardSpeedMaxMps = 1.9f;         ///< 最大前进速度 [m/s]
 constexpr float kTargetForwardSpeedMaxHighLegMps = 1.2f;  ///< 高腿长模式最大前进速度 [m/s]
 constexpr float kTargetForwardSpeedMaxMidLegMps = 1.7f;   ///< F键中腿长模式最大前进速度 [m/s]
-constexpr float kTargetForwardSpeedMaxNoScMps = 1.1f;     ///< 无超电最大前进速度 [m/s]
+constexpr float kTargetForwardSpeedMaxNoScMps = 1.9f;     ///< 无超电最大前进速度 [m/s]
 constexpr float kTargetSpeedBiasLowLegMps = 0.0f;         ///< 低腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasMidLegFMps = 0.0f;        ///< F键中腿长目标速度偏置 [m/s]
@@ -636,8 +636,8 @@ constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻�
 
 constexpr uint32_t kPositionHoldTimeoutTicks =
     1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
-constexpr float kPositionErrorScaleLowLeg = 1.0f;      ///< 低腿长位置误差缩放
-constexpr float kVelocityErrorScaleLowLeg = 1.0f;      ///< 低腿长速度误差缩放
+constexpr float kPositionErrorScaleLowLeg = 1.5f;      ///< 低腿长位置误差缩放
+constexpr float kVelocityErrorScaleLowLeg = 1.3f;      ///< 低腿长速度误差缩放
 constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误差缩放
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
@@ -649,6 +649,9 @@ constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向�
 constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;  ///< 低腿长期望左腿摆角偏置 [rad]
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;  ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = -0.08f;      ///< 期望机体俯仰偏置 [rad]
+// ==== 吊射摆腿 ====
+constexpr float kLobShotThetaTargetRad = -0.4f;    ///< 吊射摆腿目标角 [rad]
+constexpr float kLobShotThetaToleranceRad = 0.05f;  ///< 吊射摆腿到位容差 [rad]
 
 constexpr float kExpectedDisplacementBiasM = 0.0f;          ///< 期望位移偏置 [m]
 constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;  ///< 低腿长期望位移偏置 [m]（满弹量时）

@@ -177,6 +177,46 @@ void UIWheelLeggedGimbalData_edit() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Shoot recorded yaw/pitch display (hero variant)
+// ═══════════════════════════════════════════════════════════════════════════
+
+void UIWheelLeggedShootRecordedLabel_add() {
+  UICharacter fig;
+  fig.character.fillCharacter("rpy", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3,
+                              static_cast<u16>(200.728), static_cast<u16>(738.454), 30, 5);
+  memcpy(fig.data, "rP:\nrY:", 5);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  ui_async_send(len);
+}
+
+void UIWheelLeggedShootRecorded_add() {
+  static UIFigure2 fig;
+  fig.figure1.fillFloat("rpit", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3,
+                        static_cast<u16>(260.748), static_cast<u16>(730.583), 25,
+                        ui_snapshot.shoot_recorded_pitch_rad * 1000);
+  fig.figure2.fillFloat("ryaw", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 3,
+                        static_cast<u16>(260.348), static_cast<u16>(690.988), 25,
+                        ui_snapshot.shoot_recorded_yaw_rad * 1000);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  ui_async_send(len);
+}
+
+void UIWheelLeggedShootRecorded_edit() {
+  static UIFigure2 fig;
+  fig.figure1.fillFloat("rpit", UIFigure::Operation::Edit, 0, UIFigure::Color::Yellow, 3,
+                        static_cast<u16>(260.748), static_cast<u16>(730.583), 25,
+                        ui_snapshot.shoot_recorded_pitch_rad * 1000);
+  fig.figure2.fillFloat("ryaw", UIFigure::Operation::Edit, 0, UIFigure::Color::Yellow, 3,
+                        static_cast<u16>(260.348), static_cast<u16>(690.988), 25,
+                        ui_snapshot.shoot_recorded_yaw_rad * 1000);
+  u8 sender = ui_snapshot.referee_robot_id;
+  u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
+  ui_async_send(len);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Supercap energy bar
 // ═══════════════════════════════════════════════════════════════════════════
 

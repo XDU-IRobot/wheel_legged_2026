@@ -950,10 +950,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     left_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
     right_l0_pid_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
   }
-  // 下压目标腿长时使用独立 PID（持续 1s）
+  // 下压目标腿长时使用独立 PID（持续 1s），各腿用自己的腿长反馈
   if (mid_leg_dip_active_) {
-    left_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -left_leg_.l0_dot(), 2);
-    right_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, avg_leg_length_m, -right_leg_.l0_dot(), 2);
+    left_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, left_leg_.l0(), -left_leg_.l0_dot(), 2);
+    right_l0_pid_dip_.UpdateExtDiff(params_.leg_target_length_m, right_leg_.l0(), -right_leg_.l0_dot(), 2);
   }
   output_.left_l0_pid_out = mid_leg_dip_active_ ? left_l0_pid_dip_.out() : left_l0_pid_.out();
   output_.right_l0_pid_out = mid_leg_dip_active_ ? right_l0_pid_dip_.out() : right_l0_pid_.out();

@@ -55,6 +55,11 @@ static auto UI_label_py = rm::device::UITask(UIWheelLeggedLabelPY_add);
 static auto UI_gimbal_data_add = rm::device::UITask(UIWheelLeggedGimbalData_add);
 static auto UI_gimbal_data_edit = rm::device::UITask(UIWheelLeggedGimbalData_edit, 1.5f);
 
+// Shoot recorded yaw/pitch (hero variant)
+static auto UI_shoot_recorded_label_add = rm::device::UITask(UIWheelLeggedShootRecordedLabel_add);
+static auto UI_shoot_recorded_add = rm::device::UITask(UIWheelLeggedShootRecorded_add);
+static auto UI_shoot_recorded_edit = rm::device::UITask(UIWheelLeggedShootRecorded_edit, 2.0f);
+
 // Supercap energy bar
 static auto UI_supercap_box = rm::device::UITask(UIWheelLeggedSupercapBox_add);
 static auto UI_supercap_add = rm::device::UITask(UIWheelLeggedSupercap_add);
@@ -115,6 +120,9 @@ void static_UI_add() {
   schedule.addTaskStatic(&UI_label_py);
   schedule.addTaskStatic(&UI_gimbal_data_add);
   schedule.addTask(&UI_gimbal_data_edit);
+  schedule.addTaskStatic(&UI_shoot_recorded_label_add);
+  schedule.addTaskStatic(&UI_shoot_recorded_add);
+  schedule.addTask(&UI_shoot_recorded_edit);
 #else
   schedule.addTaskStatic(&UI_status_label_st1);
   schedule.addTaskStatic(&UI_status_label_st2);
@@ -213,6 +221,10 @@ constexpr float kSpinThetaBBiasRad = ns::control_loop::kSpinThetaBBiasRad;
 constexpr float kJumpThetaLlBiasRad = ns::control_loop::kJumpThetaLlBiasRad;
 constexpr float kJumpThetaLrBiasRad = ns::control_loop::kJumpThetaLrBiasRad;
 constexpr float kExpectedThetaBBiasRad = ns::control_loop::kExpectedThetaBBiasRad;
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+constexpr float kLobShotThetaTargetRad = ns::control_loop::kLobShotThetaTargetRad;
+constexpr float kLobShotThetaToleranceRad = ns::control_loop::kLobShotThetaToleranceRad;
+#endif
 constexpr uint32_t kGimbalStartupYawAlignStableTicks = ns::control_loop::kGimbalStartupYawAlignStableTicks;
 constexpr uint32_t kYawFollowDriveReadyStableTicks = ns::control_loop::kYawFollowDriveReadyStableTicks;
 constexpr float kYawFollowFixedTargetRad = ns::control_loop::kYawFollowFixedTargetRad;
@@ -415,6 +427,10 @@ void ControlLoop() {
   static chassis::Chassis::UpdateOutput chassis_control_output{};
   static gimbal::Gimbal::UpdateOutput gimbal_control_output{};
 
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  static bool lob_shot_leg_positioned = false;  // 吊射摆腿到位标志
+#endif
+
   // ── 四元数倒地检测（影子模式）──
   static wheel_legged::PostureObserver posture_observer{};
   static wheel_legged::FallDetector fall_detector{};
@@ -423,6 +439,8 @@ void ControlLoop() {
   static bool fall_detector_initialized = false;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
+  static bool prev_left_button = false;   // 左键上一周期状态，用于上升沿检测
+  static int dial_block_ticks = 0;        // 射击记录后阻塞拨盘的剩余周期数
 #endif
 
   // ── 一次性初始化 ──
@@ -840,8 +858,24 @@ void ControlLoop() {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // Hero：三摩擦轮 + DM 拨盘，ShootController 内置 5 状态机自行下发
   {
+    // 左键上升沿：记录当前 yaw/pitch（从 CAN 桥直接读取，避免一周期延迟）
+    const bool left_button = input.tc_remote.left_button;
+    if (left_button && !prev_left_button) {
+      if (gimbal_rx_valid) {
+        ui_snapshot.shoot_recorded_pitch_rad = globals->gimbal_rx->pitch_rad();
+        ui_snapshot.shoot_recorded_yaw_rad = globals->gimbal_rx->yaw_rad();
+        ui_snapshot.shoot_recorded_valid = true;
+      }
+      dial_block_ticks = 25;  // 阻塞拨盘 ~50ms，等待 UI 调度发出
+    }
+    prev_left_button = left_button;
+    if (dial_block_ticks > 0) {
+      --dial_block_ticks;
+    }
+
     const bool shooter_enter = (gimbal_output.mode == gimbal::Fsm::State::kCombat);
-    const bool manual_fire = input.dr16.dial < ns::shoot::kFireDialThreshold || input.tc_remote.left_button;
+    const bool dial_fire = input.dr16.dial < ns::shoot::kFireDialThreshold && dial_block_ticks == 0;
+    const bool manual_fire = dial_fire || input.tc_remote.left_button;
     const bool fire_flag =
         manual_fire || (gimbal_output.control.active_target_source == wheel_legged::TargetSource::kHost &&
                         (manual_fire || (globals->aimbot->aimbot_state() >> 1) & 1));
@@ -1363,7 +1397,18 @@ void ControlLoop() {
   }
   chassis_update_input.expected.phi_dot = 0.0f;
 
-  if (spin_control_enabled) {
+  const bool lob_shot_positioning =
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+      chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
+      !lob_shot_leg_positioned;
+#else
+      false;
+#endif
+
+  if (lob_shot_positioning) {
+    chassis_update_input.expected.theta_ll = kLobShotThetaTargetRad;
+    chassis_update_input.expected.theta_lr = kLobShotThetaTargetRad;
+  } else if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
     chassis_update_input.expected.theta_b = kSpinThetaBBiasRad;
@@ -1499,13 +1544,25 @@ void ControlLoop() {
   wl_debug.expected_theta_ll_rad = chassis_update_input.expected.theta_ll;
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
+#if WHEEL_LEGGED_ROBOT_VARIANT == 1
+  if (lob_shot_positioning) {
+    const float theta_ll = chassis_control_output.current_state.theta_ll;
+    const float theta_lr = chassis_control_output.current_state.theta_lr;
+    if (std::fabs(theta_ll - kLobShotThetaTargetRad) < kLobShotThetaToleranceRad &&
+        std::fabs(theta_lr - kLobShotThetaTargetRad) < kLobShotThetaToleranceRad) {
+      lob_shot_leg_positioned = true;
+    }
+  }
+#endif
+
   if (chassis_output.mode == chassis::Fsm::State::kDisabled) {
     g_actuators.ResetDmMotorsLatch();
   }
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  // 吊射自瞄模式：底盘输出 0（保持 enable，仅发一次 CAN 帧，避免 wheel_can 拥堵影响拨盘）
-  const bool chassis_apply_enable = chassis_output_enable && chassis_input.request.combat_profile !=
-                                                                 wheel_legged::CombatProfile::kAutoAimFuLongDistance;
+  // 吊射自瞄模式：先摆腿到目标角，到位后底盘无力
+  const bool chassis_apply_enable = chassis_output_enable &&
+      !(chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
+        lob_shot_leg_positioned);
 #else
   const bool chassis_apply_enable = chassis_output_enable;
 #endif
@@ -1636,6 +1693,9 @@ void ControlLoop() {
       globals->aimbot->SendWasdCommand(wasd_value);
     }
     was_in_long_distance = is_long_distance;
+    if (!is_long_distance) {
+      lob_shot_leg_positioned = false;
+    }
   }
 #endif
 
