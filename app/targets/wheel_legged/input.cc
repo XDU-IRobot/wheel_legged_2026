@@ -207,24 +207,30 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
   }
   if (!x_pressed) tc_state.x_tof_mode_armed = true;
 
-  // Z 键上升沿：对齐正方向后在前向 ToF 模式下启动一次自动跳跃
+  // Z 键上升沿：对齐正方向后在前向 ToF 模式下启动/取消一次自动跳跃
   if (z_pressed && !ctrl_pressed && tc_state.z_auto_jump_armed) {
     if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump && !tc_state.auto_jump_enabled &&
         tc_state.pending_action == TcSemanticState::PendingAction::kNone) {
       r_yaw_reset_edge = true;
       tc_state.pending_action = TcSemanticState::PendingAction::kZ;
+    } else if (tc_state.auto_jump_enabled) {
+      tc_state.auto_jump_enabled = false;
+      tc_state.auto_jump_tof_armed = true;
     }
     tc_state.z_auto_jump_armed = false;
     tc_state.ctrl_z_highland_armed = false;
   }
   if (!z_pressed) tc_state.z_auto_jump_armed = true;
 
-  // Ctrl+Z 组合键上升沿：对齐正方向后在前向 ToF 模式下启动一次中央高地自动跳跃
+  // Ctrl+Z 组合键上升沿：对齐正方向后在前向 ToF 模式下启动/取消一次中央高地自动跳跃
   if (z_pressed && ctrl_pressed && tc_state.ctrl_z_highland_armed) {
     if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump && !tc_state.highland_auto_jump_enabled &&
         tc_state.pending_action == TcSemanticState::PendingAction::kNone) {
       r_yaw_reset_edge = true;
       tc_state.pending_action = TcSemanticState::PendingAction::kCtrlZ;
+    } else if (tc_state.highland_auto_jump_enabled) {
+      tc_state.highland_auto_jump_enabled = false;
+      tc_state.highland_auto_jump_tof_armed = true;
     }
     tc_state.ctrl_z_highland_armed = false;
     tc_state.z_auto_jump_armed = false;

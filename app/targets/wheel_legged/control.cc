@@ -650,6 +650,16 @@ void ControlLoop() {
     input.highland_auto_jump_enabled = false;
   }
 
+  // Disable clears armed auto-jump
+  if (input.mode_request.domain_request == wheel_legged::DomainRequest::kDisabled) {
+    tc_state.auto_jump_enabled = false;
+    tc_state.auto_jump_tof_armed = true;
+    tc_state.highland_auto_jump_enabled = false;
+    tc_state.highland_auto_jump_tof_armed = true;
+    input.auto_jump_enabled = false;
+    input.highland_auto_jump_enabled = false;
+  }
+
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
                             chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
@@ -1635,6 +1645,8 @@ void ControlLoop() {
     ui_snapshot.cross_active = input.mode_request.mid_leg_f;
     ui_snapshot.ad_active = chassis_output.mode == chassis::Fsm::State::kSpin ||
                             chassis_output.mode == chassis::Fsm::State::kSpinExitPending;
+    ui_snapshot.auto_jump_enabled = input.auto_jump_enabled;
+    ui_snapshot.highland_auto_jump_enabled = input.highland_auto_jump_enabled;
     ui_snapshot.yaw_display_offset_rad = -ns::control_loop::kYawFollowFixedTargetRad;
 
     ui_snapshot.supercap_cap_energy =
