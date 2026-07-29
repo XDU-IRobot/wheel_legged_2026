@@ -942,7 +942,8 @@ gimbal::Fsm::Input BuildGimbalFsmInput(const InputSnapshot &input, const chassis
       .host_target_valid = m.host_target_valid,
       .gimbal_test_profile = m.gimbal_test_profile,
       .chassis_recovery_active = chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                                 chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight,
+                                 chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight ||
+                                 chassis_output.mode == chassis::Fsm::State::kRecoveryFailed,
       .startup_align_complete = startup_align_complete,
   };
   return fsm_input;

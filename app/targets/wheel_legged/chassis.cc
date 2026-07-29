@@ -32,6 +32,10 @@ constexpr rm::f32 kOffGroundSupportForceClampN = wheel_legged::params::active::c
 constexpr rm::f32 kMidLegDipTriggerLengthM = wheel_legged::params::active::chassis::kMidLegDipTriggerLengthM;
 constexpr rm::f32 kMidLegDipTargetLengthM = wheel_legged::params::active::chassis::kMidLegDipTargetLengthM;
 constexpr uint16_t kMidLegDipHoldTicks = wheel_legged::params::active::chassis::kMidLegDipHoldTicks;
+constexpr uint16_t kRecoveryHoldTorqueRampIntervalTicks =
+    wheel_legged::params::active::chassis::kRecoveryHoldTorqueRampIntervalTicks;
+constexpr float kRecoveryHoldTorqueRampIncrementNm =
+    wheel_legged::params::active::chassis::kRecoveryHoldTorqueRampIncrementNm;
 
 constexpr const auto &kEtaLookupLegLengthM = wheel_legged::params::active::chassis::kEtaLookupLegLengthM;
 
@@ -1031,6 +1035,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
     const bool is_recovery_state =
         (input.fsm_mode == Fsm::State::kRecoveryFallCheck || input.fsm_mode == Fsm::State::kRecoverySelfRight ||
          input.fsm_mode == Fsm::State::kRecoveryFailed);
+    {
+      static bool prev_in_recovery = false;
+      if (is_recovery_state && !prev_in_recovery) {
+        hold_torque_active_ticks_ = 0;
+      }
+      prev_in_recovery = is_recovery_state;
+    }
     if ((!is_recovery_state && !output_.pitch_roll_valid_theta_invalid) || standup_from_recovery_latch_) {
       roll_pid_.Update(wheel_legged::params::active::chassis::kRollBalanceTargetRad, imu_roll_);
       // 跳跃阶段分别使用收腿/蹬伸/回收三套腿长控制策略。
@@ -1269,15 +1280,24 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
         const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
 
-        const rm::f32 kHoldTorque = is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
-                                             : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
+        const rm::f32 kHoldTorqueBase =
+            is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
+                     : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
+        const rm::f32 kSign = (kHoldTorqueBase > 0.0f) ? 1.0f : -1.0f;
+        const rm::f32 kRampSteps =
+            (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                : 0.0f;
+        const rm::f32 kHoldTorque = kHoldTorqueBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
         if (!body_is_upright && l_in && r_in) {
-          // 机身未直立且双腿都真正进入翻身目标区间后，统一切换为恒定转轴力矩
+          // 机身未直立且双腿都真正进入翻身目标区间后，统一切换为恒定转轴力矩（随时间递增）
           left_pid.Clear();
           right_pid.Clear();
           ll_pid_out = kHoldTorque;
           lr_pid_out = kHoldTorque;
+          ++hold_torque_active_ticks_;
         } else {
+          hold_torque_active_ticks_ = 0;
           // 未到位腿继续运动；已到位腿以零速度闭环制动，等待另一条腿
           const rm::f32 lv = l_in ? 0.0f : dir;
           const rm::f32 rv = r_in ? 0.0f : dir;
@@ -1321,14 +1341,30 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
 
         if (is_right) {
           right_leg_turn_pid_.Clear();
+          const rm::f32 kBase = is_right_front
+                                    ? wheel_legged::params::active::chassis::kRecoveryRightFrontFallHoldTorqueNm
+                                    : wheel_legged::params::active::chassis::kRecoveryRightBackFallHoldTorqueNm;
+          const rm::f32 kSign = (kBase > 0.0f) ? 1.0f : -1.0f;
+          const rm::f32 kRampSteps =
+              (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                  ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                  : 0.0f;
           ll_pid_out = 0;
-          lr_pid_out = is_right_front ? wheel_legged::params::active::chassis::kRecoveryRightFrontFallHoldTorqueNm
-                                      : wheel_legged::params::active::chassis::kRecoveryRightBackFallHoldTorqueNm;
+          lr_pid_out = kBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
+          ++hold_torque_active_ticks_;
         } else if (is_left) {
           left_leg_turn_pid_.Clear();
-          ll_pid_out = is_left_front ? wheel_legged::params::active::chassis::kRecoveryLeftFrontFallHoldTorqueNm
-                                     : wheel_legged::params::active::chassis::kRecoveryLeftBackFallHoldTorqueNm;
+          const rm::f32 kBase = is_left_front
+                                    ? wheel_legged::params::active::chassis::kRecoveryLeftFrontFallHoldTorqueNm
+                                    : wheel_legged::params::active::chassis::kRecoveryLeftBackFallHoldTorqueNm;
+          const rm::f32 kSign = (kBase > 0.0f) ? 1.0f : -1.0f;
+          const rm::f32 kRampSteps =
+              (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                  ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                  : 0.0f;
+          ll_pid_out = kBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
           lr_pid_out = 0;
+          ++hold_torque_active_ticks_;
         }
 
         left_force_ = 0.0f;

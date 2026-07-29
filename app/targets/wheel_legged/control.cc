@@ -703,11 +703,13 @@ void ControlLoop() {
 
   // ── recovery→正常过渡：清除中腿长保持，落地后保持低腿长 ──
   const bool is_recovery = (chassis_output.mode == chassis::Fsm::State::kRecoveryFallCheck ||
-                            chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight);
+                            chassis_output.mode == chassis::Fsm::State::kRecoverySelfRight ||
+                            chassis_output.mode == chassis::Fsm::State::kRecoveryFailed);
   {
     static chassis::Fsm::State prev_chassis_mode_for_recovery = chassis::Fsm::State::kDisabled;
     const bool was_recovery = (prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFallCheck ||
-                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight);
+                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoverySelfRight ||
+                               prev_chassis_mode_for_recovery == chassis::Fsm::State::kRecoveryFailed);
     if (was_recovery && !is_recovery) {
       tc_state.mid_leg_hold = false;
     }
@@ -737,12 +739,9 @@ void ControlLoop() {
   gimbal_update_input.pitch_motor = globals->pitch_motor.has_value() ? &(*globals->pitch_motor) : nullptr;
   gimbal_update_input.gimbal_enable = gimbal_output.control.gimbal_enable;
 
-  // 底盘姿态异常时强制关闭云台输出（恢复归中阶段除外）
+  // 底盘姿态异常时不再关闭云台，改为 pitch 抬到最高点 + 编码器反馈（见下方）
   const bool chassis_posture_invalid = !chassis_control_output.posture_valid;
   const bool recovery_yaw_centering_active = gimbal_output.mode == gimbal::Fsm::State::kRecoveryYawCentering;
-  if (chassis_posture_invalid && !recovery_yaw_centering_active) {
-    gimbal_update_input.gimbal_enable = false;
-  }
 
   gimbal_update_input.align_to_chassis_forward = gimbal_output.control.align_to_chassis_forward;
   gimbal_update_input.target = gimbal_output.control.gimbal_target;
@@ -775,12 +774,14 @@ void ControlLoop() {
     // 恢复归中：yaw 到最近车头方向，pitch 到上限
     gimbal_update_input.align_to_chassis_forward = false;
     gimbal_update_input.target.yaw_rad = SelectNearestYawCenterTarget(input.estimator_input.yaw_motor_rad);
-    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
+    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchEncoderMaxRad;
     gimbal_update_input.use_yaw_motor_feedback = true;
+    gimbal_update_input.use_pitch_motor_feedback = true;
   }
-  // 倒地状态下 pitch 抬到最高点，避免云台碰撞地面
-  if (is_recovery) {
-    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchMaxRad;
+  // 倒地或姿态异常时 pitch 抬到最高点，用编码器反馈避免 IMU 不可信
+  if (is_recovery || chassis_posture_invalid) {
+    gimbal_update_input.target.pitch_rad = wheel_legged::params::active::gimbal::kPitchEncoderMaxRad;
+    gimbal_update_input.use_pitch_motor_feedback = true;
   }
   if (ctx.recovery_yaw_centering_was_active && !recovery_yaw_centering_active) {
     // 恢复归中退出：同步所有目标源到当前云台惯导角，消除目标跳变
@@ -1397,18 +1398,14 @@ void ControlLoop() {
   }
   chassis_update_input.expected.phi_dot = 0.0f;
 
-  const bool lob_shot_positioning =
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-      chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
-      !lob_shot_leg_positioned;
-#else
-      false;
-#endif
-
-  if (lob_shot_positioning) {
+  if (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
+      !lob_shot_leg_positioned) {
     chassis_update_input.expected.theta_ll = kLobShotThetaTargetRad;
     chassis_update_input.expected.theta_lr = kLobShotThetaTargetRad;
-  } else if (spin_control_enabled) {
+  } else
+#endif
+  if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
     chassis_update_input.expected.theta_b = kSpinThetaBBiasRad;
@@ -1545,7 +1542,8 @@ void ControlLoop() {
   wl_debug.expected_theta_lr_rad = chassis_update_input.expected.theta_lr;
 
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
-  if (lob_shot_positioning) {
+  if (chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
+      !lob_shot_leg_positioned) {
     const float theta_ll = chassis_control_output.current_state.theta_ll;
     const float theta_lr = chassis_control_output.current_state.theta_lr;
     if (std::fabs(theta_ll - kLobShotThetaTargetRad) < kLobShotThetaToleranceRad &&

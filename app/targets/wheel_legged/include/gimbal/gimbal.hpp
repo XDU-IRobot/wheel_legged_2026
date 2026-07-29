@@ -32,7 +32,8 @@ class Gimbal {
     DmMitMotor *pitch_motor{nullptr};      ///< 俯仰 DM 电机对象
     bool gimbal_enable{false};             ///< 是否使能云台输出
     bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
-    bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
+    bool use_yaw_motor_feedback{false};     ///< 是否用偏航电机编码器作为偏航反馈
+    bool use_pitch_motor_feedback{false};  ///< 是否用俯仰电机编码器作为俯仰反馈
     bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
     bool aimbot_is_rune{false};            ///< 是否是打符模式（小符/大符），单独使用打符 PID
     bool spin_hold{false};                 ///< 是否小陀螺模式，自瞄+小陀螺时使用另一套 PID
@@ -103,6 +104,7 @@ class Gimbal {
    */
   void Init() {
     last_use_yaw_motor_feedback_ = false;
+    last_use_pitch_motor_feedback_ = false;
     ff_ready_ = false;
     Eigen::Matrix<float, 9, 1> theta;
     for (int i = 0; i < 9; ++i) theta(i) = wheel_legged::params::active::gimbal::kIdentTheta[i];
@@ -122,6 +124,7 @@ class Gimbal {
 
       if (input.yaw_motor == nullptr || input.pitch_motor == nullptr) {
         last_use_yaw_motor_feedback_ = false;
+        last_use_pitch_motor_feedback_ = false;
         ClearPid();
         return;
       }
@@ -129,14 +132,18 @@ class Gimbal {
       output_.yaw_pos_rad = input.use_yaw_motor_feedback ? input.yaw_motor_rad : input.gimbal_imu_yaw_rad;
       // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
-      output_.pitch_pos_rad = input.gimbal_imu_pitch_rad;
-      // output_.pitch_pos_rad = input.pitch_motor->pos();
-      output_.pitch_vel_rad_s = -input.gimbal_imu_gyro_x_rad_s;
+      output_.pitch_pos_rad = input.use_pitch_motor_feedback ? input.pitch_motor->pos() : input.gimbal_imu_pitch_rad;
+      output_.pitch_vel_rad_s = input.use_pitch_motor_feedback ? input.pitch_motor->vel() : -input.gimbal_imu_gyro_x_rad_s;
 
       const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
       output_.yaw_target_rad = desired_yaw;
-      output_.pitch_target_rad = std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad,
-                                            wheel_legged::params::active::gimbal::kPitchMaxRad);
+      {
+        const float pitch_max = input.use_pitch_motor_feedback
+                                    ? wheel_legged::params::active::gimbal::kPitchEncoderMaxRad
+                                    : wheel_legged::params::active::gimbal::kPitchMaxRad;
+        output_.pitch_target_rad =
+            std::clamp(input.target.pitch_rad, wheel_legged::params::active::gimbal::kPitchMinRad, pitch_max);
+      }
       output_.gimbal_enabled = input.gimbal_enable;
 
       {
@@ -151,6 +158,7 @@ class Gimbal {
         controller_.Enable(false);
         ClearPid();
         last_use_yaw_motor_feedback_ = false;
+        last_use_pitch_motor_feedback_ = false;
         return;
       }
 
@@ -209,6 +217,11 @@ class Gimbal {
         ClearPid();
       }
       last_use_yaw_motor_feedback_ = input.use_yaw_motor_feedback;
+
+      if (input.use_pitch_motor_feedback != last_use_pitch_motor_feedback_) {
+        ClearPid();
+      }
+      last_use_pitch_motor_feedback_ = input.use_pitch_motor_feedback;
 
       const PidProfile requested_pid_profile = ResolvePidProfile(input);
       if (requested_pid_profile != current_pid_profile_) {
@@ -544,6 +557,7 @@ class Gimbal {
   }
 
   bool last_use_yaw_motor_feedback_{false};
+  bool last_use_pitch_motor_feedback_{false};
   PidProfile current_pid_profile_{PidProfile::kNormal};
   bool last_ident_mode_active_{false};
 
