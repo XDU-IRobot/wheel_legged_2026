@@ -1961,9 +1961,9 @@ constexpr float kYawFollowRampStepRadS = 0.5f;              ///< 偏航跟随角
 constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
 constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]
 constexpr uint32_t kPositionHoldTimeoutTicks =
-    1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
-constexpr float kPositionErrorScaleLowLeg = 1.f;       ///< 低腿长位置误差缩放
-constexpr float kVelocityErrorScaleLowLeg = 1.f;       ///< 低腿长速度误差缩放
+    1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）--
+constexpr float kPositionErrorScaleLowLeg = 1.5f;       ///< 低腿长位置误差缩放
+constexpr float kVelocityErrorScaleLowLeg = 1.3f;       ///< 低腿长速度误差缩放
 constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误差缩放
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
@@ -2087,17 +2087,16 @@ using namespace common::main;
 
 // ── 自瞄通信 ──
 namespace aimbot {
-constexpr uint8_t kRobotId = 4U;                 ///< 机器人 ID
-constexpr float kBulletSpeedMps = 23.0f;         ///< 弹速 [m/s]
-constexpr float kBulletDefaultSpeedMps = 23.f;   ///< 默认弹速
-constexpr float kBulletBoundarySpeedMps = 20.f;  ///< 区分裁判系统返回值是否正确
+constexpr uint8_t kRobotId = 3U;                                      ///< 机器人 ID
+constexpr float kBulletSpeedMps = 23.0f;                              ///< 弹速 [m/s]
+constexpr float kBulletDefaultSpeedMps = 23.f;                        ///< 默认弹速
+constexpr float kBulletBoundarySpeedMps = 20.f;                       ///< 区分裁判系统返回值是否正确
+constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};        ///< 自瞄偏航速度 PID（打装甲板）
+constexpr PidGains kPitchPositionPid{20.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
+constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄俯仰速度 PID（打装甲板）
 
-constexpr PidGains kYawPositionPid{35.0f, 0.f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
-constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄偏航速度 PID（打装甲板）
-constexpr PidGains kPitchPositionPid{35.0f, 0.f, 0.5f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
-constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打装甲板）
-
-constexpr PidGains kYawPositionPidRune{30.0f, 0.f, 1.5f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
+constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
 constexpr PidGains kPitchPositionPidRune{30.0f, 0.f, 2.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
 constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打符）
@@ -2105,14 +2104,14 @@ constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自
 
 // ── 自瞄 + 小陀螺模式 PID ──
 namespace aimbot_spin {
-constexpr PidGains kYawPositionPid{60.0f, 0.f, 1.5f, 10.0f, 2.2f};   ///< 自瞄+小陀螺偏航位置 PID
-constexpr PidGains kYawSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
-constexpr PidGains kPitchPositionPid{50.0f, 0.f, 1.6f, 10.0f, 4.f};  ///< 自瞄+小陀螺俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.6f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
+constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄+小陀螺偏航位置 PID
+constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.f, 2.f, 10.0f, 2.f};   ///< 自瞄+小陀螺俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
 
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
-constexpr float kYawTargetBiasRad[4] = {0.0f, 0.0f, 0.0f, 0.0f};         ///< 各档位偏航目标偏置 [rad]
+constexpr float kYawTargetBiasRad[4] = {-0.0f, -0.0f, -0.0f, -0.0f};     ///< 各档位偏航目标偏置 [rad]
 constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
 }  // namespace aimbot_spin
 
