@@ -920,7 +920,7 @@ constexpr float kIdentTheta[9] = {
     0.f,        // theta_8: fc2  pitch 库仑摩擦
 };
 
-constexpr float kPitchFeedforwardBiasNm = 0.2374f;
+constexpr float kPitchFeedforwardBiasNm = 0.f;
 // constexpr float kPitchFeedforwardBiasNm = 0.f;
 }  // namespace gimbal
 
@@ -1430,7 +1430,7 @@ constexpr float kBulletDefaultSpeedMps = 23.f;                        ///< 默�
 constexpr float kBulletBoundarySpeedMps = 20.f;                       ///< 区分裁判系统返回值是否正确
 constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
 constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};        ///< 自瞄偏航速度 PID（打装甲板）
-constexpr PidGains kPitchPositionPid{20.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
+constexpr PidGains kPitchPositionPid{30.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
 constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄俯仰速度 PID（打装甲板）
 
 constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
@@ -1443,13 +1443,13 @@ constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自
 namespace aimbot_spin {
 constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄+小陀螺偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
-constexpr PidGains kPitchPositionPid{30.0f, 0.f, 2.f, 10.0f, 2.f};   ///< 自瞄+小陀螺俯仰位置 PID
-constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.f, 0.6f, 10.0f, 2.f};   ///< 自瞄+小陀螺俯仰位置 PID
+constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
 
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
 constexpr float kYawTargetBiasRad[4] = {-0.0f, -0.0f, -0.0f, -0.0f};     ///< 各档位偏航目标偏置 [rad]
-constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
+constexpr float kYawTorqueFeedforwardNm[4] = {0.6f, 0.6f, 0.6f, 0.6f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
 }  // namespace aimbot_spin
 
 // ── 四元数姿态观测器（影子模式）──
