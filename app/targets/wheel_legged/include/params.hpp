@@ -1962,8 +1962,8 @@ constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度�
 constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]
 constexpr uint32_t kPositionHoldTimeoutTicks =
     1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）--
-constexpr float kPositionErrorScaleLowLeg = 1.5f;       ///< 低腿长位置误差缩放
-constexpr float kVelocityErrorScaleLowLeg = 1.3f;       ///< 低腿长速度误差缩放
+constexpr float kPositionErrorScaleLowLeg = 1.5f;      ///< 低腿长位置误差缩放
+constexpr float kVelocityErrorScaleLowLeg = 1.3f;      ///< 低腿长速度误差缩放
 constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误差缩放
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
