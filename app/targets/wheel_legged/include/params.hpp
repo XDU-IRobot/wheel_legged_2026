@@ -2048,7 +2048,7 @@ constexpr std::array<float, 4> kKalmanH{1.0f, 0.0f, 0.0f, 1.0f};         ///< �
 constexpr float kLeftPhi1OffsetRad = -2.5436f - 1.4352f + 0.2614f + M_PI;  ///< 左腿前关节零位偏移 [rad]
 constexpr float kLeftPhi4OffsetRad = -2.718f - 0.8015f;                    ///< 左腿后关节零位偏移 [rad]
 constexpr float kRightPhi1OffsetRad = 1.6f + M_PI - 9.5f + 0.011f;         ///< 右腿前关节零位偏移 [rad]
-constexpr float kRightPhi4OffsetRad = 1.34f - 2.52f + M_PI;                ///< 右腿后关节零位偏移 [rad]
+constexpr float kRightPhi4OffsetRad = 1.34f - 2.52f + M_PI -8.1628;        ///< 右腿后关节零位偏移 [rad]
 }  // namespace state_estimator
 
 // ── 腿部运动学 ──

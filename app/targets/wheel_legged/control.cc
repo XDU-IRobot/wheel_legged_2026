@@ -12,7 +12,6 @@
 #include <cmath>
 #include <cstring>
 #include "ui/UIWheelLegged.hpp"
-#include "ui/UIEnemyInfo.hpp"
 #include "ui/TaskScheduler.hpp"
 #include "ui/ui_snapshot.hpp"
 #include "include/input.hpp"
@@ -87,24 +86,6 @@ static auto UI_aimbot_box_edit = rm::device::UITask(UIWheelLeggedAimbotBox_edit,
 static auto UI_shooter_x_add = rm::device::UITask(UIWheelLeggedShooterX_add);
 static auto UI_shooter_x_edit = rm::device::UITask(UIWheelLeggedShooterX_edit, 3.f);
 
-// Enemy info — red team
-static auto UI_enemy_header_red = rm::device::UITask(UIEnemyHeaderRed_add);
-static auto UI_enemy_hp_red_add = rm::device::UITask(UIEnemyHPRed_add);
-static auto UI_enemy_hp_red_edit = rm::device::UITask(UIEnemyHPRed_edit, 3.f);
-static auto UI_enemy_allowance_red_add = rm::device::UITask(UIEnemyAllowanceRed_add);
-static auto UI_enemy_allowance_red_edit = rm::device::UITask(UIEnemyAllowanceRed_edit, 3.f);
-
-// Enemy info — blue team
-static auto UI_enemy_header_blue = rm::device::UITask(UIEnemyHeaderBlue_add);
-static auto UI_enemy_hp_blue_add = rm::device::UITask(UIEnemyHPBlue_add);
-static auto UI_enemy_hp_blue_edit = rm::device::UITask(UIEnemyHPBlue_edit, 3.f);
-static auto UI_enemy_allowance_blue_add = rm::device::UITask(UIEnemyAllowanceBlue_add);
-static auto UI_enemy_allowance_blue_edit = rm::device::UITask(UIEnemyAllowanceBlue_edit, 3.f);
-
-// Gold coin
-static auto UI_gold_coin_add = rm::device::UITask(UIGoldCoin_add);
-static auto UI_gold_coin_edit = rm::device::UITask(UIGoldCoin_edit, 0.5f);
-
 void static_UI_add() {
   schedule.addTaskStatic(&UI_label_leg);
   schedule.addTaskStatic(&UI_label_ad);
@@ -143,20 +124,6 @@ void static_UI_add() {
   schedule.addTaskStatic(&UI_shooter_x_add);
   schedule.addTask(&UI_shooter_x_edit);
 
-  schedule.addTaskStatic(&UI_enemy_header_red);
-  schedule.addTaskStatic(&UI_enemy_hp_red_add);
-  schedule.addTask(&UI_enemy_hp_red_edit);
-  schedule.addTaskStatic(&UI_enemy_allowance_red_add);
-  schedule.addTask(&UI_enemy_allowance_red_edit);
-
-  schedule.addTaskStatic(&UI_enemy_header_blue);
-  schedule.addTaskStatic(&UI_enemy_hp_blue_add);
-  schedule.addTask(&UI_enemy_hp_blue_edit);
-  schedule.addTaskStatic(&UI_enemy_allowance_blue_add);
-  schedule.addTask(&UI_enemy_allowance_blue_edit);
-
-  schedule.addTaskStatic(&UI_gold_coin_add);
-  schedule.addTask(&UI_gold_coin_edit);
 }
 /**
  * @file  targets/wheel_legged/control.cc
