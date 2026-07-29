@@ -1280,14 +1280,13 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
         const bool l_in = ThetaInRange(lw, tgt_min, tgt_max);
         const bool r_in = ThetaInRange(rw, tgt_min, tgt_max);
 
-        const rm::f32 kHoldTorqueBase =
-            is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
-                     : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
+        const rm::f32 kHoldTorqueBase = is_front ? wheel_legged::params::active::chassis::kRecoveryFrontFallHoldTorqueNm
+                                                 : wheel_legged::params::active::chassis::kRecoveryBackFallHoldTorqueNm;
         const rm::f32 kSign = (kHoldTorqueBase > 0.0f) ? 1.0f : -1.0f;
-        const rm::f32 kRampSteps =
-            (kRecoveryHoldTorqueRampIntervalTicks > 0)
-                ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
-                : 0.0f;
+        const rm::f32 kRampSteps = (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                                       ? static_cast<rm::f32>(hold_torque_active_ticks_) /
+                                             static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                                       : 0.0f;
         const rm::f32 kHoldTorque = kHoldTorqueBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
         if (!body_is_upright && l_in && r_in) {
           // 机身未直立且双腿都真正进入翻身目标区间后，统一切换为恒定转轴力矩（随时间递增）
@@ -1345,10 +1344,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                     ? wheel_legged::params::active::chassis::kRecoveryRightFrontFallHoldTorqueNm
                                     : wheel_legged::params::active::chassis::kRecoveryRightBackFallHoldTorqueNm;
           const rm::f32 kSign = (kBase > 0.0f) ? 1.0f : -1.0f;
-          const rm::f32 kRampSteps =
-              (kRecoveryHoldTorqueRampIntervalTicks > 0)
-                  ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
-                  : 0.0f;
+          const rm::f32 kRampSteps = (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                                         ? static_cast<rm::f32>(hold_torque_active_ticks_) /
+                                               static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                                         : 0.0f;
           ll_pid_out = 0;
           lr_pid_out = kBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
           ++hold_torque_active_ticks_;
@@ -1358,10 +1357,10 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
                                     ? wheel_legged::params::active::chassis::kRecoveryLeftFrontFallHoldTorqueNm
                                     : wheel_legged::params::active::chassis::kRecoveryLeftBackFallHoldTorqueNm;
           const rm::f32 kSign = (kBase > 0.0f) ? 1.0f : -1.0f;
-          const rm::f32 kRampSteps =
-              (kRecoveryHoldTorqueRampIntervalTicks > 0)
-                  ? static_cast<rm::f32>(hold_torque_active_ticks_) / static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
-                  : 0.0f;
+          const rm::f32 kRampSteps = (kRecoveryHoldTorqueRampIntervalTicks > 0)
+                                         ? static_cast<rm::f32>(hold_torque_active_ticks_) /
+                                               static_cast<rm::f32>(kRecoveryHoldTorqueRampIntervalTicks)
+                                         : 0.0f;
           ll_pid_out = kBase + kSign * kRampSteps * kRecoveryHoldTorqueRampIncrementNm;
           lr_pid_out = 0;
           ++hold_torque_active_ticks_;

@@ -220,9 +220,9 @@ using namespace common::gimbal;
 
 const DmMitSettings kPitchMotorSettings{0x17, 0x07, 12.5, 10.f, 28.f, {0.f, 500.f}, {0.f, 5.f}};
 
-constexpr float kPitchMinRad = -0.2f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.7f;             ///< 俯仰角上限 [rad]
-constexpr float kPitchEncoderMaxRad = 0.7f;      ///< 编码器俯仰最高点 [rad]（需标定）
+constexpr float kPitchMinRad = -0.2f;        ///< 俯仰角下限 [rad]
+constexpr float kPitchMaxRad = 0.7f;         ///< 俯仰角上限 [rad]
+constexpr float kPitchEncoderMaxRad = 0.7f;  ///< 编码器俯仰最高点 [rad]（需标定）
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
 constexpr PidGains kYawPositionPid{20.0f, 0.0f, 1.f, 1000.0f, 1.0f};     ///< 偏航位置 PID
@@ -475,8 +475,8 @@ constexpr float kRecoveryMinSpeedRadS = 0.08f;  ///< 恢复减速区边界最低
 constexpr float kRecoveryGravityRampScale = 0.35f;    ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
 constexpr float kRecoveryPitchFeedforwardKp = 23.0f;  ///< 倒地恢复俯仰角前馈系数
 constexpr float kRecoveryRollFeedforwardKp = 6.0f;    ///< 倒地恢复横滚角前馈系数
-constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -20.0f;  ///< 左前倒恢复恒定转轴力矩 [Nm]
-constexpr float kRecoveryLeftBackFallHoldTorqueNm = 26.0f;    ///< 左后倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -20.0f;   ///< 左前倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftBackFallHoldTorqueNm = 26.0f;     ///< 左后倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightFrontFallHoldTorqueNm = -20.0f;  ///< 右前倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightBackFallHoldTorqueNm = 26.0f;    ///< 右后倒恢复恒定转轴力矩 [Nm]
 
@@ -489,24 +489,24 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;    ///< pitch 反转角速度
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====
-constexpr float kRecoveryThetaRangeLowMin = -2.f;       ///< 前倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeLowMax = -0.5f;       ///< 前倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryThetaRangeLowMin = -2.f;         ///< 前倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeLowMax = -0.5f;        ///< 前倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryFrontFallHoldTorqueNm = -22.0f;  ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryThetaRangeHighMin = -5.8f;      ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -5.f;      ///< 后倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryThetaRangeHighMin = -5.8f;       ///< 后倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -5.f;        ///< 后倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryBackFallHoldTorqueNm = 24.0f;    ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
 // 恒定转轴力矩斜坡：每 interval_ticks 增加 increment Nm
 constexpr uint16_t kRecoveryHoldTorqueRampIntervalTicks = 500;  ///< 转轴力矩增加间隔 [ticks @ 500Hz = 1s]
-constexpr float kRecoveryHoldTorqueRampIncrementNm = 1.5f;       ///< 转轴力矩每次增量 [Nm]
+constexpr float kRecoveryHoldTorqueRampIncrementNm = 1.5f;      ///< 转轴力矩每次增量 [Nm]
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 10.0f;  ///< 支撑力低于此值判定为离地 [N]
-constexpr float kOffGroundSupportForceClampN = 100.0f;      ///< 离地时支持力限幅值 [N]
+constexpr float kOffGroundSupportForceClampN = 100.0f;     ///< 离地时支持力限幅值 [N]
 
 // -- 中腿长下压 --
 constexpr float kMidLegDipTriggerLengthM = 0.3f;  ///< 中腿长模式下触发下压的腿长阈值 [m]
 constexpr float kMidLegDipTargetLengthM = 0.2f;   ///< 下压目标腿长 [m]
-constexpr uint16_t kMidLegDipHoldTicks = 500;      ///< 下压维持时间 [ticks @ 500Hz = 1s]
+constexpr uint16_t kMidLegDipHoldTicks = 500;     ///< 下压维持时间 [ticks @ 500Hz = 1s]
 
 // -- 上台阶退勾起立 --
 constexpr uint16_t kStairExitStandupHookDelayTicks = 0;  ///< 上台阶退出后延迟触发起立三段式 [ticks @ 500Hz]，0=立即触发
@@ -646,7 +646,7 @@ constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误�
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
-constexpr float kYawFollowFixedTargetRad = 1.6638f;     ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
+constexpr float kYawFollowFixedTargetRad = 1.6638f;    ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]（±π/2）
 
 // ==== 期望状态偏置（腿摆角/机体俯仰）====
@@ -654,14 +654,14 @@ constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;  ///< 低腿长期望左腿
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;  ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = -0.08f;      ///< 期望机体俯仰偏置 [rad]
 // ==== 吊射摆腿 ====
-constexpr float kLobShotThetaTargetRad = -0.4f;    ///< 吊射摆腿目标角 [rad]
+constexpr float kLobShotThetaTargetRad = -0.4f;     ///< 吊射摆腿目标角 [rad]
 constexpr float kLobShotThetaToleranceRad = 0.05f;  ///< 吊射摆腿到位容差 [rad]
 
-constexpr float kExpectedDisplacementBiasM = 0.0f;          ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;  ///< 低腿长期望位移偏置 [m]（满弹量时）
-constexpr float kExpectedDisplacementBiasMMidLeg = -0.2f;     ///< 中腿长期望位移偏置 [m]（满弹量时）
-constexpr float kExpectedDisplacementBiasMHighLeg = -0.16f;    ///< 高腿长期望位移偏置 [m]（满弹量时）
-constexpr int kInitialAmmoCount = 60;                       ///< 初始弹量 [发]
+constexpr float kExpectedDisplacementBiasM = 0.0f;           ///< 期望位移偏置 [m]
+constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMMidLeg = -0.2f;    ///< 中腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMHighLeg = -0.16f;  ///< 高腿长期望位移偏置 [m]（满弹量时）
+constexpr int kInitialAmmoCount = 60;                        ///< 初始弹量 [发]
 constexpr float kDisplacementBiasPerShot = 1.f / 120.f;  ///< 每发弹的位移偏置变化量 [m/发]（待标定）
 constexpr float kDisplacementBiasRearDeltaM = -0.15f;  ///< 尾部朝向（+π 目标）时的位移偏置增量 [m]（待标定）
 
@@ -895,8 +895,8 @@ using namespace common::gimbal;
 
 const DmMitSettings kPitchMotorSettings{0x17, 0x07, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-constexpr float kPitchMinRad = -0.5f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.6f;   ///< 俯仰角上限 [rad]
+constexpr float kPitchMinRad = -0.5f;        ///< 俯仰角下限 [rad]
+constexpr float kPitchMaxRad = 0.6f;         ///< 俯仰角上限 [rad]
 constexpr float kPitchEncoderMaxRad = 0.6f;  ///< 编码器俯仰最高点 [rad]（需标定）
 
 inline constexpr PidGains kYawPositionPid{20.0f, 0.f, 1.5f, 10.0f, 0.0f};    ///< 偏航位置 PID
@@ -1186,7 +1186,7 @@ constexpr float kRecoveryRightFrontFallHoldTorqueNm = -18.0f;  ///< 右前倒恢
 constexpr float kRecoveryRightBackFallHoldTorqueNm = 25.0f;    ///< 右后倒恢复恒定转轴力矩 [Nm]
 // 恒定转轴力矩斜坡：每 interval_ticks 增加 increment Nm
 constexpr uint16_t kRecoveryHoldTorqueRampIntervalTicks = 500;  ///< 转轴力矩增加间隔 [ticks @ 500Hz = 1s]
-constexpr float kRecoveryHoldTorqueRampIncrementNm = 1.0f;       ///< 转轴力矩每次增量 [Nm]
+constexpr float kRecoveryHoldTorqueRampIncrementNm = 1.0f;      ///< 转轴力矩每次增量 [Nm]
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 20.0f;  ///< 支撑力低于此值判定为离地 [N]
@@ -1567,8 +1567,8 @@ using namespace common::gimbal;
 
 const DmMitSettings kPitchMotorSettings{0x17, 0x07, kPi, 30.f, 10.f, {0.f, 500.f}, {0.f, 5.f}};
 
-constexpr float kPitchMinRad = -0.35f;  ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.65f;   ///< 俯仰角上限 [rad]
+constexpr float kPitchMinRad = -0.35f;       ///< 俯仰角下限 [rad]
+constexpr float kPitchMaxRad = 0.65f;        ///< 俯仰角上限 [rad]
 constexpr float kPitchEncoderMaxRad = 1.4f;  ///< 编码器俯仰最高点 [rad]（需标定）
 
 constexpr PidGains kYawPositionPid{20.0f, 0.0f, 0.5f, 10.0f, 1.0f};    ///< 偏航位置 PID
@@ -1831,11 +1831,11 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;    ///< pitch 反转角速度
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====
-constexpr float kRecoveryThetaRangeLowMin = -2.5f;             ///< 前倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeLowMin = -2.5f;            ///< 前倒恢复腿摆角下限 [rad]
 constexpr float kRecoveryThetaRangeLowMax = -0.8f;            ///< 前倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryFrontFallHoldTorqueNm = -15.0f;      ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryThetaRangeHighMin = -6.f;           ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -4.5f;            ///< 后倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryThetaRangeHighMin = -6.f;            ///< 后倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -4.5f;           ///< 后倒恢复腿摆角上限 [rad]
 constexpr float kRecoveryBackFallHoldTorqueNm = 15.0f;        ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
 constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -16.0f;  ///< 左前倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryLeftBackFallHoldTorqueNm = 22.0f;    ///< 左后倒恢复恒定转轴力矩 [Nm]
@@ -1843,7 +1843,7 @@ constexpr float kRecoveryRightFrontFallHoldTorqueNm = -15.0f;  ///< 右前倒恢
 constexpr float kRecoveryRightBackFallHoldTorqueNm = 15.0f;    ///< 右后倒恢复恒定转轴力矩 [Nm]
 // 恒定转轴力矩斜坡：每 interval_ticks 增加 increment N
 constexpr uint16_t kRecoveryHoldTorqueRampIntervalTicks = 500;  ///< 转轴力矩增加间隔 [ticks @ 500Hz = 1s]
-constexpr float kRecoveryHoldTorqueRampIncrementNm = 12.f;       ///< 转轴力矩每次增量 [Nm]
+constexpr float kRecoveryHoldTorqueRampIncrementNm = 12.f;      ///< 转轴力矩每次增量 [Nm]
 
 // -- 离地检测 --
 constexpr float kOffGroundSupportForceThresholdN = 20.0f;  ///< 支撑力低于此值判定为离地 [N]

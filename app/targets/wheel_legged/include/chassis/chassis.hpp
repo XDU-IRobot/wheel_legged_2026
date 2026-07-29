@@ -248,7 +248,7 @@ class Chassis {
   bool mid_leg_dip_active_{false};          ///< 中腿长下压激活中
   bool mid_leg_dip_armed_{false};           ///< 中腿长下压待命（腿先低于阈值才可触发）
   uint16_t mid_leg_dip_ticks_{0};           ///< 中腿长下压已持续时间
-  uint32_t hold_torque_active_ticks_{0};     ///< 恒定转轴力矩已持续时间 [ticks @ 500Hz]
+  uint32_t hold_torque_active_ticks_{0};    ///< 恒定转轴力矩已持续时间 [ticks @ 500Hz]
   bool leg_was_high_{false};                ///< 离地前腿长曾高于 0.3m（防止低腿长误触发）
   bool off_ground_kd_active_{false};        ///< 着地边沿后 Kd 增大锁存
   uint16_t kd_active_ticks_{0};             ///< Kd 增大已持续时间

@@ -32,7 +32,7 @@ class Gimbal {
     DmMitMotor *pitch_motor{nullptr};      ///< 俯仰 DM 电机对象
     bool gimbal_enable{false};             ///< 是否使能云台输出
     bool align_to_chassis_forward{false};  ///< 是否对齐车体前方
-    bool use_yaw_motor_feedback{false};     ///< 是否用偏航电机编码器作为偏航反馈
+    bool use_yaw_motor_feedback{false};    ///< 是否用偏航电机编码器作为偏航反馈
     bool use_pitch_motor_feedback{false};  ///< 是否用俯仰电机编码器作为俯仰反馈
     bool aimbot_mode{false};               ///< 是否自瞄模式，切换 PID 参数
     bool aimbot_is_rune{false};            ///< 是否是打符模式（小符/大符），单独使用打符 PID
@@ -133,7 +133,8 @@ class Gimbal {
       // output_.yaw_pos_rad = input.yaw_motor_rad;
       output_.yaw_vel_rad_s = input.gimbal_imu_gyro_z_rad_s;
       output_.pitch_pos_rad = input.use_pitch_motor_feedback ? input.pitch_motor->pos() : input.gimbal_imu_pitch_rad;
-      output_.pitch_vel_rad_s = input.use_pitch_motor_feedback ? input.pitch_motor->vel() : -input.gimbal_imu_gyro_x_rad_s;
+      output_.pitch_vel_rad_s =
+          input.use_pitch_motor_feedback ? input.pitch_motor->vel() : -input.gimbal_imu_gyro_x_rad_s;
 
       const float desired_yaw = input.align_to_chassis_forward ? input.chassis_yaw_rad : input.target.yaw_rad;
       output_.yaw_target_rad = desired_yaw;

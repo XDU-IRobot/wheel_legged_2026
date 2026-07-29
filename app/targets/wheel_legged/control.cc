@@ -439,8 +439,8 @@ void ControlLoop() {
   static bool fall_detector_initialized = false;
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   static int hero_remaining_ammo = ns::control_loop::kInitialAmmoCount;
-  static bool prev_left_button = false;   // 左键上一周期状态，用于上升沿检测
-  static int dial_block_ticks = 0;        // 射击记录后阻塞拨盘的剩余周期数
+  static bool prev_left_button = false;  // 左键上一周期状态，用于上升沿检测
+  static int dial_block_ticks = 0;       // 射击记录后阻塞拨盘的剩余周期数
 #endif
 
   // ── 一次性初始化 ──
@@ -1405,7 +1405,7 @@ void ControlLoop() {
     chassis_update_input.expected.theta_lr = kLobShotThetaTargetRad;
   } else
 #endif
-  if (spin_control_enabled) {
+      if (spin_control_enabled) {
     chassis_update_input.expected.theta_ll = kSpinThetaLlBiasRad;
     chassis_update_input.expected.theta_lr = kSpinThetaLrBiasRad;
     chassis_update_input.expected.theta_b = kSpinThetaBBiasRad;
@@ -1558,7 +1558,8 @@ void ControlLoop() {
   }
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
   // 吊射自瞄模式：先摆腿到目标角，到位后底盘无力
-  const bool chassis_apply_enable = chassis_output_enable &&
+  const bool chassis_apply_enable =
+      chassis_output_enable &&
       !(chassis_input.request.combat_profile == wheel_legged::CombatProfile::kAutoAimFuLongDistance &&
         lob_shot_leg_positioned);
 #else
