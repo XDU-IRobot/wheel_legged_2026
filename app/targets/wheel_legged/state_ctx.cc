@@ -126,6 +126,10 @@ bool IsYawFollowDriveReady(const float yaw_target_rad, const float yaw_motor_rad
 }
 PositionVelocityScales ResolvePositionVelocityScales(const chassis::Fsm::State mode) {
   switch (mode) {
+    case chassis::Fsm::State::kSpin:
+    case chassis::Fsm::State::kSpinExitPending:
+      return {params::active::control_loop::kPositionErrorScaleSpin,
+              params::active::control_loop::kVelocityErrorScaleSpin};
     case chassis::Fsm::State::kLowLeg:
       return {params::active::control_loop::kPositionErrorScaleLowLeg,
               params::active::control_loop::kVelocityErrorScaleLowLeg};
@@ -141,6 +145,9 @@ PositionVelocityScales ResolvePositionVelocityScales(const chassis::Fsm::State m
 
 float ResolveDisplacementBias(const chassis::Fsm::State mode) {
   switch (mode) {
+    case chassis::Fsm::State::kSpin:
+    case chassis::Fsm::State::kSpinExitPending:
+      return 0.0f;
     case chassis::Fsm::State::kLowLeg:
       return params::active::control_loop::kExpectedDisplacementBiasMLowLeg;
     case chassis::Fsm::State::kHighLeg:
