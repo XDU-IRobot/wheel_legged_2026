@@ -225,6 +225,7 @@ class Chassis {
   bool l0_dot_filter_initialized_{false};
   bool standup_complete_{false};             ///< 起立完成
   uint8_t standup_phase_{0};                 ///< 起立阶段：0=摆腿, 1=收腿, 2=摆腿收敛, 3=完成
+  uint16_t standup_phase_elapsed_ticks_{0};  ///< 当前起立阶段已运行周期数（超时保护）
   float standup_theta_target_{0.0f};         ///< 起立摆角 PID 目标斜坡当前值 [rad]
   bool standup_complete_left_{true};         ///< 左腿起立完成（仅负角度路径使用，默认 true）
   bool standup_complete_right_{true};        ///< 右腿起立完成（仅负角度路径使用，默认 true）

@@ -119,10 +119,10 @@ ROBOT_MODEL_PARAMS: dict[str, RobotModelParams] = {
         body_com_offset_m=0.024,
         wheel_mass_kg=0.3,
         leg_mass_kg=1.640907,
-        body_mass_kg=20.0,
+        body_mass_kg=25.0,
         wheel_inertia_kg_m2=0.001009,
-        body_pitch_inertia_kg_m2=0.3,
-        body_yaw_inertia_kg_m2=0.53302282,
+        body_pitch_inertia_kg_m2=0.6,
+        body_yaw_inertia_kg_m2=0.83302282,
     ),
     "infantry3": RobotModelParams(
         wheel_radius_m=0.0575,
