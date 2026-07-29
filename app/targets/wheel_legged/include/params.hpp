@@ -635,7 +635,7 @@ constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误�
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
-constexpr float kYawFollowFixedTargetRad = 1.6638f;     ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
+constexpr float kYawFollowFixedTargetRad = 1.6638f;    ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]（±π/2）
 
 // ==== 期望状态偏置（腿摆角/机体俯仰）====
@@ -643,11 +643,11 @@ constexpr float kExpectedThetaLlBiasRadLowLeg = 0.f;  ///< 低腿长期望左腿
 constexpr float kExpectedThetaLrBiasRadLowLeg = 0.f;  ///< 低腿长期望右腿摆角偏置 [rad]
 constexpr float kExpectedThetaBBiasRad = -0.08f;      ///< 期望机体俯仰偏置 [rad]
 
-constexpr float kExpectedDisplacementBiasM = 0.0f;          ///< 期望位移偏置 [m]
-constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;  ///< 低腿长期望位移偏置 [m]（满弹量时）
-constexpr float kExpectedDisplacementBiasMMidLeg = -0.2f;     ///< 中腿长期望位移偏置 [m]（满弹量时）
-constexpr float kExpectedDisplacementBiasMHighLeg = -0.16f;    ///< 高腿长期望位移偏置 [m]（满弹量时）
-constexpr int kInitialAmmoCount = 60;                       ///< 初始弹量 [发]
+constexpr float kExpectedDisplacementBiasM = 0.0f;           ///< 期望位移偏置 [m]
+constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;   ///< 低腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMMidLeg = -0.2f;    ///< 中腿长期望位移偏置 [m]（满弹量时）
+constexpr float kExpectedDisplacementBiasMHighLeg = -0.16f;  ///< 高腿长期望位移偏置 [m]（满弹量时）
+constexpr int kInitialAmmoCount = 60;                        ///< 初始弹量 [发]
 constexpr float kDisplacementBiasPerShot = 1.f / 120.f;  ///< 每发弹的位移偏置变化量 [m/发]（待标定）
 constexpr float kDisplacementBiasRearDeltaM = -0.15f;  ///< 尾部朝向（+π 目标）时的位移偏置增量 [m]（待标定）
 
@@ -1993,13 +1993,13 @@ constexpr float kSpinTargetYawDotRadNoScS4 = 10.f;  ///< 无超电小陀螺目�
 // constexpr float kSpinTargetYawDotRadNoScS3 = 4.0f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] 65-75W
 // constexpr float kSpinTargetYawDotRadNoScS4 = 4.f;      ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 constexpr float kSpinExitYawAlignThresholdRad = 0.5f;  ///< 小陀螺预测退出：yaw 对齐阈值 [rad]
-constexpr float kYawResetRampStepRad = 0.02f;           ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
-constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
-constexpr float kSpinTranslationGain = 0.2f;            ///< 小陀螺平移增益
+constexpr float kYawResetRampStepRad = 0.02f;          ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
+constexpr float kYawResetMaxSpeedMps = 0.3f;           ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
+constexpr float kSpinTranslationGain = 0.2f;           ///< 小陀螺平移增益
 constexpr float kSpinThetaLlBiasRad = 0.f;             ///< 小陀螺时左腿摆角偏置 [rad]
-constexpr float kSpinThetaLrBiasRad = -0.02f;              ///< 小陀螺时右腿摆角偏置 [rad]
-constexpr float kSpinLegLengthBiasM = 0.0f;             ///< 小陀螺时腿长偏差（左+右-）[m]
-constexpr float kSpinThetaBBiasRad = 0.f;               ///< 小陀螺时俯仰目标偏置 [rad]
+constexpr float kSpinThetaLrBiasRad = -0.02f;          ///< 小陀螺时右腿摆角偏置 [rad]
+constexpr float kSpinLegLengthBiasM = 0.0f;            ///< 小陀螺时腿长偏差（左+右-）[m]
+constexpr float kSpinThetaBBiasRad = 0.f;              ///< 小陀螺时俯仰目标偏置 [rad]
 
 // ==== 跳跃腿摆角偏置 ====
 constexpr float kJumpThetaLlBiasRad = 0.f;  ///< 跳跃时左腿摆角偏置 [rad]
