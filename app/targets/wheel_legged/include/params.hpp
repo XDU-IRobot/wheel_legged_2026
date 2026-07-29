@@ -1860,7 +1860,7 @@ static constexpr const auto &kCtrlPSpin = ::wheel_legged::params::generated::kCt
 // ==== 基本运动（PID 增益）====
 constexpr PidGains kLeftL0Pid{2700.0f, 0.f, 100.0f, 170.0f, 30.0f};   ///< 左腿腿长 PID（常规）
 constexpr PidGains kRightL0Pid{2700.0f, 0.f, 100.0f, 170.0f, 30.0f};  ///< 右腿腿长 PID（常规）
-constexpr PidGains kRollPid{800.0f, 0.0f, 200.0f, 80.0f, 0.0f};       ///< 横滚平衡 PID
+constexpr PidGains kRollPid{1000.0f, 1.f, 20.0f, 140.0f, 40.0f};       ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
 constexpr float kJumpPushForceN = 280.0f;                                     ///< 蹬伸阶段单腿基础支撑力 [N]
@@ -2014,10 +2014,10 @@ constexpr uint32_t kSpinExitStableTicks = 10U;          ///< 角度和角速度�
 constexpr float kYawResetRampStepRad = 0.02f;           ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
 constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.2f;            ///< 小陀螺平移增益
-constexpr float kSpinThetaLlBiasRad = 0.0f;             ///< 小陀螺时左腿摆角偏置 [rad]
-constexpr float kSpinThetaLrBiasRad = 0.f;              ///< 小陀螺时右腿摆角偏置 [rad]
+constexpr float kSpinThetaLlBiasRad = 0.04f;             ///< 小陀螺时左腿摆角偏置 [rad]
+constexpr float kSpinThetaLrBiasRad = -0.01f;              ///< 小陀螺时右腿摆角偏置 [rad]
 constexpr float kSpinLegLengthBiasM = 0.0f;             ///< 小陀螺时腿长偏差（左+右-）[m]
-constexpr float kSpinThetaBBiasRad = 0.f;               ///< 小陀螺时俯仰目标偏置 [rad]
+constexpr float kSpinThetaBBiasRad = -0.02f;               ///< 小陀螺时俯仰目标偏置 [rad]
 
 // ==== 跳跃腿摆角偏置 ====
 constexpr float kJumpThetaLlBiasRad = 0.f;  ///< 跳跃时左腿摆角偏置 [rad]
