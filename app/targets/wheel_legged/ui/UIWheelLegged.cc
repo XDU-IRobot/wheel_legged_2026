@@ -528,8 +528,8 @@ void UIWheelLeggedStatusLabel_add_st1() {
 void UIWheelLeggedStatusLabel_add_st2() {
   UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 16);
-  memcpy(fig.data, "SPIN CROSS", 10);
+  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 23);
+  memcpy(fig.data, "SPIN CROSS HIGHLAND FLY", 23);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   ui_async_send(len);
 }
@@ -576,6 +576,10 @@ void UIWheelLeggedStateIndicator_add() {
     fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 736, 238, 832, 278);
   } else if (ui_snapshot.cross_active) {
     fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 842, 238, 965, 278);
+  } else if (ui_snapshot.auto_jump_enabled) {
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 1134, 238, 1204, 278);
+  } else if (ui_snapshot.highland_auto_jump_enabled) {
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Add, 954, 238, 1122, 278);
   } else {
     fill_hidden(fig.figure2, "mv_", UIFigure::Operation::Add);
   }
@@ -643,6 +647,10 @@ void UIWheelLeggedStateIndicator_edit() {
     fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 736, 238, 802, 278);
   } else if (ui_snapshot.cross_active) {
     fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 842, 238, 965, 278);
+  } else if (ui_snapshot.auto_jump_enabled) {
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 1136, 238, 1198, 278);
+  } else if (ui_snapshot.highland_auto_jump_enabled) {
+    fill_rect(fig.figure2, "mv_", UIFigure::Operation::Edit, 956, 238, 1120, 278);
   } else {
     fill_hidden(fig.figure2, "mv_", UIFigure::Operation::Edit);
   }

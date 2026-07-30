@@ -832,8 +832,8 @@ using namespace common;
 
 namespace tof {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1000U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 900U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 900U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 700U;
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
@@ -846,8 +846,8 @@ constexpr std::size_t kDebugMovingAverageWindow = 5U;
 
 namespace tof_highland {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 750U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 550U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 700U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 500U;
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 350U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
@@ -1508,8 +1508,8 @@ using namespace common;
 
 namespace tof {
 constexpr bool kEnabled = true;
-constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 1000U;
-constexpr std::uint16_t kAutoJumpMinDistanceMm = 900U;
+constexpr std::uint16_t kAutoJumpTriggerDistanceMm = 900U;
+constexpr std::uint16_t kAutoJumpMinDistanceMm = 700U;
 constexpr std::uint16_t kAutoJumpRearmDistanceMm = 400U;
 constexpr std::uint32_t kAutoJumpBothActiveDurationMs = 6U;
 constexpr std::uint16_t kStairDescendTriggerDistanceMm = 160U;
