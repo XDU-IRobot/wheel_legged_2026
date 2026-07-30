@@ -1005,7 +1005,7 @@ constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};  ///< �
 // ── 本地热量闭环 ──
 constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单位]
 constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
-constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
+constexpr float kLowHeatSafetyMargin = 30.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
 constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
 constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
@@ -1671,7 +1671,7 @@ constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};  ///< �
 // ── 本地热量闭环 ──
 constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单位]
 constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
-constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
+constexpr float kLowHeatSafetyMargin = 30.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
 constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
 constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]

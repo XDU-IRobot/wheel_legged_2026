@@ -94,7 +94,7 @@ class ShootController {
         if (!enter_shoot) {
           booster_disable_ = true;
           state_ = State::kStop;
-        } else if (fire_trigger && heat_delta >= 100 && fric_ready) {
+        } else if (fire_trigger && heat_delta >= 110 && fric_ready) {
           state_ = State::kShooting;
           shoot_time_ = kShootTicks;
           now_angle_ = next_angle_;
@@ -124,7 +124,7 @@ class ShootController {
           state_ = State::kStop;
           break;
         }
-        if (heat_delta >= 100) {
+        if (heat_delta >= 110) {
           state_ = State::kReady;
         } else {
           state_ = State::kCooling;
