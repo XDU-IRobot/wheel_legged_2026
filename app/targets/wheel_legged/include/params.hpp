@@ -37,8 +37,8 @@ struct PostureObserverParams {
 
 /// @brief 倒地检测器参数（滞回阈值 + 定时确认）
 struct FallDetectorParams {
-  float fall_enter_uxy_abs;  ///< 倒地进入阈值 [1]，|ux| 或 |uy| 超过此值触发候选（sin(50°)≈0.766）
-  float upright_exit_uxy_abs;  ///< 直立退出阈值 [1]，|ux| 且 |uy| 低于此值且角速度低才确认直立（sin(28°)≈0.469）
+  float fall_enter_uxy_abs;          ///< 倒地进入阈值 [1]，|ux| 或 |uy| 超过此值触发候选（sin(50°)≈0.766）
+  float upright_exit_uxy_abs;        ///< 直立退出阈值 [1]，|ux| 且 |uy| 低于此值且角速度低才确认直立（sin(28°)≈0.469）
   std::uint32_t fall_confirm_ms;     ///< 倒地候选需持续满足此时间才确认 [ms]
   std::uint32_t upright_confirm_ms;  ///< 直立需持续满足此时间才确认已恢复 [ms]
   float upright_gyro_max_rad_s;      ///< 直立确认时允许的最大角速度模长 [rad/s]
@@ -250,12 +250,12 @@ constexpr float kDmTorqueLimitNm = 10.0f;                                       
 constexpr float kDefaultDtS = 0.002f;                                               ///< 辨识控制周期 [s]
 constexpr float kYawAmp[kHarmonicCount] = {0.35f, -0.2f, 0.13f, -0.12f, 0.04f};     ///< yaw 轴五次谐波幅值 [rad]
 constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};  ///< pitch 轴五次谐波幅值 [rad]
-constexpr float kPitchPhase[kHarmonicCount] = {};                      ///< pitch 轴五次谐波相位 [rad]
-constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};    ///< 辨识模式 yaw 位置 PID
-constexpr PidGains kIdentPitchPosPid{40.0f, 2.0f, 1.5f, 10.0f, 5.0f};  ///< 辨识模式 pitch 位置 PID
-constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.f, 10.0f, 2.0f};     ///< Friction step yaw 速度 PID
-constexpr PidGains kIdentPitchVelPid{2.f, 10.0f, 0.f, 10.0f, 10.0f};   ///< 兼容保留，pitch 摩擦现用位置 PID
-constexpr float kIdentPitchCenter = -0.505264f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kPitchPhase[kHarmonicCount] = {};                                   ///< pitch 轴五次谐波相位 [rad]
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};                 ///< 辨识模式 yaw 位置 PID
+constexpr PidGains kIdentPitchPosPid{40.0f, 2.0f, 1.5f, 10.0f, 5.0f};               ///< 辨识模式 pitch 位置 PID
+constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.f, 10.0f, 2.0f};                  ///< Friction step yaw 速度 PID
+constexpr PidGains kIdentPitchVelPid{2.f, 10.0f, 0.f, 10.0f, 10.0f};  ///< 兼容保留，pitch 摩擦现用位置 PID
+constexpr float kIdentPitchCenter = -0.505264f;   ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
 constexpr float kIdentPitchTopLimit = -0.80f;     ///< 辨识轨迹 pitch 下限 [rad]
 constexpr float kIdentPitchBottomLimit = 0.215f;  ///< 辨识轨迹 pitch 上限 [rad]
 
@@ -373,20 +373,20 @@ constexpr StairClimbParams kStairClimbStep2{
 };
 
 // ==== 倒地自起 ====
-constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;  ///< 倒地确认时间（持续倒地超过此值进入自启） [ms]
+constexpr std::uint32_t kRecoveryFallConfirmMs = 220U;        ///< 倒地确认时间（持续倒地超过此值进入自启） [ms]
 constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自启超时（超时后强制停机） [ms]
 constexpr std::uint32_t kRecoveryFailedTimeoutMs = 3000U;     ///< 自启失败锁定超时 [ms]
 
 // ==== 跳跃（低腿长）====
-constexpr std::uint32_t kJumpLowPrepMs = 100U;     ///< 跳跃预备阶段持续时间 [ms]
-constexpr std::uint32_t kJumpLowPushMaxMs = 500U;  ///< 跳跃蹬伸阶段最长持续时间 [ms]
-constexpr std::uint32_t kJumpLowRecoverMs = 150U;  ///< 跳跃回收阶段持续时间（保底超时）[ms]
-constexpr std::uint32_t kJumpLowRecoverMinMs = 60U;  ///< 跳跃回收阶段最低维持时间（此后开始判断离地）[ms]
+constexpr std::uint32_t kJumpLowPrepMs = 100U;          ///< 跳跃预备阶段持续时间 [ms]
+constexpr std::uint32_t kJumpLowPushMaxMs = 500U;       ///< 跳跃蹬伸阶段最长持续时间 [ms]
+constexpr std::uint32_t kJumpLowRecoverMs = 150U;       ///< 跳跃回收阶段持续时间（保底超时）[ms]
+constexpr std::uint32_t kJumpLowRecoverMinMs = 60U;     ///< 跳跃回收阶段最低维持时间（此后开始判断离地）[ms]
 constexpr float kJumpLowPrepLegLengthM = 0.13f;         ///< 跳跃预备阶段目标腿长 [m]（蓄力收腿）
 constexpr float kJumpLowPushLegLengthM = 0.25f;         ///< 跳跃蹬伸阶段目标腿长 [m]（爆发推地）
 constexpr float kJumpLowRecoverLegLengthM = 0.16f;      ///< 跳跃回收阶段目标腿长 [m]（落地缓冲）
 constexpr float kJumpLowPushReachedLegLengthM = 0.26f;  ///< 蹬伸到位判定腿长 [m]（到达此值提前结束 push）
-constexpr std::uint32_t kJumpPushReachedHoldMs = 5U;  ///< 蹬伸腿长到位后持续满足此时间才切换 [ms]
+constexpr std::uint32_t kJumpPushReachedHoldMs = 5U;    ///< 蹬伸腿长到位后持续满足此时间才切换 [ms]
 
 // 自动跳跃已移除
 
@@ -394,10 +394,10 @@ constexpr std::uint32_t kJumpPushReachedHoldMs = 5U;  ///< 蹬伸腿长到位后
 constexpr float kStandupRetractLegLengthM = 0.16f;  ///< 起立 Phase 1 收腿目标腿长 [m]
 
 // ==== 基本运动（腿长档位）====
-constexpr float kLowLegLengthM = 0.16f;      ///< 低腿长档位目标腿长 [m]
-constexpr float kMidLegLengthM = 0.21f;      ///< 中腿长档位目标腿长 [m]
-constexpr float kHighLegLengthM = 0.37f;     ///< 高腿长档位目标腿长 [m]
-constexpr float kLegLengthRampTimeS = 0.4f;  ///< 腿长切换斜坡时间 [s]（从低到高腿长的过渡时间）
+constexpr float kLowLegLengthM = 0.16f;              ///< 低腿长档位目标腿长 [m]
+constexpr float kMidLegLengthM = 0.21f;              ///< 中腿长档位目标腿长 [m]
+constexpr float kHighLegLengthM = 0.37f;             ///< 高腿长档位目标腿长 [m]
+constexpr float kLegLengthRampTimeS = 0.4f;          ///< 腿长切换斜坡时间 [s]（从低到高腿长的过渡时间）
 constexpr std::uint32_t kSpinExitTimeoutMs = 3000U;  ///< 小陀螺预测退出超时兜底 [ms]
 constexpr float kSpinEntrySpeedThresholdMps = 0.3f;  ///< 进入小陀螺的速度阈值 [m/s]
 constexpr float kSpinCtrlMinLegLengthM = 0.14f;      ///< Ctrl+小陀螺最低腿长 [m]
@@ -445,11 +445,11 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
-constexpr float kStandupPhase0TargetLengthM = 0.36f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
-constexpr float kStandupPhase0ThetaTolRad = 0.3f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
-constexpr float kStandupPhase1ThetaTolRad = 0.5f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase0ThetaTargetRad = 1.6f;       ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.36f;       ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.3f;          ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.13f;       ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.5f;          ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;      ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.008f;         ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
@@ -462,18 +462,18 @@ constexpr float kPostureThetaBMinRad = -0.58f;             ///< 机体俯仰角�
 constexpr float kPostureThetaBMaxRad = 0.5f;               ///< 机体俯仰角安全上限 [rad]
 constexpr float kPostureThetaLegMinRad = -1.5f;            ///< 腿摆角安全下限 [rad]
 constexpr float kPostureThetaLegMaxRad = 2.4f;             ///< 腿摆角安全上限 [rad]
-constexpr float kLegRecoverThetaDotTarget = -3.f;  ///< 倒地恢复时腿摆角速度目标 [rad/s]（负号表示前摆方向）
-constexpr float kLegRecoverThetaDotRampStep = 0.06f;  ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
-constexpr float kManualRecoveryLegSpeedRadS = 1.2f;   ///< 手动倒地恢复腿摆角速度 [rad/s]
-constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;   ///< 倒地恢复零力矩区间下限 [rad]
-constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;   ///< 倒地恢复零力矩区间上限 [rad]
+constexpr float kLegRecoverThetaDotTarget = -3.f;          ///< 倒地恢复时腿摆角速度目标 [rad/s]（负号表示前摆方向）
+constexpr float kLegRecoverThetaDotRampStep = 0.06f;       ///< 倒地恢复腿摆角速度斜坡步长 [(rad/s)/周期]
+constexpr float kManualRecoveryLegSpeedRadS = 1.2f;        ///< 手动倒地恢复腿摆角速度 [rad/s]
+constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;        ///< 倒地恢复零力矩区间下限 [rad]
+constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 倒地恢复零力矩区间上限 [rad]
 
 // ==== 倒地恢复软着陆 ====
-constexpr float kRecoveryDecelZoneRad = 0.6f;   ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
-constexpr float kRecoveryMinSpeedRadS = 0.08f;  ///< 恢复减速区边界最低速度 [rad/s]
-constexpr float kRecoveryGravityRampScale = 0.35f;    ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
-constexpr float kRecoveryPitchFeedforwardKp = 23.0f;  ///< 倒地恢复俯仰角前馈系数
-constexpr float kRecoveryRollFeedforwardKp = 6.0f;    ///< 倒地恢复横滚角前馈系数
+constexpr float kRecoveryDecelZoneRad = 0.6f;                ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
+constexpr float kRecoveryMinSpeedRadS = 0.08f;               ///< 恢复减速区边界最低速度 [rad/s]
+constexpr float kRecoveryGravityRampScale = 0.35f;           ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
+constexpr float kRecoveryPitchFeedforwardKp = 23.0f;         ///< 倒地恢复俯仰角前馈系数
+constexpr float kRecoveryRollFeedforwardKp = 6.0f;           ///< 倒地恢复横滚角前馈系数
 constexpr float kRecoveryLeftFrontFallHoldTorqueNm = 8.0f;   ///< 左前倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryLeftBackFallHoldTorqueNm = 8.0f;    ///< 左后倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightFrontFallHoldTorqueNm = 8.0f;  ///< 右前倒恢复恒定转轴力矩 [Nm]
@@ -527,14 +527,14 @@ constexpr PidGains kRightL0Pid{3000.0f, 0.1f, 150.0f, 170.0f, 10.0f};  ///< 右�
 constexpr PidGains kRollPid{1000.0f, 0.1f, 20.0f, 140.0f, 40.0f};  ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
-constexpr float kJumpPushForceN = 0.0f;                                      ///< 蹬伸阶段单腿基础支撑力 [N]
-constexpr PidGains kLeftL0PidJumpOne{3500.0f, 0.f, 100.0f, 120.0f, 0.0f};    ///< 左腿预备 PID（JumpPrep）
-constexpr PidGains kRightL0PidJumpOne{3500.0f, 0.f, 100.0f, 120.0f, 0.0f};   ///< 右腿预备 PID（JumpPrep）
-constexpr PidGains kLeftL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};    ///< 左腿蹬伸 PID（JumpPush）
-constexpr PidGains kRightL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};   ///< 右腿蹬伸 PID（JumpPush）
-constexpr PidGains kLeftL0PidJumpThree{4000.0f, 0.f, 60.0f, 120.0f, 0.0f};   ///< 左腿回收 PID（JumpRecover）
-constexpr PidGains kRightL0PidJumpThree{4000.0f, 0.f, 60.0f, 120.0f, 0.0f};  ///< 右腿回收 PID（JumpRecover）
-constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 左腿摆角 PID（跳跃收腿第二阶段）
+constexpr float kJumpPushForceN = 0.0f;                                            ///< 蹬伸阶段单腿基础支撑力 [N]
+constexpr PidGains kLeftL0PidJumpOne{3500.0f, 0.f, 100.0f, 120.0f, 0.0f};          ///< 左腿预备 PID（JumpPrep）
+constexpr PidGains kRightL0PidJumpOne{3500.0f, 0.f, 100.0f, 120.0f, 0.0f};         ///< 右腿预备 PID（JumpPrep）
+constexpr PidGains kLeftL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};          ///< 左腿蹬伸 PID（JumpPush）
+constexpr PidGains kRightL0PidJumpTwo{4000.0f, 0.0f, 60.0f, 120.0f, 0.0f};         ///< 右腿蹬伸 PID（JumpPush）
+constexpr PidGains kLeftL0PidJumpThree{4000.0f, 0.f, 60.0f, 120.0f, 0.0f};         ///< 左腿回收 PID（JumpRecover）
+constexpr PidGains kRightL0PidJumpThree{4000.0f, 0.f, 60.0f, 120.0f, 0.0f};        ///< 右腿回收 PID（JumpRecover）
+constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};   ///< 左腿摆角 PID（跳跃收腿第二阶段）
 constexpr PidGains kRightLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 右腿摆角 PID（跳跃收腿第二阶段）
 
 // ==== 中腿长下压（PID 增益）====
@@ -544,16 +544,16 @@ constexpr PidGains kRightL0PidDip{500.0f, 0.f, 130.0f, 180.0f, 0.0f};  ///< 右�
 // constexpr PidGains kRightL0PidDip{1000.0f, 0.1f, 130.0f, 120.0f, 10.0f};  ///< 右腿腿长 PID（常规）
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 左腿摆角速度 PID（theta/roll 恢复用）
+constexpr PidGains kLeftLegTurnPid{30.0f, 0.f, 60.0f, 15.0f, 9.0f};   ///< 左腿摆角速度 PID（theta/roll 恢复用）
 constexpr PidGains kRightLegTurnPid{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 右腿摆角速度 PID（theta/roll 恢复用）
-constexpr PidGains kLeftLegTurnPidFrontRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 左腿摆角速度 PID（前倒恢复用）
+constexpr PidGains kLeftLegTurnPidFrontRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};   ///< 左腿摆角速度 PID（前倒恢复用）
 constexpr PidGains kRightLegTurnPidFrontRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 右腿摆角速度 PID（前倒恢复用）
-constexpr PidGains kLeftLegTurnPidBackRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 左腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kRightLegTurnPidBackRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};  ///< 右腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kLeftLegAnglePidStandup{20.0f, 0.0f, 0.0f, 11.0f, 0.0f};   ///< 左腿摆角 PID（起立用）
-constexpr PidGains kRightLegAnglePidStandup{20.0f, 0.0f, 0.0f, 11.0f, 0.0f};  ///< 右腿摆角 PID（起立用）
-constexpr PidGains kLeftLegTurnPidManual{30.0f, 0.f, 60.0f, 25.0f, 9.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
-constexpr PidGains kRightLegTurnPidManual{30.0f, 0.f, 60.0f, 25.0f, 9.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
+constexpr PidGains kLeftLegTurnPidBackRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};    ///< 左腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kRightLegTurnPidBackRecovery{30.0f, 0.f, 60.0f, 15.0f, 9.0f};   ///< 右腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kLeftLegAnglePidStandup{20.0f, 0.0f, 0.0f, 11.0f, 0.0f};        ///< 左腿摆角 PID（起立用）
+constexpr PidGains kRightLegAnglePidStandup{20.0f, 0.0f, 0.0f, 11.0f, 0.0f};       ///< 右腿摆角 PID（起立用）
+constexpr PidGains kLeftLegTurnPidManual{30.0f, 0.f, 60.0f, 25.0f, 9.0f};          ///< 左腿摆角速度 PID（手动倒地恢复）
+constexpr PidGains kRightLegTurnPidManual{30.0f, 0.f, 60.0f, 25.0f, 9.0f};         ///< 右腿摆角速度 PID（手动倒地恢复）
 
 // ==== l0_ddot 低通滤波 ====
 constexpr float kL0DdotFilterCutoffHz = 5.0f;    ///< l0_ddot 低通滤波截止频率 [Hz]
@@ -572,7 +572,7 @@ struct SdotRampParams {
 // -- 小陀螺/跳跃触发阈值（DR16 拨轮值）--
 constexpr std::int16_t kWheelSpinThreshold = 220;    ///< 拨轮超过此值触发小陀螺保持
 constexpr std::int16_t kWheelActionThreshold = 320;  ///< 拨轮回中后快速负推超过此值触发跳跃
-constexpr std::int16_t kWheelCenterThreshold = 80;  ///< 拨轮归中阈值（绝对值小于此值视为归中，重新就绪）
+constexpr std::int16_t kWheelCenterThreshold = 80;   ///< 拨轮归中阈值（绝对值小于此值视为归中，重新就绪）
 // 自动跳跃触发阈值已移除
 
 constexpr float kControlLoopDtS = 0.002f;  ///< 控制环周期 [s]
@@ -613,26 +613,26 @@ constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目�
 constexpr float kTargetSpeedBiasMidLegFMps = 0.0f;        ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = 0.0f;        ///< 高腿长目标速度偏置 [m/s]
 constexpr float kMaxSafeYawRateRadS = 3.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.5f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.5f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.1f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
+constexpr float kLargeTurnThresholdRad = 0.5f;            ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
+constexpr float kSafeTurnSpeedMps = 0.5f;                 ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
+constexpr float kLargeTurnThetaThresholdRad = 0.1f;       ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
 constexpr float kLargeTurnRecoveryAccelScale = 0.6f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;        ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;             ///< 中腿长大转向安全速度上限 [m/s]
+constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;  ///< 中腿长大转向检测阈值 [rad]
+constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;       ///< 中腿长大转向安全速度上限 [m/s]
 constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;   ///< 中腿长大转向腿摆角阈值 [rad]
 constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.6f;  ///< 中腿长大转向恢复加速缩放
 constexpr float kVxInputDeadbandNorm = 0.1f;                ///< 前进输入死区（归一化值，低于此忽略）
 constexpr float kVyInputDeadbandNorm = 0.1f;                ///< 平移输入死区（归一化值）
 constexpr float kYawFollowRampStepRadS = 0.3f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
-constexpr float kYawFollowRampStepRadNoScS = 0.15f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
-constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]（车速低于此值时锁定位置）
+constexpr float kYawFollowRampStepRadNoScS = 0.15f;         ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
+constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;   ///< 位置锚定冻结速度阈值 [m/s]（车速低于此值时锁定位置）
 
 constexpr uint32_t kPositionHoldTimeoutTicks =
-    1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
-constexpr float kPositionErrorScaleLowLeg = 1.0f;      ///< 低腿长位置误差缩放
-constexpr float kVelocityErrorScaleLowLeg = 1.0f;      ///< 低腿长速度误差缩放
-constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误差缩放
-constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
+    1000U;                                         ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
+constexpr float kPositionErrorScaleLowLeg = 1.0f;  ///< 低腿长位置误差缩放
+constexpr float kVelocityErrorScaleLowLeg = 1.0f;  ///< 低腿长速度误差缩放
+constexpr float kPositionErrorScaleMidLeg = 1.0f;  ///< 中腿长位置误差缩放
+constexpr float kVelocityErrorScaleMidLeg = 1.0f;  ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
 constexpr float kPositionErrorScaleSpin = 1.0f;        ///< 小陀螺原地位置误差缩放
@@ -650,8 +650,8 @@ constexpr float kExpectedDisplacementBiasMLowLeg = -0.24f;  ///< 低腿长期望
 constexpr float kExpectedDisplacementBiasMMidLeg = 0.f;     ///< 中腿长期望位移偏置 [m]（满弹量时）
 constexpr float kExpectedDisplacementBiasMHighLeg = 0.f;    ///< 高腿长期望位移偏置 [m]（满弹量时）
 constexpr int kInitialAmmoCount = 60;                       ///< 初始弹量 [发]
-constexpr float kDisplacementBiasPerShot = 1.f / 120.f;  ///< 每发弹的位移偏置变化量 [m/发]（待标定）
-constexpr float kDisplacementBiasRearDeltaM = -0.15f;  ///< 尾部朝向（+π 目标）时的位移偏置增量 [m]（待标定）
+constexpr float kDisplacementBiasPerShot = 1.f / 120.f;     ///< 每发弹的位移偏置变化量 [m/发]（待标定）
+constexpr float kDisplacementBiasRearDeltaM = -0.15f;       ///< 尾部朝向（+π 目标）时的位移偏置增量 [m]（待标定）
 
 // ==== 速度斜坡参数（按腿长档位分级）====
 constexpr SdotRampParams kSdotRampLowLeg{0.004f, 0.005f};     ///< 低腿长速度斜坡（加速/制动步长）
@@ -677,11 +677,11 @@ constexpr float kSpinMaxPhaseErrorRad = 0.20f;          ///< 积分 yaw 参考�
 constexpr uint32_t kSpinExitStableTicks = 10U;          ///< 角度和角速度同时达标的判稳周期数
 constexpr float kYawResetRampStepRad = 0.005f;          ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
 constexpr float kYawResetMaxSpeedMps = 0.3f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
-constexpr float kSpinTranslationGain = 0.3f;  ///< 小陀螺平移增益（将云台系前进指令投影到车体系的比例）
-constexpr float kSpinThetaLlBiasRad = 0.02f;   ///< 小陀螺时左腿摆角偏置 [rad]
-constexpr float kSpinThetaLrBiasRad = -0.05f;  ///< 小陀螺时右腿摆角偏置 [rad]
-constexpr float kSpinLegLengthBiasM = -0.0f;   ///< 小陀螺时腿长偏差（左+右-）[m]
-constexpr float kSpinThetaBBiasRad = -0.1f;    ///< 小陀螺时俯仰目标偏置 [rad]
+constexpr float kSpinTranslationGain = 0.3f;            ///< 小陀螺平移增益（将云台系前进指令投影到车体系的比例）
+constexpr float kSpinThetaLlBiasRad = 0.02f;            ///< 小陀螺时左腿摆角偏置 [rad]
+constexpr float kSpinThetaLrBiasRad = -0.05f;           ///< 小陀螺时右腿摆角偏置 [rad]
+constexpr float kSpinLegLengthBiasM = -0.0f;            ///< 小陀螺时腿长偏差（左+右-）[m]
+constexpr float kSpinThetaBBiasRad = -0.1f;             ///< 小陀螺时俯仰目标偏置 [rad]
 
 // ==== 跳跃腿摆角偏置 ====
 constexpr float kJumpThetaLlBiasRad = 0.0f;  ///< 跳跃时左腿摆角偏置 [rad]
@@ -775,7 +775,7 @@ constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 9.0f, 0.4f};     ///< 自瞄
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
 constexpr float kYawTargetBiasRad[4] = {0.0f, 0.0f, 0.0f, 0.0f};         ///< 各档位偏航目标偏置 [rad]
-constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
+constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};   ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
 }  // namespace aimbot_spin
 
 // ── LESO 观测器 ──
@@ -935,11 +935,11 @@ constexpr float kDefaultDtS = 0.002f;                                           
 constexpr float kYawAmp[kHarmonicCount] = {0.35f, -0.2f, 0.13f, -0.12f, 0.04f};     ///< yaw 轴五次谐波幅值 [rad]
 constexpr float kPitchAmp[kHarmonicCount] = {0.27f, -0.14f, 0.09f, -0.05f, 0.03f};  ///< pitch 轴五次谐波幅值 [rad]
 constexpr float kPitchPhase[kHarmonicCount] = {1.2177f, 0.4006f, -0.8970f, 0.1462f, -2.6391f};
-constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};  ///< 辨识模式 yaw 位置 PID
+constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};    ///< 辨识模式 yaw 位置 PID
 constexpr PidGains kIdentPitchPosPid{30.0f, 5.0f, 0.2f, 10.0f, 2.0f};  ///< 辨识模式 pitch 位置 PID (Ki 克服静摩擦)
-constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.0f, 10.0f, 2.0f};  ///< Friction step yaw 速度 PID
-constexpr PidGains kIdentPitchVelPid{1.1f, 4.0f, 0.0f, 5.0f, 2.0f};  ///< Friction step pitch 速度环 PID
-constexpr float kIdentPitchCenter = 0.51;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.0f, 10.0f, 2.0f};    ///< Friction step yaw 速度 PID
+constexpr PidGains kIdentPitchVelPid{1.1f, 4.0f, 0.0f, 5.0f, 2.0f};    ///< Friction step pitch 速度环 PID
+constexpr float kIdentPitchCenter = 0.51;       ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
 constexpr float kIdentPitchTopLimit = 0.1f;     ///< 辨识轨迹 pitch 上限 [rad]
 constexpr float kIdentPitchBottomLimit = 1.1f;  ///< 辨识轨迹 pitch 下限 [rad]
 
@@ -979,20 +979,22 @@ constexpr uint16_t kCouplingRecordCycles = 3;
 
 // ── 发射机构（M3508 拨盘）──
 namespace shoot {
-constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.f, 16000.0f, 1000.0f};  ///< 拨盘速度 PID
-constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.0f, 16000.0f, 0.0f};  ///< 拨盘位置 PID
-constexpr int16_t kDialFireThreshold = -600;                           ///< 发射触发拨轮阈值
-constexpr float kFricSpeedTargetRpm = 6200.0f;  ///< 摩擦轮目标转速 [rpm]（打弹检测用）
+constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.f, 16000.0f, 1000.0f};    ///< 拨盘速度 PID
+constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.0f, 16000.0f, 0.0f};    ///< 拨盘位置 PID
+constexpr int16_t kDialFireThreshold = -600;                             ///< 发射触发拨轮阈值
+constexpr float kDialSingleShotSpeed = 1000.0f;                          ///< 单发拨盘内环速度 [rpm]
+constexpr float kDialPositionThreshold = 500.0f;                         ///< 单发到位误差阈值 [ticks]
+constexpr float kFricSpeedTargetRpm = 6200.0f;                           ///< 摩擦轮目标转速 [rpm]（打弹检测用）
 constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID（Shoot控制器用）
 
 // ── 本地热量闭环 ──
-constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单位]
-constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
+constexpr float kHeatPerShot = 10.0f;          ///< 每发子弹热量增量 [热量单位]
+constexpr float kHeatSafetyMargin = 10.0f;     ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
 constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
-constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
-constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
-constexpr uint16_t kLowHeatLimitThreshold = 40;  ///< 低热量上限阈值：低于此值时降频并使用本地热量
+constexpr uint16_t kDefaultHeatLimit = 240;       ///< 裁判系统离线时默认热量上限
+constexpr uint16_t kDefaultCoolingRate = 40;      ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
+constexpr uint16_t kLowHeatLimitThreshold = 40;   ///< 低热量上限阈值：低于此值时降频并使用本地热量
 constexpr float kLowHeatShootFrequencyHz = 6.0f;  ///< 低热量上限时发射频率 [Hz]
 constexpr float kNormalShootFrequencyHz = 15.0f;  ///< 正常发射频率 [Hz]
 }  // namespace shoot
@@ -1126,11 +1128,11 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
-constexpr float kStandupPhase0TargetLengthM = 0.33f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
-constexpr float kStandupPhase0ThetaTolRad = 0.3f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
-constexpr float kStandupPhase1ThetaTolRad = 0.8f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase0ThetaTargetRad = 1.6f;       ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.33f;       ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.3f;          ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.13f;       ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.8f;          ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;      ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.02f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
@@ -1149,11 +1151,11 @@ constexpr float kManualRecoveryLegSpeedRadS = 0.5f;        ///< 手动倒地恢�
 constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;        ///< 倒地恢复零力矩区间下限 [rad]
 constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 倒地恢复零力矩区间上限 [rad]
                                                            // ==== 倒地恢复软着陆 ====
-constexpr float kRecoveryDecelZoneRad = 0.7f;   ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
-constexpr float kRecoveryMinSpeedRadS = 0.07f;  ///< 恢复减速区边界最低速度 [rad/s]
-constexpr float kRecoveryGravityRampScale = 0.35f;   ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
-constexpr float kRecoveryPitchFeedforwardKp = 30.f;  ///< 倒地恢复俯仰角前馈系数
-constexpr float kRecoveryRollFeedforwardKp = 5.0f;   ///< 倒地恢复横滚角前馈系数
+constexpr float kRecoveryDecelZoneRad = 0.7f;              ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
+constexpr float kRecoveryMinSpeedRadS = 0.07f;             ///< 恢复减速区边界最低速度 [rad/s]
+constexpr float kRecoveryGravityRampScale = 0.35f;         ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
+constexpr float kRecoveryPitchFeedforwardKp = 30.f;        ///< 倒地恢复俯仰角前馈系数
+constexpr float kRecoveryRollFeedforwardKp = 5.0f;         ///< 倒地恢复横滚角前馈系数
 
 // ==== pitch 恢复刹车 ====
 constexpr float kPitchBrakeZoneRad = 0.55f;       ///< pitch 恢复刹车区间 [rad]
@@ -1165,14 +1167,14 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====]
-constexpr float kRecoveryThetaRangeLowMin = -2.f;             ///< 前倒恢复腿摆角下限 [rad]1
-constexpr float kRecoveryThetaRangeLowMax = -0.8f;            ///< 前倒恢复腿摆角上限 [rad]
-constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;      ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryThetaRangeHighMin = -5.6f;           ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -5.f;            ///< 后倒恢复腿摆角上限 [rad]1
-constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;        ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -18.0f;  ///< 左前倒恢复恒定转轴力矩 [Nm]
-constexpr float kRecoveryLeftBackFallHoldTorqueNm = 25.0f;    ///< 左后倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryThetaRangeLowMin = -2.f;              ///< 前倒恢复腿摆角下限 [rad]1
+constexpr float kRecoveryThetaRangeLowMax = -0.8f;             ///< 前倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;       ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
+constexpr float kRecoveryThetaRangeHighMin = -5.6f;            ///< 后倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -5.f;             ///< 后倒恢复腿摆角上限 [rad]1
+constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;         ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -18.0f;   ///< 左前倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftBackFallHoldTorqueNm = 25.0f;     ///< 左后倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightFrontFallHoldTorqueNm = -18.0f;  ///< 右前倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightBackFallHoldTorqueNm = 25.0f;    ///< 右后倒恢复恒定转轴力矩 [Nm]
 
@@ -1205,14 +1207,14 @@ constexpr PidGains kRightL0Pid{3000.0f, 0.5f, 150.0f, 170.0f, 10.0f};  ///< 右�
 constexpr PidGains kRollPid{1000.0f, 1.f, 20.0f, 140.0f, 40.0f};       ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
-constexpr float kJumpPushForceN = 320.0f;                                     ///< 蹬伸阶段单腿基础支撑力 [N]
-constexpr PidGains kLeftL0PidJumpOne{700.0f, 0.f, 100.0f, 120.0f, 20.0f};     ///< 左腿预备 PID（JumpPrep）
-constexpr PidGains kRightL0PidJumpOne{700.0f, 0.f, 100.0f, 120.0f, 20.0f};    ///< 右腿预备 PID（JumpPrep）
-constexpr PidGains kLeftL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};    ///< 左腿蹬伸 PID
-constexpr PidGains kRightL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};   ///< 右腿蹬伸 PID
-constexpr PidGains kLeftL0PidJumpThree{3500.0f, 0.f, 150.0f, 150.0f, 30.0f};  ///< 左腿回收 PID
-constexpr PidGains kRightL0PidJumpThree{3500.0f, 0.f, 150.0f, 150.0f, 30.0f};  ///< 右腿回收 PID
-constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 左腿摆角 PID（跳跃收腿第二阶段）
+constexpr float kJumpPushForceN = 320.0f;                                          ///< 蹬伸阶段单腿基础支撑力 [N]
+constexpr PidGains kLeftL0PidJumpOne{700.0f, 0.f, 100.0f, 120.0f, 20.0f};          ///< 左腿预备 PID（JumpPrep）
+constexpr PidGains kRightL0PidJumpOne{700.0f, 0.f, 100.0f, 120.0f, 20.0f};         ///< 右腿预备 PID（JumpPrep）
+constexpr PidGains kLeftL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};         ///< 左腿蹬伸 PID
+constexpr PidGains kRightL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};        ///< 右腿蹬伸 PID
+constexpr PidGains kLeftL0PidJumpThree{3500.0f, 0.f, 150.0f, 150.0f, 30.0f};       ///< 左腿回收 PID
+constexpr PidGains kRightL0PidJumpThree{3500.0f, 0.f, 150.0f, 150.0f, 30.0f};      ///< 右腿回收 PID
+constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};   ///< 左腿摆角 PID（跳跃收腿第二阶段）
 constexpr PidGains kRightLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 右腿摆角 PID（跳跃收腿第二阶段）
 
 // ==== 中腿长下压（PID 增益）====
@@ -1220,16 +1222,16 @@ constexpr PidGains kLeftL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{450.0f, 0.f, 200.0f, 170.0f, 10.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};  ///< 左腿摆角速度 PID（theta/roll 恢复用）
+constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};   ///< 左腿摆角速度 PID（theta/roll 恢复用）
 constexpr PidGains kRightLegTurnPid{18.0f, 0.f, 0.0f, 11.5f, 10.0f};  ///< 右腿摆角速度 PID（theta/roll 恢复用）
-constexpr PidGains kLeftLegTurnPidFrontRecovery{22.0f, 0.f, 0.0f, 14.f, 10.0f};  ///< 左腿摆角速度 PID（前倒恢复用）
+constexpr PidGains kLeftLegTurnPidFrontRecovery{22.0f, 0.f, 0.0f, 14.f, 10.0f};   ///< 左腿摆角速度 PID（前倒恢复用）
 constexpr PidGains kRightLegTurnPidFrontRecovery{22.0f, 0.f, 0.0f, 14.f, 10.0f};  ///< 右腿摆角速度 PID（前倒恢复用）
-constexpr PidGains kLeftLegTurnPidBackRecovery{12.0f, 0.f, 0.0f, 8.f, 10.0f};  ///< 左腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kRightLegTurnPidBackRecovery{12.0f, 0.f, 0.0f, 8.f, 10.0f};  ///< 右腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kLeftLegAnglePidStandup{14.0f, 0.0f, 0.f, 10.0f, 0.0f};   ///< 左腿摆角 PID（起立用）
-constexpr PidGains kRightLegAnglePidStandup{14.0f, 0.0f, 0.f, 10.0f, 0.0f};  ///< 右腿摆角 PID（起立用）
-constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
-constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
+constexpr PidGains kLeftLegTurnPidBackRecovery{12.0f, 0.f, 0.0f, 8.f, 10.0f};     ///< 左腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kRightLegTurnPidBackRecovery{12.0f, 0.f, 0.0f, 8.f, 10.0f};    ///< 右腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kLeftLegAnglePidStandup{14.0f, 0.0f, 0.f, 10.0f, 0.0f};        ///< 左腿摆角 PID（起立用）
+constexpr PidGains kRightLegAnglePidStandup{14.0f, 0.0f, 0.f, 10.0f, 0.0f};       ///< 右腿摆角 PID（起立用）
+constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};         ///< 左腿摆角速度 PID（手动倒地恢复）
+constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};        ///< 右腿摆角速度 PID（手动倒地恢复）
 
 // ==== l0_ddot 低通滤波 ====
 constexpr float kL0DdotFilterCutoffHz = 5.0f;    ///< l0_ddot 低通滤波截止频率 [Hz]
@@ -1289,31 +1291,31 @@ constexpr float kTargetSpeedBiasMidLegMps = 0.0f;         ///< C键中腿长目�
 constexpr float kTargetSpeedBiasMidLegFMps = 0.0f;        ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = 0.0f;        ///< 高腿长目标速度偏置 [m/s]
 constexpr float kMaxSafeYawRateRadS = 4.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.55f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.6f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.15f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
+constexpr float kLargeTurnThresholdRad = 0.55f;           ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
+constexpr float kSafeTurnSpeedMps = 0.6f;                 ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
+constexpr float kLargeTurnThetaThresholdRad = 0.15f;      ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
 constexpr float kLargeTurnRecoveryAccelScale = 0.5f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.3f;         ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;              ///< 中腿长大转向安全速度上限 [m/s]
+constexpr float kLargeTurnThresholdRadMidLeg = 0.3f;  ///< 中腿长大转向检测阈值 [rad]
+constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;       ///< 中腿长大转向安全速度上限 [m/s]
 constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;    ///< 中腿长大转向腿摆角阈值 [rad]
 constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.42f;  ///< 中腿长大转向恢复加速缩放
 constexpr float kVxInputDeadbandNorm = 0.05f;                ///< 前进输入死区
 constexpr float kVyInputDeadbandNorm = 0.05f;                ///< 平移输入死区
 constexpr float kYawFollowRampStepRadS = 0.11f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
-constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
+constexpr float kYawFollowRampStepRadNoScS = 0.06f;          ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
 
 constexpr float kPositionFreezeSpeedThresholdMps = 0.05f;  ///< 位置锚定冻结速度阈值 [m/s]
 constexpr uint32_t kPositionHoldTimeoutTicks =
-    500U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
-constexpr float kPositionErrorScaleLowLeg = 1.5f;    ///< 低腿长位置误差缩放
-constexpr float kVelocityErrorScaleLowLeg = 1.3f;    ///< 低腿长速度误差缩放
-constexpr float kPositionErrorScaleMidLeg = 1.0f;    ///< 中腿长位置误差缩放
-constexpr float kVelocityErrorScaleMidLeg = 1.0f;    ///< 中腿长速度误差缩放
-constexpr float kPositionErrorScaleHighLeg = 1.0f;   ///< 高腿长位置误差缩放
-constexpr float kVelocityErrorScaleHighLeg = 1.0f;   ///< 高腿长速度误差缩放
-constexpr float kPositionErrorScaleSpin = 1.0f;      ///< 小陀螺原地位置误差缩放
-constexpr float kVelocityErrorScaleSpin = 1.0f;      ///< 小陀螺平均轮速误差缩放
-constexpr float kYawFollowFixedTargetRad = -3.087f;  ///< 偏航跟随固定目标偏置角 [rad]
+    500U;                                          ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）
+constexpr float kPositionErrorScaleLowLeg = 1.5f;  ///< 低腿长位置误差缩放
+constexpr float kVelocityErrorScaleLowLeg = 1.3f;  ///< 低腿长速度误差缩放
+constexpr float kPositionErrorScaleMidLeg = 1.0f;  ///< 中腿长位置误差缩放
+constexpr float kVelocityErrorScaleMidLeg = 1.0f;  ///< 中腿长速度误差缩放
+constexpr float kPositionErrorScaleHighLeg = 1.0f;                                   ///< 高腿长位置误差缩放
+constexpr float kVelocityErrorScaleHighLeg = 1.0f;                                   ///< 高腿长速度误差缩放
+constexpr float kPositionErrorScaleSpin = 1.0f;                                      ///< 小陀螺原地位置误差缩放
+constexpr float kVelocityErrorScaleSpin = 1.0f;                                      ///< 小陀螺平均轮速误差缩放
+constexpr float kYawFollowFixedTargetRad = -3.087f;                                  ///< 偏航跟随固定目标偏置角 [rad]
 constexpr float kYawFollowSideOffsetRad = 0.5f * wheel_legged::params::common::kPi;  ///< 偏航跟随侧向目标偏置角 [rad]
 // kYawFollowPid 已移除：转向由 LQR φ 通道 + 偏航电机反作用力驱动
 
@@ -1349,7 +1351,7 @@ constexpr float kSpinMaxPhaseErrorRad = 0.20f;          ///< 积分 yaw 参考�
 constexpr uint32_t kSpinExitStableTicks = 10U;          ///< 角度和角速度同时达标的判稳周期数
 constexpr float kYawResetRampStepRad = 0.02f;           ///< C/V/B 偏航复位目标角斜坡步长 [rad/tick]
 constexpr float kYawResetMaxSpeedMps = 0.2f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
-constexpr float kSpinTranslationGain = 0.3f;  ///< 小陀螺平移增益（系数2补偿 cos² 平均衰减，使平均车速=摇杆指令值）
+constexpr float kSpinTranslationGain = 0.3f;   ///< 小陀螺平移增益（系数2补偿 cos² 平均衰减，使平均车速=摇杆指令值）
 constexpr float kSpinThetaLlBiasRad = 0.0f;    ///< 小陀螺时左腿摆角偏置 [rad] 0.0
 constexpr float kSpinThetaLrBiasRad = 0.05f;   ///< 小陀螺时右腿摆角偏置 [rad] 0.05
 constexpr float kSpinLegLengthBiasM = 0.0f;    ///< 小陀螺时腿长偏差（左+右-）[m]
@@ -1433,23 +1435,23 @@ constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};        ///< 自�
 constexpr PidGains kPitchPositionPid{30.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
 constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄俯仰速度 PID（打装甲板）
 
-constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.8f, 10.0f, 2.2f};  ///< 自瞄偏航位置 PID（打符）
-constexpr PidGains kYawSpeedPidRune{0.6f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄偏航速度 PID（打符）
-constexpr PidGains kPitchPositionPidRune{30.0f, 0.f, 2.f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
-constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};    ///< 自瞄俯仰速度 PID（打符）
+constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
+constexpr PidGains kYawSpeedPidRune{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄偏航速度 PID（打符）
+constexpr PidGains kPitchPositionPidRune{35.0f, 0.f, 0.7f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
+constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打符）
 }  // namespace aimbot
 
 // ── 自瞄 + 小陀螺模式 PID ──
 namespace aimbot_spin {
 constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄+小陀螺偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
-constexpr PidGains kPitchPositionPid{30.0f, 0.f, 0.6f, 10.0f, 2.f};   ///< 自瞄+小陀螺俯仰位置 PID
+constexpr PidGains kPitchPositionPid{30.0f, 0.f, 0.6f, 10.0f, 2.f};  ///< 自瞄+小陀螺俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
 
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
 constexpr float kYawTargetBiasRad[4] = {-0.0f, -0.0f, -0.0f, -0.0f};     ///< 各档位偏航目标偏置 [rad]
-constexpr float kYawTorqueFeedforwardNm[4] = {0.6f, 0.6f, 0.6f, 0.6f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
+constexpr float kYawTorqueFeedforwardNm[4] = {0.6f, 0.6f, 0.6f, 0.6f};   ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
 }  // namespace aimbot_spin
 
 // ── 四元数姿态观测器（影子模式）──
@@ -1600,7 +1602,7 @@ constexpr PidGains kIdentYawPosPid{20.0f, 0.0f, 0.1f, 10.0f, 0.0f};    ///< 辨�
 constexpr PidGains kIdentPitchPosPid{30.0f, 5.0f, 0.2f, 10.0f, 2.0f};  ///< 辨识模式 pitch 位置 PID
 constexpr PidGains kIdentYawVelPid{1.5f, 10.0f, 0.0f, 10.0f, 2.0f};    ///< Friction step yaw 速度 PID
 constexpr PidGains kIdentPitchVelPid{1.1f, 4.0f, 0.0f, 5.0f, 2.0f};    ///< Friction step pitch 速度环 PID
-constexpr float kIdentPitchCenter = 0.7941f;  ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
+constexpr float kIdentPitchCenter = 0.7941f;    ///< 辨识轨迹 pitch 中心角 [rad]（机械中位，实际需根据云台标定）
 constexpr float kIdentPitchTopLimit = 0.4f;     ///< 辨识轨迹 pitch 下限 [rad]
 constexpr float kIdentPitchBottomLimit = 1.4f;  ///< 辨识轨迹 pitch 上限 [rad]
 
@@ -1642,17 +1644,19 @@ namespace shoot {
 constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.f, 16000.0f, 1000.0f};     ///< 拨盘速度 PID
 constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.01f, 30000.0f, 500.0f};  ///< 拨盘位置 PID
 constexpr int16_t kDialFireThreshold = -600;                              ///< 发射触发拨轮阈值
-constexpr float kFricSpeedTargetRpm = 6000.0f;  ///< 摩擦轮目标转速 [rpm]（打弹检测用）
-constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID（Shoot控制器用）
+constexpr float kDialSingleShotSpeed = 1000.0f;                           ///< 单发拨盘内环速度 [rpm]
+constexpr float kDialPositionThreshold = 500.0f;                         ///< 单发到位误差阈值 [ticks]
+constexpr float kFricSpeedTargetRpm = 6000.0f;                            ///< 摩擦轮目标转速 [rpm]（打弹检测用）
+constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};   ///< 摩擦轮速度 PID（Shoot控制器用）
 
 // ── 本地热量闭环 ──
-constexpr float kHeatPerShot = 10.0f;  ///< 每发子弹热量增量 [热量单位]
-constexpr float kHeatSafetyMargin = 10.0f;  ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
+constexpr float kHeatPerShot = 10.0f;          ///< 每发子弹热量增量 [热量单位]
+constexpr float kHeatSafetyMargin = 10.0f;     ///< 高热量模式停火余量：heat + kHeatPerShot > limit - margin 时抑制发射
 constexpr float kLowHeatSafetyMargin = 25.0f;  ///< 低热量模式停火余量
 constexpr float kHeatResumeMargin = 0.0f;  ///< 恢复迟滞余量：heat + kHeatPerShot <= limit - margin - resume 时恢复发射
-constexpr uint16_t kDefaultHeatLimit = 240;      ///< 裁判系统离线时默认热量上限
-constexpr uint16_t kDefaultCoolingRate = 40;     ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
-constexpr uint16_t kLowHeatLimitThreshold = 40;  ///< 低热量上限阈值：低于此值时降频并使用本地热量
+constexpr uint16_t kDefaultHeatLimit = 240;       ///< 裁判系统离线时默认热量上限
+constexpr uint16_t kDefaultCoolingRate = 40;      ///< 裁判系统离线时默认冷却速率 [热量单位/秒]
+constexpr uint16_t kLowHeatLimitThreshold = 40;   ///< 低热量上限阈值：低于此值时降频并使用本地热量
 constexpr float kLowHeatShootFrequencyHz = 6.0f;  ///< 低热量上限时发射频率 [Hz]
 constexpr float kNormalShootFrequencyHz = 15.0f;  ///< 正常发射频率 [Hz]
 }  // namespace shoot
@@ -1720,10 +1724,10 @@ constexpr std::uint32_t kRecoverySelfRightTimeoutMs = 2200U;  ///< 自启超时 
 constexpr std::uint32_t kRecoveryFailedTimeoutMs = 3000U;     ///< 自启失败锁定超时 [ms]
 
 // ==== 跳跃 ====
-constexpr std::uint32_t kJumpLowPrepMs = 0U;        ///< 跳跃预备阶段持续时间 [ms]
-constexpr std::uint32_t kJumpLowPushMaxMs = 2500U;  ///< 跳跃蹬伸阶段最长持续时间 [ms]
-constexpr std::uint32_t kJumpLowRecoverMs = 1000U;  ///< 跳跃回收阶段持续时间（保底超时）[ms]
-constexpr std::uint32_t kJumpLowRecoverMinMs = 500U;  ///< 跳跃回收阶段最低维持时间（此后开始判断离地）[ms]
+constexpr std::uint32_t kJumpLowPrepMs = 0U;            ///< 跳跃预备阶段持续时间 [ms]
+constexpr std::uint32_t kJumpLowPushMaxMs = 2500U;      ///< 跳跃蹬伸阶段最长持续时间 [ms]
+constexpr std::uint32_t kJumpLowRecoverMs = 1000U;      ///< 跳跃回收阶段持续时间（保底超时）[ms]
+constexpr std::uint32_t kJumpLowRecoverMinMs = 500U;    ///< 跳跃回收阶段最低维持时间（此后开始判断离地）[ms]
 constexpr float kJumpLowPrepLegLengthM = 0.15f;         ///< 跳跃预备阶段目标腿长 [m]
 constexpr float kJumpLowPushLegLengthM = 0.4f;          ///< 跳跃蹬伸阶段目标腿长 [m]
 constexpr float kJumpLowRecoverLegLengthM = 0.14f;      ///< 跳跃回收阶段目标腿长 [m]
@@ -1785,11 +1789,11 @@ constexpr std::array<float, 24> kEtaLookupLwM{
 };
 
 // ==== 姿态安全/倒地恢复 ====
-constexpr float kStandupPhase0ThetaTargetRad = 1.6f;  ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
-constexpr float kStandupPhase0TargetLengthM = 0.33f;  ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
-constexpr float kStandupPhase0ThetaTolRad = 0.6f;  ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
-constexpr float kStandupPhase1TargetLengthM = 0.13f;  ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
-constexpr float kStandupPhase1ThetaTolRad = 0.8f;  ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase0ThetaTargetRad = 1.6f;       ///< 起立 Phase 0 腿摆角目标 [rad]（摆腿）
+constexpr float kStandupPhase0TargetLengthM = 0.33f;       ///< 起立 Phase 0 目标腿长 [m]（摆腿阶段）
+constexpr float kStandupPhase0ThetaTolRad = 0.6f;          ///< 起立 Phase 0 完成判定：摆角与目标差值容许 [rad]
+constexpr float kStandupPhase1TargetLengthM = 0.13f;       ///< 起立 Phase 2 目标腿长 [m]（摆腿收敛）
+constexpr float kStandupPhase1ThetaTolRad = 0.8f;          ///< 起立 Phase 2 完成判定：摆角与目标差值容许 [rad]
 constexpr float kStandupDirectLqrThetaTolRad = 0.85f;      ///< 起立单腿直入 LQR 摆角阈值 [rad]
 constexpr float kStandupSingleNegThetaRecoveryRad = 1.0f;  ///< 单腿负角度超过此值走 theta 恢复 [rad]
 constexpr float kStandupThetaRampStepRad = 0.01f;          ///< 起立摆角斜坡步长 [rad/周期]（Phase 2）
@@ -1809,8 +1813,8 @@ constexpr float kLegRecoverZeroTorqueMinRad = 0.0f;        ///< 倒地恢复零�
 constexpr float kLegRecoverZeroTorqueMaxRad = 1.4f;        ///< 倒地恢复零力矩区间上限 [rad]
 
 // ==== 倒地恢复软着陆 ====
-constexpr float kRecoveryDecelZoneRad = 0.6f;   ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
-constexpr float kRecoveryMinSpeedRadS = 0.08f;  ///< 恢复减速区边界最低速度 [rad/s]
+constexpr float kRecoveryDecelZoneRad = 0.6f;         ///< 恢复减速区宽度 [rad]（接近目标边界时开始减速）
+constexpr float kRecoveryMinSpeedRadS = 0.08f;        ///< 恢复减速区边界最低速度 [rad/s]
 constexpr float kRecoveryGravityRampScale = 0.35f;    ///< 恢复时重力补偿斜坡比例（越大身体越不砸）
 constexpr float kRecoveryPitchFeedforwardKp = 30.0f;  ///< 倒地恢复俯仰角前馈系数
 constexpr float kRecoveryRollFeedforwardKp = 5.0f;    ///< 倒地恢复横滚角前馈系数
@@ -1824,14 +1828,14 @@ constexpr float kPitchBrakeReverseRateRadS = 2.6f;    ///< pitch 反转角速度
 constexpr float kPitchBrakeReverseSpeedRadS = 0.35f;  ///< pitch 反转目标速度 [rad/s]
 
 // ==== 倒地恢复腿摆角目标范围 ====
-constexpr float kRecoveryThetaRangeLowMin = -2.f;             ///< 前倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeLowMax = -0.8f;            ///< 前倒恢复腿摆角上限 [rad]
-constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;      ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryThetaRangeHighMin = -5.6f;           ///< 后倒恢复腿摆角下限 [rad]
-constexpr float kRecoveryThetaRangeHighMax = -5.f;            ///< 后倒恢复腿摆角上限 [rad]
-constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;        ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
-constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -18.0f;  ///< 左前倒恢复恒定转轴力矩 [Nm]
-constexpr float kRecoveryLeftBackFallHoldTorqueNm = 25.0f;    ///< 左后倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryThetaRangeLowMin = -2.f;              ///< 前倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeLowMax = -0.8f;             ///< 前倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryFrontFallHoldTorqueNm = -18.0f;       ///< 前倒恢复到达下限后的恒定转轴力矩 [Nm]
+constexpr float kRecoveryThetaRangeHighMin = -5.6f;            ///< 后倒恢复腿摆角下限 [rad]
+constexpr float kRecoveryThetaRangeHighMax = -5.f;             ///< 后倒恢复腿摆角上限 [rad]
+constexpr float kRecoveryBackFallHoldTorqueNm = 18.0f;         ///< 后倒恢复到达上限后的恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftFrontFallHoldTorqueNm = -18.0f;   ///< 左前倒恢复恒定转轴力矩 [Nm]
+constexpr float kRecoveryLeftBackFallHoldTorqueNm = 25.0f;     ///< 左后倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightFrontFallHoldTorqueNm = -18.0f;  ///< 右前倒恢复恒定转轴力矩 [Nm]
 constexpr float kRecoveryRightBackFallHoldTorqueNm = 25.0f;    ///< 右后倒恢复恒定转轴力矩 [Nm]
 
@@ -1863,14 +1867,14 @@ constexpr PidGains kRightL0Pid{2700.0f, 0.f, 100.0f, 170.0f, 30.0f};  ///< 右�
 constexpr PidGains kRollPid{1000.0f, 1.f, 20.0f, 140.0f, 40.0f};      ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
-constexpr float kJumpPushForceN = 280.0f;                                     ///< 蹬伸阶段单腿基础支撑力 [N]
-constexpr PidGains kLeftL0PidJumpOne{1200.0f, 0.f, 200.0f, 120.0f, 20.0f};    ///< 左腿预备 PID（JumpPrep）
-constexpr PidGains kRightL0PidJumpOne{1200.0f, 0.f, 200.0f, 120.0f, 20.0f};   ///< 右腿预备 PID（JumpPrep）
-constexpr PidGains kLeftL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};    ///< 左腿蹬伸 PID
-constexpr PidGains kRightL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};   ///< 右腿蹬伸 PID
-constexpr PidGains kLeftL0PidJumpThree{3500.0f, 0.f, 220.0f, 120.0f, 30.0f};  ///< 左腿回收 PID
-constexpr PidGains kRightL0PidJumpThree{3500.0f, 0.f, 220.0f, 120.0f, 30.0f};  ///< 右腿回收 PID
-constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 左腿摆角 PID（跳跃收腿第二阶段）
+constexpr float kJumpPushForceN = 280.0f;                                          ///< 蹬伸阶段单腿基础支撑力 [N]
+constexpr PidGains kLeftL0PidJumpOne{1200.0f, 0.f, 200.0f, 120.0f, 20.0f};         ///< 左腿预备 PID（JumpPrep）
+constexpr PidGains kRightL0PidJumpOne{1200.0f, 0.f, 200.0f, 120.0f, 20.0f};        ///< 右腿预备 PID（JumpPrep）
+constexpr PidGains kLeftL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};         ///< 左腿蹬伸 PID
+constexpr PidGains kRightL0PidJumpTwo{3800.0f, 0.0f, 200.0f, 200.0f, 0.0f};        ///< 右腿蹬伸 PID
+constexpr PidGains kLeftL0PidJumpThree{3500.0f, 0.f, 220.0f, 120.0f, 30.0f};       ///< 左腿回收 PID
+constexpr PidGains kRightL0PidJumpThree{3500.0f, 0.f, 220.0f, 120.0f, 30.0f};      ///< 右腿回收 PID
+constexpr PidGains kLeftLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};   ///< 左腿摆角 PID（跳跃收腿第二阶段）
 constexpr PidGains kRightLegAnglePidJumpRetract2{15.0f, 0.0f, 0.0f, 20.0f, 0.0f};  ///< 右腿摆角 PID（跳跃收腿第二阶段）
 
 // ==== 中腿长下压（PID 增益）====
@@ -1878,15 +1882,15 @@ constexpr PidGains kLeftL0PidDip{400.0f, 0.f, 200.0f, 170.0f, 30.0f};   ///< 左
 constexpr PidGains kRightL0PidDip{400.0f, 0.f, 200.0f, 170.0f, 30.0f};  ///< 右腿下压腿长 PID
 
 // ==== 倒地自启（腿摆速度 PID）====
-constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 左腿摆角速度 PID（theta/roll 恢复用）
+constexpr PidGains kLeftLegTurnPid{18.0f, 0.f, 30.0f, 13.0f, 10.0f};   ///< 左腿摆角速度 PID（theta/roll 恢复用）
 constexpr PidGains kRightLegTurnPid{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 右腿摆角速度 PID（theta/roll 恢复用）
-constexpr PidGains kLeftLegTurnPidFrontRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 左腿摆角速度 PID（前倒恢复用）
+constexpr PidGains kLeftLegTurnPidFrontRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};   ///< 左腿摆角速度 PID（前倒恢复用）
 constexpr PidGains kRightLegTurnPidFrontRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 右腿摆角速度 PID（前倒恢复用）
-constexpr PidGains kLeftLegTurnPidBackRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 左腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kRightLegTurnPidBackRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};  ///< 右腿摆角速度 PID（后倒恢复用）
-constexpr PidGains kLeftLegAnglePidStandup{14.0f, 0.0f, 0.0f, 10.0f, 0.0f};   ///< 左腿摆角 PID（起立用）
-constexpr PidGains kRightLegAnglePidStandup{14.0f, 0.0f, 0.0f, 10.0f, 0.0f};  ///< 右腿摆角 PID（起立用）
-constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 左腿摆角速度 PID（手动倒地恢复）
+constexpr PidGains kLeftLegTurnPidBackRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};    ///< 左腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kRightLegTurnPidBackRecovery{18.0f, 0.f, 30.0f, 13.0f, 10.0f};   ///< 右腿摆角速度 PID（后倒恢复用）
+constexpr PidGains kLeftLegAnglePidStandup{14.0f, 0.0f, 0.0f, 10.0f, 0.0f};         ///< 左腿摆角 PID（起立用）
+constexpr PidGains kRightLegAnglePidStandup{14.0f, 0.0f, 0.0f, 10.0f, 0.0f};        ///< 右腿摆角 PID（起立用）
+constexpr PidGains kLeftLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};   ///< 左腿摆角速度 PID（手动倒地恢复）
 constexpr PidGains kRightLegTurnPidManual{10.0f, 0.0f, 2.0f, 20.0f, 0.0f};  ///< 右腿摆角速度 PID（手动倒地恢复）
 
 // ==== l0_ddot 低通滤波 ====
@@ -1947,19 +1951,19 @@ constexpr float kTargetSpeedBiasMidLegMps = 0.f;          ///< C键中腿长目�
 constexpr float kTargetSpeedBiasMidLegFMps = 0.f;         ///< F键中腿长目标速度偏置 [m/s]
 constexpr float kTargetSpeedBiasHighLegMps = -0.f;        ///< 高腿长目标速度偏置 [m/s]
 constexpr float kMaxSafeYawRateRadS = 4.5f;               ///< 摩擦圆最大安全偏航速率 [rad/s]
-constexpr float kLargeTurnThresholdRad = 0.5f;  ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
-constexpr float kSafeTurnSpeedMps = 0.6f;  ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
-constexpr float kLargeTurnThetaThresholdRad = 0.15f;  ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
+constexpr float kLargeTurnThresholdRad = 0.5f;            ///< 大转向检测阈值：motor_error 超此值触发先减速再转向 [rad]
+constexpr float kSafeTurnSpeedMps = 0.6f;                 ///< 大转向安全速度上限：超此速度时强制限速 [m/s]
+constexpr float kLargeTurnThetaThresholdRad = 0.15f;      ///< 大转向腿摆角阈值：摆角超此值需先回正再转向 [rad]
 constexpr float kLargeTurnRecoveryAccelScale = 0.4f;  ///< 大转向恢复加速缩放：限速解除后加速斜坡乘以该系数，越小越缓
-constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;        ///< 中腿长大转向检测阈值 [rad]
-constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;             ///< 中腿长大转向安全速度上限 [m/s]
+constexpr float kLargeTurnThresholdRadMidLeg = 0.5f;  ///< 中腿长大转向检测阈值 [rad]
+constexpr float kSafeTurnSpeedMpsMidLeg = 0.5f;       ///< 中腿长大转向安全速度上限 [m/s]
 constexpr float kLargeTurnThetaThresholdRadMidLeg = 0.1f;   ///< 中腿长大转向腿摆角阈值 [rad]
 constexpr float kLargeTurnRecoveryAccelScaleMidLeg = 0.6f;  ///< 中腿长大转向恢复加速缩放
 constexpr float kVxInputDeadbandNorm = 0.05f;               ///< 前进输入死区
 constexpr float kVyInputDeadbandNorm = 0.05f;               ///< 平移输入死区
 constexpr float kYawFollowRampStepRadS = 0.5f;              ///< 偏航跟随角速度斜坡步长 [(rad/s)/周期]
-constexpr float kYawFollowRampStepRadNoScS = 0.06f;  ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
-constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;  ///< 位置锚定冻结速度阈值 [m/s]
+constexpr float kYawFollowRampStepRadNoScS = 0.06f;         ///< 偏航跟随角速度斜坡步长（无超电）[(rad/s)/周期]
+constexpr float kPositionFreezeSpeedThresholdMps = 0.15f;   ///< 位置锚定冻结速度阈值 [m/s]
 constexpr uint32_t kPositionHoldTimeoutTicks =
     1000U;  ///< 位置锚定超时 [ticks]（斜坡归零后最多等待此周期数，超时强制冻结）--
 constexpr float kPositionErrorScaleLowLeg = 1.5f;      ///< 低腿长位置误差缩放
@@ -2112,7 +2116,7 @@ constexpr PidGains kPitchSpeedPid{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
 constexpr float kYawTargetBiasSpeedThresholds[3] = {8.0f, 9.5f, 10.5f};  ///< 四档偏置的自旋速度分界 [rad/s]
 constexpr float kYawTargetBiasRad[4] = {-0.0f, -0.0f, -0.0f, -0.0f};     ///< 各档位偏航目标偏置 [rad]
-constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};  ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
+constexpr float kYawTorqueFeedforwardNm[4] = {0.2f, 0.2f, 0.2f, 0.2f};   ///< 自瞄小陀螺各挡固定 yaw 力矩前馈 [N·m]
 }  // namespace aimbot_spin
 
 // ── 四元数姿态观测器（影子模式）──
