@@ -831,7 +831,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   output_.position_hold_active = input.position_hold_active;
 
   // 进入/退出小陀螺时切换 LQR 增益矩阵
-  const bool now_spin = (input.fsm_mode == Fsm::State::kSpin);
+  const bool now_spin = (input.fsm_mode == Fsm::State::kSpin || input.fsm_mode == Fsm::State::kSpinExitPending);
   if (now_spin != prev_spin_active_) {
     lqr_controller_.SetLqrCoefficients(now_spin ? ToCoeffMatrix(kCtrlPSpin) : ToCoeffMatrix(kCtrlPLow));
     prev_spin_active_ = now_spin;
@@ -921,7 +921,7 @@ void chassis::Chassis::ComputeActuatorTorque(const UpdateInput &input,
   const bool use_stair_target = input.motion_target.use_stair_theta_controller;
 
   // 着地后腿长 PID D 项输入放大
-  if (input.fsm_mode == Fsm::State::kSpin) {
+  if (input.fsm_mode == Fsm::State::kSpin || input.fsm_mode == Fsm::State::kSpinExitPending) {
     float spin_leg_target = params_.leg_target_length_m;
     if (input.ctrl_spin_active) {
       constexpr float kMin = wheel_legged::params::active::chassis_fsm::kSpinCtrlMinLegLengthM;
