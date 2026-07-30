@@ -528,7 +528,7 @@ void UIWheelLeggedStatusLabel_add_st1() {
 void UIWheelLeggedStatusLabel_add_st2() {
   UICharacter fig;
   const u8 sender = ui_snapshot.referee_robot_id;
-  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 1, 740, 268, 20, 23);
+  fig.character.fillCharacter("st2", UIFigure::Operation::Add, 0, UIFigure::Color::Yellow, 2, 740, 268, 20, 23);
   memcpy(fig.data, "SPIN CROSS HIGHLAND FLY", 23);
   u8 len = Referee0x301Prepare(dataBox, 0, fig, sender, static_cast<u16>(sender) + 256);
   ui_async_send(len);
