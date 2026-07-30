@@ -123,7 +123,6 @@ void static_UI_add() {
 
   schedule.addTaskStatic(&UI_shooter_x_add);
   schedule.addTask(&UI_shooter_x_edit);
-
 }
 /**
  * @file  targets/wheel_legged/control.cc
