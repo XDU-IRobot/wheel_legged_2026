@@ -646,8 +646,8 @@ constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误�
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
-constexpr float kPositionErrorScaleSpin = 1.0f;      ///< 小陀螺原地位置误差缩放
-constexpr float kVelocityErrorScaleSpin = 1.0f;      ///< 小陀螺平均轮速误差缩放
+constexpr float kPositionErrorScaleSpin = 1.0f;        ///< 小陀螺原地位置误差缩放
+constexpr float kVelocityErrorScaleSpin = 1.0f;        ///< 小陀螺平均轮速误差缩放
 constexpr float kYawFollowFixedTargetRad = 1.6638f;    ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]（±π/2）
 
@@ -676,6 +676,7 @@ constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};    ///< 高腿长速�
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.05f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
 constexpr float kSpinExitYawRampStepRadS = 0.05f;       ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.003f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
 constexpr float kSpinTargetYawDotRadS1 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 constexpr float kSpinTargetYawDotRadS2 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 constexpr float kSpinTargetYawDotRadS3 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
@@ -1354,6 +1355,7 @@ constexpr SdotRampParams kSdotRampHighLeg{0.0045f, 0.005f};  ///< 高腿长速�
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.04f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
 constexpr float kSpinExitYawRampStepRadS = 0.05f;       ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.003f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
 constexpr float kSpinTargetYawDotRadS1 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 constexpr float kSpinTargetYawDotRadS2 = 8.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 constexpr float kSpinTargetYawDotRadS3 = 9.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
@@ -2014,16 +2016,17 @@ constexpr SdotRampParams kSdotRampMidLegF{0.0045f, 0.006f};  ///< 中腿长速�
 constexpr SdotRampParams kSdotRampHighLeg{0.006f, 0.005f};   ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====
-constexpr float kSpinYawRampStepRadS = 0.05f;       ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
-constexpr float kSpinExitYawRampStepRadS = 0.05f;   ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
-constexpr float kSpinTargetYawDotRadS1 = 8.5f;      ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
-constexpr float kSpinTargetYawDotRadS2 = 9.5f;      ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
-constexpr float kSpinTargetYawDotRadS3 = 10.5f;     ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
-constexpr float kSpinTargetYawDotRadS4 = 11.5f;     ///< 小陀螺目标自旋角速度 [rad/s] >75W
-constexpr float kSpinTargetYawDotRadNoScS1 = 7.0f;  ///< 无超电小陀螺目标自旋角速度 [rad/s] ≤55W
-constexpr float kSpinTargetYawDotRadNoScS2 = 8.0f;  ///< 无超电小陀螺目标自旋角速度 [rad/s] 55-65W
-constexpr float kSpinTargetYawDotRadNoScS3 = 9.0f;  ///< 无超电小陀螺目标自旋角速度 [rad/s] 65-75W
-constexpr float kSpinTargetYawDotRadNoScS4 = 10.f;  ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
+constexpr float kSpinYawRampStepRadS = 0.05f;        ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
+constexpr float kSpinExitYawRampStepRadS = 0.05f;    ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.003f;  ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
+constexpr float kSpinTargetYawDotRadS1 = 8.5f;       ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
+constexpr float kSpinTargetYawDotRadS2 = 9.5f;       ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
+constexpr float kSpinTargetYawDotRadS3 = 10.5f;      ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
+constexpr float kSpinTargetYawDotRadS4 = 11.5f;      ///< 小陀螺目标自旋角速度 [rad/s] >75W
+constexpr float kSpinTargetYawDotRadNoScS1 = 7.0f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] ≤55W
+constexpr float kSpinTargetYawDotRadNoScS2 = 8.0f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] 55-65W
+constexpr float kSpinTargetYawDotRadNoScS3 = 9.0f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] 65-75W
+constexpr float kSpinTargetYawDotRadNoScS4 = 10.f;   ///< 无超电小陀螺目标自旋角速度 [rad/s] >75W
 // constexpr float kSpinTargetYawDotRadS1 = 4.5f;          ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 // constexpr float kSpinTargetYawDotRadS2 = 4.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 // constexpr float kSpinTargetYawDotRadS3 = 4.5f;         ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
