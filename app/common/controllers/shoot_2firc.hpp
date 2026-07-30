@@ -22,7 +22,7 @@ class Shoot2Fric {
     state_.loader_position = loader_position;
 
     position_ = loader_position - target_.loader_position;
-    if (std::fabs(position_) < 1000.f) {
+    if (std::fabs(position_) < position_threshold_) {
       single_shoot_complete_ = true;
     }
 
@@ -47,7 +47,7 @@ class Shoot2Fric {
     if (!single_shoot_complete_) {
       // 单发模式：位置 - 速度串级
       //      pid_.loader_position.Update(target_.loader_position, state_.loader_position, dt);
-      pid_.loader_speed.Update(-1000, -state_.loader_speed, dt);
+      pid_.loader_speed.Update(-single_shot_speed_, -state_.loader_speed, dt);
       output_.loader = -pid_.loader_speed.out();
     } else {
       // 连发模式：速度环
@@ -120,6 +120,9 @@ class Shoot2Fric {
   auto &position() { return position_; }
   const auto &position() const { return position_; }
 
+  void SetPositionThreshold(float threshold) { position_threshold_ = threshold; }
+  void SetSingleShotSpeed(float speed) { single_shot_speed_ = speed; }
+
  private:
   bool enabled_{false};
   bool armed_{true};
@@ -128,6 +131,8 @@ class Shoot2Fric {
   const float loader_reduction_ratio_;
   float calculated_target_loader_speed_{0.0f};
   float position_;
+  float position_threshold_{1000.f};
+  float single_shot_speed_{1000.f};
   Mode mode_{kFullAuto};
 
   struct {

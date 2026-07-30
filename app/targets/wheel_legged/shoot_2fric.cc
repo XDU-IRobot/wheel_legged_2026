@@ -19,6 +19,9 @@ void Shoot::Init() {
   init_pid(spid.fric_2_speed, ns::kFricSpeedPid);
   init_pid(spid.loader_speed, ns::kDialSpeedPid);
   init_pid(spid.loader_position, ns::kDialPositionPid);
+
+  controller_.SetSingleShotSpeed(ns::kDialSingleShotSpeed);
+  controller_.SetPositionThreshold(ns::kDialPositionThreshold);
 }
 
 void Shoot::Enable() { enabled_ = true; }

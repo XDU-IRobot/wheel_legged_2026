@@ -29,6 +29,8 @@ struct UiSnapshot {
   bool spin_active{false};
   bool cross_active{false};
   bool ad_active{false};
+  bool auto_jump_enabled{false};           // Z key: FLY highlight
+  bool highland_auto_jump_enabled{false};  // Ctrl+Z: HIGHLAND highlight
   float yaw_display_offset_rad{0.0f};
 
   float supercap_cap_energy{0.0f};

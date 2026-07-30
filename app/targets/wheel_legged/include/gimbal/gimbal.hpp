@@ -236,15 +236,9 @@ class Gimbal {
 #if WHEEL_LEGGED_ROBOT_VARIANT == 1
       yaw_ff.Update(output_.yaw_target_rad);
       controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,
-                            input.aimbot_mode ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
+                            input.aimbot_mode && !input.spin_hold ? yaw_ff.GetYawSpeedFeedforward() : 0.0f);
 #else
-      if (input.aimbot_mode && input.spin_hold) {
-        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad,
-                              ResolveSpinYawSpeedFeedforward(input.chassis_yaw_rate_rad_s));
-        // controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
-      } else {
-        controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
-      }
+      controller_.SetTarget(output_.yaw_target_rad, output_.pitch_target_rad);
 #endif
 
       controller_.Update(output_.yaw_pos_rad, output_.yaw_vel_rad_s, output_.pitch_pos_rad, output_.pitch_vel_rad_s,
@@ -292,18 +286,21 @@ class Gimbal {
       //                                               -output_.pitch_vel_rad_s, yaw_ddq, pitch_ddq, g_vec);
       const auto ff = dynamics_.ComputeFfDecomposed(output_.yaw_pos_rad, pitch_q_enc, -output_.yaw_vel_rad_s,
                                                     -output_.pitch_vel_rad_s, 0.f, 0.f, g_vec);
-      output_.ff_yaw = ff.yaw;
+      const bool aimbot_spin_active = input.aimbot_mode && input.spin_hold;
+      const float applied_yaw_ff =
+          aimbot_spin_active ? ResolveSpinYawTorqueFeedforward(input.chassis_yaw_rate_rad_s) : ff.yaw;
+      output_.ff_yaw = applied_yaw_ff;
       output_.ff_pitch = ff.pitch;
-      output_.ff_yaw_inertia = ff.yaw_inertia;
-      output_.ff_yaw_gravity = ff.yaw_gravity;
-      output_.ff_yaw_friction = ff.yaw_friction;
+      output_.ff_yaw_inertia = aimbot_spin_active ? 0.0f : ff.yaw_inertia;
+      output_.ff_yaw_gravity = aimbot_spin_active ? 0.0f : ff.yaw_gravity;
+      output_.ff_yaw_friction = aimbot_spin_active ? 0.0f : ff.yaw_friction;
       output_.ff_pitch_coupling = ff.pitch_yaw_coupling;
       output_.ff_pitch_inertia = ff.pitch_inertia;
       output_.ff_pitch_gravity = ff.pitch_gravity;
       output_.ff_pitch_friction = ff.pitch_friction;
 
       output_.yaw_cmd_torque_nm =
-          std::clamp(controller_.output().yaw + ff.yaw, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
+          std::clamp(controller_.output().yaw + applied_yaw_ff, -wheel_legged::params::active::gimbal::kDmTorqueLimitNm,
                      wheel_legged::params::active::gimbal::kDmTorqueLimitNm);
       output_.pitch_cmd_torque_nm = std::clamp(
           controller_.output().pitch + ff.pitch + wheel_legged::params::active::gimbal::kPitchFeedforwardBiasNm, -28.f,
@@ -363,10 +360,13 @@ class Gimbal {
     return 3;
   }
 
-  static float ResolveSpinYawSpeedFeedforward(const float chassis_yaw_rate_rad_s) {
+  static float ResolveSpinYawTorqueFeedforward(const float chassis_yaw_rate_rad_s) {
+    if (std::fabs(chassis_yaw_rate_rad_s) < 0.1f) {
+      return 0.0f;
+    }
     const int gear = ResolveSpinYawRateGear(chassis_yaw_rate_rad_s);
     const float dir = chassis_yaw_rate_rad_s >= 0.0f ? 1.0f : -1.0f;
-    return -dir * wheel_legged::params::active::aimbot_spin::kYawSpeedFeedforwardRadS[gear];
+    return -dir * wheel_legged::params::active::aimbot_spin::kYawTorqueFeedforwardNm[gear];
   }
 
   void ConfigurePidProfile(const PidProfile profile) {
