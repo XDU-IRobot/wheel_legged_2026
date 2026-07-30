@@ -646,8 +646,8 @@ constexpr float kPositionErrorScaleMidLeg = 1.0f;      ///< 中腿长位置误�
 constexpr float kVelocityErrorScaleMidLeg = 1.0f;      ///< 中腿长速度误差缩放
 constexpr float kPositionErrorScaleHighLeg = 1.0f;     ///< 高腿长位置误差缩放
 constexpr float kVelocityErrorScaleHighLeg = 1.0f;     ///< 高腿长速度误差缩放
-constexpr float kPositionErrorScaleSpin = 1.0f;      ///< 小陀螺原地位置误差缩放
-constexpr float kVelocityErrorScaleSpin = 1.0f;      ///< 小陀螺平均轮速误差缩放
+constexpr float kPositionErrorScaleSpin = 1.0f;        ///< 小陀螺原地位置误差缩放
+constexpr float kVelocityErrorScaleSpin = 1.0f;        ///< 小陀螺平均轮速误差缩放
 constexpr float kYawFollowFixedTargetRad = 1.6638f;    ///< 偏航跟随固定目标偏置角 [rad]（前进方向）
 constexpr float kYawFollowSideOffsetRad = 0.5f * kPi;  ///< 偏航跟随侧向目标偏置角 [rad]（±π/2）
 
