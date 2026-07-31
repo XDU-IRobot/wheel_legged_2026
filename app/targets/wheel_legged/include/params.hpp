@@ -221,7 +221,7 @@ using namespace common::gimbal;
 const DmMitSettings kPitchMotorSettings{0x17, 0x07, 12.5, 10.f, 28.f, {0.f, 500.f}, {0.f, 5.f}};
 
 constexpr float kPitchMinRad = -0.2f;        ///< 俯仰角下限 [rad]
-constexpr float kPitchMaxRad = 0.7f;         ///< 俯仰角上限 [rad]
+constexpr float kPitchMaxRad = 0.8f;         ///< 俯仰角上限 [rad]
 constexpr float kPitchEncoderMaxRad = 0.7f;  ///< 编码器俯仰最高点 [rad]（需标定）
 constexpr float kPitchGravityCompensationNm = 2.35f;
 
@@ -600,7 +600,7 @@ constexpr float kRcYawRateMaxRadS_LongDistance_Shift = -0.1f;   ///< 吊射 Shif
 constexpr float kRcPitchRateMaxRadS_LongDistance_Shift = 0.1f;  ///< 吊射 Shift 俯仰积分速率 [rad/s]
 #endif
 constexpr float kPitchTargetMinRad = -0.2f;       ///< RC 积分俯仰目标下限 [rad]
-constexpr float kPitchTargetMaxRad = 0.7f;        ///< RC 积分俯仰目标上限 [rad]
+constexpr float kPitchTargetMaxRad = 0.8f;        ///< RC 积分俯仰目标上限 [rad]
 constexpr float kKeyboardAccelRampStep = 0.004f;  ///< 键盘 WASD 加速斜坡步进（每周期，0→1 约 0.5s）
 constexpr float kKeyboardBrakeRampStep = 0.008f;  ///< 键盘 WASD 减速斜坡步进（每周期，1→0 约 0.25s）
 
