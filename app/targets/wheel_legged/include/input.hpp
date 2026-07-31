@@ -179,6 +179,7 @@ struct TcSemanticState {
   bool highland_auto_jump_in_progress{false};  ///< 已由高地 TOF 触发并进入底盘跳跃状态
   bool ctrl_z_highland_armed{true};            ///< Ctrl+Z 组合键上升沿检测
   bool highland_auto_jump_tof_armed{true};     ///< 中央高地 TOF 边沿检测
+  uint32_t z_released_at_ms{0};               ///< Z 键释放时刻（防抖：需持续释放 >=50ms 才重新武装上升沿）
   uint32_t highland_both_active_start_ms{0};   ///< 中央高地 both_active 条件首次满足的时刻
   bool dial_jump_armed{true};                  ///< DR16 拨轮跳跃边沿检测
   bool mouse_z_jump_armed{true};               ///< 鼠标滚轮跳跃边沿检测

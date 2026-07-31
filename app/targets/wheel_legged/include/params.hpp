@@ -1031,8 +1031,8 @@ constexpr StairDescendParams kStairDescend{
 };
 
 constexpr StairClimbParams kStairClimb{
-    .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .high_leg_length_m = 0.35f,
+    .hook_leg_length_m = 0.35f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
@@ -1052,8 +1052,8 @@ constexpr StairClimbParams kStairClimb{
     .settle_timeout_ms = 1000U,
 };
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .high_leg_length_m = 0.35f,
+    .hook_leg_length_m = 0.35f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.60f,
@@ -1537,7 +1537,6 @@ constexpr std::uint32_t kStairDescendFreshTimeoutMs = 100U;
 constexpr float kPollRequestFrequencyHz = 100.0f;
 constexpr float kDebugLowPassAlpha = 0.2F;
 constexpr std::size_t kDebugMovingAverageWindow = 5U;
-
 }  // namespace tof
 
 namespace tof_highland {
@@ -1698,8 +1697,8 @@ constexpr StairDescendParams kStairDescend{
 };
 
 constexpr StairClimbParams kStairClimb{
-    .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .high_leg_length_m = 0.35f,
+    .hook_leg_length_m = 0.35f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
@@ -1719,8 +1718,8 @@ constexpr StairClimbParams kStairClimb{
     .settle_timeout_ms = 1000U,
 };
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.33f,
-    .hook_leg_length_m = 0.33f,
+    .high_leg_length_m = 0.35f,
+    .hook_leg_length_m = 0.35f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.65f,

@@ -244,8 +244,6 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
     }
     tc_state.z_auto_jump_armed = false;
   }
-  if (!z_pressed) tc_state.z_auto_jump_armed = true;
-
   // Ctrl+Z 组合键上升沿：启动中央高地时同时关闭反飞坡，取消则只关自己
   if (z_pressed && ctrl_pressed && tc_state.ctrl_z_highland_armed) {
     if (tc_state.requested_tof_mode == wheel_legged::TofMode::kAutoJump && !tc_state.highland_auto_jump_enabled &&
@@ -259,8 +257,19 @@ void ResolveTcKeyboardEdges(const TcRemoteInput &tc_remote, TcSemanticState &tc_
       tc_state.highland_auto_jump_tof_armed = true;
     }
     tc_state.ctrl_z_highland_armed = false;
+    tc_state.z_auto_jump_armed = false;  // 同时消费 Z 键上升沿，防止先松 Ctrl 时触发 Z 键逻辑
   }
-  if (!z_pressed) tc_state.ctrl_z_highland_armed = true;
+
+  // Z 键释放防抖：需持续释放 >=50ms 才重新武装上升沿，避免长按抖动误触发取消
+  // 按下时记录当前 tick，启动时 z_released_at_ms=0 保证立即武装
+  if (!z_pressed) {
+    if (HAL_GetTick() - tc_state.z_released_at_ms >= 50) {
+      tc_state.z_auto_jump_armed = true;
+      tc_state.ctrl_z_highland_armed = true;
+    }
+  } else {
+    tc_state.z_released_at_ms = HAL_GetTick();
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -625,10 +634,6 @@ void ResolveInputSemantics(const Dr16RawInput &dr16, const TcRemoteInput &tc_rem
   request.mid_leg_f = tc_state.mid_leg_f;
 
   const bool is_auto_aim = IsAutoAimProfile(combat_profile);
-  if (combat_profile == wheel_legged::CombatProfile::kAutoAimFuSmall ||
-      combat_profile == wheel_legged::CombatProfile::kAutoAimFuBig) {
-    request.standby = true;
-  }
   if (request.domain_request == wheel_legged::DomainRequest::kDisabled) request.standby = false;
 
   request.combat_profile = combat_profile;
