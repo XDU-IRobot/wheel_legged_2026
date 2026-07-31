@@ -995,10 +995,10 @@ constexpr uint16_t kCouplingRecordCycles = 3;
 
 // ── 发射机构（M3508 拨盘）──
 namespace shoot {
-constexpr PidGains kDialSpeedPid{10.0f, 0.f, 0.f, 16000.0f, 1000.0f};  ///< 拨盘速度 PID
+constexpr PidGains kDialSpeedPid{15.0f, 0.f, 0.f, 16000.0f, 1000.0f};  ///< 拨盘速度 PID
 constexpr PidGains kDialPositionPid{0.5f, 0.f, 0.0f, 16000.0f, 0.0f};  ///< 拨盘位置 PID
 constexpr int16_t kDialFireThreshold = -600;                           ///< 发射触发拨轮阈值
-constexpr float kDialSingleShotSpeed = 1000.0f;                        ///< 单发拨盘内环速度 [rpm]
+constexpr float kDialSingleShotSpeed = 800.0f;                        ///< 单发拨盘内环速度 [rpm]
 constexpr float kDialPositionThreshold = 500.0f;                       ///< 单发到位误差阈值 [ticks]
 constexpr float kFricSpeedTargetRpm = 6200.0f;  ///< 摩擦轮目标转速 [rpm]（打弹检测用）
 constexpr PidGains kFricSpeedPid{10.0f, 0.0f, 0.0f, 16000.0f, 2000.0f};  ///< 摩擦轮速度 PID（Shoot控制器用）
@@ -1098,7 +1098,7 @@ constexpr float kMidLegLengthM = 0.23f;              ///< 中腿长档位目标�
 constexpr float kHighLegLengthM = 0.32f;             ///< 高腿长档位目标腿长 [m]
 constexpr float kLegLengthRampTimeS = 0.35f;         ///< 腿长切换斜坡时间 [s]
 constexpr std::uint32_t kSpinExitTimeoutMs = 3000U;  ///< 小陀螺预测退出超时兜底 [ms]
-constexpr float kSpinEntrySpeedThresholdMps = 0.3f;  ///< 进入小陀螺的速度阈值 [m/s]
+constexpr float kSpinEntrySpeedThresholdMps = 0.1f;  ///< 进入小陀螺的速度阈值 [m/s]
 constexpr float kSpinCtrlMinLegLengthM = 0.14f;      ///< Ctrl+小陀螺最低腿长 [m]
 constexpr float kSpinCtrlMaxLegLengthM = 0.24f;      ///< Ctrl+小陀螺最高腿长 [m]
 constexpr float kSpinCtrlLegOscillationHz = 1.f;     ///< Ctrl+小陀螺腿长振荡频率 [Hz]
@@ -1450,22 +1450,22 @@ constexpr uint8_t kRobotId = 3U;                                      ///< 机�
 constexpr float kBulletSpeedMps = 23.0f;                              ///< 弹速 [m/s]
 constexpr float kBulletDefaultSpeedMps = 23.f;                        ///< 默认弹速
 constexpr float kBulletBoundarySpeedMps = 20.f;                       ///< 区分裁判系统返回值是否正确
-constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
+constexpr PidGains kYawPositionPid{30.0f, 0.f, 0.8f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打装甲板）
 constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};        ///< 自瞄偏航速度 PID（打装甲板）
 constexpr PidGains kPitchPositionPid{30.0f, 0.5f, 0.6f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打装甲板）
 constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};      ///< 自瞄俯仰速度 PID（打装甲板）
 
-constexpr PidGains kYawPositionPidRune{35.0f, 0.f, 0.5f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
+constexpr PidGains kYawPositionPidRune{30.0f, 0.f, 1.15f, 10.0f, 2.2f};   ///< 自瞄偏航位置 PID（打符）
 constexpr PidGains kYawSpeedPidRune{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄偏航速度 PID（打符）
-constexpr PidGains kPitchPositionPidRune{35.0f, 0.f, 0.7f, 10.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
-constexpr PidGains kPitchSpeedPidRune{0.5f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打符）
+constexpr PidGains kPitchPositionPidRune{45.0f, 0.f, 1.3f, 8.0f, 2.f};  ///< 自瞄俯仰位置 PID（打符）
+constexpr PidGains kPitchSpeedPidRune{0.4f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄俯仰速度 PID（打符）
 }  // namespace aimbot
 
 // ── 自瞄 + 小陀螺模式 PID ──
 namespace aimbot_spin {
-constexpr PidGains kYawPositionPid{20.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄+小陀螺偏航位置 PID
+constexpr PidGains kYawPositionPid{30.0f, 0.5f, 0.8f, 10.0f, 2.2f};  ///< 自瞄+小陀螺偏航位置 PID
 constexpr PidGains kYawSpeedPid{0.4f, 0.0f, 0.0f, 10.0f, 0.f};       ///< 自瞄+小陀螺偏航速度 PID
-constexpr PidGains kPitchPositionPid{30.0f, 0.f, 0.6f, 10.0f, 2.f};  ///< 自瞄+小陀螺俯仰位置 PID
+constexpr PidGains kPitchPositionPid{40.0f, 0.f, 0.6f, 10.0f, 2.f};  ///< 自瞄+小陀螺俯仰位置 PID
 constexpr PidGains kPitchSpeedPid{0.7f, 0.0f, 0.0f, 10.0f, 0.f};     ///< 自瞄+小陀螺俯仰速度 PID
 
 // ── 自旋偏航目标偏置（补偿小陀螺自旋时的角度滞后）──
@@ -1697,8 +1697,8 @@ constexpr StairDescendParams kStairDescend{
 };
 
 constexpr StairClimbParams kStairClimb{
-    .high_leg_length_m = 0.35f,
-    .hook_leg_length_m = 0.35f,
+    .high_leg_length_m = 0.345f,
+    .hook_leg_length_m = 0.345f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.50f,
@@ -1718,8 +1718,8 @@ constexpr StairClimbParams kStairClimb{
     .settle_timeout_ms = 1000U,
 };
 constexpr StairClimbParams kStairClimbStep2{
-    .high_leg_length_m = 0.35f,
-    .hook_leg_length_m = 0.35f,
+    .high_leg_length_m = 0.33f,
+    .hook_leg_length_m = 0.33f,
     .retract_leg_length_m = 0.1f,
     .settle_leg_length_m = 0.1f,
     .contact_theta_threshold_rad = 0.65f,
@@ -1885,8 +1885,8 @@ static constexpr const auto &kCtrlPLow = ::wheel_legged::params::generated::kCtr
 static constexpr const auto &kCtrlPSpin = ::wheel_legged::params::generated::kCtrlPSpin;
 
 // ==== 基本运动（PID 增益）====
-constexpr PidGains kLeftL0Pid{2700.0f, 0.f, 100.0f, 170.0f, 30.0f};   ///< 左腿腿长 PID（常规）
-constexpr PidGains kRightL0Pid{2700.0f, 0.f, 100.0f, 170.0f, 30.0f};  ///< 右腿腿长 PID（常规）
+constexpr PidGains kLeftL0Pid{2700.0f, 0.f, 150.0f, 170.0f, 30.0f};   ///< 左腿腿长 PID（常规）
+constexpr PidGains kRightL0Pid{2700.0f, 0.f, 150.0f, 170.0f, 30.0f};  ///< 右腿腿长 PID（常规）
 constexpr PidGains kRollPid{1000.0f, 1.f, 20.0f, 140.0f, 40.0f};      ///< 横滚平衡 PID
 
 // ==== 跳跃（PID 增益）====
