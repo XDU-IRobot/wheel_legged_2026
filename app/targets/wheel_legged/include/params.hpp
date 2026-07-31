@@ -676,7 +676,7 @@ constexpr SdotRampParams kSdotRampHighLeg{0.003f, 0.003f};    ///< 高腿长速�
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.05f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
 constexpr float kSpinExitYawRampStepRadS = 0.05f;       ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
-constexpr float kSpinExitAngleRampStepRad = 0.003f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.05f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
 constexpr float kSpinTargetYawDotRadS1 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 constexpr float kSpinTargetYawDotRadS2 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 constexpr float kSpinTargetYawDotRadS3 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
@@ -1353,9 +1353,9 @@ constexpr SdotRampParams kSdotRampMidLegF{0.0045f, 0.006f};  ///< 中腿长速�
 constexpr SdotRampParams kSdotRampHighLeg{0.0045f, 0.005f};  ///< 高腿长速度斜坡
 
 // ==== 小陀螺 ====
-constexpr float kSpinYawRampStepRadS = 0.04f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
-constexpr float kSpinExitYawRampStepRadS = 0.05f;       ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
-constexpr float kSpinExitAngleRampStepRad = 0.003f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
+constexpr float kSpinYawRampStepRadS = 0.03f;           ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
+constexpr float kSpinExitYawRampStepRadS = 0.1f;       ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.1f;     ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
 constexpr float kSpinTargetYawDotRadS1 = 7.5f;          ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 constexpr float kSpinTargetYawDotRadS2 = 8.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 constexpr float kSpinTargetYawDotRadS3 = 9.5f;          ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
@@ -1373,7 +1373,7 @@ constexpr float kYawResetRampStepRad = 0.02f;           ///< C/V/B 偏航复位�
 constexpr float kYawResetMaxSpeedMps = 0.2f;            ///< C/V/B 偏航复位允许旋转的最大车速 [m/s]
 constexpr float kSpinTranslationGain = 0.3f;  ///< 小陀螺平移增益（系数2补偿 cos² 平均衰减，使平均车速=摇杆指令值）
 constexpr float kSpinThetaLlBiasRad = 0.0f;    ///< 小陀螺时左腿摆角偏置 [rad] 0.0
-constexpr float kSpinThetaLrBiasRad = 0.05f;   ///< 小陀螺时右腿摆角偏置 [rad] 0.05
+constexpr float kSpinThetaLrBiasRad = 0.0f;   ///< 小陀螺时右腿摆角偏置 [rad] 0.05
 constexpr float kSpinLegLengthBiasM = 0.0f;    ///< 小陀螺时腿长偏差（左+右-）[m]
 constexpr float kSpinThetaBBiasRad = -0.015f;  ///< 小陀螺时俯仰目标偏置 [rad] -0.02
 
@@ -2017,7 +2017,7 @@ constexpr SdotRampParams kSdotRampHighLeg{0.006f, 0.005f};   ///< 高腿长速�
 // ==== 小陀螺 ====
 constexpr float kSpinYawRampStepRadS = 0.05f;        ///< 小陀螺进入偏航角速度斜坡步长 [(rad/s)/周期]
 constexpr float kSpinExitYawRampStepRadS = 0.05f;    ///< 小陀螺退出最大偏航减速步长 [(rad/s)/周期]
-constexpr float kSpinExitAngleRampStepRad = 0.003f;  ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
+constexpr float kSpinExitAngleRampStepRad = 0.05;  ///< 小陀螺退出角度参考斜坡步长 [rad/周期]
 constexpr float kSpinTargetYawDotRadS1 = 8.5f;       ///< 小陀螺目标自旋角速度 [rad/s] ≤55W
 constexpr float kSpinTargetYawDotRadS2 = 9.5f;       ///< 小陀螺目标自旋角速度 [rad/s] 55-65W
 constexpr float kSpinTargetYawDotRadS3 = 10.5f;      ///< 小陀螺目标自旋角速度 [rad/s] 65-75W
